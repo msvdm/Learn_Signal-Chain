@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --signal-too-quiet: #3b82f6;
+  --signal-good: #22c55e;
+  --signal-hot: #eab308;
+  --signal-clipping: #ef4444;
+  --node-bg: #ffffff;
+  --node-border: #e2e8f0;
+  --node-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --canvas-bg: #f8fafc;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--canvas-bg);
+  color: var(--text-primary);
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Animated dashed signal flow line */
+@keyframes signal-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+.signal-line-animated {
+  stroke-dasharray: 8 4;
+  animation: signal-flow 0.6s linear infinite;
+}
+
+/* Clipping pulse */
+@keyframes clip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.clipping-pulse {
+  animation: clip-pulse 0.5s ease-in-out infinite;
+}
+
+/* React Flow overrides */
+.react-flow__edge-path {
+  stroke-width: 3;
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  border: 2px solid #94a3b8 !important;
+  background: #fff !important;
+}
+
+.react-flow__handle-left {
+  left: -6px !important;
+}
+
+.react-flow__handle-right {
+  right: -6px !important;
+}
