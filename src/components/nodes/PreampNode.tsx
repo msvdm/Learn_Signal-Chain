@@ -26,7 +26,7 @@ export function PreampNode() {
             label={t.nodes.preamp.gain}
             formatValue={(v) => `+${v} dB`}
             onChange={(v) => updateNodeState({ preampGainDb: v })}
-            color="#4ade80"
+            color="var(--signal-good)"
             size={56}
           />
         </div>

@@ -105,7 +105,7 @@ export function SignalChain() {
   for (let i = 0; i < displayNodes.length - 1; i++) {
     const src = displayNodes[i].id
     const tgt = displayNodes[i + 1].id
-    displayEdges.push(buildEdge(src, tgt, healthColorMap[src] ?? '#4b5563'))
+    displayEdges.push(buildEdge(src, tgt, healthColorMap[src] ?? 'var(--lsc-fg-fainter)'))
   }
 
   return (
@@ -124,11 +124,13 @@ export function SignalChain() {
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: false }}
+        style={{ background: 'var(--lsc-canvas)' }}
       >
         <Background
-          variant={BackgroundVariant.Lines}
-          gap={32}
-          color="#1a1d24"
+          variant={BackgroundVariant.Dots}
+          gap={18}
+          size={1}
+          color="var(--lsc-grid)"
         />
       </ReactFlow>
     </div>

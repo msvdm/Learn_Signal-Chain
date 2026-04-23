@@ -54,29 +54,28 @@ export function CompressorCurve({
   const transferPath = buildTransferPath(thresholdDb, ratio, makeupGainDb)
   const threshX = xToSvg(thresholdDb)
 
-  // Current "now" dot
   const nowInputDb = Math.max(DB_MIN, Math.min(DB_MAX, inputDb))
   const nowOutputDb = computeOutput(nowInputDb, thresholdDb, ratio, makeupGainDb)
   const nowX = xToSvg(nowInputDb)
   const nowY = yToSvg(nowOutputDb)
 
-  void gainReductionDb  // used by parent for display; curve recomputes it
+  void gainReductionDb
 
   return (
-    <div className="rounded-md overflow-hidden" style={{ background: '#0d0f13' }}>
+    <div className="rounded-md overflow-hidden" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         preserveAspectRatio="none"
         className="w-full block"
         style={{ height }}
       >
-        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="#0d0f13" />
+        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="var(--lsc-sunken)" />
 
         {/* 1:1 reference diagonal (dashed) */}
         <line
           x1={xToSvg(DB_MIN)} y1={yToSvg(DB_MIN)}
           x2={xToSvg(DB_MAX)} y2={yToSvg(DB_MAX)}
-          stroke="#2e3341"
+          stroke="var(--lsc-border)"
           strokeWidth="1"
           strokeDasharray="4 3"
         />
@@ -85,7 +84,7 @@ export function CompressorCurve({
         <line
           x1={threshX} y1={0}
           x2={threshX} y2={SVG_H}
-          stroke="#4b5563"
+          stroke="var(--lsc-fg-fainter)"
           strokeWidth="1"
           strokeDasharray="3 2"
         />
@@ -94,17 +93,17 @@ export function CompressorCurve({
         <path
           d={transferPath}
           fill="none"
-          stroke="#818cf8"
+          stroke="var(--lsc-accent)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* "Now" dot — animated */}
+        {/* "Now" dot */}
         <motion.circle
           r={4}
-          fill="#4ade80"
-          stroke="#0d0f13"
+          fill="var(--signal-good)"
+          stroke="var(--lsc-sunken)"
           strokeWidth="1.5"
           animate={{ cx: nowX, cy: nowY }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}

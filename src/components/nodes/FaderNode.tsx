@@ -20,7 +20,6 @@ export function FaderNode() {
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
 
-  // faderDb: -80 to 0. Map to 0% (bottom) to 100% (top)
   const faderPct = ((nodeState.faderDb + 80) / 80) * 100
 
   return (
@@ -30,12 +29,11 @@ export function FaderNode() {
 
         {/* Vertical fader */}
         <div className="nodrag flex items-center justify-center gap-4 py-1">
-          {/* Track + cap + hidden input all in the same relative container */}
           <div className="relative h-32 w-8 flex items-center justify-center">
             {/* Track */}
             <div
               className="absolute w-2 h-full rounded-full"
-              style={{ background: '#0d0f13', border: '1px solid #2e3341' }}
+              style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
             />
 
             {/* dB scale markers */}
@@ -49,12 +47,12 @@ export function FaderNode() {
                     style={{
                       width: db === 0 ? 20 : 12,
                       right: db === 0 ? -4 : 0,
-                      background: db === 0 ? 'var(--signal-good)' : '#2e3341',
+                      background: db === 0 ? 'var(--signal-good)' : 'var(--lsc-border)',
                     }}
                   />
                   <span
                     className="absolute text-[7px] font-mono"
-                    style={{ right: 24, top: -4, color: db === 0 ? 'var(--signal-good)' : '#4b5563' }}
+                    style={{ right: 24, top: -4, color: db === 0 ? 'var(--signal-good)' : 'var(--lsc-fg-fainter)' }}
                   >
                     {label}
                   </span>
@@ -70,18 +68,18 @@ export function FaderNode() {
                 height: 14,
                 bottom: `${faderPct}%`,
                 marginBottom: -7,
-                background: 'linear-gradient(180deg, #3a3d47 0%, #2a2d35 100%)',
-                border: '1px solid #4b5563',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                background: `linear-gradient(180deg, var(--lsc-track-3) 0%, var(--lsc-track-2) 100%)`,
+                border: '1px solid var(--lsc-fg-fainter)',
+                boxShadow: 'var(--lsc-shadow-fader)',
               }}
             >
               <div
                 className="absolute left-1/2 top-1/2 h-px"
-                style={{ width: '60%', transform: 'translate(-50%,-50%)', background: '#6b7280' }}
+                style={{ width: '60%', transform: 'translate(-50%,-50%)', background: 'var(--lsc-fg-faint)' }}
               />
             </motion.div>
 
-            {/* Hidden input — overlaid on the track for interaction */}
+            {/* Hidden input */}
             <input
               type="range"
               min={-80}
@@ -103,7 +101,7 @@ export function FaderNode() {
 
           {/* Value display */}
           <div className="text-center min-w-[36px]">
-            <div className="text-xs font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <div className="text-xs font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>
               {nodeState.faderDb === 0 ? '0' : nodeState.faderDb} dB
             </div>
             {nodeState.faderDb === 0 && (

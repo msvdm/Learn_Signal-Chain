@@ -23,30 +23,31 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
 
   return (
     <div
-      className={`relative w-52 rounded-xl border select-none ${
-        activeTooltipId === nodeId ? 'ring-2 ring-indigo-500 ring-offset-1' : ''
-      } ${className}`}
+      className={`relative w-52 select-none ${className}`}
       style={{
-        background: 'var(--node-bg)',
-        borderColor: 'var(--node-border)',
-        boxShadow: 'var(--node-shadow)',
+        background: 'var(--lsc-node-bg)',
+        border: '1px solid var(--lsc-border)',
+        borderRadius: 'var(--lsc-radius-lg)',
+        boxShadow: activeTooltipId === nodeId
+          ? '0 0 0 2px var(--lsc-accent)'
+          : 'var(--lsc-shadow-node)',
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-2 border-b"
-        style={{ borderColor: 'var(--node-border)' }}
+        className="flex items-center justify-between px-3 py-2"
+        style={{ borderBottom: '1px solid var(--lsc-border)' }}
       >
-        <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-fg-dim)' }}>
           <span>{icon}</span>
-          <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-fg)' }}>
             {label}
           </span>
         </div>
         {hasTooltip && (
           <button
             className="nodrag transition-colors"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: 'var(--lsc-fg-dim)' }}
             onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
           >
             <HelpCircle size={13} />
@@ -59,11 +60,17 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
         {children}
       </div>
 
-      {/* Locked overlay for non-interactive nodes */}
+      {/* Locked overlay */}
       {!isInteractive && (
-        <div className="absolute inset-0 rounded-xl" style={{ background: 'rgba(0,0,0,0.3)' }}>
+        <div
+          className="absolute inset-0"
+          style={{ borderRadius: 'var(--lsc-radius-lg)', background: 'rgba(250,248,243,0.55)' }}
+        >
           <div className="flex h-full items-center justify-center">
-            <span className="text-[10px] font-semibold tracking-wide" style={{ color: 'var(--text-muted)' }}>
+            <span
+              className="text-[10px] font-semibold tracking-wide"
+              style={{ color: 'var(--lsc-fg-dim)' }}
+            >
               LOCKED
             </span>
           </div>
@@ -101,8 +108,8 @@ export function ControlSlider({
   return (
     <div className={`nodrag space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>{label}</span>
+        <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>
           {display}
         </span>
       </div>
@@ -114,7 +121,7 @@ export function ControlSlider({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="nodrag w-full h-1.5 appearance-none rounded-full cursor-pointer"
-        style={{ accentColor: '#4ade80', background: '#2e3341' }}
+        style={{ accentColor: 'var(--signal-good)', background: 'var(--lsc-track)' }}
       />
     </div>
   )

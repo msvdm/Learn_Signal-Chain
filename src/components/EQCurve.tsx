@@ -140,8 +140,8 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 cursor-crosshair"
-          style={{ height: 200 }}
+          className="w-full cursor-crosshair"
+          style={{ height: 200, borderRadius: 'var(--lsc-radius-md)', border: '1px solid var(--lsc-border)', background: 'var(--lsc-sunken)' }}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -154,7 +154,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
               y1={dbToY(db)}
               x2={SVG_W}
               y2={dbToY(db)}
-              stroke={db === 0 ? '#94a3b8' : '#e2e8f0'}
+              stroke={db === 0 ? 'var(--lsc-fg-fainter)' : 'var(--lsc-border-mute)'}
               strokeWidth={db === 0 ? 1.5 : 1}
             />
           ))}
@@ -167,7 +167,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
               y1={0}
               x2={freqToX(freq)}
               y2={SVG_H}
-              stroke="#e2e8f0"
+              stroke="var(--lsc-border-mute)"
               strokeWidth={1}
             />
           ))}
@@ -175,14 +175,14 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
           {/* Filled area under/over the curve */}
           <path
             d={`${curvePath} L ${SVG_W},${zeroY} L 0,${zeroY} Z`}
-            fill="rgba(99,102,241,0.06)"
+            fill="rgba(154,127,212,0.08)"
           />
 
           {/* Curve */}
           <path
             d={curvePath}
             fill="none"
-            stroke="#6366f1"
+            stroke="var(--lsc-accent)"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -225,7 +225,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
               key={db}
               x={4}
               y={dbToY(db) - 2}
-              fill="#94a3b8"
+              fill="var(--lsc-fg-fainter)"
               fontSize="9"
               fontFamily="monospace"
             >
@@ -243,7 +243,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
                 x={freqToX(freq)}
                 y={12}
                 textAnchor="middle"
-                fill="#94a3b8"
+                fill="var(--lsc-fg-fainter)"
                 fontSize="9"
                 fontFamily="monospace"
               >

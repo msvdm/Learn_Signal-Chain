@@ -23,14 +23,17 @@ export function JourneyBanner() {
   if (allUnlocked) {
     return (
       <div
-        className="flex items-center gap-3 px-4 py-2 text-xs border-b flex-shrink-0"
-        style={{ background: 'rgba(74,222,128,0.08)', borderColor: 'rgba(74,222,128,0.2)' }}
+        className="flex items-center gap-3 px-4 py-2 text-xs flex-shrink-0"
+        style={{
+          background: 'var(--signal-good-bg)',
+          borderBottom: '1px solid var(--signal-good-border)',
+        }}
       >
         <Trophy size={14} style={{ color: 'var(--signal-good)' }} />
         <span className="font-semibold" style={{ color: 'var(--signal-good)' }}>
           Full chain unlocked — experiment freely!
         </span>
-        <span style={{ color: 'var(--text-muted)' }}>
+        <span style={{ color: 'var(--lsc-fg-dim)' }}>
           Master output: {chain.master.out > -60 ? `${chain.master.out >= 0 ? '+' : ''}${chain.master.out.toFixed(1)} dBu` : '-∞ dBu'}
         </span>
       </div>
@@ -39,8 +42,14 @@ export function JourneyBanner() {
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 border-b flex-shrink-0"
-      style={{ background: '#16181d', borderColor: 'var(--node-border)' }}
+      className="flex items-center gap-3 px-4 flex-shrink-0"
+      style={{
+        minHeight: 36,
+        paddingTop: 6,
+        paddingBottom: 6,
+        background: 'var(--lsc-header)',
+        borderBottom: '1px solid var(--lsc-border)',
+      }}
     >
       {/* Step progress dots */}
       <div className="flex gap-1.5 flex-shrink-0">
@@ -53,18 +62,18 @@ export function JourneyBanner() {
                 i < journeyStep
                   ? 'var(--signal-good)'
                   : i === journeyStep
-                  ? goalMet ? 'var(--signal-good)' : '#4b5563'
-                  : '#2e3341',
+                  ? goalMet ? 'var(--signal-good)' : 'var(--lsc-fg-fainter)'
+                  : 'var(--lsc-border)',
             }}
           />
         ))}
       </div>
 
-      <Lock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+      <Lock size={12} style={{ color: 'var(--lsc-fg-dim)', flexShrink: 0 }} />
 
       {/* Goal text */}
-      <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-muted)' }}>
-        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+      <span className="text-xs flex-1 truncate" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <span className="font-semibold" style={{ color: 'var(--lsc-fg)' }}>
           Goal:{' '}
         </span>
         {currentStep.goalLabel}
@@ -80,9 +89,9 @@ export function JourneyBanner() {
               opacity: 1,
               scale: 1,
               boxShadow: [
-                '0 0 0 0 rgba(74,222,128,0.4)',
-                '0 0 8px 4px rgba(74,222,128,0.25)',
-                '0 0 0 0 rgba(74,222,128,0.4)',
+                '0 0 0 0 rgba(79,168,118,0)',
+                '0 0 8px 4px rgba(79,168,118,0.25)',
+                '0 0 0 0 rgba(79,168,118,0)',
               ],
             }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -94,9 +103,10 @@ export function JourneyBanner() {
             onClick={unlockNextNode}
             className="nodrag flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors flex-shrink-0"
             style={{
-              background: 'rgba(74,222,128,0.15)',
-              border: '1px solid rgba(74,222,128,0.4)',
+              background: 'var(--signal-good-bg)',
+              border: '1px solid var(--signal-good-border)',
               color: 'var(--signal-good)',
+              cursor: 'pointer',
             }}
           >
             <CheckCircle size={12} />

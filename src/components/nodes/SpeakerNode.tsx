@@ -4,20 +4,13 @@ import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useSignalChain } from '../../hooks/useSignalChain'
 import { useTranslation } from '../../i18n/useTranslation'
+import { getHealthStyle } from '../../hooks/useGainStaging'
 import { motion } from 'framer-motion'
 
 export function SpeakerNode() {
   const { master } = useSignalChain()
   const { t } = useTranslation()
-
-  const waveColor =
-    master.health === 'clipping'
-      ? 'var(--signal-clipping)'
-      : master.health === 'hot'
-      ? 'var(--signal-hot)'
-      : master.health === 'good'
-      ? 'var(--signal-good)'
-      : 'var(--signal-too-quiet)'
+  const healthStyle = getHealthStyle(master.health)
 
   const amplitude = Math.max(2, Math.min(18, ((master.out + 60) / 80) * 24))
   const isClipping = master.health === 'clipping'
@@ -30,7 +23,7 @@ export function SpeakerNode() {
         {/* Waveform animation */}
         <div
           className="flex items-center justify-center h-12 rounded-lg"
-          style={{ background: '#0d0f13', border: '1px solid #1e2128' }}
+          style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
         >
           <motion.svg
             viewBox="0 0 100 40"
@@ -44,7 +37,7 @@ export function SpeakerNode() {
                 d: `M 0 20 Q 12.5 ${20 - amplitude} 25 20 Q 37.5 ${20 + amplitude} 50 20 Q 62.5 ${20 - amplitude} 75 20 Q 87.5 ${20 + amplitude} 100 20`,
               }}
               fill="none"
-              stroke={waveColor}
+              stroke={healthStyle.color}
               strokeWidth="2"
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             />
@@ -54,18 +47,9 @@ export function SpeakerNode() {
         <div
           className="rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold"
           style={{
-            background:
-              master.health === 'good' ? 'rgba(74,222,128,0.1)'
-              : master.health === 'clipping' ? 'rgba(248,113,113,0.1)'
-              : master.health === 'hot' ? 'rgba(250,204,21,0.1)'
-              : 'rgba(96,165,250,0.1)',
-            border: `1px solid ${
-              master.health === 'good' ? 'rgba(74,222,128,0.2)'
-              : master.health === 'clipping' ? 'rgba(248,113,113,0.2)'
-              : master.health === 'hot' ? 'rgba(250,204,21,0.2)'
-              : 'rgba(96,165,250,0.2)'
-            }`,
-            color: waveColor,
+            background: healthStyle.bg,
+            border: `1px solid ${healthStyle.border}`,
+            color: healthStyle.color,
           }}
         >
           {master.health === 'good' && t.nodes.speaker.statusGood}

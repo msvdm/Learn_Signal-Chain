@@ -1,16 +1,81 @@
 @import "tailwindcss";
 
+/* =======================================================================
+   Learn Signal Chain — Light Whiteboard Theme
+   Warm paper background, ink-black text, soft dotted grid.
+   Signal-health colours retuned for contrast on white.
+   ======================================================================= */
+
 :root {
-  --signal-too-quiet: #60a5fa;
-  --signal-good: #4ade80;
-  --signal-hot: #facc15;
-  --signal-clipping: #f87171;
-  --node-bg: #1e2128;
-  --node-border: #2e3341;
-  --node-shadow: 0 2px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.4);
-  --canvas-bg: #111214;
-  --text-primary: #e2e8f0;
-  --text-muted: #64748b;
+  /* Core surfaces */
+  --lsc-canvas:        #fbfaf7;
+  --lsc-header:        #ffffff;
+  --lsc-node-bg:       #ffffff;
+  --lsc-sunken:        #f5f3ee;
+  --lsc-node-bg-2:     #faf8f3;
+  --lsc-track:         #e6e2d8;
+  --lsc-track-2:       #efece4;
+  --lsc-track-3:       #f6f4ed;
+  --lsc-grid:          #ece8dd;
+
+  /* Borders */
+  --lsc-border:        #e6e2d8;
+  --lsc-border-soft:   #eeeae0;
+  --lsc-border-mute:   #f4f1e8;
+
+  /* Text */
+  --lsc-fg:            #3a3532;
+  --lsc-fg-muted:      #5c544f;
+  --lsc-fg-dim:        #8a8278;
+  --lsc-fg-fainter:    #b5ac9f;
+  --lsc-fg-faint:      #d1c9bc;
+
+  /* Signal health */
+  --signal-too-quiet:        #5b8de8;
+  --signal-good:             #4fa876;
+  --signal-hot:              #d89548;
+  --signal-clipping:         #d86b6b;
+  --signal-too-quiet-bg:     rgba(91,141,232,0.08);
+  --signal-too-quiet-border: rgba(91,141,232,0.22);
+  --signal-good-bg:          rgba(79,168,118,0.08);
+  --signal-good-border:      rgba(79,168,118,0.22);
+  --signal-hot-bg:           rgba(216,149,72,0.10);
+  --signal-hot-border:       rgba(216,149,72,0.24);
+  --signal-clipping-bg:      rgba(216,107,107,0.08);
+  --signal-clipping-border:  rgba(216,107,107,0.24);
+
+  /* Accent */
+  --lsc-accent:        #9a7fd4;
+  --lsc-accent-soft:   #b8a3de;
+  --lsc-accent-bg:     rgba(154,127,212,0.08);
+
+  /* EQ band palette */
+  --lsc-eq-low:   #9a7fd4;
+  --lsc-eq-mid:   #d89548;
+  --lsc-eq-high:  #4fa876;
+
+  /* Tooltip pro tip */
+  --lsc-tip:      #d89548;
+  --lsc-tip-fg:   #8a5e28;
+  --lsc-tip-bg:   rgba(216,149,72,0.08);
+  --lsc-tip-bd:   rgba(216,149,72,0.22);
+
+  /* Shadows */
+  --lsc-shadow-node:    0 1px 2px rgba(60,50,40,0.04), 0 1px 3px rgba(60,50,40,0.04);
+  --lsc-shadow-popup:   0 2px 12px rgba(60,50,40,0.06);
+  --lsc-shadow-tooltip: 0 2px 12px rgba(60,50,40,0.05);
+  --lsc-shadow-fader:   0 1px 2px rgba(60,50,40,0.08);
+
+  /* Radii */
+  --lsc-radius-xs:   2px;
+  --lsc-radius-sm:   4px;
+  --lsc-radius-md:   8px;
+  --lsc-radius-lg:   12px;
+  --lsc-radius-pill: 9999px;
+
+  /* Type */
+  --lsc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --lsc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -19,9 +84,11 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--canvas-bg);
-  color: var(--text-primary);
+  font-family: var(--lsc-font-sans);
+  background: var(--lsc-canvas);
+  color: var(--lsc-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -51,6 +118,12 @@ body {
   animation: clip-pulse 0.5s ease-in-out infinite;
 }
 
+/* Unlock button glow */
+@keyframes lsc-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,168,118,0); }
+  50%       { box-shadow: 0 0 14px 1px rgba(79,168,118,0.35); }
+}
+
 /* React Flow overrides */
 .react-flow__edge-path {
   stroke-width: 3;
@@ -60,8 +133,8 @@ body {
   width: 10px !important;
   height: 10px !important;
   border-radius: 50% !important;
-  border: 2px solid #4b5563 !important;
-  background: #1e2128 !important;
+  border: 2px solid var(--lsc-border) !important;
+  background: var(--lsc-node-bg) !important;
 }
 
 .react-flow__handle-left {
@@ -73,15 +146,54 @@ body {
 }
 
 .react-flow__controls button {
-  background: #1e2128 !important;
-  border-color: #2e3341 !important;
-  color: #94a3b8 !important;
+  background: var(--lsc-node-bg) !important;
+  border-color: var(--lsc-border) !important;
+  color: var(--lsc-fg-dim) !important;
 }
 
 .react-flow__controls button:hover {
-  background: #2e3341 !important;
+  background: var(--lsc-sunken) !important;
 }
 
 .react-flow__panel {
-  color: #64748b;
+  color: var(--lsc-fg-dim);
 }
+
+/* Semantic type classes */
+.lsc-overline {
+  font-family: var(--lsc-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lsc-fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lsc-value {
+  font-family: var(--lsc-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lsc-fg);
+}
+
+.lsc-value-sm {
+  font-family: var(--lsc-font-mono);
+  font-size: 9px;
+  color: var(--lsc-fg);
+  line-height: 1;
+}
+
+.lsc-knob-label {
+  font-family: var(--lsc-font-sans);
+  font-size: 8px;
+  font-weight: 400;
+  color: var(--lsc-fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-thumb { background: var(--lsc-border); border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }

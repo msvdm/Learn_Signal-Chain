@@ -38,21 +38,24 @@ function App() {
   }, [showSettings])
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--canvas-bg)' }}>
+    <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)' }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-        style={{ background: '#16181d', borderColor: 'var(--node-border)' }}
+        className="flex items-center justify-between px-4 flex-shrink-0"
+        style={{ height: 48, background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)' }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="rounded-lg p-1.5" style={{ background: 'rgba(74,222,128,0.15)' }}>
-            <Radio size={16} style={{ color: 'var(--signal-good)' }} />
+          <div
+            className="rounded-lg flex items-center justify-center"
+            style={{ padding: 6, background: 'var(--signal-good-bg)', color: 'var(--signal-good)' }}
+          >
+            <Radio size={16} />
           </div>
           <div>
-            <h1 className="text-sm font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
+            <h1 className="text-sm font-bold leading-none" style={{ color: 'var(--lsc-fg)' }}>
               {t.app.title}
             </h1>
-            <p className="text-[10px] mt-0.5 leading-none" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-[10px] mt-0.5 leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
               {t.app.tagline}
             </p>
           </div>
@@ -61,8 +64,14 @@ function App() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
-            className="rounded-lg border p-2 transition-colors"
-            style={{ borderColor: 'var(--node-border)', color: 'var(--text-muted)' }}
+            className="rounded-lg flex items-center justify-center transition-colors"
+            style={{
+              padding: 6,
+              border: '1px solid var(--lsc-border)',
+              background: 'transparent',
+              color: 'var(--lsc-fg-dim)',
+              cursor: 'pointer',
+            }}
             title={t.app.resetButton}
           >
             <RotateCcw size={14} />
@@ -71,11 +80,13 @@ function App() {
           <div className="relative" ref={settingsRef}>
             <button
               onClick={() => setShowSettings((v) => !v)}
-              className="rounded-lg border p-2 transition-colors"
+              className="rounded-lg flex items-center justify-center transition-colors"
               style={{
-                borderColor: showSettings ? '#6366f1' : 'var(--node-border)',
-                color: showSettings ? '#818cf8' : 'var(--text-muted)',
-                background: showSettings ? 'rgba(99,102,241,0.1)' : 'transparent',
+                padding: 6,
+                border: `1px solid ${showSettings ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                background: showSettings ? 'var(--lsc-accent-bg)' : 'transparent',
+                color: showSettings ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg-dim)',
+                cursor: 'pointer',
               }}
               title={t.app.settings}
             >
@@ -86,14 +97,14 @@ function App() {
               <div
                 className="absolute right-0 top-full mt-2 w-44 rounded-xl border py-1 z-50"
                 style={{
-                  background: '#16181d',
-                  borderColor: 'var(--node-border)',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+                  background: 'var(--lsc-header)',
+                  borderColor: 'var(--lsc-border)',
+                  boxShadow: 'var(--lsc-shadow-popup)',
                 }}
               >
                 <p
                   className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: 'var(--lsc-fg-dim)' }}
                 >
                   {t.app.settings}
                 </p>
@@ -103,14 +114,14 @@ function App() {
                     onClick={() => handleLanguage(lang)}
                     className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between"
                     style={{
-                      color: language === lang ? 'var(--text-primary)' : 'var(--text-muted)',
-                      background: language === lang ? 'rgba(255,255,255,0.05)' : 'transparent',
+                      color: language === lang ? 'var(--lsc-fg)' : 'var(--lsc-fg-dim)',
+                      background: language === lang ? 'rgba(0,0,0,0.04)' : 'transparent',
                       fontWeight: language === lang ? 600 : 400,
                     }}
                   >
                     {t.app.languages[lang]}
                     {language === lang && (
-                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>✓</span>
+                      <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>✓</span>
                     )}
                   </button>
                 ))}

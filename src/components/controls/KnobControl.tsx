@@ -14,8 +14,8 @@ interface KnobControlProps {
   className?: string
 }
 
-const START_CLOCK = 225  // degrees from 12 o'clock, clockwise (bottom-left)
-const SWEEP = 270        // total degrees of rotation
+const START_CLOCK = 225
+const SWEEP = 270
 
 function polarPoint(cx: number, cy: number, r: number, clockDeg: number) {
   const rad = ((clockDeg - 90) * Math.PI) / 180
@@ -31,7 +31,7 @@ export function KnobControl({
   formatValue,
   onChange,
   size = 52,
-  color = '#4ade80',
+  color = 'var(--signal-good)',
   className = '',
 }: KnobControlProps) {
   const range = max - min
@@ -42,21 +42,16 @@ export function KnobControl({
   const cy = size / 2
   const trackR = size / 2 - 6
 
-  // Track arc endpoints
   const trackStart = polarPoint(cx, cy, trackR, START_CLOCK)
-  // Offset end slightly to avoid SVG degenerate full-circle arc
   const trackEnd = polarPoint(cx, cy, trackR, START_CLOCK + SWEEP - 0.01)
 
-  // Fill arc
   const fillEnd = polarPoint(cx, cy, trackR, currentClock)
   const fillLargeArc = normalizedValue * SWEEP >= 180 ? 1 : 0
 
-  // Indicator dot position
   const indicatorTip = polarPoint(cx, cy, trackR - 5, currentClock)
 
   const display = formatValue ? formatValue(value) : String(value)
 
-  // Pointer drag refs
   const startY = useRef<number | null>(null)
   const startValue = useRef(value)
   const valueRef = useRef(value)
@@ -65,7 +60,7 @@ export function KnobControl({
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (startY.current === null) return
-      const dy = startY.current - e.clientY  // positive = upward drag
+      const dy = startY.current - e.clientY
       const deltaValue = (dy / 150) * range
       const raw = startValue.current + deltaValue
       const clamped = Math.max(min, Math.min(max, raw))
@@ -98,18 +93,18 @@ export function KnobControl({
         style={{ cursor: 'ns-resize', touchAction: 'none' }}
       >
         {/* Knob body */}
-        <circle cx={cx} cy={cy} r={size / 2 - 1} fill="#1a1d24" stroke="#3a3d47" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={size / 2 - 1} fill="var(--lsc-node-bg-2)" stroke="var(--lsc-track-3)" strokeWidth="1.5" />
 
         {/* Track arc — full sweep, dim */}
         <path
           d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 1 1 ${trackEnd.x.toFixed(2)},${trackEnd.y.toFixed(2)}`}
           fill="none"
-          stroke="#2e3341"
+          stroke="var(--lsc-border)"
           strokeWidth="3"
           strokeLinecap="round"
         />
 
-        {/* Fill arc — up to current value */}
+        {/* Fill arc */}
         {normalizedValue > 0.005 && (
           <path
             d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
@@ -128,10 +123,10 @@ export function KnobControl({
           transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         />
       </svg>
-      <span className="text-[9px] font-mono leading-none" style={{ color: 'var(--text-primary)' }}>
+      <span className="text-[9px] font-mono leading-none" style={{ color: 'var(--lsc-fg)' }}>
         {display}
       </span>
-      <span className="text-[8px] uppercase tracking-wider leading-none" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-[8px] uppercase tracking-wider leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
         {label}
       </span>
     </div>

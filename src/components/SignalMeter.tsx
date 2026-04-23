@@ -18,13 +18,13 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
           {label}
         </span>
       )}
       <div
         className="relative h-2.5 w-full rounded-full overflow-hidden"
-        style={{ background: '#0d0f13', border: '1px solid #1e2128' }}
+        style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)' }}
       >
         <motion.div
           className="absolute left-0 top-0 h-full rounded-full"
@@ -32,10 +32,10 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
           animate={{ width: `${pct}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         />
-        {/* Zone tick marks */}
-        <div className="absolute top-0 h-full w-px" style={{ left: '25%', background: '#2e3341' }} />
-        <div className="absolute top-0 h-full w-px" style={{ left: '60%', background: '#2e3341' }} />
-        <div className="absolute top-0 h-full w-px" style={{ left: '75%', background: '#4b5563' }} />
+        {/* Zone tick marks at -40 (46.5%), -12 (79.1%), 0 (93%) */}
+        <div className="absolute top-0 h-full w-px" style={{ left: '46.5%', background: 'var(--lsc-border)' }} />
+        <div className="absolute top-0 h-full w-px" style={{ left: '79.1%', background: 'var(--lsc-border)' }} />
+        <div className="absolute top-0 h-full w-px" style={{ left: '93%', background: 'var(--lsc-fg-fainter)' }} />
       </div>
       {showValue && (
         <div className="flex items-center justify-between">

@@ -56,7 +56,6 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
     draggingBand.current = null
   }, [])
 
-  // Suppress text showing for non-zero bands
   const activeBandInfo = bands
     .map((b, i) => ({ ...b, i }))
     .filter((b) => b.gainDb !== 0 || bellGain(b.freqHz, b.freqHz, b.gainDb) !== 0)
@@ -64,7 +63,7 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
   void activeBandInfo
 
   return (
-    <div className="nodrag rounded-md overflow-hidden" style={{ background: '#0d0f13' }}>
+    <div className="nodrag rounded-md overflow-hidden" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -77,14 +76,14 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Background */}
-        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="#0d0f13" />
+        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="var(--lsc-sunken)" />
 
         {/* dB grid lines */}
         {DB_LABELS.map((db) => (
           <line
             key={db}
             x1={0} y1={dbToY(db)} x2={SVG_W} y2={dbToY(db)}
-            stroke={db === 0 ? '#4b5563' : '#1e2128'}
+            stroke={db === 0 ? 'var(--lsc-fg-fainter)' : 'var(--lsc-border-mute)'}
             strokeWidth={db === 0 ? 1.5 : 1}
           />
         ))}
@@ -94,7 +93,7 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
           <line
             key={freq}
             x1={freqToX(freq)} y1={0} x2={freqToX(freq)} y2={SVG_H}
-            stroke="#1e2128"
+            stroke="var(--lsc-border-mute)"
             strokeWidth={1}
           />
         ))}
@@ -102,14 +101,14 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
         {/* Filled area */}
         <path
           d={`${curvePath} L ${SVG_W},${zeroY} L 0,${zeroY} Z`}
-          fill="rgba(99,102,241,0.12)"
+          fill="rgba(154,127,212,0.10)"
         />
 
         {/* Curve */}
         <path
           d={curvePath}
           fill="none"
-          stroke="#6366f1"
+          stroke="var(--lsc-accent)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -121,7 +120,7 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
           const cy = dbToY(band.gainDb)
           return (
             <g key={i}>
-              <circle cx={cx} cy={cy} r={9} fill="#0d0f13" stroke={BAND_COLORS[i]} strokeWidth={2} />
+              <circle cx={cx} cy={cy} r={9} fill="var(--lsc-sunken)" stroke={BAND_COLORS[i]} strokeWidth={2} />
               <circle
                 cx={cx}
                 cy={cy}

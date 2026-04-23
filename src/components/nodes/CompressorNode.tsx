@@ -22,7 +22,6 @@ export function CompressorNode() {
       <div className="space-y-3">
         <SignalMeter db={eq.out} health={eq.health} label={t.meters.input} />
 
-        {/* Gain transfer curve */}
         <CompressorCurve
           thresholdDb={nodeState.compThresholdDb}
           ratio={nodeState.compRatio}
@@ -32,7 +31,6 @@ export function CompressorNode() {
           height={72}
         />
 
-        {/* Knobs row */}
         <div className="flex justify-around py-1">
           <KnobControl
             value={nodeState.compThresholdDb}
@@ -41,7 +39,7 @@ export function CompressorNode() {
             label={t.nodes.comp.threshold}
             formatValue={(v) => `${v}dBu`}
             onChange={(v) => updateNodeState({ compThresholdDb: v })}
-            color="#f59e0b"
+            color="var(--signal-hot)"
             size={48}
           />
           <KnobControl
@@ -51,14 +49,14 @@ export function CompressorNode() {
             label={t.nodes.comp.makeupGain}
             formatValue={(v) => `+${v}dB`}
             onChange={(v) => updateNodeState({ compMakeupGainDb: v })}
-            color="#4ade80"
+            color="var(--signal-good)"
             size={48}
           />
         </div>
 
         {/* Ratio selector */}
         <div className="nodrag space-y-1">
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
             {t.nodes.comp.ratio}
           </span>
           <div className="flex gap-1">
@@ -68,8 +66,10 @@ export function CompressorNode() {
                 onClick={() => updateNodeState({ compRatio: r })}
                 className="flex-1 rounded text-[10px] py-1 font-semibold transition-colors"
                 style={{
-                  background: nodeState.compRatio === r ? '#6366f1' : '#2e3341',
-                  color: nodeState.compRatio === r ? 'white' : 'var(--text-muted)',
+                  background: nodeState.compRatio === r ? 'var(--lsc-accent)' : 'var(--lsc-sunken)',
+                  border: `1px solid ${nodeState.compRatio === r ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                  color: nodeState.compRatio === r ? 'white' : 'var(--lsc-fg-dim)',
+                  cursor: 'pointer',
                 }}
               >
                 {RATIO_LABELS[r]}
@@ -80,10 +80,13 @@ export function CompressorNode() {
 
         {/* GR readout */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
             {t.nodes.comp.gainReduction}
           </span>
-          <span className="text-[10px] font-mono font-semibold" style={{ color: comp.gainReductionDb > 6 ? 'var(--signal-hot)' : 'var(--text-primary)' }}>
+          <span
+            className="text-[10px] font-mono font-semibold"
+            style={{ color: comp.gainReductionDb > 6 ? 'var(--signal-hot)' : 'var(--lsc-fg)' }}
+          >
             -{comp.gainReductionDb.toFixed(1)} dB
           </span>
         </div>

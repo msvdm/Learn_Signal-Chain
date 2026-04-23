@@ -24,7 +24,7 @@ export function MicrophoneNode() {
           formatValue={(v) => `${v} dBu`}
           onChange={(v) => updateNodeState({ micSensitivityDb: v })}
         />
-        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-fg-dim)' }}>
           {t.nodes.mic.micInfo}
         </p>
       </div>
