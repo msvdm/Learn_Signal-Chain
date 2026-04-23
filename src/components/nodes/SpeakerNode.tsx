@@ -12,12 +12,12 @@ export function SpeakerNode() {
 
   const waveColor =
     master.health === 'clipping'
-      ? '#ef4444'
+      ? 'var(--signal-clipping)'
       : master.health === 'hot'
-      ? '#eab308'
+      ? 'var(--signal-hot)'
       : master.health === 'good'
-      ? '#22c55e'
-      : '#3b82f6'
+      ? 'var(--signal-good)'
+      : 'var(--signal-too-quiet)'
 
   const amplitude = Math.max(2, Math.min(18, ((master.out + 60) / 80) * 24))
   const isClipping = master.health === 'clipping'
@@ -28,7 +28,10 @@ export function SpeakerNode() {
         <SignalMeter db={master.out} health={master.health} label={t.nodes.speaker.signalIn} />
 
         {/* Waveform animation */}
-        <div className="flex items-center justify-center h-12 bg-slate-50 rounded-lg border border-slate-100">
+        <div
+          className="flex items-center justify-center h-12 rounded-lg"
+          style={{ background: '#0d0f13', border: '1px solid #1e2128' }}
+        >
           <motion.svg
             viewBox="0 0 100 40"
             className="w-full"
@@ -36,7 +39,6 @@ export function SpeakerNode() {
             animate={isClipping ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
             transition={isClipping ? { duration: 0.5, repeat: Infinity } : {}}
           >
-            {/* Sine wave approximation */}
             <motion.path
               animate={{
                 d: `M 0 20 Q 12.5 ${20 - amplitude} 25 20 Q 37.5 ${20 + amplitude} 50 20 Q 62.5 ${20 - amplitude} 75 20 Q 87.5 ${20 + amplitude} 100 20`,
@@ -49,15 +51,23 @@ export function SpeakerNode() {
           </motion.svg>
         </div>
 
-        <div className={`rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold ${
-          master.health === 'good'
-            ? 'bg-green-50 text-green-700'
-            : master.health === 'clipping'
-            ? 'bg-red-50 text-red-700'
-            : master.health === 'hot'
-            ? 'bg-yellow-50 text-yellow-700'
-            : 'bg-blue-50 text-blue-700'
-        }`}>
+        <div
+          className="rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold"
+          style={{
+            background:
+              master.health === 'good' ? 'rgba(74,222,128,0.1)'
+              : master.health === 'clipping' ? 'rgba(248,113,113,0.1)'
+              : master.health === 'hot' ? 'rgba(250,204,21,0.1)'
+              : 'rgba(96,165,250,0.1)',
+            border: `1px solid ${
+              master.health === 'good' ? 'rgba(74,222,128,0.2)'
+              : master.health === 'clipping' ? 'rgba(248,113,113,0.2)'
+              : master.health === 'hot' ? 'rgba(250,204,21,0.2)'
+              : 'rgba(96,165,250,0.2)'
+            }`,
+            color: waveColor,
+          }}
+        >
           {master.health === 'good' && t.nodes.speaker.statusGood}
           {master.health === 'hot' && t.nodes.speaker.statusHot}
           {master.health === 'clipping' && t.nodes.speaker.statusClipping}

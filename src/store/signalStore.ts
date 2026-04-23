@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type { LevelId } from '../data/levels'
 import type { Lang } from '../i18n/translations'
 
 function getInitialLanguage(): Lang {
@@ -34,52 +33,44 @@ export const DEFAULT_NODE_STATE: NodeState = {
     { freqHz: 1000, gainDb: 0 },
     { freqHz: 8000, gainDb: 0 },
   ],
-  compThresholdDb: -18,
-  compRatio: 4,
+  compThresholdDb: 0,   // neutral by default (no compression until unlocked)
+  compRatio: 2,
   compMakeupGainDb: 0,
   faderDb: 0,
   masterTrimDb: 0,
 }
 
+const JOURNEY_UNLOCK_ORDER = ['eq', 'comp', 'fader', 'master']
+const INITIAL_UNLOCKED = ['mic', 'preamp', 'speaker']
+
 interface SignalChainStore {
-  level: LevelId
   language: Lang
   nodeState: NodeState
   activeTooltipId: string | null
-  tourIndex: number
-  placedNodeIds: string[]
 
-  setLevel: (level: LevelId) => void
+  // Journey progression
+  journeyStep: number
+  unlockedNodes: string[]
+
   setLanguage: (lang: Lang) => void
   updateNodeState: (patch: Partial<NodeState>) => void
   updateEQBand: (index: number, patch: Partial<EQBand>) => void
   setActiveTooltip: (id: string | null) => void
-  advanceTour: () => void
-  addPlacedNode: (id: string) => void
-  resetToDefaults: () => void
+  unlockNextNode: () => void
+  resetJourney: () => void
 }
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
-  level: 1,
   language: getInitialLanguage(),
   nodeState: { ...DEFAULT_NODE_STATE },
-  activeTooltipId: 'mic',
-  tourIndex: 0,
-  placedNodeIds: [],
+  activeTooltipId: null,
+  journeyStep: 0,
+  unlockedNodes: [...INITIAL_UNLOCKED],
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
     set({ language: lang })
   },
-
-  setLevel: (level) =>
-    set({
-      level,
-      nodeState: { ...DEFAULT_NODE_STATE },
-      activeTooltipId: level === 1 ? 'mic' : null,
-      tourIndex: 0,
-      placedNodeIds: [],
-    }),
 
   updateNodeState: (patch) =>
     set((s) => ({ nodeState: { ...s.nodeState, ...patch } })),
@@ -93,27 +84,25 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setActiveTooltip: (id) => set({ activeTooltipId: id }),
 
-  advanceTour: () =>
+  unlockNextNode: () =>
     set((s) => {
-      const seq = ['mic', 'preamp', 'eq', 'comp', 'fader', 'master', 'speaker']
-      const next = s.tourIndex + 1
-      return {
-        tourIndex: next,
-        activeTooltipId: next < seq.length ? seq[next] : null,
-      }
+      const nextId = JOURNEY_UNLOCK_ORDER[s.journeyStep]
+      if (!nextId) return s
+      const unlockedNodes = s.unlockedNodes.includes(nextId)
+        ? s.unlockedNodes
+        : [
+            ...s.unlockedNodes.filter((n) => n !== 'speaker'),
+            nextId,
+            'speaker',
+          ]
+      return { journeyStep: s.journeyStep + 1, unlockedNodes }
     }),
 
-  addPlacedNode: (id) =>
-    set((s) => ({
-      placedNodeIds: s.placedNodeIds.includes(id)
-        ? s.placedNodeIds
-        : [...s.placedNodeIds, id],
-    })),
-
-  resetToDefaults: () =>
-    set((s) => ({
+  resetJourney: () =>
+    set({
+      journeyStep: 0,
+      unlockedNodes: [...INITIAL_UNLOCKED],
       nodeState: { ...DEFAULT_NODE_STATE },
-      activeTooltipId: s.level === 1 ? 'mic' : null,
-      tourIndex: 0,
-    })),
+      activeTooltipId: null,
+    }),
 }))

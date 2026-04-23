@@ -10,32 +10,32 @@ export interface HealthStyle {
 
 const HEALTH_STYLES: Record<SignalHealth, HealthStyle> = {
   'too-quiet': {
-    color: '#3b82f6',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
+    color: '#60a5fa',
+    bg: 'rgba(96,165,250,0.1)',
+    border: 'rgba(96,165,250,0.25)',
     label: 'Too Quiet',
-    textClass: 'text-blue-600',
+    textClass: 'text-blue-400',
   },
   good: {
-    color: '#22c55e',
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
+    color: '#4ade80',
+    bg: 'rgba(74,222,128,0.1)',
+    border: 'rgba(74,222,128,0.25)',
     label: 'Good',
-    textClass: 'text-green-600',
+    textClass: 'text-green-400',
   },
   hot: {
-    color: '#eab308',
-    bg: '#fefce8',
-    border: '#fef08a',
+    color: '#facc15',
+    bg: 'rgba(250,204,21,0.1)',
+    border: 'rgba(250,204,21,0.25)',
     label: 'Hot',
-    textClass: 'text-yellow-600',
+    textClass: 'text-yellow-400',
   },
   clipping: {
-    color: '#ef4444',
-    bg: '#fef2f2',
-    border: '#fecaca',
+    color: '#f87171',
+    bg: 'rgba(248,113,113,0.1)',
+    border: 'rgba(248,113,113,0.25)',
     label: 'Clipping!',
-    textClass: 'text-red-600',
+    textClass: 'text-red-400',
   },
 }
 

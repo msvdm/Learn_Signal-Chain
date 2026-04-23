@@ -17,28 +17,34 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
 
   return (
     <div className="flex flex-col gap-1">
-      {label && <span className="text-xs text-slate-500">{label}</span>}
-      <div className="relative h-3 w-full rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
+      {label && (
+        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          {label}
+        </span>
+      )}
+      <div
+        className="relative h-2.5 w-full rounded-full overflow-hidden"
+        style={{ background: '#0d0f13', border: '1px solid #1e2128' }}
+      >
         <motion.div
           className="absolute left-0 top-0 h-full rounded-full"
           style={{ backgroundColor: style.color }}
           animate={{ width: `${pct}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         />
-        {/* Tick marks at key dB levels */}
-        {/* -40 dBu = ((-40+60)/80)*100 = 25% */}
-        <div className="absolute top-0 h-full w-px bg-slate-300" style={{ left: '25%' }} />
-        {/* -12 dBu = 60% */}
-        <div className="absolute top-0 h-full w-px bg-slate-300" style={{ left: '60%' }} />
-        {/* 0 dBu = 75% */}
-        <div className="absolute top-0 h-full w-px bg-slate-400" style={{ left: '75%' }} />
+        {/* Zone tick marks */}
+        <div className="absolute top-0 h-full w-px" style={{ left: '25%', background: '#2e3341' }} />
+        <div className="absolute top-0 h-full w-px" style={{ left: '60%', background: '#2e3341' }} />
+        <div className="absolute top-0 h-full w-px" style={{ left: '75%', background: '#4b5563' }} />
       </div>
       {showValue && (
         <div className="flex items-center justify-between">
-          <span className={`text-xs font-mono font-semibold ${style.textClass}`}>
+          <span className="text-[10px] font-mono font-semibold" style={{ color: style.color }}>
             {formatDb(db)}
           </span>
-          <span className={`text-xs font-medium ${style.textClass}`}>{t.health[health]}</span>
+          <span className="text-[10px] font-medium" style={{ color: style.color }}>
+            {t.health[health]}
+          </span>
         </div>
       )}
     </div>
