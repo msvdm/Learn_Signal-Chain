@@ -1,5 +1,12 @@
 import { create } from 'zustand'
 import type { LevelId } from '../data/levels'
+import type { Lang } from '../i18n/translations'
+
+function getInitialLanguage(): Lang {
+  const stored = localStorage.getItem('lsc-language')
+  if (stored === 'en' || stored === 'bg') return stored
+  return navigator.language.startsWith('bg') ? 'bg' : 'en'
+}
 
 export interface EQBand {
   freqHz: number
@@ -36,12 +43,14 @@ export const DEFAULT_NODE_STATE: NodeState = {
 
 interface SignalChainStore {
   level: LevelId
+  language: Lang
   nodeState: NodeState
   activeTooltipId: string | null
   tourIndex: number
   placedNodeIds: string[]
 
   setLevel: (level: LevelId) => void
+  setLanguage: (lang: Lang) => void
   updateNodeState: (patch: Partial<NodeState>) => void
   updateEQBand: (index: number, patch: Partial<EQBand>) => void
   setActiveTooltip: (id: string | null) => void
@@ -52,10 +61,16 @@ interface SignalChainStore {
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
   level: 1,
+  language: getInitialLanguage(),
   nodeState: { ...DEFAULT_NODE_STATE },
   activeTooltipId: 'mic',
   tourIndex: 0,
   placedNodeIds: [],
+
+  setLanguage: (lang) => {
+    localStorage.setItem('lsc-language', lang)
+    set({ language: lang })
+  },
 
   setLevel: (level) =>
     set({

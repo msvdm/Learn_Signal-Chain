@@ -4,28 +4,30 @@ import { NodeWrapper, ControlSlider } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useSignalChain } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export function MasterBusNode() {
   const { fader, master } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
+  const { t } = useTranslation()
 
   return (
-    <NodeWrapper nodeId="master" icon={<Layers size={14} />} label="Master Bus">
+    <NodeWrapper nodeId="master" icon={<Layers size={14} />} label={t.nodes.master.label}>
       <div className="space-y-2">
-        <SignalMeter db={fader.out} health={fader.health} label="Input" />
+        <SignalMeter db={fader.out} health={fader.health} label={t.meters.input} />
 
         <ControlSlider
           value={nodeState.masterTrimDb}
           min={-12}
           max={12}
           step={0.5}
-          label="Output trim"
+          label={t.nodes.master.outputTrim}
           formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
           onChange={(v) => updateNodeState({ masterTrimDb: v })}
         />
 
-        <SignalMeter db={master.out} health={master.health} label="Output" />
+        <SignalMeter db={master.out} health={master.health} label={t.meters.output} />
 
         <div className={`rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold ${
           master.health === 'good'
@@ -36,10 +38,10 @@ export function MasterBusNode() {
             ? 'bg-yellow-50 text-yellow-700 border border-yellow-100'
             : 'bg-blue-50 text-blue-700 border border-blue-100'
         }`}>
-          {master.health === 'good' && 'Gain staging: Good'}
-          {master.health === 'hot' && 'Signal is hot — watch headroom'}
-          {master.health === 'clipping' && 'CLIPPING — reduce gain!'}
-          {master.health === 'too-quiet' && 'Too quiet — increase gain'}
+          {master.health === 'good' && t.nodes.master.statusGood}
+          {master.health === 'hot' && t.nodes.master.statusHot}
+          {master.health === 'clipping' && t.nodes.master.statusClipping}
+          {master.health === 'too-quiet' && t.nodes.master.statusQuiet}
         </div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />

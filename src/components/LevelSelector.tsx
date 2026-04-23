@@ -1,16 +1,17 @@
 import { useSignalStore } from '../store/signalStore'
-import { levels } from '../data/levels'
+import { useTranslation } from '../i18n/useTranslation'
 import type { LevelId } from '../data/levels'
 
 export function LevelSelector() {
   const currentLevel = useSignalStore((s) => s.level)
   const setLevel = useSignalStore((s) => s.setLevel)
+  const { t, fmt } = useTranslation()
 
   const handleChange = (id: LevelId) => {
     if (id === currentLevel) return
     if (currentLevel > 1) {
       const ok = window.confirm(
-        `Switch to ${levels[id].title}? This will reset all controls to defaults.`
+        fmt(t.levels.switchConfirm, { title: t.levels[id].title })
       )
       if (!ok) return
     }
@@ -29,7 +30,7 @@ export function LevelSelector() {
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          {levels[id].badge}
+          {t.levels[id].badge}
         </button>
       ))}
     </div>

@@ -1,10 +1,12 @@
 import { useSignalChain } from '../hooks/useSignalChain'
 import { getHealthStyle } from '../hooks/useGainStaging'
+import { useTranslation } from '../i18n/useTranslation'
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react'
 
 export function GainStagingBanner() {
   const { overallHealth, warnings } = useSignalChain()
   const style = getHealthStyle(overallHealth)
+  const { t } = useTranslation()
 
   const icon =
     overallHealth === 'good' ? (
@@ -22,7 +24,7 @@ export function GainStagingBanner() {
     >
       {icon}
       <span className="font-semibold" style={{ color: style.color }}>
-        Gain Staging: {style.label}
+        {t.banner.gainStaging}: {t.health[overallHealth]}
       </span>
       {warnings.length > 0 && (
         <span className="text-slate-600 truncate">{warnings[0]}</span>

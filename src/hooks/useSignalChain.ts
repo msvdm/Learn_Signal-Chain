@@ -1,5 +1,7 @@
 import { useSignalStore } from '../store/signalStore'
+import { useTranslation } from '../i18n/useTranslation'
 import type { NodeState } from '../store/signalStore'
+import type { Translations } from '../i18n/translations'
 
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
 
@@ -73,24 +75,23 @@ function worstHealth(healths: SignalHealth[]): SignalHealth {
   return 'good'
 }
 
-function buildWarnings(result: Omit<SignalChainResult, 'overallHealth' | 'warnings'>): string[] {
+function buildWarnings(
+  result: Omit<SignalChainResult, 'overallHealth' | 'warnings'>,
+  w: Translations['warnings'],
+  fmt: (str: string, params: Record<string, string>) => string
+): string[] {
   const warns: string[] = []
-  if (result.preamp.health === 'too-quiet')
-    warns.push('Preamp output is too quiet. Increase gain to bring the signal into the green zone.')
-  if (result.preamp.health === 'clipping')
-    warns.push('Preamp is clipping! Reduce the gain — you are adding distortion before anything else can help.')
-  if (result.eq.health === 'clipping')
-    warns.push('EQ is boosting the signal into clipping. Reduce EQ boost or lower preamp gain.')
+  if (result.preamp.health === 'too-quiet') warns.push(w.preampTooQuiet)
+  if (result.preamp.health === 'clipping') warns.push(w.preampClipping)
+  if (result.eq.health === 'clipping') warns.push(w.eqClipping)
   if (result.comp.gainReductionDb > 10)
-    warns.push(`Heavy compression: ${result.comp.gainReductionDb.toFixed(1)} dB of gain reduction. The signal may sound pumped or squashed.`)
-  if (result.master.health === 'clipping')
-    warns.push('Master output is clipping. Lower the fader or master trim to prevent distortion.')
-  if (result.master.health === 'too-quiet')
-    warns.push('Master output is too quiet. Increase gain earlier in the chain.')
+    warns.push(fmt(w.heavyCompression, { amount: result.comp.gainReductionDb.toFixed(1) }))
+  if (result.master.health === 'clipping') warns.push(w.masterClipping)
+  if (result.master.health === 'too-quiet') warns.push(w.masterTooQuiet)
   return warns
 }
 
-export function computeSignalChain(state: NodeState): SignalChainResult {
+export function computeSignalChain(state: NodeState): Omit<SignalChainResult, 'warnings'> & { warnings: string[] } {
   const mic = computeMic(state)
   const preamp = computePreamp(mic.out, state)
   const eq = computeEQ(preamp.out, state)
@@ -100,12 +101,24 @@ export function computeSignalChain(state: NodeState): SignalChainResult {
 
   const partial = { mic, preamp, eq, comp, fader, master }
   const overallHealth = worstHealth([mic, preamp, eq, comp, fader, master].map((s) => s.health))
-  const warnings = buildWarnings(partial)
 
-  return { ...partial, overallHealth, warnings }
+  return { ...partial, overallHealth, warnings: [] }
 }
 
 export function useSignalChain(): SignalChainResult {
   const nodeState = useSignalStore((s) => s.nodeState)
-  return computeSignalChain(nodeState)
+  const { t, fmt } = useTranslation()
+
+  const mic = computeMic(nodeState)
+  const preamp = computePreamp(mic.out, nodeState)
+  const eq = computeEQ(preamp.out, nodeState)
+  const comp = computeCompressor(eq.out, nodeState)
+  const fader = computeFader(comp.out, nodeState)
+  const master = computeMaster(fader.out, nodeState)
+
+  const partial = { mic, preamp, eq, comp, fader, master }
+  const overallHealth = worstHealth([mic, preamp, eq, comp, fader, master].map((s) => s.health))
+  const warnings = buildWarnings(partial, t.warnings, fmt)
+
+  return { ...partial, overallHealth, warnings }
 }

@@ -4,19 +4,21 @@ import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useSignalChain } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 import { motion } from 'framer-motion'
 
 export function FaderNode() {
   const { comp, fader } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
+  const { t } = useTranslation()
 
   const faderPct = ((nodeState.faderDb + 80) / 80) * 100
 
   return (
-    <NodeWrapper nodeId="fader" icon={<SlidersHorizontal size={14} />} label="Channel Fader">
+    <NodeWrapper nodeId="fader" icon={<SlidersHorizontal size={14} />} label={t.nodes.fader.label}>
       <div className="space-y-2">
-        <SignalMeter db={comp.out} health={comp.health} label="Input" />
+        <SignalMeter db={comp.out} health={comp.health} label={t.meters.input} />
 
         {/* Vertical fader visual */}
         <div className="nodrag flex items-center gap-3 py-1">
@@ -59,12 +61,12 @@ export function FaderNode() {
               {nodeState.faderDb === 0 ? '0' : nodeState.faderDb} dB
             </div>
             {nodeState.faderDb === 0 && (
-              <div className="text-[9px] text-slate-400">Unity</div>
+              <div className="text-[9px] text-slate-400">{t.nodes.fader.unity}</div>
             )}
           </div>
         </div>
 
-        <SignalMeter db={fader.out} health={fader.health} label="Output" />
+        <SignalMeter db={fader.out} health={fader.health} label={t.meters.output} />
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="source" position={Position.Right} id="out" />

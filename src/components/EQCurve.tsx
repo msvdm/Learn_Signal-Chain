@@ -1,6 +1,7 @@
 import { useRef, useCallback } from 'react'
 import { X } from 'lucide-react'
 import type { EQBand } from '../store/signalStore'
+import { useTranslation } from '../i18n/useTranslation'
 
 const SVG_W = 560
 const SVG_H = 200
@@ -81,6 +82,7 @@ interface EQCurveProps {
 export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingBand = useRef<number | null>(null)
+  const { t } = useTranslation()
 
   const curvePath = buildCurvePath(bands, hpfHz)
   const zeroY = dbToY(0)
@@ -127,8 +129,8 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-[640px] max-w-[95vw]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">EQ Curve</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Drag the colored handles to shape the frequency response</p>
+            <h2 className="text-sm font-semibold text-slate-900">{t.eqCurve.title}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{t.eqCurve.subtitle}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
             <X size={18} />
@@ -257,7 +259,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
             <div key={i} className="flex-1 rounded-lg border p-2" style={{ borderColor: BAND_COLORS[i] + '40' }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: BAND_COLORS[i] }} />
-                <span className="text-[10px] font-semibold text-slate-600">Band {i + 1}</span>
+                <span className="text-[10px] font-semibold text-slate-600">{t.eqCurve.band} {i + 1}</span>
               </div>
               <div className="text-[10px] font-mono text-slate-700">
                 {band.freqHz >= 1000 ? `${(band.freqHz / 1000).toFixed(1)}k` : band.freqHz} Hz

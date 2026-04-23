@@ -3,10 +3,12 @@ import { Volume2 } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useSignalChain } from '../../hooks/useSignalChain'
+import { useTranslation } from '../../i18n/useTranslation'
 import { motion } from 'framer-motion'
 
 export function SpeakerNode() {
   const { master } = useSignalChain()
+  const { t } = useTranslation()
 
   const waveColor =
     master.health === 'clipping'
@@ -21,9 +23,9 @@ export function SpeakerNode() {
   const isClipping = master.health === 'clipping'
 
   return (
-    <NodeWrapper nodeId="speaker" icon={<Volume2 size={14} />} label="Speaker / Monitor">
+    <NodeWrapper nodeId="speaker" icon={<Volume2 size={14} />} label={t.nodes.speaker.label}>
       <div className="space-y-2">
-        <SignalMeter db={master.out} health={master.health} label="Signal in" />
+        <SignalMeter db={master.out} health={master.health} label={t.nodes.speaker.signalIn} />
 
         {/* Waveform animation */}
         <div className="flex items-center justify-center h-12 bg-slate-50 rounded-lg border border-slate-100">
@@ -56,10 +58,10 @@ export function SpeakerNode() {
             ? 'bg-yellow-50 text-yellow-700'
             : 'bg-blue-50 text-blue-700'
         }`}>
-          {master.health === 'good' && 'Clean output'}
-          {master.health === 'hot' && 'Loud — near limit'}
-          {master.health === 'clipping' && 'Distortion! Signal clipping'}
-          {master.health === 'too-quiet' && 'Too quiet — noise audible'}
+          {master.health === 'good' && t.nodes.speaker.statusGood}
+          {master.health === 'hot' && t.nodes.speaker.statusHot}
+          {master.health === 'clipping' && t.nodes.speaker.statusClipping}
+          {master.health === 'too-quiet' && t.nodes.speaker.statusQuiet}
         </div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />

@@ -26,6 +26,7 @@ import { SpeakerNode } from './nodes/SpeakerNode'
 import { useSignalStore } from '../store/signalStore'
 import { useSignalChain, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle } from '../hooks/useGainStaging'
+import { useTranslation } from '../i18n/useTranslation'
 import { levels, PALETTE_NODES } from '../data/levels'
 import { Zap, Activity, Minimize2, SlidersHorizontal, Layers } from 'lucide-react'
 
@@ -89,6 +90,7 @@ const PALETTE_ICONS: Record<string, React.ReactNode> = {
 
 function NodePalette() {
   const placedNodeIds = useSignalStore((s) => s.placedNodeIds)
+  const { t } = useTranslation()
 
   const handleDragStart = (e: React.DragEvent, nodeId: string) => {
     e.dataTransfer.setData('application/reactflow-nodeid', nodeId)
@@ -100,10 +102,10 @@ function NodePalette() {
   return (
     <div className="absolute left-4 top-4 z-20 w-40 rounded-xl border border-slate-200 bg-white shadow-lg p-3">
       <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-        Elements
+        {t.palette.heading}
       </p>
       {unplaced.length === 0 ? (
-        <p className="text-[10px] text-slate-400">All elements placed!</p>
+        <p className="text-[10px] text-slate-400">{t.palette.empty}</p>
       ) : (
         <div className="space-y-1.5">
           {unplaced.map((n) => (
@@ -114,7 +116,7 @@ function NodePalette() {
               className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 cursor-grab text-xs text-slate-700 hover:border-slate-300 hover:bg-white transition-colors"
             >
               <span className="text-slate-400">{PALETTE_ICONS[n.id]}</span>
-              {n.label}
+              {t.palette.nodes[n.id as keyof typeof t.palette.nodes]}
             </div>
           ))}
         </div>

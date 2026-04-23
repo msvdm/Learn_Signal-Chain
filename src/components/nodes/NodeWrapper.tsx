@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 import { levels } from '../../data/levels'
-import { theory } from '../../data/theory'
 import { TooltipPanel } from '../Tooltip'
 import { HelpCircle } from 'lucide-react'
 
@@ -18,9 +18,10 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
   const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
   const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
   const levelConfig = levels[level]
+  const { t } = useTranslation()
 
   const isInteractive = levelConfig.interactiveNodes.includes(nodeId)
-  const hasTooltip = Boolean(theory[nodeId])
+  const hasTooltip = Boolean(t.theory[nodeId])
 
   return (
     <div

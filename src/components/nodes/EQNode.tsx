@@ -6,6 +6,7 @@ import { SignalMeter } from '../SignalMeter'
 import { EQCurve } from '../EQCurve'
 import { useSignalChain } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 import { levels } from '../../data/levels'
 
 export function EQNode() {
@@ -16,14 +17,15 @@ export function EQNode() {
   const updateEQBand = useSignalStore((s) => s.updateEQBand)
   const levelConfig = levels[level]
   const [showCurve, setShowCurve] = useState(false)
+  const { t } = useTranslation()
 
-  const bandLabels = ['Low', 'Mid', 'High']
+  const bandLabels = [t.nodes.eq.bandLow, t.nodes.eq.bandMid, t.nodes.eq.bandHigh]
 
   return (
     <>
-      <NodeWrapper nodeId="eq" icon={<Activity size={14} />} label="Equalizer (EQ)">
+      <NodeWrapper nodeId="eq" icon={<Activity size={14} />} label={t.nodes.eq.label}>
         <div className="space-y-2">
-          <SignalMeter db={preamp.out} health={preamp.health} label="Input" />
+          <SignalMeter db={preamp.out} health={preamp.health} label={t.meters.input} />
 
           {levelConfig.eqMode === 'static' && (
             <div className="rounded-lg bg-slate-50 p-2">
@@ -36,7 +38,7 @@ export function EQNode() {
                   strokeWidth="1.5"
                 />
               </svg>
-              <p className="text-[10px] text-slate-400 text-center">EQ curve preview</p>
+              <p className="text-[10px] text-slate-400 text-center">{t.nodes.eq.curvePreview}</p>
             </div>
           )}
 
@@ -46,7 +48,7 @@ export function EQNode() {
                 value={nodeState.eqHpfHz}
                 min={20}
                 max={500}
-                label="High-pass filter"
+                label={t.nodes.eq.highPass}
                 formatValue={(v) => `${v} Hz`}
                 onChange={(v) => updateNodeState({ eqHpfHz: v })}
               />
@@ -70,11 +72,11 @@ export function EQNode() {
               className="nodrag w-full rounded-lg border border-slate-200 py-1.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               onClick={() => setShowCurve(true)}
             >
-              Open EQ Curve
+              {t.nodes.eq.openCurve}
             </button>
           )}
 
-          <SignalMeter db={eq.out} health={eq.health} label="Output" />
+          <SignalMeter db={eq.out} health={eq.health} label={t.meters.output} />
         </div>
         <Handle type="target" position={Position.Left} id="in" />
         <Handle type="source" position={Position.Right} id="out" />

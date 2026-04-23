@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { getHealthStyle, dbToPercent, formatDb } from '../hooks/useGainStaging'
+import { useTranslation } from '../i18n/useTranslation'
 import type { SignalHealth } from '../hooks/useSignalChain'
 
 interface SignalMeterProps {
@@ -12,6 +13,7 @@ interface SignalMeterProps {
 export function SignalMeter({ db, health, label, showValue = true }: SignalMeterProps) {
   const style = getHealthStyle(health)
   const pct = dbToPercent(db)
+  const { t } = useTranslation()
 
   return (
     <div className="flex flex-col gap-1">
@@ -36,7 +38,7 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
           <span className={`text-xs font-mono font-semibold ${style.textClass}`}>
             {formatDb(db)}
           </span>
-          <span className={`text-xs font-medium ${style.textClass}`}>{style.label}</span>
+          <span className={`text-xs font-medium ${style.textClass}`}>{t.health[health]}</span>
         </div>
       )}
     </div>
