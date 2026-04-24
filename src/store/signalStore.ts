@@ -16,6 +16,11 @@ function getInitialComplexityLevel(): ComplexityLevel {
   return 'beginner'
 }
 
+function defaultChainOrder(level: ComplexityLevel): string[] {
+  if (level === 'beginner') return ['mic', 'preamp', 'eq', 'comp', 'speaker']
+  return ['mic', 'preamp', 'eq', 'comp', 'fader', 'master', 'speaker']
+}
+
 export interface EQBand {
   freqHz: number
   gainDb: number
@@ -31,6 +36,19 @@ export interface NodeState {
   compMakeupGainDb: number
   faderDb: number
   masterTrimDb: number
+}
+
+export interface Send {
+  id: string
+  fromNodeId: string
+  busType: 'aux' | 'fx' | 'pfl'
+  sendLevelDb: number
+  busPosition: { x: number; y: number }
+}
+
+interface PlacingSend {
+  fromNodeId: string
+  busType: Send['busType']
 }
 
 export const DEFAULT_NODE_STATE: NodeState = {
@@ -49,11 +67,17 @@ export const DEFAULT_NODE_STATE: NodeState = {
   masterTrimDb: 0,
 }
 
+const PROTECTED_NODES = new Set(['mic', 'speaker'])
+
 interface SignalChainStore {
   language: Lang
   nodeState: NodeState
   activeTooltipId: string | null
   complexityLevel: ComplexityLevel
+  chainOrder: string[]
+  bypassedNodes: Set<string>
+  sends: Send[]
+  placingSend: PlacingSend | null
 
   setLanguage: (lang: Lang) => void
   updateNodeState: (patch: Partial<NodeState>) => void
@@ -61,6 +85,15 @@ interface SignalChainStore {
   setActiveTooltip: (id: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
   resetNodeState: () => void
+  insertNode: (nodeId: string, afterNodeId: string) => void
+  removeNode: (nodeId: string) => void
+  toggleBypassNode: (nodeId: string) => void
+  startPlacingSend: (fromNodeId: string, busType: Send['busType']) => void
+  placeSend: (canvasPos: { x: number; y: number }) => void
+  cancelSend: () => void
+  updateSendLevel: (sendId: string, levelDb: number) => void
+  updateBusPosition: (sendId: string, position: { x: number; y: number }) => void
+  removeSend: (sendId: string) => void
 }
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
@@ -68,6 +101,10 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   nodeState: { ...DEFAULT_NODE_STATE },
   activeTooltipId: null,
   complexityLevel: getInitialComplexityLevel(),
+  chainOrder: defaultChainOrder(getInitialComplexityLevel()),
+  bypassedNodes: new Set<string>(),
+  sends: [],
+  placingSend: null,
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
@@ -88,12 +125,87 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
-    set({ complexityLevel: level })
+    set({
+      complexityLevel: level,
+      chainOrder: defaultChainOrder(level),
+      bypassedNodes: new Set<string>(),
+      sends: [],
+      placingSend: null,
+      nodeState: { ...DEFAULT_NODE_STATE },
+      activeTooltipId: null,
+    })
   },
 
   resetNodeState: () =>
-    set({
+    set((s) => ({
       nodeState: { ...DEFAULT_NODE_STATE },
       activeTooltipId: null,
+      chainOrder: defaultChainOrder(s.complexityLevel),
+      bypassedNodes: new Set<string>(),
+      sends: [],
+      placingSend: null,
+    })),
+
+  insertNode: (nodeId, afterNodeId) =>
+    set((s) => {
+      if (s.chainOrder.includes(nodeId)) return {}
+      const idx = s.chainOrder.indexOf(afterNodeId)
+      if (idx === -1) return {}
+      const next = [...s.chainOrder]
+      next.splice(idx + 1, 0, nodeId)
+      return { chainOrder: next }
     }),
+
+  removeNode: (nodeId) =>
+    set((s) => {
+      if (PROTECTED_NODES.has(nodeId)) return {}
+      const next = s.chainOrder.filter((id) => id !== nodeId)
+      const nextBypassed = new Set(s.bypassedNodes)
+      nextBypassed.delete(nodeId)
+      return { chainOrder: next, bypassedNodes: nextBypassed }
+    }),
+
+  toggleBypassNode: (nodeId) =>
+    set((s) => {
+      if (PROTECTED_NODES.has(nodeId)) return {}
+      const next = new Set(s.bypassedNodes)
+      if (next.has(nodeId)) next.delete(nodeId)
+      else next.add(nodeId)
+      return { bypassedNodes: next }
+    }),
+
+  startPlacingSend: (fromNodeId, busType) =>
+    set({ placingSend: { fromNodeId, busType } }),
+
+  placeSend: (canvasPos) =>
+    set((s) => {
+      if (!s.placingSend) return {}
+      const send: Send = {
+        id: `send-${Date.now()}`,
+        fromNodeId: s.placingSend.fromNodeId,
+        busType: s.placingSend.busType,
+        sendLevelDb: 0,
+        busPosition: canvasPos,
+      }
+      return { sends: [...s.sends, send], placingSend: null }
+    }),
+
+  cancelSend: () => set({ placingSend: null }),
+
+  updateSendLevel: (sendId, levelDb) =>
+    set((s) => ({
+      sends: s.sends.map((send) =>
+        send.id === sendId ? { ...send, sendLevelDb: levelDb } : send
+      ),
+    })),
+
+  updateBusPosition: (sendId, position) =>
+    set((s) => ({
+      sends: s.sends.map((send) =>
+        send.id === sendId ? { ...send, busPosition: position } : send
+      ),
+    })),
+
+  removeSend: (sendId) =>
+    set((s) => ({ sends: s.sends.filter((send) => send.id !== sendId) })),
 }))

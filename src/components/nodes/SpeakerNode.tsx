@@ -7,18 +7,20 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { motion } from 'framer-motion'
 
-export function SpeakerNode() {
-  const { master } = useSignalChain()
+export function SpeakerNode({ id }: { id: string }) {
+  const { stages } = useSignalChain()
   const { t } = useTranslation()
-  const healthStyle = getHealthStyle(master.health)
 
-  const amplitude = Math.max(2, Math.min(18, ((master.out + 60) / 80) * 24))
-  const isClipping = master.health === 'clipping'
+  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const healthStyle = getHealthStyle(result.health)
+
+  const amplitude = Math.max(2, Math.min(18, ((result.out + 60) / 80) * 24))
+  const isClipping = result.health === 'clipping'
 
   return (
-    <NodeWrapper nodeId="speaker" icon={<Volume2 size={14} />} label={t.nodes.speaker.label}>
+    <NodeWrapper nodeId={id} icon={<Volume2 size={14} />} label={t.nodes.speaker.label}>
       <div className="space-y-2">
-        <SignalMeter db={master.out} health={master.health} label={t.nodes.speaker.signalIn} />
+        <SignalMeter db={result.out} health={result.health} label={t.nodes.speaker.signalIn} />
 
         {/* Waveform animation */}
         <div
@@ -52,10 +54,10 @@ export function SpeakerNode() {
             color: healthStyle.color,
           }}
         >
-          {master.health === 'good' && t.nodes.speaker.statusGood}
-          {master.health === 'hot' && t.nodes.speaker.statusHot}
-          {master.health === 'clipping' && t.nodes.speaker.statusClipping}
-          {master.health === 'too-quiet' && t.nodes.speaker.statusQuiet}
+          {result.health === 'good' && t.nodes.speaker.statusGood}
+          {result.health === 'hot' && t.nodes.speaker.statusHot}
+          {result.health === 'clipping' && t.nodes.speaker.statusClipping}
+          {result.health === 'too-quiet' && t.nodes.speaker.statusQuiet}
         </div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />

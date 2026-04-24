@@ -3,20 +3,23 @@ import { Zap } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useSignalChain } from '../../hooks/useSignalChain'
+import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
-export function PreampNode() {
-  const { mic, preamp } = useSignalChain()
+export function PreampNode({ id }: { id: string }) {
+  const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
 
+  const input = inputDb[id] ?? -Infinity
+  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+
   return (
-    <NodeWrapper nodeId="preamp" icon={<Zap size={14} />} label={t.nodes.preamp.label}>
+    <NodeWrapper nodeId={id} icon={<Zap size={14} />} label={t.nodes.preamp.label}>
       <div className="space-y-3">
-        <SignalMeter db={mic.out} health={mic.health} label={t.meters.input} />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         <div className="flex justify-center py-1">
           <KnobControl
@@ -31,7 +34,7 @@ export function PreampNode() {
           />
         </div>
 
-        <SignalMeter db={preamp.out} health={preamp.health} label={t.meters.output} />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="source" position={Position.Right} id="out" />

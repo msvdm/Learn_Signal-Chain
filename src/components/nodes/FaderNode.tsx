@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react'
 import { SlidersHorizontal } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useSignalChain } from '../../hooks/useSignalChain'
+import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { motion } from 'framer-motion'
@@ -14,18 +14,20 @@ const DB_MARKS = [
   { db: -40, label: '-40' },
 ]
 
-export function FaderNode() {
-  const { comp, fader } = useSignalChain()
+export function FaderNode({ id }: { id: string }) {
+  const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
 
+  const input = inputDb[id] ?? -Infinity
+  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const faderPct = ((nodeState.faderDb + 80) / 80) * 100
 
   return (
-    <NodeWrapper nodeId="fader" icon={<SlidersHorizontal size={14} />} label={t.nodes.fader.label}>
+    <NodeWrapper nodeId={id} icon={<SlidersHorizontal size={14} />} label={t.nodes.fader.label}>
       <div className="space-y-3">
-        <SignalMeter db={comp.out} health={comp.health} label={t.meters.input} />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         {/* Vertical fader */}
         <div className="nodrag flex items-center justify-center gap-4 py-1">
@@ -112,7 +114,7 @@ export function FaderNode() {
           </div>
         </div>
 
-        <SignalMeter db={fader.out} health={fader.health} label={t.meters.output} />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="source" position={Position.Right} id="out" />

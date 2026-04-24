@@ -83,6 +83,19 @@ export interface Translations {
     }
   }
   eqCurve: { title: string; subtitle: string; band: string }
+  nodeControls: {
+    bypass: string
+    bypassed: string
+    remove: string
+  }
+  chainMenu: {
+    insertTitle: string
+    sendTitle: string
+    auxBus: string
+    fxEngine: string
+    pflMonitor: string
+    allStagesInUse: string
+  }
   theory: Record<string, TheoryEntry>
 }
 
@@ -199,6 +212,19 @@ export const translations: Record<Lang, Translations> = {
       title: 'EQ Curve',
       subtitle: 'Drag the colored handles to shape the frequency response',
       band: 'Band',
+    },
+    nodeControls: {
+      bypass: 'Bypass',
+      bypassed: 'Bypassed — signal passes through unchanged',
+      remove: 'Remove from chain',
+    },
+    chainMenu: {
+      insertTitle: 'Insert',
+      sendTitle: 'Send',
+      auxBus: 'Aux Bus',
+      fxEngine: 'FX Engine',
+      pflMonitor: 'PFL Monitor',
+      allStagesInUse: 'All stages already in chain',
     },
     theory: {
       mic: {
@@ -353,6 +379,19 @@ export const translations: Record<Lang, Translations> = {
       title: 'EQ Крива',
       subtitle: 'Плъзни цветните дръжки, за да оформиш честотния отговор',
       band: 'Лента',
+    },
+    nodeControls: {
+      bypass: 'Байпас',
+      bypassed: 'Байпас — сигналът минава без промяна',
+      remove: 'Премахни от веригата',
+    },
+    chainMenu: {
+      insertTitle: 'Вмъкни',
+      sendTitle: 'Изпрати',
+      auxBus: 'Aux шина',
+      fxEngine: 'FX двигател',
+      pflMonitor: 'PFL монитор',
+      allStagesInUse: 'Всички елементи вече са в сигналната верига',
     },
     theory: {
       mic: {

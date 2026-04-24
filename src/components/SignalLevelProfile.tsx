@@ -1,6 +1,4 @@
 import { useSignalChain } from '../hooks/useSignalChain'
-import { useSignalStore } from '../store/signalStore'
-import { CHAIN_ORDER, getLevelNodes } from '../data/levels'
 import type { SignalHealth } from '../hooks/useSignalChain'
 
 const W = 900
@@ -42,23 +40,14 @@ interface StagePoint {
 }
 
 export function SignalLevelProfile() {
-  const chain = useSignalChain()
-  const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const { stages: stageMap, chainOrder } = useSignalChain()
 
-  const allStages: StagePoint[] = [
-    { id: 'mic',     label: STAGE_LABELS.mic,    db: chain.mic.out,    health: chain.mic.health },
-    { id: 'preamp',  label: STAGE_LABELS.preamp,  db: chain.preamp.out, health: chain.preamp.health },
-    { id: 'eq',      label: STAGE_LABELS.eq,      db: chain.eq.out,     health: chain.eq.health },
-    { id: 'comp',    label: STAGE_LABELS.comp,    db: chain.comp.out,   health: chain.comp.health },
-    { id: 'fader',   label: STAGE_LABELS.fader,   db: chain.fader.out,  health: chain.fader.health },
-    { id: 'master',  label: STAGE_LABELS.master,  db: chain.master.out, health: chain.master.health },
-    { id: 'speaker', label: STAGE_LABELS.speaker, db: chain.master.out, health: chain.master.health },
-  ]
-
-  const stages = CHAIN_ORDER
-    .filter((id) => getLevelNodes(complexityLevel).includes(id))
-    .map((id) => allStages.find((s) => s.id === id)!)
-    .filter(Boolean)
+  const stages: StagePoint[] = chainOrder.map((id) => ({
+    id,
+    label: STAGE_LABELS[id] ?? id,
+    db: stageMap[id]?.out ?? -Infinity,
+    health: stageMap[id]?.health ?? 'too-quiet',
+  }))
 
   const xPlotStart = PAD_LEFT
   const xPlotEnd = W - PAD_RIGHT

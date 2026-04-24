@@ -4,30 +4,34 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { CompressorCurve } from '../controls/CompressorCurve'
 import { SignalMeter } from '../SignalMeter'
-import { useSignalChain } from '../../hooks/useSignalChain'
+import { useSignalChain, getHealth, DEFAULT_COMP } from '../../hooks/useSignalChain'
+import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
 const RATIOS = [2, 4, 8, 100] as const
 const RATIO_LABELS: Record<number, string> = { 2: '2:1', 4: '4:1', 8: '8:1', 100: '∞:1' }
 
-export function CompressorNode() {
-  const { eq, comp } = useSignalChain()
+export function CompressorNode({ id }: { id: string }) {
+  const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
 
+  const input = inputDb[id] ?? -Infinity
+  const comp = (stages[id] as CompressorResult) ?? DEFAULT_COMP
+
   return (
-    <NodeWrapper nodeId="comp" icon={<Minimize2 size={14} />} label={t.nodes.comp.label}>
+    <NodeWrapper nodeId={id} icon={<Minimize2 size={14} />} label={t.nodes.comp.label}>
       <div className="space-y-3">
-        <SignalMeter db={eq.out} health={eq.health} label={t.meters.input} />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         <CompressorCurve
           thresholdDb={nodeState.compThresholdDb}
           ratio={nodeState.compRatio}
           makeupGainDb={nodeState.compMakeupGainDb}
           gainReductionDb={comp.gainReductionDb}
-          inputDb={eq.out}
+          inputDb={input}
           height={72}
         />
 
@@ -92,6 +96,7 @@ export function CompressorNode() {
         </div>
 
         <SignalMeter db={comp.out} health={comp.health} label={t.meters.output} />
+
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="source" position={Position.Right} id="out" />

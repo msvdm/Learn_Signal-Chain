@@ -6,16 +6,18 @@ import { useSignalChain } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
-export function MicrophoneNode() {
-  const { mic } = useSignalChain()
+export function MicrophoneNode({ id }: { id: string }) {
+  const { stages } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
 
+  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+
   return (
-    <NodeWrapper nodeId="mic" icon={<Mic size={14} />} label={t.nodes.mic.label}>
+    <NodeWrapper nodeId={id} icon={<Mic size={14} />} label={t.nodes.mic.label}>
       <div className="space-y-2">
-        <SignalMeter db={mic.out} health={mic.health} label={t.meters.output} />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
         <ControlSlider
           value={nodeState.micSensitivityDb}
           min={-70}

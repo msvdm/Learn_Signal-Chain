@@ -9,7 +9,7 @@ Advanced - all possible future elements and functions of a professional digital 
 Routing Madness - no rules, pure fun.
 
 
-### Stage 2:
+### ~~Stage 2~~ ✓ IMPLEMENTED (not fully tested):
 "Cursor hover over mode"
 Changes the function of the mouse cursor based on position on the page. 
 1. On the plain field - Drag tool - hand cursor - navigate the signal chain (the current default function)

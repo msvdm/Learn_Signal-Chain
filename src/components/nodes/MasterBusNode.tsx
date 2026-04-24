@@ -3,22 +3,25 @@ import { Layers } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useSignalChain } from '../../hooks/useSignalChain'
+import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
-export function MasterBusNode() {
-  const { fader, master } = useSignalChain()
+export function MasterBusNode({ id }: { id: string }) {
+  const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
   const { t } = useTranslation()
-  const healthStyle = getHealthStyle(master.health)
+
+  const input = inputDb[id] ?? -Infinity
+  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const healthStyle = getHealthStyle(result.health)
 
   return (
-    <NodeWrapper nodeId="master" icon={<Layers size={14} />} label={t.nodes.master.label}>
+    <NodeWrapper nodeId={id} icon={<Layers size={14} />} label={t.nodes.master.label}>
       <div className="space-y-3">
-        <SignalMeter db={fader.out} health={fader.health} label={t.meters.input} />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         <div className="flex justify-center py-1">
           <KnobControl
@@ -34,7 +37,7 @@ export function MasterBusNode() {
           />
         </div>
 
-        <SignalMeter db={master.out} health={master.health} label={t.meters.output} />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
 
         <div
           className="rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold"
@@ -44,10 +47,10 @@ export function MasterBusNode() {
             color: healthStyle.color,
           }}
         >
-          {master.health === 'good' && t.nodes.master.statusGood}
-          {master.health === 'hot' && t.nodes.master.statusHot}
-          {master.health === 'clipping' && t.nodes.master.statusClipping}
-          {master.health === 'too-quiet' && t.nodes.master.statusQuiet}
+          {result.health === 'good' && t.nodes.master.statusGood}
+          {result.health === 'hot' && t.nodes.master.statusHot}
+          {result.health === 'clipping' && t.nodes.master.statusClipping}
+          {result.health === 'too-quiet' && t.nodes.master.statusQuiet}
         </div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />
