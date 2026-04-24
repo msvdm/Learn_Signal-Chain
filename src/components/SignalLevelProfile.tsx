@@ -1,6 +1,6 @@
 import { useSignalChain } from '../hooks/useSignalChain'
 import { useSignalStore } from '../store/signalStore'
-import { CHAIN_ORDER } from '../data/levels'
+import { CHAIN_ORDER, getLevelNodes } from '../data/levels'
 import type { SignalHealth } from '../hooks/useSignalChain'
 
 const W = 900
@@ -43,7 +43,7 @@ interface StagePoint {
 
 export function SignalLevelProfile() {
   const chain = useSignalChain()
-  const unlockedNodes = useSignalStore((s) => s.unlockedNodes)
+  const complexityLevel = useSignalStore((s) => s.complexityLevel)
 
   const allStages: StagePoint[] = [
     { id: 'mic',     label: STAGE_LABELS.mic,    db: chain.mic.out,    health: chain.mic.health },
@@ -56,7 +56,7 @@ export function SignalLevelProfile() {
   ]
 
   const stages = CHAIN_ORDER
-    .filter((id) => unlockedNodes.includes(id))
+    .filter((id) => getLevelNodes(complexityLevel).includes(id))
     .map((id) => allStages.find((s) => s.id === id)!)
     .filter(Boolean)
 

@@ -15,10 +15,8 @@ interface NodeWrapperProps {
 export function NodeWrapper({ nodeId, icon, label, children, className = '' }: NodeWrapperProps) {
   const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
   const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
-  const unlockedNodes = useSignalStore((s) => s.unlockedNodes)
   const { t } = useTranslation()
 
-  const isInteractive = unlockedNodes.includes(nodeId)
   const hasTooltip = Boolean(t.theory[nodeId])
 
   return (
@@ -56,26 +54,9 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
       </div>
 
       {/* Content */}
-      <div className={`p-3 ${!isInteractive ? 'opacity-40 pointer-events-none' : ''}`}>
+      <div className="p-3">
         {children}
       </div>
-
-      {/* Locked overlay */}
-      {!isInteractive && (
-        <div
-          className="absolute inset-0"
-          style={{ borderRadius: 'var(--lsc-radius-lg)', background: 'rgba(250,248,243,0.55)' }}
-        >
-          <div className="flex h-full items-center justify-center">
-            <span
-              className="text-[10px] font-semibold tracking-wide"
-              style={{ color: 'var(--lsc-fg-dim)' }}
-            >
-              LOCKED
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Tooltip */}
       {hasTooltip && <TooltipPanel nodeId={nodeId} />}

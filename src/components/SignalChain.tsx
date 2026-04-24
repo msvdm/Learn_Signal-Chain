@@ -6,6 +6,7 @@ import {
   type Edge,
   type Node,
   BackgroundVariant,
+  MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -20,7 +21,7 @@ import { SpeakerNode } from './nodes/SpeakerNode'
 import { useSignalStore } from '../store/signalStore'
 import { useSignalChain, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle } from '../hooks/useGainStaging'
-import { CHAIN_ORDER } from '../data/levels'
+import { CHAIN_ORDER, getLevelNodes } from '../data/levels'
 
 // Node types must be defined outside the component to avoid re-registration
 const nodeTypes = {
@@ -70,13 +71,15 @@ function buildEdge(source: string, target: string, healthColor: string): Edge {
     id: `e-${source}-${target}`,
     source,
     target,
-    animated: true,
+    type: 'step',
+    animated: false,
+    markerEnd: { type: MarkerType.ArrowClosed, color: healthColor, width: 18, height: 18 },
     style: { stroke: healthColor, strokeWidth: 3 },
   }
 }
 
 export function SignalChain() {
-  const unlockedNodes = useSignalStore((s) => s.unlockedNodes)
+  const complexityLevel = useSignalStore((s) => s.complexityLevel)
   const chain = useSignalChain()
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -84,9 +87,9 @@ export function SignalChain() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_edges, _setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
-  // Filter to only unlocked nodes in chain order
+  // Filter to visible nodes for current level
   const displayNodes = CHAIN_ORDER
-    .filter((id) => unlockedNodes.includes(id))
+    .filter((id) => getLevelNodes(complexityLevel).includes(id))
     .map((id) => ALL_NODES.find((n) => n.id === id)!)
     .filter(Boolean)
 

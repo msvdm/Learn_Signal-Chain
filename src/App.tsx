@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { useSignalStore } from './store/signalStore'
+import type { ComplexityLevel } from './store/signalStore'
 import { useTranslation } from './i18n/useTranslation'
-import { JourneyBanner } from './components/JourneyBanner'
 import { SignalChain } from './components/SignalChain'
 import { SignalLevelProfile } from './components/SignalLevelProfile'
 import { RotateCcw, Radio, Settings } from 'lucide-react'
@@ -10,16 +10,34 @@ import type { Lang } from './i18n/translations'
 
 function App() {
   const language = useSignalStore((s) => s.language)
-  const resetJourney = useSignalStore((s) => s.resetJourney)
+  const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const setComplexityLevel = useSignalStore((s) => s.setComplexityLevel)
+  const resetNodeState = useSignalStore((s) => s.resetNodeState)
   const setLanguage = useSignalStore((s) => s.setLanguage)
-  const { t } = useTranslation()
+  const { t, fmt } = useTranslation()
 
   const [showSettings, setShowSettings] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
 
+  const LEVELS: { id: ComplexityLevel; label: string }[] = [
+    { id: 'beginner',        label: t.levels.beginner.title },
+    { id: 'intermediate',    label: t.levels.intermediate.title },
+    { id: 'advanced',        label: t.levels.advanced.title },
+    { id: 'routing-madness', label: t.levels['routing-madness'].title },
+  ]
+
   const handleReset = () => {
     const ok = window.confirm(t.app.resetConfirm)
-    if (ok) resetJourney()
+    if (ok) resetNodeState()
+  }
+
+  const handleLevelChange = (level: ComplexityLevel) => {
+    if (level === complexityLevel) return
+    const ok = window.confirm(fmt(t.levels.switchConfirm, { title: t.levels[level].title }))
+    if (ok) {
+      setComplexityLevel(level)
+      resetNodeState()
+    }
   }
 
   const handleLanguage = (lang: Lang) => {
@@ -41,10 +59,11 @@ function App() {
     <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)' }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-4 flex-shrink-0"
+        className="flex items-center justify-between px-4 flex-shrink-0 gap-4"
         style={{ height: 48, background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)' }}
       >
-        <div className="flex items-center gap-2.5">
+        {/* Left: Logo */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           <div
             className="rounded-lg flex items-center justify-center"
             style={{ padding: 6, background: 'var(--signal-good-bg)', color: 'var(--signal-good)' }}
@@ -61,7 +80,30 @@ function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Center: Level buttons */}
+        <div className="flex items-center gap-1">
+          {LEVELS.map(({ id, label }) => {
+            const active = complexityLevel === id
+            return (
+              <button
+                key={id}
+                onClick={() => handleLevelChange(id)}
+                className="rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
+                style={{
+                  border: `1px solid ${active ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                  background: active ? 'var(--lsc-accent-bg)' : 'transparent',
+                  color: active ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg-dim)',
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Right: Reset + Settings */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handleReset}
             className="rounded-lg flex items-center justify-center transition-colors"
@@ -130,9 +172,6 @@ function App() {
           </div>
         </div>
       </header>
-
-      {/* Journey goal banner */}
-      <JourneyBanner />
 
       {/* Main canvas */}
       <main className="flex-1 overflow-hidden min-h-0">

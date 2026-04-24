@@ -15,7 +15,11 @@ bun run lint     # ESLint check
 bun run preview  # Preview the production build locally
 ```
 
-No test suite exists yet. Manual browser testing against the verification checklist in the plan is the current approach.
+No test suite exists yet. Manual browser testing is the current approach.
+
+## Roadmap
+
+Planned features and their completion status are tracked in [TODO.md](TODO.md). Check it before starting any new feature work to understand what has already been implemented and what comes next.
 
 ## Architecture
 
@@ -37,20 +41,24 @@ Every slider change → updates `signalStore` → `useSignalChain` recomputes �
 
 | File | What it owns |
 |---|---|
-| `src/store/signalStore.ts` | All mutable state: slider positions, current level, active tooltip, tour index |
+| `src/store/signalStore.ts` | All mutable state: slider positions, complexity level, active tooltip, language |
 | `src/hooks/useSignalChain.ts` | Pure signal math — input dB in, output dB out for each stage. No side effects. |
 | `src/hooks/useGainStaging.ts` | Maps `SignalHealth` → CSS colour, label, background. No logic. |
-| `src/data/levels.ts` | Declares what is visible/interactive/draggable at each level. Change level behaviour here, not in components. |
-| `src/data/theory.ts` | All tooltip educational text (`what`, `why`, `tip` per node). Edit educational content here only. |
-| `src/components/SignalChain.tsx` | React Flow canvas. Owns node layout, edge colours, drag-to-canvas (Level 3), palette. |
-| `src/components/EQCurve.tsx` | SVG frequency response curve with draggable band handles (Level 4 only). |
-| `src/components/nodes/NodeWrapper.tsx` | Shared shell for all 7 nodes: header, locked overlay, tooltip trigger, `ControlSlider` primitive. |
+| `src/data/levels.ts` | `getLevelNodes(level)` — single source of truth for which nodes are visible per complexity level. |
+| `src/i18n/translations.ts` | All UI text and tooltip educational content (`theory` key). Edit copy here only. |
+| `src/components/SignalChain.tsx` | React Flow canvas. Owns node layout and edge colours. |
+| `src/components/EQCurve.tsx` | SVG frequency response curve with draggable band handles. |
+| `src/components/nodes/NodeWrapper.tsx` | Shared shell for all nodes: header, tooltip trigger, `ControlSlider` primitive. |
 
 ### Level system
 
-Levels are declared entirely in `src/data/levels.ts` as a `LevelConfig` object. A node becomes interactive when its id appears in `interactiveNodes[]`. `NodeWrapper` reads this and applies a locked overlay automatically — **node components do not check the level themselves**.
+The active complexity level is stored as `complexityLevel: ComplexityLevel` in `signalStore.ts`. The type is `'beginner' | 'intermediate' | 'advanced' | 'routing-madness'`, persisted to `localStorage`.
 
-EQ complexity is controlled by `eqMode: 'static' | 'sliders' | 'curve'` in the level config.
+`getLevelNodes(level)` in `src/data/levels.ts` returns the node IDs visible for that level:
+- **Beginner**: `mic → preamp → eq → comp → speaker` (5 nodes)
+- **Intermediate / Advanced / Routing Madness**: full 7-node chain (future stages add unique content)
+
+`SignalChain.tsx` and `SignalLevelProfile.tsx` call `getLevelNodes` to filter their displayed nodes. All visible nodes are fully interactive — there is no locked state. Level buttons in the header let the user switch; switching resets node sliders.
 
 ### Signal health zones
 
@@ -76,7 +84,7 @@ The math is intentionally simplified. It teaches the concept correctly without I
 
 - `nodeTypes` must be defined **outside** the component to avoid re-registration on every render.
 - All node components use the `nodrag` CSS class on interactive elements (sliders, buttons) so React Flow does not intercept drag events.
-- Edges in Levels 1–2 are computed directly from health colours, not stored in React Flow state. Levels 3–4 use `useEdgesState`.
+- Edges are computed directly from health colours, not stored in React Flow state.
 
 ### Adding a new node
 
@@ -84,7 +92,7 @@ The math is intentionally simplified. It teaches the concept correctly without I
 2. Add its id to `NODE_TYPE_MAP` and `nodeTypes` in `SignalChain.tsx`
 3. Add a signal computation function in `useSignalChain.ts`
 4. Add educational text in `theory.ts`
-5. Add to `levels.ts` `visibleNodes` / `interactiveNodes` as appropriate
+5. Add its id to `BEGINNER_NODES` and/or `FULL_NODES` in `levels.ts` as appropriate
 
 ### Adding a new level
 

@@ -16,10 +16,10 @@ export interface Translations {
     languages: { en: string; bg: string }
   }
   levels: {
-    1: { title: string; badge: string; description: string }
-    2: { title: string; badge: string; description: string }
-    3: { title: string; badge: string; description: string }
-    4: { title: string; badge: string; description: string }
+    beginner:          { title: string; description: string }
+    intermediate:      { title: string; description: string }
+    advanced:          { title: string; description: string }
+    'routing-madness': { title: string; description: string }
     switchConfirm: string
   }
   palette: {
@@ -97,25 +97,21 @@ export const translations: Record<Lang, Translations> = {
       languages: { en: 'English', bg: 'Български' },
     },
     levels: {
-      1: {
-        badge: 'Level 1',
-        title: 'Watch & Learn',
-        description: 'Follow the signal through a complete chain. Click each element to learn what it does.',
+      beginner: {
+        title: 'Beginner',
+        description: 'Simple chain: microphone → preamp → EQ → compressor → speaker.',
       },
-      2: {
-        badge: 'Level 2',
-        title: 'Adjust',
-        description: 'The chain is built. Move the controls and watch the signal change in real time.',
+      intermediate: {
+        title: 'Intermediate',
+        description: 'Full chain including channel fader and master bus.',
       },
-      3: {
-        badge: 'Level 3',
-        title: 'Build',
-        description: 'Drag elements from the palette onto the canvas and connect them in the correct order.',
+      advanced: {
+        title: 'Advanced',
+        description: 'Full chain with all processing stages.',
       },
-      4: {
-        badge: 'Level 4',
-        title: 'Experiment',
-        description: 'Full access. Reorder elements, try unusual configurations, break things and learn why.',
+      'routing-madness': {
+        title: 'Routing Madness',
+        description: 'No rules. Pure fun.',
       },
       switchConfirm: 'Switch to {title}? This will reset all controls to defaults.',
     },
@@ -253,32 +249,24 @@ export const translations: Record<Lang, Translations> = {
       languages: { en: 'English', bg: 'Български' },
     },
     levels: {
-      1: {
-        badge: 'Ниво 1',
-        title: 'Гледай и учи',
-        description:
-          'Следвай сигнала през цялата верига. Натисни всеки елемент, за да научиш какво прави.',
+      beginner: {
+        title: 'Начинаещ',
+        description: 'Проста верига: микрофон → предусилвател → EQ → компресор → говорител.',
       },
-      2: {
-        badge: 'Ниво 2',
-        title: 'Настройвай',
-        description:
-          'Веригата е изградена. Движи контролите и наблюдавай как се променя сигналът в реално време.',
+      intermediate: {
+        title: 'Средно ниво',
+        description: 'Пълна верига с канален фейдър и мастър бус.',
       },
-      3: {
-        badge: 'Ниво 3',
-        title: 'Изгради',
-        description:
-          'Плъзни елементите от палитрата върху платното и ги свържи в правилния ред.',
+      advanced: {
+        title: 'Напреднал',
+        description: 'Пълна верига с всички обработващи стъпала.',
       },
-      4: {
-        badge: 'Ниво 4',
-        title: 'Експериментирай',
-        description:
-          'Пълен достъп. Пренарежди елементите, пробвай необичайни конфигурации, счупи нещо и научи защо.',
+      'routing-madness': {
+        title: 'Луд Рутинг',
+        description: 'Без правила. Чисто забавление.',
       },
       switchConfirm:
-        'Превключване към {title}? Това ще нулира всички контроли към стойностите по подразбиране.',
+        'Превключване към {title}? Всички контроли ще се нулират.',
     },
     palette: {
       heading: 'Елементи',
