@@ -4,7 +4,6 @@ interface CompressorCurveProps {
   thresholdDb: number
   ratio: number
   makeupGainDb: number
-  gainReductionDb: number
   inputDb: number
   height?: number
 }
@@ -47,7 +46,6 @@ export function CompressorCurve({
   thresholdDb,
   ratio,
   makeupGainDb,
-  gainReductionDb,
   inputDb,
   height = 80,
 }: CompressorCurveProps) {
@@ -58,8 +56,6 @@ export function CompressorCurve({
   const nowOutputDb = computeOutput(nowInputDb, thresholdDb, ratio, makeupGainDb)
   const nowX = xToSvg(nowInputDb)
   const nowY = yToSvg(nowOutputDb)
-
-  void gainReductionDb
 
   return (
     <div className="rounded-md overflow-hidden" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>

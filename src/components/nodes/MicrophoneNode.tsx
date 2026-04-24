@@ -1,4 +1,3 @@
-import { Handle, Position } from '@xyflow/react'
 import { Mic } from 'lucide-react'
 import { NodeWrapper, ControlSlider } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
@@ -15,7 +14,7 @@ export function MicrophoneNode({ id }: { id: string }) {
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
   return (
-    <NodeWrapper nodeId={id} icon={<Mic size={14} />} label={t.nodes.mic.label}>
+    <NodeWrapper nodeId={id} icon={<Mic size={14} />} label={t.nodes.mic.label} hasTarget={false}>
       <div className="space-y-2">
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
         <ControlSlider
@@ -30,7 +29,6 @@ export function MicrophoneNode({ id }: { id: string }) {
           {t.nodes.mic.micInfo}
         </p>
       </div>
-      <Handle type="source" position={Position.Right} id="out" />
     </NodeWrapper>
   )
 }

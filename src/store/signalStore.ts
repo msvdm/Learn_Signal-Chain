@@ -16,9 +16,8 @@ function getInitialComplexityLevel(): ComplexityLevel {
   return 'beginner'
 }
 
-function defaultChainOrder(level: ComplexityLevel): string[] {
-  if (level === 'beginner') return ['mic', 'preamp', 'eq', 'comp', 'speaker']
-  return ['mic', 'preamp', 'eq', 'comp', 'fader', 'master', 'speaker']
+function defaultChainOrder(_level: ComplexityLevel): string[] {
+  return ['mic', 'preamp', 'fader', 'master-bus', 'master-fader']
 }
 
 export interface EQBand {
@@ -35,14 +34,16 @@ export interface NodeState {
   compRatio: 2 | 4 | 8 | 100
   compMakeupGainDb: number
   faderDb: number
-  masterTrimDb: number
+  masterFaderDb: number
+  outputGainDb: number
+  outputEqBands: EQBand[]
 }
 
 export interface Send {
   id: string
   fromNodeId: string
   busType: 'aux' | 'fx' | 'pfl'
-  sendLevelDb: number
+  faderDb: number
   busPosition: { x: number; y: number }
 }
 
@@ -64,10 +65,16 @@ export const DEFAULT_NODE_STATE: NodeState = {
   compRatio: 2,
   compMakeupGainDb: 0,
   faderDb: 0,
-  masterTrimDb: 0,
+  masterFaderDb: 0,
+  outputGainDb: 0,
+  outputEqBands: [
+    { freqHz: 200, gainDb: 0 },
+    { freqHz: 1000, gainDb: 0 },
+    { freqHz: 8000, gainDb: 0 },
+  ],
 }
 
-const PROTECTED_NODES = new Set(['mic', 'speaker'])
+const PROTECTED_NODES = new Set(['mic', 'preamp', 'fader', 'master-bus', 'master-fader'])
 
 interface SignalChainStore {
   language: Lang
@@ -82,6 +89,7 @@ interface SignalChainStore {
   setLanguage: (lang: Lang) => void
   updateNodeState: (patch: Partial<NodeState>) => void
   updateEQBand: (index: number, patch: Partial<EQBand>) => void
+  updateOutputEQBand: (index: number, patch: Partial<EQBand>) => void
   setActiveTooltip: (id: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
   resetNodeState: () => void
@@ -91,7 +99,7 @@ interface SignalChainStore {
   startPlacingSend: (fromNodeId: string, busType: Send['busType']) => void
   placeSend: (canvasPos: { x: number; y: number }) => void
   cancelSend: () => void
-  updateSendLevel: (sendId: string, levelDb: number) => void
+  updateBusFader: (sendId: string, faderDb: number) => void
   updateBusPosition: (sendId: string, position: { x: number; y: number }) => void
   removeSend: (sendId: string) => void
 }
@@ -119,6 +127,13 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       const bands = [...s.nodeState.eqBands]
       bands[index] = { ...bands[index], ...patch }
       return { nodeState: { ...s.nodeState, eqBands: bands } }
+    }),
+
+  updateOutputEQBand: (index, patch) =>
+    set((s) => {
+      const bands = [...s.nodeState.outputEqBands]
+      bands[index] = { ...bands[index], ...patch }
+      return { nodeState: { ...s.nodeState, outputEqBands: bands } }
     }),
 
   setActiveTooltip: (id) => set({ activeTooltipId: id }),
@@ -184,7 +199,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
         id: `send-${Date.now()}`,
         fromNodeId: s.placingSend.fromNodeId,
         busType: s.placingSend.busType,
-        sendLevelDb: 0,
+        faderDb: 0,
         busPosition: canvasPos,
       }
       return { sends: [...s.sends, send], placingSend: null }
@@ -192,10 +207,10 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   cancelSend: () => set({ placingSend: null }),
 
-  updateSendLevel: (sendId, levelDb) =>
+  updateBusFader: (sendId, faderDb) =>
     set((s) => ({
       sends: s.sends.map((send) =>
-        send.id === sendId ? { ...send, sendLevelDb: levelDb } : send
+        send.id === sendId ? { ...send, faderDb } : send
       ),
     })),
 

@@ -1,4 +1,3 @@
-import { Handle, Position } from '@xyflow/react'
 import { Minimize2 } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
@@ -30,7 +29,6 @@ export function CompressorNode({ id }: { id: string }) {
           thresholdDb={nodeState.compThresholdDb}
           ratio={nodeState.compRatio}
           makeupGainDb={nodeState.compMakeupGainDb}
-          gainReductionDb={comp.gainReductionDb}
           inputDb={input}
           height={72}
         />
@@ -98,8 +96,6 @@ export function CompressorNode({ id }: { id: string }) {
         <SignalMeter db={comp.out} health={comp.health} label={t.meters.output} />
 
       </div>
-      <Handle type="target" position={Position.Left} id="in" />
-      <Handle type="source" position={Position.Right} id="out" />
     </NodeWrapper>
   )
 }

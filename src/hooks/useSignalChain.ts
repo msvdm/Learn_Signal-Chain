@@ -63,8 +63,19 @@ function computeFader(input: number, state: NodeState): StageResult {
   return { out, health: getHealth(out) }
 }
 
-function computeMaster(input: number, state: NodeState): StageResult {
-  const out = input + state.masterTrimDb
+function computeMasterFader(input: number, state: NodeState): StageResult {
+  const out = input + state.masterFaderDb
+  return { out, health: getHealth(out) }
+}
+
+function computeOutputGain(input: number, state: NodeState): StageResult {
+  const out = input + state.outputGainDb
+  return { out, health: getHealth(out) }
+}
+
+function computeOutputEQ(input: number, state: NodeState): StageResult {
+  const bandSum = state.outputEqBands.reduce((acc, b) => acc + b.gainDb, 0)
+  const out = input + bandSum
   return { out, health: getHealth(out) }
 }
 
@@ -74,14 +85,17 @@ function computeNodeById(
   state: NodeState
 ): StageResult | CompressorResult {
   switch (nodeId) {
-    case 'mic':     return computeMic(state)
-    case 'preamp':  return computePreamp(input, state)
-    case 'eq':      return computeEQ(input, state)
-    case 'comp':    return computeCompressor(input, state)
-    case 'fader':   return computeFader(input, state)
-    case 'master':  return computeMaster(input, state)
-    case 'speaker': return { out: input, health: getHealth(input) }
-    default:        return { out: input, health: getHealth(input) }
+    case 'mic':           return computeMic(state)
+    case 'preamp':        return computePreamp(input, state)
+    case 'eq':            return computeEQ(input, state)
+    case 'comp':          return computeCompressor(input, state)
+    case 'fader':         return computeFader(input, state)
+    case 'master-bus':    return { out: input, health: getHealth(input) }
+    case 'master-fader':  return computeMasterFader(input, state)
+    case 'output-eq':     return computeOutputEQ(input, state)
+    case 'output-gain':   return computeOutputGain(input, state)
+    case 'speaker':       return { out: input, health: getHealth(input) }
+    default:              return { out: input, health: getHealth(input) }
   }
 }
 
@@ -101,31 +115,16 @@ function buildWarnings(
   const preamp = stages['preamp']
   const eq = stages['eq']
   const comp = stages['comp'] as CompressorResult | undefined
-  const master = stages['master']
+  const masterFader = stages['master-fader']
 
   if (preamp?.health === 'too-quiet') warns.push(w.preampTooQuiet)
   if (preamp?.health === 'clipping') warns.push(w.preampClipping)
   if (eq?.health === 'clipping') warns.push(w.eqClipping)
   if (comp != null && comp.gainReductionDb > 10)
     warns.push(fmt(w.heavyCompression, { amount: comp.gainReductionDb.toFixed(1) }))
-  if (master?.health === 'clipping') warns.push(w.masterClipping)
-  if (master?.health === 'too-quiet') warns.push(w.masterTooQuiet)
+  if (masterFader?.health === 'clipping') warns.push(w.masterClipping)
+  if (masterFader?.health === 'too-quiet') warns.push(w.masterTooQuiet)
   return warns
-}
-
-// Legacy export — kept for any non-hook callers. Uses full 7-node chain, no bypass.
-export function computeSignalChain(state: NodeState): Omit<SignalChainResult, 'warnings' | 'stages' | 'inputDb' | 'chainOrder'> & { warnings: string[] } {
-  const mic = computeMic(state)
-  const preamp = computePreamp(mic.out, state)
-  const eq = computeEQ(preamp.out, state)
-  const comp = computeCompressor(eq.out, state)
-  const fader = computeFader(comp.out, state)
-  const master = computeMaster(fader.out, state)
-
-  const partial = { mic, preamp, eq, comp, fader, master }
-  const overallHealth = worstHealth([mic, preamp, eq, comp, fader, master].map((s) => s.health))
-
-  return { ...partial, overallHealth, warnings: [] }
 }
 
 export function useSignalChain(): SignalChainResult {

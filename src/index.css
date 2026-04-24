@@ -10,7 +10,7 @@
   /* Core surfaces */
   --lsc-canvas:        #fbfaf7;
   --lsc-header:        #ffffff;
-  --lsc-node-bg:       #ffffff;
+  --lsc-node-bg:       #f0f0e6;
   --lsc-sunken:        #f5f3ee;
   --lsc-node-bg-2:     #faf8f3;
   --lsc-track:         #e6e2d8;
@@ -24,17 +24,17 @@
   --lsc-border-mute:   #f4f1e8;
 
   /* Text */
-  --lsc-fg:            #3a3532;
-  --lsc-fg-muted:      #5c544f;
-  --lsc-fg-dim:        #8a8278;
-  --lsc-fg-fainter:    #b5ac9f;
-  --lsc-fg-faint:      #d1c9bc;
+  --lsc-fg:            #000000;
+  --lsc-fg-muted:      #000000;
+  --lsc-fg-dim:        #000000;
+  --lsc-fg-fainter:    #000000;
+  --lsc-fg-faint:      #000000;
 
   /* Signal health */
   --signal-too-quiet:        #5b8de8;
   --signal-good:             #4fa876;
-  --signal-hot:              #d89548;
-  --signal-clipping:         #d86b6b;
+  --signal-hot:              #efd545;
+  --signal-clipping:         #fc0000;
   --signal-too-quiet-bg:     rgba(91,141,232,0.08);
   --signal-too-quiet-border: rgba(91,141,232,0.22);
   --signal-good-bg:          rgba(79,168,118,0.08);
@@ -197,6 +197,11 @@ body {
 .cursor-grab .react-flow__pane      { cursor: grab; }
 .cursor-crosshair .react-flow__pane { cursor: crosshair; }
 .cursor-default .react-flow__pane   { cursor: default; }
+
+/* React Flow sets cursor:grab on node wrappers — override since nodes are non-draggable */
+.react-flow__node { cursor: default; }
+.react-flow__node button,
+.react-flow__node input[type="range"] { cursor: pointer; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { height: 10px; width: 10px; }

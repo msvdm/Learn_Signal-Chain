@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
@@ -17,16 +17,20 @@ import { EQNode } from './nodes/EQNode'
 import { CompressorNode } from './nodes/CompressorNode'
 import { FaderNode } from './nodes/FaderNode'
 import { MasterBusNode } from './nodes/MasterBusNode'
+import { MasterFaderNode } from './nodes/MasterFaderNode'
+import { OutputEQNode } from './nodes/OutputEQNode'
+import { OutputGainNode } from './nodes/OutputGainNode'
 import { SpeakerNode } from './nodes/SpeakerNode'
 import { BusNode } from './nodes/BusNode'
-import { EdgeContextMenu } from './EdgeContextMenu'
+import { BusFaderNode } from './nodes/BusFaderNode'
+import { EndNode } from './nodes/EndNode'
+import { ChainEdge } from './ChainEdge'
 
 import { useSignalStore } from '../store/signalStore'
-import { useSignalChain } from '../hooks/useSignalChain'
+import { useSignalChain, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle } from '../hooks/useGainStaging'
-import { CHAIN_ORDER } from '../data/levels'
 
-// Node types must be defined outside the component to avoid re-registration
+// Must be defined outside component to avoid re-registration on every render
 const nodeTypes = {
   microphone: MicrophoneNode,
   preamp: PreampNode,
@@ -34,8 +38,17 @@ const nodeTypes = {
   compressor: CompressorNode,
   fader: FaderNode,
   masterBus: MasterBusNode,
+  masterFader: MasterFaderNode,
+  outputEq: OutputEQNode,
+  outputGain: OutputGainNode,
   speaker: SpeakerNode,
   bus: BusNode,
+  busFader: BusFaderNode,
+  end: EndNode,
+}
+
+const edgeTypes = {
+  chain: ChainEdge,
 }
 
 const NODE_TYPE_MAP: Record<string, string> = {
@@ -44,11 +57,14 @@ const NODE_TYPE_MAP: Record<string, string> = {
   eq: 'eq',
   comp: 'compressor',
   fader: 'fader',
-  master: 'masterBus',
+  'master-bus': 'masterBus',
+  'master-fader': 'masterFader',
+  'output-eq': 'outputEq',
+  'output-gain': 'outputGain',
   speaker: 'speaker',
 }
 
-const NODE_SPACING = 240
+const NODE_SPACING = 300
 
 function computeNodePositions(order: string[]): Record<string, number> {
   return Object.fromEntries(order.map((id, i) => [id, i * NODE_SPACING]))
@@ -68,16 +84,11 @@ function buildChainEdge(
     id: `e-${source}-${target}`,
     source,
     target,
-    type: 'step',
+    type: 'chain',
     animated: false,
     markerEnd: { type: MarkerType.ArrowClosed, color: markerColor, width: 18, height: 18 },
     style,
   }
-}
-
-interface EdgeMenuState {
-  edge: Edge
-  position: { x: number; y: number }
 }
 
 export function SignalChain() {
@@ -85,132 +96,143 @@ export function SignalChain() {
   const bypassedNodes     = useSignalStore((s) => s.bypassedNodes)
   const sends             = useSignalStore((s) => s.sends)
   const placingSend       = useSignalStore((s) => s.placingSend)
-  const insertNode        = useSignalStore((s) => s.insertNode)
-  const startPlacingSend  = useSignalStore((s) => s.startPlacingSend)
   const cancelSend        = useSignalStore((s) => s.cancelSend)
   const updateBusPosition = useSignalStore((s) => s.updateBusPosition)
   const { stages }        = useSignalChain()
 
-  const [hoverTarget, setHoverTarget] = useState<'pane' | 'node' | 'edge'>('pane')
-  const [edgeMenu, setEdgeMenu] = useState<EdgeMenuState | null>(null)
-  // Track viewport for screen→canvas coordinate conversion
   const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Nodes available to insert = known chain nodes not currently in the chain
-  const availableInserts = CHAIN_ORDER.filter((id) => !chainOrder.includes(id))
+  const displayNodes: Node[] = useMemo(() => {
+    const nodePositions = computeNodePositions(chainOrder)
+    const chainNodes: Node[] = chainOrder
+      .filter((id) => NODE_TYPE_MAP[id] !== undefined)
+      .map((id) => ({
+        id,
+        type: NODE_TYPE_MAP[id],
+        position: { x: nodePositions[id] ?? 0, y: 0 },
+        data: {},
+        draggable: false,
+      }))
 
-  const nodePositions = computeNodePositions(chainOrder)
+    if (!chainOrder.includes('speaker')) {
+      const lastId = chainOrder[chainOrder.length - 1]
+      const lastX = nodePositions[lastId] ?? 0
+      chainNodes.push({
+        id: '__end',
+        type: 'end' as const,
+        position: { x: lastX + NODE_SPACING, y: 0 },
+        data: {},
+        draggable: false,
+      })
+    }
 
-  // Main-chain nodes (non-draggable)
-  const chainNodes: Node[] = chainOrder
-    .filter((id) => NODE_TYPE_MAP[id] !== undefined)
-    .map((id) => ({
-      id,
-      type: NODE_TYPE_MAP[id],
-      position: { x: nodePositions[id] ?? 0, y: 0 },
-      data: {},
+    const busNodes: Node[] = sends.map((send) => ({
+      id: `bus-${send.id}`,
+      type: 'bus' as const,
+      position: send.busPosition,
+      data: { send },
+      draggable: true,
+    }))
+
+    const busFaderNodes: Node[] = sends.map((send) => ({
+      id: `bus-fader-${send.id}`,
+      type: 'busFader' as const,
+      position: { x: send.busPosition.x + 220, y: send.busPosition.y },
+      data: { send },
       draggable: false,
     }))
 
-  // Bus nodes (draggable, positioned wherever the user placed them)
-  const busNodes: Node[] = sends.map((send) => ({
-    id: `bus-${send.id}`,
-    type: 'bus' as const,
-    position: send.busPosition,
-    data: { send },
-    draggable: true,
-  }))
+    return [...chainNodes, ...busNodes, ...busFaderNodes]
+  }, [chainOrder, sends])
 
-  const displayNodes: Node[] = [...chainNodes, ...busNodes]
+  const displayEdges: Edge[] = useMemo(() => {
+    const chainEdges: Edge[] = []
+    for (let i = 0; i < chainOrder.length - 1; i++) {
+      const src = chainOrder[i]
+      const tgt = chainOrder[i + 1]
+      if (!NODE_TYPE_MAP[src] || !NODE_TYPE_MAP[tgt]) continue
+      const stage = stages[src]
+      const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-fg-fainter)'
+      chainEdges.push(buildChainEdge(src, tgt, healthColor, bypassedNodes.has(src)))
+    }
 
-  // Main-chain edges
-  const chainEdges: Edge[] = []
-  for (let i = 0; i < chainOrder.length - 1; i++) {
-    const src = chainOrder[i]
-    const tgt = chainOrder[i + 1]
-    if (!NODE_TYPE_MAP[src] || !NODE_TYPE_MAP[tgt]) continue
-    const stage = stages[src]
-    const healthColor = stage
-      ? getHealthStyle(stage.health).color
-      : 'var(--lsc-fg-fainter)'
-    chainEdges.push(buildChainEdge(src, tgt, healthColor, bypassedNodes.has(src)))
-  }
+    if (!chainOrder.includes('speaker') && chainOrder.length > 0) {
+      const lastId = chainOrder[chainOrder.length - 1]
+      chainEdges.push({
+        id: 'e-end',
+        source: lastId,
+        target: '__end',
+        animated: false,
+        style: { stroke: 'var(--lsc-border)', strokeDasharray: '5 3', strokeWidth: 2, opacity: 0.45 },
+      })
+    }
 
-  // Send edges (dashed, animated — from tap node to bus node)
-  const sendEdges: Edge[] = sends.map((send) => ({
-    id: `send-edge-${send.id}`,
-    source: send.fromNodeId,
-    target: `bus-${send.id}`,
-    type: 'step',
-    animated: true,
-    style: { stroke: 'var(--lsc-accent-soft)', strokeDasharray: '6 3', strokeWidth: 2 },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: 'var(--lsc-accent-soft)',
-      width: 14,
-      height: 14,
-    },
-  }))
+    const sendEdges: Edge[] = sends.map((send) => ({
+      id: `send-edge-${send.id}`,
+      source: send.fromNodeId,
+      target: `bus-${send.id}`,
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: 'var(--lsc-accent-soft)', strokeDasharray: '6 3', strokeWidth: 2 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: 'var(--lsc-accent-soft)',
+        width: 14,
+        height: 14,
+      },
+    }))
 
-  const displayEdges: Edge[] = [...chainEdges, ...sendEdges]
+    const busFaderEdges: Edge[] = sends.map((send) => {
+      const tapDb = stages[send.fromNodeId]?.out ?? -Infinity
+      const color = getHealthStyle(getHealth(tapDb)).color
+      return {
+        id: `bus-fader-edge-${send.id}`,
+        source: `bus-${send.id}`,
+        target: `bus-fader-${send.id}`,
+        animated: false,
+        style: { stroke: color, strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color, width: 14, height: 14 },
+      }
+    })
 
-  const cursorClass = placingSend
-    ? 'cursor-crosshair'
-    : ({ pane: 'cursor-grab', node: 'cursor-default', edge: 'cursor-crosshair' } as const)[hoverTarget]
+    return [...chainEdges, ...sendEdges, ...busFaderEdges]
+  }, [chainOrder, sends, stages, bypassedNodes])
 
   function handleNodesChange(changes: NodeChange<Node>[]) {
-    // Only handle position changes for draggable bus nodes
     for (const change of changes) {
-      if (change.type === 'position' && change.id.startsWith('bus-') && change.position) {
-        const sendId = change.id.slice(4) // remove 'bus-' prefix
-        updateBusPosition(sendId, change.position)
+      if (change.type === 'position' && change.id.startsWith('bus-') && !change.id.startsWith('bus-fader-') && change.position) {
+        updateBusPosition(change.id.slice(4), change.position)
       }
     }
-    // Apply changes to keep React Flow internal state in sync
-    // (React Flow needs this even for externally-controlled nodes)
     void applyNodeChanges(changes, displayNodes)
   }
 
-  function handleEdgeClick(event: React.MouseEvent, edge: Edge) {
-    if (edge.id.startsWith('send-edge-')) return
-    event.stopPropagation()
-    setEdgeMenu({ edge, position: { x: event.clientX, y: event.clientY } })
-  }
-
   function handlePaneClick(event: React.MouseEvent) {
-    if (placingSend) {
-      const rect = containerRef.current?.getBoundingClientRect()
-      if (rect) {
-        // Convert screen → canvas coordinates using tracked viewport transform
-        const canvasPos = {
-          x: (event.clientX - rect.left - viewport.x) / viewport.zoom,
-          y: (event.clientY - rect.top - viewport.y) / viewport.zoom,
-        }
-        useSignalStore.getState().placeSend(canvasPos)
-      }
-    } else {
-      setEdgeMenu(null)
+    if (!placingSend) return
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (rect) {
+      useSignalStore.getState().placeSend({
+        x: (event.clientX - rect.left - viewport.x) / viewport.zoom,
+        y: (event.clientY - rect.top - viewport.y) / viewport.zoom,
+      })
     }
   }
 
   return (
-    <div ref={containerRef} className={`w-full h-full ${cursorClass} relative`}>
-      {/* "Place bus" overlay hint */}
+    <div
+      ref={containerRef}
+      className={`w-full h-full relative ${placingSend ? 'cursor-crosshair' : 'cursor-grab'}`}
+    >
       {placingSend && (
         <div
           style={{
-            position: 'absolute',
-            top: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
             zIndex: 50,
             background: 'var(--lsc-node-bg)',
             border: '1px solid var(--lsc-border)',
             borderRadius: 'var(--lsc-radius-md)',
-            padding: '6px 14px',
-            fontSize: 12,
-            color: 'var(--lsc-fg-dim)',
+            padding: '6px 14px', fontSize: 12, color: 'var(--lsc-fg-dim)',
             pointerEvents: 'none',
             boxShadow: 'var(--lsc-shadow-popup)',
             whiteSpace: 'nowrap',
@@ -219,7 +241,7 @@ export function SignalChain() {
           Click anywhere to place the{' '}
           <strong style={{ color: 'var(--lsc-fg)' }}>
             {placingSend.busType === 'aux' ? 'Aux Bus'
-              : placingSend.busType === 'fx' ? 'FX Engine'
+              : placingSend.busType === 'fx' ? 'FX Bus'
               : 'PFL Monitor'}
           </strong>
           {' '}— press{' '}
@@ -232,18 +254,15 @@ export function SignalChain() {
         nodes={displayNodes}
         edges={displayEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
         onNodesChange={handleNodesChange}
-        onNodeMouseEnter={() => setHoverTarget('node')}
-        onNodeMouseLeave={() => setHoverTarget('pane')}
-        onEdgeMouseEnter={() => setHoverTarget('edge')}
-        onEdgeMouseLeave={() => setHoverTarget('pane')}
-        onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
         onMove={(_e, vp) => setViewport(vp)}
         onKeyDown={(e) => { if (e.key === 'Escape') cancelSend() }}
+        nodeOrigin={[0, 0.5]}
         fitView
         fitViewOptions={{ padding: 0.25 }}
         minZoom={0.2}
@@ -258,23 +277,6 @@ export function SignalChain() {
           color="var(--lsc-grid)"
         />
       </ReactFlow>
-
-      {edgeMenu && (
-        <EdgeContextMenu
-          edge={edgeMenu.edge}
-          position={edgeMenu.position}
-          availableInserts={availableInserts}
-          onInsert={(nodeId) => {
-            insertNode(nodeId, edgeMenu.edge.source)
-            setEdgeMenu(null)
-          }}
-          onSend={(busType) => {
-            startPlacingSend(edgeMenu.edge.source, busType)
-            setEdgeMenu(null)
-          }}
-          onClose={() => setEdgeMenu(null)}
-        />
-      )}
     </div>
   )
 }

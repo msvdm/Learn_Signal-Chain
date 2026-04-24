@@ -1,11 +1,13 @@
-import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { Handle, Position } from '@xyflow/react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
 import { HelpCircle, Power, X } from 'lucide-react'
 
-const PROTECTED_NODES = new Set(['mic', 'speaker'])
+const PROTECTED_NODES = new Set(['mic', 'preamp', 'fader', 'master-bus', 'master-fader'])
+
+const HANDLE_STYLE = { visibility: 'hidden' as const }
 
 interface NodeWrapperProps {
   nodeId: string
@@ -13,9 +15,11 @@ interface NodeWrapperProps {
   label: string
   children?: ReactNode
   className?: string
+  hasTarget?: boolean
+  hasSource?: boolean
 }
 
-export function NodeWrapper({ nodeId, icon, label, children, className = '' }: NodeWrapperProps) {
+export function NodeWrapper({ nodeId, icon, label, children, className = '', hasTarget = true, hasSource = true }: NodeWrapperProps) {
   const setActiveTooltip  = useSignalStore((s) => s.setActiveTooltip)
   const activeTooltipId   = useSignalStore((s) => s.activeTooltipId)
   const bypassedNodes     = useSignalStore((s) => s.bypassedNodes)
@@ -23,16 +27,13 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
   const removeNode        = useSignalStore((s) => s.removeNode)
   const { t }             = useTranslation()
 
-  const [hovered, setHovered] = useState(false)
-
   const isBypassed  = bypassedNodes.has(nodeId)
   const isProtected = PROTECTED_NODES.has(nodeId)
   const hasTooltip  = Boolean(t.theory[nodeId])
-  const showControls = hovered && !isProtected
 
   return (
     <div
-      className={`relative w-52 select-none ${className}`}
+      className={`relative w-52 select-none cursor-default ${className}`}
       style={{
         background: 'var(--lsc-node-bg)',
         border: `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
@@ -41,10 +42,12 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
           ? '0 0 0 2px var(--lsc-accent)'
           : 'var(--lsc-shadow-node)',
         transition: 'border-color 0.15s',
+        pointerEvents: 'auto',
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
+      {hasTarget && <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />}
+      {hasSource && <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />}
+
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2"
@@ -65,25 +68,26 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
           )}
         </div>
 
-        {/* Action buttons — visible on hover for non-protected nodes */}
+        {/* Action buttons */}
         <div className="flex items-center gap-1">
-          {showControls && (
+          {!isProtected && (
             <>
               <button
-                className="nodrag transition-colors rounded"
+                className="nodrag nopan transition-colors rounded"
                 title={isBypassed ? t.nodeControls?.bypassed ?? 'Bypassed' : t.nodeControls?.bypass ?? 'Bypass'}
                 style={{
                   color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg-fainter)',
                   padding: '1px 2px',
+                  cursor: 'pointer',
                 }}
                 onClick={() => toggleBypassNode(nodeId)}
               >
                 <Power size={12} />
               </button>
               <button
-                className="nodrag transition-colors rounded"
+                className="nodrag nopan transition-colors rounded"
                 title={t.nodeControls?.remove ?? 'Remove'}
-                style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px' }}
+                style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
                 onClick={() => removeNode(nodeId)}
@@ -94,8 +98,8 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '' }: N
           )}
           {hasTooltip && (
             <button
-              className="nodrag transition-colors"
-              style={{ color: 'var(--lsc-fg-dim)' }}
+              className="nodrag nopan transition-colors"
+              style={{ color: 'var(--lsc-fg-dim)', cursor: 'pointer' }}
               onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
             >
               <HelpCircle size={13} />
@@ -138,7 +142,7 @@ export function ControlSlider({
 }: SliderProps) {
   const display = formatValue ? formatValue(value) : String(value)
   return (
-    <div className={`nodrag space-y-1 ${className}`}>
+    <div className={`nodrag nopan space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
         <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>{label}</span>
         <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>
@@ -152,7 +156,7 @@ export function ControlSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="nodrag w-full h-1.5 appearance-none rounded-full cursor-pointer"
+        className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
         style={{ accentColor: 'var(--signal-good)', background: 'var(--lsc-track)' }}
       />
     </div>

@@ -3,7 +3,7 @@ import type { EQBand } from '../../store/signalStore'
 import {
   SVG_W, SVG_H, DB_LABELS, FREQ_LABELS,
   freqToX, xToFreq, dbToY, yToDb,
-  bellGain, buildCurvePath, BAND_COLORS, DB_MIN, DB_MAX,
+  buildCurvePath, BAND_COLORS, DB_MIN, DB_MAX,
 } from './eqMath'
 
 interface EQInlineGraphProps {
@@ -55,12 +55,6 @@ export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInl
   const handleMouseUp = useCallback(() => {
     draggingBand.current = null
   }, [])
-
-  const activeBandInfo = bands
-    .map((b, i) => ({ ...b, i }))
-    .filter((b) => b.gainDb !== 0 || bellGain(b.freqHz, b.freqHz, b.gainDb) !== 0)
-
-  void activeBandInfo
 
   return (
     <div className="nodrag rounded-md overflow-hidden" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>

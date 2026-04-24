@@ -1,12 +1,12 @@
-import { Zap } from 'lucide-react'
+import { Sliders } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
-import { KnobControl } from '../controls/KnobControl'
+import { VerticalFader } from '../controls/VerticalFader'
 import { SignalMeter } from '../SignalMeter'
 import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
-export function PreampNode({ id }: { id: string }) {
+export function MasterFaderNode({ id }: { id: string }) {
   const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
   const updateNodeState = useSignalStore((s) => s.updateNodeState)
@@ -16,22 +16,18 @@ export function PreampNode({ id }: { id: string }) {
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
   return (
-    <NodeWrapper nodeId={id} icon={<Zap size={14} />} label={t.nodes.preamp.label}>
+    <NodeWrapper nodeId={id} icon={<Sliders size={14} />} label="Master Fader">
       <div className="space-y-3">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
-        <div className="flex justify-center py-1">
-          <KnobControl
-            value={nodeState.preampGainDb}
-            min={0}
-            max={60}
-            label={t.nodes.preamp.gain}
-            formatValue={(v) => `+${v} dB`}
-            onChange={(v) => updateNodeState({ preampGainDb: v })}
-            color="var(--signal-good)"
-            size={56}
-          />
-        </div>
+        <VerticalFader
+          value={nodeState.masterFaderDb}
+          min={-80}
+          max={10}
+          step={1}
+          formatValue={(v) => (v <= -80 ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)}
+          onChange={(v) => updateNodeState({ masterFaderDb: v })}
+        />
 
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>

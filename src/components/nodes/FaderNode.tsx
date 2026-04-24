@@ -1,4 +1,3 @@
-import { Handle, Position } from '@xyflow/react'
 import { SlidersHorizontal } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
@@ -8,7 +7,8 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { motion } from 'framer-motion'
 
 const DB_MARKS = [
-  { db: 0, label: '0' },
+  { db: 10,  label: '+10' },
+  { db: 0,   label: '0'   },
   { db: -10, label: '-10' },
   { db: -20, label: '-20' },
   { db: -40, label: '-40' },
@@ -22,7 +22,7 @@ export function FaderNode({ id }: { id: string }) {
 
   const input = inputDb[id] ?? -Infinity
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const faderPct = ((nodeState.faderDb + 80) / 80) * 100
+  const faderPct = ((nodeState.faderDb + 80) / 90) * 100
 
   return (
     <NodeWrapper nodeId={id} icon={<SlidersHorizontal size={14} />} label={t.nodes.fader.label}>
@@ -85,11 +85,11 @@ export function FaderNode({ id }: { id: string }) {
             <input
               type="range"
               min={-80}
-              max={0}
+              max={10}
               step={1}
               value={nodeState.faderDb}
               onChange={(e) => updateNodeState({ faderDb: Number(e.target.value) })}
-              className="nodrag absolute inset-0 opacity-0 cursor-ns-resize w-full h-full"
+              className="nodrag nopan absolute inset-0 opacity-0 cursor-ns-resize w-full h-full"
               style={{
                 writingMode: 'vertical-lr',
                 direction: 'rtl',
@@ -116,8 +116,6 @@ export function FaderNode({ id }: { id: string }) {
 
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
-      <Handle type="target" position={Position.Left} id="in" />
-      <Handle type="source" position={Position.Right} id="out" />
     </NodeWrapper>
   )
 }

@@ -1,50 +1,37 @@
 import { Activity } from 'lucide-react'
-import { NodeWrapper, ControlSlider } from './NodeWrapper'
-import { SignalMeter } from '../SignalMeter'
+import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { EQInlineGraph } from '../controls/EQInlineGraph'
+import { SignalMeter } from '../SignalMeter'
 import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
 const BAND_COLORS = ['#6366f1', '#f59e0b', '#10b981']
 
-export function EQNode({ id }: { id: string }) {
+export function OutputEQNode({ id }: { id: string }) {
   const { stages, inputDb } = useSignalChain()
   const nodeState = useSignalStore((s) => s.nodeState)
-  const updateNodeState = useSignalStore((s) => s.updateNodeState)
-  const updateEQBand = useSignalStore((s) => s.updateEQBand)
+  const updateOutputEQBand = useSignalStore((s) => s.updateOutputEQBand)
   const { t } = useTranslation()
 
   const input = inputDb[id] ?? -Infinity
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
   return (
-    <NodeWrapper nodeId={id} icon={<Activity size={14} />} label={t.nodes.eq.label}>
+    <NodeWrapper nodeId={id} icon={<Activity size={14} />} label="Output EQ">
       <div className="space-y-3">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
-        {/* Inline EQ graph */}
         <EQInlineGraph
-          bands={nodeState.eqBands}
-          hpfHz={nodeState.eqHpfHz}
-          onBandChange={updateEQBand}
+          bands={nodeState.outputEqBands}
+          hpfHz={20}
+          onBandChange={updateOutputEQBand}
           height={80}
         />
 
-        {/* HPF slider */}
-        <ControlSlider
-          value={nodeState.eqHpfHz}
-          min={20}
-          max={500}
-          label={t.nodes.eq.highPass}
-          formatValue={(v) => `${v} Hz`}
-          onChange={(v) => updateNodeState({ eqHpfHz: v })}
-        />
-
-        {/* Band gain knobs */}
         <div className="flex justify-around py-1">
-          {nodeState.eqBands.map((band, i) => (
+          {nodeState.outputEqBands.map((band, i) => (
             <KnobControl
               key={i}
               value={band.gainDb}
@@ -53,7 +40,7 @@ export function EQNode({ id }: { id: string }) {
               step={0.5}
               label={`${band.freqHz >= 1000 ? `${band.freqHz / 1000}k` : band.freqHz}Hz`}
               formatValue={(v) => `${v >= 0 ? '+' : ''}${v}dB`}
-              onChange={(v) => updateEQBand(i, { gainDb: v })}
+              onChange={(v) => updateOutputEQBand(i, { gainDb: v })}
               color={BAND_COLORS[i]}
               size={44}
             />

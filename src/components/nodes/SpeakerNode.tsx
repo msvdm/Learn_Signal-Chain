@@ -1,4 +1,3 @@
-import { Handle, Position } from '@xyflow/react'
 import { Volume2 } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
@@ -18,7 +17,7 @@ export function SpeakerNode({ id }: { id: string }) {
   const isClipping = result.health === 'clipping'
 
   return (
-    <NodeWrapper nodeId={id} icon={<Volume2 size={14} />} label={t.nodes.speaker.label}>
+    <NodeWrapper nodeId={id} icon={<Volume2 size={14} />} label={t.nodes.speaker.label} hasSource={false}>
       <div className="space-y-2">
         <SignalMeter db={result.out} health={result.health} label={t.nodes.speaker.signalIn} />
 
@@ -60,7 +59,6 @@ export function SpeakerNode({ id }: { id: string }) {
           {result.health === 'too-quiet' && t.nodes.speaker.statusQuiet}
         </div>
       </div>
-      <Handle type="target" position={Position.Left} id="in" />
     </NodeWrapper>
   )
 }
