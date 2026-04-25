@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { useRef, useEffect } from 'react'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
@@ -29,18 +29,59 @@ export function VerticalFader({
   marks = DEFAULT_MARKS,
   height = 128,
 }: VerticalFaderProps) {
-  const pct = ((value - min) / (max - min)) * 100
+  const trackRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const valueRef = useRef(value)
+  valueRef.current = value
 
+  const pct = ((value - min) / (max - min)) * 100
   const displayValue = formatValue
     ? formatValue(value)
     : `${value >= 0 ? '+' : ''}${value} dB`
 
+  function computeValueFromPointer(clientY: number): number {
+    if (!trackRef.current) return valueRef.current
+    const rect = trackRef.current.getBoundingClientRect()
+    const relY = Math.max(0, Math.min(rect.height, clientY - rect.top))
+    const fraction = 1 - relY / rect.height
+    const raw = min + fraction * (max - min)
+    const stepped = Math.round(raw / step) * step
+    return Math.max(min, Math.min(max, stepped))
+  }
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!isDragging.current) return
+      onChange(computeValueFromPointer(e.clientY))
+    }
+    const onUp = () => { isDragging.current = false }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [min, max, step, onChange])
+
+  function handlePointerDown(e: React.PointerEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    isDragging.current = true
+    onChange(computeValueFromPointer(e.clientY))
+  }
+
   return (
-    <div className="nodrag flex items-center justify-center gap-4 py-1">
-      <div className="relative w-8 flex items-center justify-center" style={{ height }}>
+    <div className="nodrag nopan flex items-center justify-center gap-4 py-1">
+      <div
+        ref={trackRef}
+        className="relative w-8 flex items-center justify-center select-none"
+        style={{ height, touchAction: 'none', cursor: 'ns-resize' }}
+        onPointerDown={handlePointerDown}
+      >
         {/* Track */}
         <div
-          className="absolute w-2 h-full rounded-full"
+          className="absolute w-2 h-full rounded-full pointer-events-none"
           style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
         />
 
@@ -52,7 +93,7 @@ export function VerticalFader({
             const top = `${100 - markPct}%`
             const isUnity = db === 0
             return (
-              <div key={db} className="absolute w-full" style={{ top }}>
+              <div key={db} className="absolute w-full pointer-events-none" style={{ top }}>
                 <div
                   className="absolute h-px"
                   style={{
@@ -72,7 +113,7 @@ export function VerticalFader({
           })}
 
         {/* Fader cap */}
-        <motion.div
+        <div
           className="absolute z-10 rounded-sm pointer-events-none"
           style={{
             width: 28,
@@ -88,26 +129,7 @@ export function VerticalFader({
             className="absolute left-1/2 top-1/2 h-px"
             style={{ width: '60%', transform: 'translate(-50%,-50%)', background: 'var(--lsc-fg-faint)' }}
           />
-        </motion.div>
-
-        {/* Hidden range input */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="nodrag nopan absolute inset-0 opacity-0 cursor-ns-resize w-full h-full"
-          style={{
-            writingMode: 'vertical-lr',
-            direction: 'rtl',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            appearance: 'slider-vertical' as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            WebkitAppearance: 'slider-vertical' as any,
-          }}
-        />
+        </div>
       </div>
 
       {/* Value readout */}

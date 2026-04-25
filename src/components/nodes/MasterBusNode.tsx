@@ -1,20 +1,41 @@
 import { Network } from 'lucide-react'
+import { Handle, Position } from '@xyflow/react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useMultiChannelSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 
+const HANDLE_STYLE = { visibility: 'hidden' as const }
+
 export function MasterBusNode({ id }: { id: string }) {
   const { masterStages, masterInputDb } = useMultiChannelSignal()
-  const channelCount = useSignalStore((s) => s.channels.length)
+  const channels = useSignalStore((s) => s.channels)
   const result = masterStages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
-  const mixNote = channelCount === 1
+  const mixNote = channels.length === 1
     ? 'Single channel output'
-    : `${channelCount} channels mixing here`
+    : `${channels.length} channels mixing here`
 
   return (
-    <NodeWrapper nodeId={id} channelId="master" typeKey="master-bus" icon={<Network size={14} />} label="Master Bus">
+    // hasTarget={false} — we provide our own per-channel target handles below
+    // so each channel's line arrives at a distinct vertical position.
+    <NodeWrapper nodeId={id} channelId="master" typeKey="master-bus" icon={<Network size={14} />} label="Master Bus" hasTarget={false}>
+      {/* One hidden target handle per channel, spread across the left edge */}
+      {channels.map((ch, i) => {
+        const topPct = channels.length === 1
+          ? 50
+          : 10 + (i / (channels.length - 1)) * 80
+        return (
+          <Handle
+            key={ch.id}
+            id={ch.id}
+            type="target"
+            position={Position.Left}
+            style={{ ...HANDLE_STYLE, top: `${topPct}%` }}
+          />
+        )
+      })}
+
       <div className="space-y-3">
         <SignalMeter db={masterInputDb} health={result.health} label="Channels summed" />
         <div
@@ -22,7 +43,7 @@ export function MasterBusNode({ id }: { id: string }) {
           style={{ background: 'var(--lsc-sunken)', color: 'var(--lsc-fg-dim)' }}
         >
           {mixNote}
-          {channelCount > 1 && (
+          {channels.length > 1 && (
             <span className="block mt-0.5" style={{ color: 'var(--lsc-fg-fainter)' }}>
               Each doubling of channels adds ~3 dB
             </span>

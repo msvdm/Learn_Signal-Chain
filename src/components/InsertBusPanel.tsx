@@ -19,27 +19,20 @@ const BUS_OPTIONS: BusOption[] = [
   { type: 'matrix', icon: Network,    label: 'Matrix Out',  description: 'Secondary output routing' },
 ]
 
-// Stack buses vertically below master (aux/fx/pfl) or above (matrix).
-// zoneCount = total buses already in the same zone (above or below).
-function defaultBusPosition(
+// Returns a position RELATIVE to (masterX, masterY).
+// x:0 means same X column as master; y is an offset above/below.
+function defaultBusRelativeOffset(
   busType: BusType,
-  zoneCount: number,
-  masterX: number,
-  masterY: number
+  zoneCount: number
 ): { x: number; y: number } {
   const isAbove = busType === 'matrix'
   const y = isAbove
-    ? masterY - 340 - zoneCount * 230
-    : masterY + 340 + zoneCount * 230
-  return { x: masterX, y }
+    ? -340 - zoneCount * 230
+    : 340 + zoneCount * 230
+  return { x: 0, y }
 }
 
-interface InsertBusPanelProps {
-  masterX: number
-  masterY: number
-}
-
-export function InsertBusPanel({ masterX, masterY }: InsertBusPanelProps) {
+export function InsertBusPanel() {
   const [open, setOpen] = useState(false)
   const buses          = useSignalStore((s) => s.buses)
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
@@ -107,7 +100,6 @@ export function InsertBusPanel({ masterX, masterY }: InsertBusPanelProps) {
           </div>
           {visibleOptions.map(({ type, icon: Icon, label, description }) => {
             const { allowed, reason } = canAdd(type)
-            // Zone count = all buses in the same vertical zone (above/below master)
             const isAbove = type === 'matrix'
             const zoneCount = isAbove
               ? buses.filter((b) => b.busType === 'matrix').length
@@ -131,8 +123,7 @@ export function InsertBusPanel({ masterX, masterY }: InsertBusPanelProps) {
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 onClick={() => {
                   if (!allowed) return
-                  const pos = defaultBusPosition(type, zoneCount, masterX, masterY)
-                  addBus(type, pos)
+                  addBus(type, defaultBusRelativeOffset(type, zoneCount))
                   setOpen(false)
                 }}
               >

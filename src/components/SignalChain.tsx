@@ -107,21 +107,23 @@ export function SignalChain() {
   const updateBus   = useSignalStore((s) => s.updateBus)
   const { allStages } = useMultiChannelSignal()
 
-  const { masterX, masterY } = useMemo(() => buildLayout(channels), [channels])
+  const { masterX, masterY, maxColCount } = useMemo(() => buildLayout(channels), [channels])
 
   const displayNodes: Node[] = useMemo(() => {
-    const { masterX, masterY } = buildLayout(channels)
     const nodes: Node[] = []
 
-    // Channel rows
+    // Channel rows — right-aligned so the fader column is always the same X.
+    // Shorter chains get a left offset so their last node lines up with the
+    // last node of the longest chain (just before master).
     for (const ch of channels) {
+      const colOffset = maxColCount - ch.chainOrder.length
       ch.chainOrder.forEach((typeKey, colIndex) => {
         const rfType = CHANNEL_TYPE_MAP[typeKey]
         if (!rfType) return
         nodes.push({
           id: `${ch.id}:${typeKey}`,
           type: rfType,
-          position: { x: colIndex * H_SPACING, y: channels.indexOf(ch) * V_SPACING },
+          position: { x: (colOffset + colIndex) * H_SPACING, y: channels.indexOf(ch) * V_SPACING },
           data: {
             channelId: ch.id,
             typeKey,
@@ -148,19 +150,20 @@ export function SignalChain() {
       masterSectionX += H_SPACING
     }
 
-    // Bus nodes
+    // Bus nodes — position is stored relative to (masterX, masterY) so buses
+    // automatically follow the master section when the chain grows.
     for (const bus of buses) {
       nodes.push({
         id: `bus-${bus.id}`,
         type: 'bus',
-        position: bus.position,
+        position: { x: masterX + bus.position.x, y: masterY + bus.position.y },
         data: { bus },
         draggable: true,
       })
     }
 
     return nodes
-  }, [channels, buses])
+  }, [channels, buses, masterX, masterY, maxColCount])
 
   const displayEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = []
@@ -178,17 +181,20 @@ export function SignalChain() {
         edges.push(buildChainEdge(srcId, tgtId, healthColor, isBypassed))
       }
 
-      // Channel fader → master-bus (converging edge)
+      // Channel fader → master-bus: each channel gets its own target handle
+      // (handle ID = channelId) so the lines arrive at separate vertical
+      // positions on the master bus card instead of all merging at one point.
       const lastTypeKey = ch.chainOrder[ch.chainOrder.length - 1]
       const lastId = `${ch.id}:${lastTypeKey}`
       edges.push({
         id: `e-${lastId}-master-bus`,
         source: lastId,
         target: 'master-bus',
+        targetHandle: ch.id,
         type: 'smoothstep',
         animated: false,
         markerEnd: { type: MarkerType.ArrowClosed, color: ch.color, width: 16, height: 16 },
-        style: { stroke: ch.color, strokeWidth: 2, opacity: 0.75 },
+        style: { stroke: ch.color, strokeWidth: 2, opacity: 0.85 },
       })
     }
 
@@ -231,9 +237,15 @@ export function SignalChain() {
         change.id.startsWith('bus-') &&
         change.position
       ) {
-        // Extract bus ID (strip 'bus-' prefix)
+        // Store position relative to (masterX, masterY) so buses follow master
+        // when the channel chain length changes.
         const busId = change.id.slice(4)
-        updateBus(busId, { position: change.position })
+        updateBus(busId, {
+          position: {
+            x: change.position.x - masterX,
+            y: change.position.y - masterY,
+          },
+        })
       }
     }
     void applyNodeChanges(changes, displayNodes)
@@ -265,7 +277,7 @@ export function SignalChain() {
           color="var(--lsc-grid)"
         />
         <AddSourcePanel />
-        <InsertBusPanel masterX={masterX} masterY={masterY} />
+        <InsertBusPanel />
       </ReactFlow>
     </div>
   )
