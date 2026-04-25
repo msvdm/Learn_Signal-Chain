@@ -1,45 +1,44 @@
 import { Handle, Position } from '@xyflow/react'
-import { Radio, Volume2, Headphones, X } from 'lucide-react'
+import { Radio, Volume2, Headphones, Network, X, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
-import { useSignalChain } from '../../hooks/useSignalChain'
+import { useMultiChannelSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle, formatDb } from '../../hooks/useGainStaging'
 import { SignalMeter } from '../SignalMeter'
-import type { Send } from '../../store/signalStore'
+import { VerticalFader } from '../controls/VerticalFader'
+import { getHealth } from '../../hooks/useSignalChain'
+import type { Bus } from '../../store/signalStore'
 
-const BUS_ICONS = {
-  aux: Radio,
-  fx: Volume2,
-  pfl: Headphones,
-}
-
-const BUS_LABELS = {
-  aux: 'Aux Bus',
-  fx: 'FX Bus',
-  pfl: 'PFL Bus',
+const BUS_ICONS: Record<string, typeof Radio> = {
+  aux:    Radio,
+  fx:     Volume2,
+  pfl:    Headphones,
+  matrix: Network,
 }
 
 interface BusNodeProps {
-  data: { send: Send }
+  data: { bus: Bus }
 }
 
 export function BusNode({ data }: BusNodeProps) {
-  const { send } = data
-  const { stages } = useSignalChain()
-  const removeSend = useSignalStore((s) => s.removeSend)
+  const { bus } = data
+  const { busResults } = useMultiChannelSignal()
+  const removeBus = useSignalStore((s) => s.removeBus)
+  const updateBus = useSignalStore((s) => s.updateBus)
 
-  const tapStage = stages[send.fromNodeId]
-  const tapDb = tapStage?.out ?? -Infinity
-  const tapHealth = tapStage?.health ?? 'too-quiet'
-  const healthStyle = getHealthStyle(tapHealth)
+  const busResult = busResults[bus.id] ?? { inputDb: -Infinity, outputDb: -Infinity }
+  const inputDb   = busResult.inputDb
+  const outputDb  = busResult.outputDb
+  const inputHealth  = getHealth(inputDb)
+  const outputHealth = getHealth(outputDb)
+  const healthStyle  = getHealthStyle(outputHealth)
 
-  const Icon = BUS_ICONS[send.busType]
-  const label = BUS_LABELS[send.busType]
+  const Icon = BUS_ICONS[bus.busType] ?? Radio
 
   return (
     <div
-      className="select-none nodrag"
+      className="select-none"
       style={{
-        width: 168,
+        width: 192,
         background: 'var(--lsc-node-bg)',
         border: '1px solid var(--lsc-border)',
         borderRadius: 'var(--lsc-radius-lg)',
@@ -66,33 +65,80 @@ export function BusNode({ data }: BusNodeProps) {
         <div className="flex items-center gap-2" style={{ color: 'var(--lsc-fg-dim)' }}>
           <Icon size={13} />
           <span className="text-xs font-semibold" style={{ color: 'var(--lsc-fg)' }}>
-            {label}
+            {bus.label}
           </span>
         </div>
-        <button
-          className="nodrag transition-colors"
-          title="Remove send"
-          style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
-          onClick={() => removeSend(send.id)}
-        >
-          <X size={12} />
-        </button>
+        <div className="flex items-center gap-1">
+          {bus.busType !== 'pfl' && (
+            <button
+              className="nodrag nopan flex items-center gap-1 text-[9px] rounded px-1 py-0.5 transition-colors"
+              title={bus.isStereo ? 'Stereo — click for mono' : 'Mono — click for stereo'}
+              style={{
+                color: 'var(--lsc-fg-dim)',
+                background: 'var(--lsc-sunken)',
+                border: '1px solid var(--lsc-border)',
+                cursor: 'pointer',
+              }}
+              onClick={() => updateBus(bus.id, { isStereo: !bus.isStereo })}
+            >
+              {bus.isStereo
+                ? <><ToggleRight size={10} /> ST</>
+                : <><ToggleLeft size={10} /> MO</>
+              }
+            </button>
+          )}
+          <button
+            className="nodrag nopan transition-colors"
+            title="Remove bus"
+            style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
+            onClick={() => removeBus(bus.id)}
+          >
+            <X size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>Tap point</span>
-          <span
-            className="text-[10px] font-mono font-semibold"
-            style={{ color: healthStyle.color }}
-          >
-            {formatDb(tapDb)}
-          </span>
+      <div className="p-3 space-y-3">
+        {/* Input signal */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>Receives</span>
+            <span
+              className="text-[10px] font-mono font-semibold"
+              style={{ color: getHealthStyle(inputHealth).color }}
+            >
+              {formatDb(inputDb)}
+            </span>
+          </div>
+          <SignalMeter db={inputDb} health={inputHealth} showValue={false} />
         </div>
-        <SignalMeter db={tapDb} health={tapHealth} showValue={false} />
+
+        {/* Bus master fader */}
+        <VerticalFader
+          value={bus.faderDb}
+          min={-80}
+          max={10}
+          step={1}
+          formatValue={(v) => (v <= -80 ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)}
+          onChange={(v) => updateBus(bus.id, { faderDb: v })}
+        />
+
+        {/* Output signal */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>Output</span>
+            <span
+              className="text-[10px] font-mono font-semibold"
+              style={{ color: healthStyle.color }}
+            >
+              {formatDb(outputDb)}
+            </span>
+          </div>
+          <SignalMeter db={outputDb} health={outputHealth} showValue={false} />
+        </div>
       </div>
     </div>
   )

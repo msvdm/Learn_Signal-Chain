@@ -1,10 +1,12 @@
+import type { NodeProps, Node } from '@xyflow/react'
 import { SlidersHorizontal } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useSignalChain, getHealth } from '../../hooks/useSignalChain'
+import { useMultiChannelSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { motion } from 'framer-motion'
+import type { ChannelNodeData } from './nodeTypes'
 
 const DB_MARKS = [
   { db: 10,  label: '+10' },
@@ -14,18 +16,29 @@ const DB_MARKS = [
   { db: -40, label: '-40' },
 ]
 
-export function FaderNode({ id }: { id: string }) {
-  const { stages, inputDb } = useSignalChain()
-  const nodeState = useSignalStore((s) => s.nodeState)
-  const updateNodeState = useSignalStore((s) => s.updateNodeState)
+export function FaderNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
+  const { allStages, allInputDb } = useMultiChannelSignal()
+  const channel = useSignalStore((s) => s.channels.find((c) => c.id === data.channelId))
+  const updateChannelNodeState = useSignalStore((s) => s.updateChannelNodeState)
   const { t } = useTranslation()
 
-  const input = inputDb[id] ?? -Infinity
-  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const nodeState = channel?.nodeState
+  const input = allInputDb[id] ?? -Infinity
+  const result = allStages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+
+  if (!nodeState) return null
+
   const faderPct = ((nodeState.faderDb + 80) / 90) * 100
 
   return (
-    <NodeWrapper nodeId={id} icon={<SlidersHorizontal size={14} />} label={t.nodes.fader.label}>
+    <NodeWrapper
+      nodeId={id}
+      channelId={data.channelId}
+      typeKey="fader"
+      accentColor={data.color}
+      icon={<SlidersHorizontal size={14} />}
+      label={t.nodes.fader.label}
+    >
       <div className="space-y-3">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
@@ -88,7 +101,7 @@ export function FaderNode({ id }: { id: string }) {
               max={10}
               step={1}
               value={nodeState.faderDb}
-              onChange={(e) => updateNodeState({ faderDb: Number(e.target.value) })}
+              onChange={(e) => updateChannelNodeState(data.channelId, { faderDb: Number(e.target.value) })}
               className="nodrag nopan absolute inset-0 opacity-0 cursor-ns-resize w-full h-full"
               style={{
                 writingMode: 'vertical-lr',

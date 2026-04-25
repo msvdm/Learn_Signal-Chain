@@ -12,7 +12,7 @@ function App() {
   const language = useSignalStore((s) => s.language)
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
   const setComplexityLevel = useSignalStore((s) => s.setComplexityLevel)
-  const resetNodeState = useSignalStore((s) => s.resetNodeState)
+  const resetAll = useSignalStore((s) => s.resetAll)
   const setLanguage = useSignalStore((s) => s.setLanguage)
   const { t, fmt } = useTranslation()
 
@@ -28,7 +28,7 @@ function App() {
 
   const handleReset = () => {
     const ok = window.confirm(t.app.resetConfirm)
-    if (ok) resetNodeState()
+    if (ok) resetAll()
   }
 
   const handleLevelChange = (level: ComplexityLevel) => {
@@ -36,7 +36,6 @@ function App() {
     const ok = window.confirm(fmt(t.levels.switchConfirm, { title: t.levels[level].title }))
     if (ok) {
       setComplexityLevel(level)
-      resetNodeState()
     }
   }
 

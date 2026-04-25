@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import type { EdgeProps } from '@xyflow/react'
 import { getStraightPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react'
-import { Plus, ArrowUpRight } from 'lucide-react'
+import { Plus, ArrowUpRight, Radio, Volume2, Headphones, Network, Check } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import { CHAIN_ORDER } from '../data/levels'
+import { CHANNEL_NODE_ORDER } from '../data/levels'
+import type { BusType } from '../data/levels'
 
 const INSERT_LABELS: Record<string, string> = {
   preamp:        'Preamp / Gain',
@@ -15,33 +16,52 @@ const INSERT_LABELS: Record<string, string> = {
   'output-gain': 'Output Gain',
 }
 
+const BUS_ICONS: Record<BusType, typeof Radio> = {
+  aux:    Radio,
+  fx:     Volume2,
+  pfl:    Headphones,
+  matrix: Network,
+}
+
 export function ChainEdge({
   id, source, target, sourceX, sourceY, targetX, targetY, style, markerEnd,
 }: EdgeProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const insertNode       = useSignalStore((s) => s.insertNode)
-  const startPlacingSend = useSignalStore((s) => s.startPlacingSend)
-  const chainOrder       = useSignalStore((s) => s.chainOrder)
-  const complexityLevel  = useSignalStore((s) => s.complexityLevel)
-  const { t }            = useTranslation()
+  const buses           = useSignalStore((s) => s.buses)
+  const sends           = useSignalStore((s) => s.sends)
+  const addSend         = useSignalStore((s) => s.addSend)
+  const insertChannelNode = useSignalStore((s) => s.insertChannelNode)
+  const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const { t }           = useTranslation()
 
-  const BEGINNER_BLOCKED = new Set(['output-eq', 'output-gain'])
+  // Extract channelId and typeKeys from the edge source/target IDs
+  const channelId     = source.includes(':') ? source.split(':')[0] : 'master'
+  const srcTypeKey    = source.includes(':') ? source.split(':')[1] : source
+  const tgtTypeKey    = target?.includes(':') ? target.split(':')[1] : (target ?? '')
+
+  const channel = useSignalStore((s) => s.channels.find((c) => c.id === channelId))
 
   const [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY })
 
-  const srcPos = CHAIN_ORDER.indexOf(source)
-  const tgtPos = CHAIN_ORDER.indexOf(target ?? '')
-  const availableInserts = CHAIN_ORDER.filter((nid) =>
-    !chainOrder.includes(nid) &&
-    CHAIN_ORDER.indexOf(nid) > srcPos &&
-    CHAIN_ORDER.indexOf(nid) < tgtPos &&
-    !(BEGINNER_BLOCKED.has(nid) && complexityLevel === 'beginner')
-  )
+  const BEGINNER_BLOCKED = new Set(['output-eq', 'output-gain'])
 
-  // Nothing to insert and sends don't make sense before the first gain stage
-  const showSends = source !== 'mic'
+  // For channel edges: find insertable type-keys between source and target
+  const srcPos = CHANNEL_NODE_ORDER.indexOf(srcTypeKey)
+  const tgtPos = CHANNEL_NODE_ORDER.indexOf(tgtTypeKey)
+  const availableInserts = channel
+    ? CHANNEL_NODE_ORDER.filter((k) =>
+        !channel.chainOrder.includes(k) &&
+        CHANNEL_NODE_ORDER.indexOf(k) > srcPos &&
+        CHANNEL_NODE_ORDER.indexOf(k) < tgtPos &&
+        !(BEGINNER_BLOCKED.has(k) && complexityLevel === 'beginner')
+      )
+    : []
+
+  // Sends only make sense from channel nodes (not from the source node itself)
+  const showSends = channelId !== 'master' && srcTypeKey !== 'source'
+
   const canOpen = availableInserts.length > 0 || showSends
 
   useEffect(() => {
@@ -62,7 +82,8 @@ export function ChainEdge({
     color: 'var(--lsc-fg-dim)', background: 'var(--lsc-sunken)',
   }
   const itemStyle: React.CSSProperties = {
-    display: 'block', width: '100%',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    width: '100%',
     padding: '5px 12px',
     background: 'none', border: 'none', cursor: 'pointer',
     color: 'var(--lsc-fg)', textAlign: 'left', fontSize: 12,
@@ -89,48 +110,89 @@ export function ChainEdge({
                 border: '1px solid var(--lsc-border)',
                 borderRadius: 'var(--lsc-radius-md)',
                 boxShadow: 'var(--lsc-shadow-popup)',
-                minWidth: 170,
+                minWidth: 180,
                 overflow: 'hidden',
                 fontSize: 12,
                 color: 'var(--lsc-fg)',
               }}
             >
+              {/* Insert section — unchanged */}
               {availableInserts.length > 0 && (
                 <>
                   <div style={sectionStyle}>
                     <Plus size={9} /> {t.chainMenu.insertTitle}
                   </div>
-                  {availableInserts.map((nodeId) => (
+                  {availableInserts.map((typeKey) => (
                     <button
-                      key={nodeId}
+                      key={typeKey}
                       style={itemStyle}
                       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-                      onClick={() => { insertNode(nodeId, source); setOpen(false) }}
+                      onClick={() => {
+                        insertChannelNode(channelId, typeKey, srcTypeKey)
+                        setOpen(false)
+                      }}
                     >
-                      {INSERT_LABELS[nodeId] ?? nodeId}
+                      {INSERT_LABELS[typeKey] ?? typeKey}
                     </button>
                   ))}
                 </>
               )}
 
+              {/* Send to Bus section — bus picker */}
               {showSends && (
                 <>
                   {availableInserts.length > 0 && <div style={{ borderTop: '1px solid var(--lsc-border)' }} />}
                   <div style={sectionStyle}>
                     <ArrowUpRight size={9} /> {t.chainMenu.sendTitle}
                   </div>
-                  {(['aux', 'fx', 'pfl'] as const).map((busType) => (
-                    <button
-                      key={busType}
-                      style={itemStyle}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-                      onClick={() => { startPlacingSend(source, busType); setOpen(false) }}
+
+                  {buses.length === 0 ? (
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: 11,
+                        color: 'var(--lsc-fg-dim)',
+                        fontStyle: 'italic',
+                      }}
                     >
-                      {busType === 'aux' ? t.chainMenu.auxBus : busType === 'fx' ? t.chainMenu.fxEngine : t.chainMenu.pflMonitor}
-                    </button>
-                  ))}
+                      Add buses using the Insert Bus panel →
+                    </div>
+                  ) : (
+                    buses.map((bus) => {
+                      const alreadyConnected = sends.some(
+                        (s) => s.fromNodeId === source && s.busId === bus.id
+                      )
+                      const Icon = BUS_ICONS[bus.busType] ?? Radio
+                      return (
+                        <button
+                          key={bus.id}
+                          style={{
+                            ...itemStyle,
+                            opacity: alreadyConnected ? 0.5 : 1,
+                            cursor: alreadyConnected ? 'default' : 'pointer',
+                          }}
+                          disabled={alreadyConnected}
+                          onMouseEnter={(e) => {
+                            if (!alreadyConnected) e.currentTarget.style.background = 'var(--lsc-sunken)'
+                          }}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                          onClick={() => {
+                            if (!alreadyConnected) {
+                              addSend(source, bus.id)
+                              setOpen(false)
+                            }
+                          }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Icon size={11} style={{ color: 'var(--lsc-fg-dim)' }} />
+                            {bus.label}
+                          </span>
+                          {alreadyConnected && <Check size={10} style={{ color: 'var(--signal-good)' }} />}
+                        </button>
+                      )
+                    })
+                  )}
                 </>
               )}
             </div>
@@ -153,7 +215,7 @@ export function ChainEdge({
               }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderColor = 'var(--lsc-accent)' }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; e.currentTarget.style.borderColor = 'var(--lsc-border)' }}
-              title="Insert node or add send"
+              title="Insert node or connect to bus"
             >
               +
             </button>

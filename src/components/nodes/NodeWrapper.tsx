@@ -1,35 +1,54 @@
 import type { ReactNode } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useSignalStore } from '../../store/signalStore'
+import { useSignalStore, MASTER_PROTECTED } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
 import { HelpCircle, Power, X } from 'lucide-react'
-
-const PROTECTED_NODES = new Set(['mic', 'preamp', 'fader', 'master-bus', 'master-fader'])
 
 const HANDLE_STYLE = { visibility: 'hidden' as const }
 
 interface NodeWrapperProps {
   nodeId: string
+  channelId: string
+  typeKey?: string
   icon: ReactNode
   label: string
+  accentColor?: string
   children?: ReactNode
   className?: string
   hasTarget?: boolean
   hasSource?: boolean
 }
 
-export function NodeWrapper({ nodeId, icon, label, children, className = '', hasTarget = true, hasSource = true }: NodeWrapperProps) {
-  const setActiveTooltip  = useSignalStore((s) => s.setActiveTooltip)
-  const activeTooltipId   = useSignalStore((s) => s.activeTooltipId)
-  const bypassedNodes     = useSignalStore((s) => s.bypassedNodes)
-  const toggleBypassNode  = useSignalStore((s) => s.toggleBypassNode)
-  const removeNode        = useSignalStore((s) => s.removeNode)
-  const { t }             = useTranslation()
+export function NodeWrapper({
+  nodeId,
+  channelId,
+  typeKey,
+  icon,
+  label,
+  accentColor,
+  children,
+  className = '',
+  hasTarget = true,
+  hasSource = true,
+}: NodeWrapperProps) {
+  const setActiveTooltip         = useSignalStore((s) => s.setActiveTooltip)
+  const activeTooltipId          = useSignalStore((s) => s.activeTooltipId)
+  const toggleBypassChannelNode  = useSignalStore((s) => s.toggleBypassChannelNode)
+  const removeChannelNode        = useSignalStore((s) => s.removeChannelNode)
+  const { t }                    = useTranslation()
 
-  const isBypassed  = bypassedNodes.has(nodeId)
-  const isProtected = PROTECTED_NODES.has(nodeId)
-  const hasTooltip  = Boolean(t.theory[nodeId])
+  // Determine bypass state
+  const channel = useSignalStore((s) => s.channels.find((c) => c.id === channelId))
+  const effectiveTypeKey = typeKey ?? ''
+  const isBypassed = channel ? channel.bypassedNodes.has(effectiveTypeKey) : false
+
+  // A node is protected if it's a master-section node or a channel source node
+  const isMasterNode = MASTER_PROTECTED.has(nodeId)
+  const isSourceNode = effectiveTypeKey === 'source'
+  const isProtected  = isMasterNode || isSourceNode
+
+  const hasTooltip = Boolean(t.theory[typeKey ?? nodeId])
 
   return (
     <div
@@ -37,6 +56,9 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '', has
       style={{
         background: 'var(--lsc-node-bg)',
         border: `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
+        borderLeft: accentColor
+          ? `3px solid ${isBypassed ? 'var(--signal-hot)' : accentColor}`
+          : `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
         borderRadius: 'var(--lsc-radius-lg)',
         boxShadow: activeTooltipId === nodeId
           ? '0 0 0 2px var(--lsc-accent)'
@@ -47,6 +69,10 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '', has
     >
       {hasTarget && <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />}
       {hasSource && <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />}
+      {/* Send-tap handle: bottom-center, used by send edges so they branch off the chain below the card */}
+      {hasSource && channelId !== 'master' && (
+        <Handle id="send-tap" type="source" position={Position.Bottom} style={HANDLE_STYLE} />
+      )}
 
       {/* Header */}
       <div
@@ -74,13 +100,13 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '', has
             <>
               <button
                 className="nodrag nopan transition-colors rounded"
-                title={isBypassed ? t.nodeControls?.bypassed ?? 'Bypassed' : t.nodeControls?.bypass ?? 'Bypass'}
+                title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
                 style={{
                   color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg-fainter)',
                   padding: '1px 2px',
                   cursor: 'pointer',
                 }}
-                onClick={() => toggleBypassNode(nodeId)}
+                onClick={() => toggleBypassChannelNode(channelId, effectiveTypeKey)}
               >
                 <Power size={12} />
               </button>
@@ -90,7 +116,7 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '', has
                 style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
-                onClick={() => removeNode(nodeId)}
+                onClick={() => removeChannelNode(channelId, effectiveTypeKey)}
               >
                 <X size={12} />
               </button>
@@ -114,7 +140,7 @@ export function NodeWrapper({ nodeId, icon, label, children, className = '', has
       </div>
 
       {/* Tooltip */}
-      {hasTooltip && <TooltipPanel nodeId={nodeId} />}
+      {hasTooltip && <TooltipPanel nodeId={typeKey ?? nodeId} />}
     </div>
   )
 }
