@@ -9,7 +9,7 @@ Advanced - all possible future elements and functions of a professional digital 
 Routing Madness - no rules, pure fun.
 
 
-### ~~Stage 2~~ ✓ IMPLEMENTED (not fully tested):
+### ~~Stage 2~~ ✓ DONE:
 "Cursor hover over mode"
 Changes the function of the mouse cursor based on position on the page. 
 1. On the plain field - Drag tool - hand cursor - navigate the signal chain (the current default function)
@@ -18,9 +18,27 @@ Changes the function of the mouse cursor based on position on the page.
 
 !!!Mouse scroll must always work as zoom tool! No change depending on hovering!!!
 
-### Stage 3:
+### ~~Stage 3~~ ✓ DONE (not fully tested):
 "Multi channel"
 Add a "Add Source" button on the top left of the map that opens a few option for adding a channel to the signal chain. Line, Instrument, Mic. Add the new source below the previous and re-scale the whole map to make it understandable and not let things overlap, cross in weird ways. Give me some examples on what is possible here.
+For now the app must support this theoretical maximum:
+8 mic/line/instr inputs
+ - 1 for beginner
+ - 2 for intermediate
+ - 8 for advanced
+1 master bus 
+6 aux buses with mono/stereo button on the card
+ - 1 for beginner
+ - 2 for intermediate
+ - 6 for advanced 
+4 FX engines
+ - 0 for beginner
+ - 1 for intermediate
+ - 4 for advanced
+
+2 matrix output busses for advanced mode only
+1 USB interface for recording and playback for advanced mode only
+In general the end goal is to get to a full mixer layout
 
 ### Task 4:
 "Signal across the chain"
