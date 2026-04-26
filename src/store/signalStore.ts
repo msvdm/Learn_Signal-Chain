@@ -1,7 +1,12 @@
 import { create } from 'zustand'
 import type { Lang } from '../i18n/translations'
-import { LEVEL_LIMITS, CHANNEL_COLORS } from '../data/levels'
+import { LEVEL_LIMITS, CHANNEL_COLORS, buildDefaultGraph, H_SPACING, V_SPACING } from '../data/levels'
 import type { BusType } from '../data/levels'
+import type { NodeParamValue } from '../data/nodeRegistry'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
+
+// Re-export graph types so components only need one import location.
+export type { SignalNode, SignalEdge, NodeParamValue } from '../data/nodeRegistry'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced' | 'routing-madness'
 export type SourceType = 'mic' | 'line' | 'instrument'
@@ -163,12 +168,40 @@ interface SignalChainStore {
   addSend: (fromNodeId: string, busId: string) => void
   removeSend: (sendId: string) => void
   updateSendLevel: (sendId: string, sendLevelDb: number) => void
+
+  // ── Phase 2+ graph model ──────────────────────────────────────────────────
+  // Flat nodes[] + edges[] — the authoritative model for the new architecture.
+  // Coexists with the old model during migration; replaces it in Phase 3.
+
+  nodes: import('../data/nodeRegistry').SignalNode[]
+  edges: import('../data/nodeRegistry').SignalEdge[]
+
+  // Basic graph mutations
+  addNode: (node: import('../data/nodeRegistry').SignalNode) => void
+  removeNode: (nodeId: string) => void
+  updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
+  toggleBypassNode: (nodeId: string) => void
+  addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
+  removeEdge: (edgeId: string) => void
+
+  // Compound: insert a new node on an existing edge (splits the edge in two).
+  // Shifts all nodes at x >= target.x rightward by H_SPACING to make room.
+  insertNodeOnEdge: (edgeId: string, typeKey: string, extraParams?: Record<string, NodeParamValue>) => void
+
+  // High-level helpers (used by AddSourcePanel / InsertBusPanel in Phase 3)
+  addInputChannel: (sourceType: SourceType) => void
+  addBusNode: (busType: BusType) => void
 }
 
 // Protected node type-keys within a channel — source cannot be removed, only the channel itself
 const CHANNEL_PROTECTED = new Set(['source'])
 // Globally protected master node IDs — speaker is always the final output, never removable
 const MASTER_PROTECTED = new Set(['master-bus', 'master-fader', 'speaker'])
+
+function getInitialGraph() {
+  return buildDefaultGraph(getInitialComplexityLevel())
+}
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
@@ -180,6 +213,8 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   masterChainOrder: ['master-bus', 'master-fader', 'speaker'],
   buses: [],
   sends: [],
+
+  ...getInitialGraph(),
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
@@ -198,6 +233,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       buses: [],
       sends: [],
       activeTooltipId: null,
+      ...buildDefaultGraph(level),
     })
   },
 
@@ -210,6 +246,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       sends: [],
       activeTooltipId: null,
       complexityLevel: s.complexityLevel,
+      ...buildDefaultGraph(s.complexityLevel),
     })),
 
   // ── Channel management ────────────────────────────────────────────────────
@@ -384,6 +421,214 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
         send.id === sendId ? { ...send, sendLevelDb } : send
       ),
     })),
+
+  // ── Graph actions ─────────────────────────────────────────────────────────
+
+  addNode: (node) =>
+    set((s) => ({ nodes: [...s.nodes, node] })),
+
+  removeNode: (nodeId) =>
+    set((s) => ({
+      nodes: s.nodes.filter((n) => n.id !== nodeId),
+      edges: s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+    })),
+
+  updateNodeParams: (nodeId, patch) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n
+      ),
+    })),
+
+  updateNodePosition: (nodeId, position) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === nodeId ? { ...n, position } : n
+      ),
+    })),
+
+  toggleBypassNode: (nodeId) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === nodeId ? { ...n, bypassed: !n.bypassed } : n
+      ),
+    })),
+
+  addEdge: (edge) =>
+    set((s) => ({ edges: [...s.edges, edge] })),
+
+  removeEdge: (edgeId) =>
+    set((s) => ({ edges: s.edges.filter((e) => e.id !== edgeId) })),
+
+  insertNodeOnEdge: (edgeId, typeKey, extraParams = {}) =>
+    set((s) => {
+      const edge = s.edges.find((e) => e.id === edgeId)
+      if (!edge) return {}
+
+      const sourceNode = s.nodes.find((n) => n.id === edge.source)
+      const targetNode = s.nodes.find((n) => n.id === edge.target)
+      if (!sourceNode || !targetNode) return {}
+
+      const def = NODE_REGISTRY[typeKey]
+      if (!def) return {}
+
+      const newX = sourceNode.position.x + H_SPACING
+      const newY = sourceNode.position.y
+
+      const newId = `${typeKey}-${Date.now()}`
+      const newNode = {
+        id: newId,
+        typeKey,
+        position: { x: newX, y: newY },
+        params: { ...def.defaultParams, ...extraParams },
+        bypassed: false,
+        draggable: def.category === 'source' || def.category === 'sink' || typeKey === 'bus',
+        label: def.label,
+        color: sourceNode.color,
+      }
+
+      // Shift non-draggable nodes that were at or beyond the target position
+      const shiftedNodes = s.nodes.map((n) => {
+        if (n.draggable) return n // buses and endpoints stay put
+        if (n.position.x >= newX && n.id !== sourceNode.id) {
+          return { ...n, position: { ...n.position, x: n.position.x + H_SPACING } }
+        }
+        return n
+      })
+
+      const inPortId = def.inputs[0]?.id ?? 'in'
+      const outPortId = def.outputs[0]?.id ?? 'out'
+
+      const filteredEdges = s.edges.filter((e) => e.id !== edgeId)
+      const edgeA = {
+        id: `e-${edge.source}-${newId}`,
+        source: edge.source,
+        sourceHandle: edge.sourceHandle,
+        target: newId,
+        targetHandle: inPortId,
+      }
+      const edgeB = {
+        id: `e-${newId}-${edge.target}`,
+        source: newId,
+        sourceHandle: outPortId,
+        target: edge.target,
+        targetHandle: edge.targetHandle,
+      }
+
+      return {
+        nodes: [...shiftedNodes, newNode],
+        edges: [...filteredEdges, edgeA, edgeB],
+      }
+    }),
+
+  addInputChannel: (sourceType) =>
+    set((s) => {
+      const limits = LEVEL_LIMITS[s.complexityLevel]
+      // Count existing source nodes
+      const existingSources = s.nodes.filter((n) =>
+        n.typeKey === 'mic' || n.typeKey === 'line-in' || n.typeKey === 'instrument'
+      )
+      if (existingSources.length >= limits.maxInputChannels) return {}
+
+      const channelIdx = existingSources.length
+      const color = CHANNEL_COLORS[channelIdx % CHANNEL_COLORS.length]
+      const y = channelIdx * V_SPACING
+      const ts = Date.now()
+
+      const typeKey = sourceType === 'mic' ? 'mic' : sourceType === 'line' ? 'line-in' : 'instrument'
+      const defaultSensitivity = sourceType === 'mic' ? -60 : sourceType === 'line' ? -10 : -30
+
+      const newMic: import('../data/nodeRegistry').SignalNode = {
+        id: `${typeKey}-${channelIdx + 1}`,
+        typeKey,
+        position: { x: 0, y },
+        params: sourceType === 'mic' ? { sensitivityDb: defaultSensitivity } : { levelDb: defaultSensitivity },
+        bypassed: false,
+        draggable: true,
+        label: typeKey === 'mic' ? 'Microphone' : typeKey === 'line-in' ? 'Line Input' : 'Instrument',
+        color,
+      }
+
+      const newNodes: import('../data/nodeRegistry').SignalNode[] = [newMic]
+      const newEdges: import('../data/nodeRegistry').SignalEdge[] = []
+
+      // In intermediate+, connect mic → gain → fader → master-bus
+      const masterBus = s.nodes.find((n) => n.id === 'master-bus')
+      if (masterBus) {
+        const gainId = `gain-${ts}`
+        const faderId = `fader-ch-${ts}`
+        newNodes.push(
+          {
+            id: gainId,
+            typeKey: 'gain',
+            position: { x: H_SPACING, y },
+            params: { gainDb: 40 },
+            bypassed: false,
+            draggable: false,
+            label: 'Preamp',
+            color,
+          },
+          {
+            id: faderId,
+            typeKey: 'fader',
+            position: { x: H_SPACING * 2, y },
+            params: { faderDb: 0 },
+            bypassed: false,
+            draggable: false,
+            label: 'Channel Fader',
+            color,
+          }
+        )
+        const channelHandleId = `in-${channelIdx + 1}`
+        newEdges.push(
+          { id: `e-${newMic.id}-${gainId}`, source: newMic.id, sourceHandle: 'out', target: gainId, targetHandle: 'in' },
+          { id: `e-${gainId}-${faderId}`, source: gainId, sourceHandle: 'out', target: faderId, targetHandle: 'in' },
+          { id: `e-${faderId}-mbus`, source: faderId, sourceHandle: 'out', target: 'master-bus', targetHandle: channelHandleId }
+        )
+      }
+
+      return {
+        nodes: [...s.nodes, ...newNodes],
+        edges: [...s.edges, ...newEdges],
+      }
+    }),
+
+  addBusNode: (busType) =>
+    set((s) => {
+      const limits = LEVEL_LIMITS[s.complexityLevel]
+      const existingBuses = s.nodes.filter((n) => n.typeKey === 'bus' && n.params.busType === busType)
+
+      if (busType === 'aux' && existingBuses.length >= limits.maxAuxBuses) return {}
+      if (busType === 'fx' && existingBuses.length >= limits.maxFxEngines) return {}
+      if (busType === 'pfl' && existingBuses.length >= limits.maxPflBuses) return {}
+      if (busType === 'matrix' && !limits.hasMatrixBuses) return {}
+
+      const masterBus = s.nodes.find((n) => n.id === 'master-bus')
+      const refX = masterBus ? masterBus.position.x : H_SPACING * 3
+      const refY = masterBus ? masterBus.position.y : 0
+
+      const busNum = existingBuses.length + 1
+      const labels: Record<BusType, string> = {
+        aux: `Aux ${busNum}`, fx: `FX ${busNum}`, pfl: 'PFL', matrix: `Matrix ${busNum}`,
+      }
+
+      // Aux/FX below master-bus, matrix above
+      const yOffset = busType === 'matrix'
+        ? -(existingBuses.length + 1) * V_SPACING
+        : (existingBuses.length + 1) * V_SPACING
+
+      const newBus: import('../data/nodeRegistry').SignalNode = {
+        id: `bus-${Date.now()}`,
+        typeKey: 'bus',
+        position: { x: refX, y: refY + yOffset },
+        params: { faderDb: 0, isStereo: busType !== 'pfl', busType },
+        bypassed: false,
+        draggable: true,
+        label: labels[busType],
+      }
+
+      return { nodes: [...s.nodes, newBus] }
+    }),
 }))
 
 // ── Backward-compat exports (used by some components during migration) ────────
