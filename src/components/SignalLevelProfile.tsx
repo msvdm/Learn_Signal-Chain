@@ -62,15 +62,8 @@ export function SignalLevelProfile() {
   return (
     <div
       className="flex-shrink-0"
-      style={{ borderTop: '1px solid var(--lsc-border)', background: 'var(--lsc-header)' }}
+      style={{ background: 'var(--lsc-header)' }}
     >
-      <div
-        className="flex items-center justify-between"
-        style={{ padding: '8px 24px 0', fontSize: 11, color: 'var(--lsc-fg-dim)' }}
-      >
-        <span style={{ fontWeight: 600, color: 'var(--lsc-fg)' }}>Signal level across the chain</span>
-        <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 10 }}>dBu</span>
-      </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"

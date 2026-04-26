@@ -5,7 +5,7 @@ import type { ComplexityLevel } from './store/signalStore'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { SignalLevelProfile } from './components/SignalLevelProfile'
-import { RotateCcw, Radio, Settings } from 'lucide-react'
+import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 
 function App() {
@@ -17,6 +17,7 @@ function App() {
   const { t, fmt } = useTranslation()
 
   const [showSettings, setShowSettings] = useState(false)
+  const [showSignalProfile, setShowSignalProfile] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
 
   const LEVELS: { id: ComplexityLevel; label: string }[] = [
@@ -179,8 +180,35 @@ function App() {
         </ReactFlowProvider>
       </main>
 
-      {/* Signal level profile graph */}
-      <SignalLevelProfile />
+      {/* Signal level profile drawer */}
+      <div
+        className="flex-shrink-0 transition-all duration-200 ease-out"
+        style={{
+          maxHeight: showSignalProfile ? 220 : 36,
+          overflow: 'hidden',
+          borderTop: '1px solid var(--lsc-border)',
+        }}
+      >
+        {/* Drawer toggle button */}
+        <button
+          onClick={() => setShowSignalProfile((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-1.5 transition-colors"
+          style={{
+            background: 'var(--lsc-header)',
+            color: 'var(--lsc-fg-dim)',
+            cursor: 'pointer',
+            border: 'none',
+          }}
+        >
+          <span style={{ fontWeight: 600, fontSize: 11 }}>Signal level across the chain</span>
+          {showSignalProfile ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </button>
+
+        {/* Drawer content */}
+        <div style={{ padding: '0 0 8px' }}>
+          <SignalLevelProfile />
+        </div>
+      </div>
     </div>
   )
 }
