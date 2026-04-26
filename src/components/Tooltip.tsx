@@ -40,19 +40,19 @@ export function TooltipPanel({ nodeId }: TooltipProps) {
       />
 
       <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold leading-tight" style={{ color: 'var(--lsc-fg)' }}>
+        <h3 className="text-sm font-semibold leading-tight" style={{ color: 'var(--lsc-text)' }}>
           {nodeLabel}
         </h3>
         <button
           onClick={() => setActiveTooltip(null)}
           className="flex-shrink-0 transition-colors"
-          style={{ color: 'var(--lsc-fg-dim)' }}
+          style={{ color: 'var(--lsc-text)' }}
         >
           <X size={14} />
         </button>
       </div>
 
-      <div className="space-y-2 text-xs" style={{ color: 'var(--lsc-fg)' }}>
+      <div className="space-y-2 text-xs" style={{ color: 'var(--lsc-text)' }}>
         <div>
           <span className="lsc-overline">{t.tooltip.whatIsThis}</span>
           <p className="mt-0.5 leading-relaxed" style={{ fontSize: 11 }}>{entry.what}</p>

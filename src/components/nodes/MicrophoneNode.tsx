@@ -38,7 +38,7 @@ export function MicrophoneNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
           formatValue={(v) => `${v} dBu`}
           onChange={(v) => updateChannelNodeState(data.channelId, { micSensitivityDb: v })}
         />
-        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           {t.nodes.mic.micInfo}
         </p>
       </div>

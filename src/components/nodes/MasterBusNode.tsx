@@ -40,11 +40,11 @@ export function MasterBusNode({ id }: { id: string }) {
         <SignalMeter db={masterInputDb} health={result.health} label="Channels summed" />
         <div
           className="rounded-lg px-2 py-2 text-center text-[10px]"
-          style={{ background: 'var(--lsc-sunken)', color: 'var(--lsc-fg-dim)' }}
+          style={{ background: 'var(--lsc-sunken)', color: 'var(--lsc-text)' }}
         >
           {mixNote}
           {channels.length > 1 && (
-            <span className="block mt-0.5" style={{ color: 'var(--lsc-fg-fainter)' }}>
+            <span className="block mt-0.5" style={{ color: 'var(--lsc-text)' }}>
               Each doubling of channels adds ~3 dB
             </span>
           )}

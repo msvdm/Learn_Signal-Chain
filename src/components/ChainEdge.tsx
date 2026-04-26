@@ -90,14 +90,14 @@ export function ChainEdge({
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '5px 10px 3px',
     fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-    color: 'var(--lsc-fg-dim)', background: 'var(--lsc-sunken)',
+    color: 'var(--lsc-text)', background: 'var(--lsc-sunken)',
   }
   const itemStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     width: '100%',
     padding: '5px 12px',
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--lsc-fg)', textAlign: 'left', fontSize: 12,
+    color: 'var(--lsc-text)', textAlign: 'left', fontSize: 12,
   }
 
   return (
@@ -124,7 +124,7 @@ export function ChainEdge({
                 minWidth: 180,
                 overflow: 'hidden',
                 fontSize: 12,
-                color: 'var(--lsc-fg)',
+                color: 'var(--lsc-text)',
               }}
             >
               {/* Channel inserts */}
@@ -187,7 +187,7 @@ export function ChainEdge({
                       style={{
                         padding: '8px 12px',
                         fontSize: 11,
-                        color: 'var(--lsc-fg-dim)',
+                        color: 'var(--lsc-text)',
                         fontStyle: 'italic',
                       }}
                     >
@@ -220,7 +220,7 @@ export function ChainEdge({
                           }}
                         >
                           <span className="flex items-center gap-2">
-                            <Icon size={11} style={{ color: 'var(--lsc-fg-dim)' }} />
+                            <Icon size={11} style={{ color: 'var(--lsc-text)' }} />
                             {bus.label}
                           </span>
                           {alreadyConnected && <Check size={10} style={{ color: 'var(--signal-good)' }} />}
@@ -240,7 +240,7 @@ export function ChainEdge({
                 borderRadius: '50%',
                 background: 'var(--lsc-node-bg)',
                 border: '1.5px solid var(--lsc-border)',
-                color: 'var(--lsc-fg-dim)',
+                color: 'var(--lsc-text)',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, lineHeight: 1,

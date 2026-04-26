@@ -68,7 +68,7 @@ function HPFCurve({ cutoffHz }: { cutoffHz: number }) {
         <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="var(--lsc-sunken)" />
         {/* 0 dB reference line at top */}
         <line x1={0} y1={TOP_Y} x2={SVG_W} y2={TOP_Y}
-          stroke="var(--lsc-fg-fainter)" strokeWidth={1} />
+          stroke="var(--lsc-text)" strokeWidth={1} />
         {/* Fill under the curve — shows the signal that passes through */}
         <path
           d={`${curvePath} L ${SVG_W},${BOT_Y} L 0,${BOT_Y} Z`}

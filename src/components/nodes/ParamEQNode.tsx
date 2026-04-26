@@ -37,7 +37,7 @@ function ShelfToggle({
         borderRadius: 4,
         border: `1px solid ${isShelf ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
         background: isShelf ? 'var(--lsc-accent)' : 'transparent',
-        color: isShelf ? '#fff' : 'var(--lsc-fg-dim)',
+        color: isShelf ? '#fff' : 'var(--lsc-text)',
         cursor: 'pointer',
         transition: 'all 0.12s',
       }}
@@ -276,7 +276,7 @@ function AdvancedView({
         onBandChange={(i, patch) => updateBand(i, patch)}
         height={72}
       />
-      <div className="text-[9px] text-center" style={{ color: 'var(--lsc-fg-fainter)' }}>
+      <div className="text-[9px] text-center" style={{ color: 'var(--lsc-text)' }}>
         Drag handles on graph · Bell = peak boost/cut · Shelf = tilt all highs or lows
       </div>
 

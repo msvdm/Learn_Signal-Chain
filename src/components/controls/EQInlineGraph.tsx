@@ -77,7 +77,7 @@ export function EQInlineGraph({ bands, hpfHz = 20, onBandChange, height = 80 }: 
           <line
             key={db}
             x1={0} y1={dbToY(db)} x2={SVG_W} y2={dbToY(db)}
-            stroke={db === 0 ? 'var(--lsc-fg-fainter)' : 'var(--lsc-border-mute)'}
+            stroke={db === 0 ? 'var(--lsc-text)' : 'var(--lsc-border-mute)'}
             strokeWidth={db === 0 ? 1.5 : 1}
           />
         ))}

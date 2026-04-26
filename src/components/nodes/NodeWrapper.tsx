@@ -85,9 +85,9 @@ export function NodeWrapper({
         className="flex items-center justify-between px-3 py-2"
         style={{ borderBottom: '1px solid var(--lsc-border)' }}
       >
-        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-text)' }}>
           <span>{icon}</span>
-          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-fg)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-text)' }}>
             {label}
           </span>
           {isBypassed && (
@@ -109,7 +109,7 @@ export function NodeWrapper({
                   className="nodrag nopan transition-colors rounded"
                   title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
                   style={{
-                    color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg-fainter)',
+                    color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-text)',
                     padding: '1px 2px',
                     cursor: 'pointer',
                   }}
@@ -121,9 +121,9 @@ export function NodeWrapper({
               <button
                 className="nodrag nopan transition-colors rounded"
                 title={t.nodeControls?.remove ?? 'Remove'}
-                style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
+                style={{ color: 'var(--lsc-text)', padding: '1px 2px', cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
                 onClick={() => {
                   if (isMasterSection) removeMasterNode(nodeId)
                   else removeChannelNode(channelId, effectiveTypeKey)
@@ -136,7 +136,7 @@ export function NodeWrapper({
           {hasTooltip && (
             <button
               className="nodrag nopan transition-colors"
-              style={{ color: 'var(--lsc-fg-dim)', cursor: 'pointer' }}
+              style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
               onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
             >
               <HelpCircle size={13} />
@@ -181,8 +181,8 @@ export function ControlSlider({
   return (
     <div className={`nodrag nopan space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>{label}</span>
-        <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>
+        <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{label}</span>
+        <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>
           {display}
         </span>
       </div>

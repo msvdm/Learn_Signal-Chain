@@ -37,7 +37,7 @@ export function InstrumentNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
           formatValue={(v) => `${v} dBu`}
           onChange={(v) => updateChannelNodeState(data.channelId, { instrumentInputDb: v })}
         />
-        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           Instruments output a high-impedance signal. The preamp boosts it to line level.
         </p>
       </div>

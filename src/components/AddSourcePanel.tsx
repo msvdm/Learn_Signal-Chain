@@ -26,7 +26,7 @@ export function AddSourcePanel() {
     borderRadius: 'var(--lsc-radius-md)',
     boxShadow: 'var(--lsc-shadow-popup)',
     fontSize: 12,
-    color: 'var(--lsc-fg)',
+    color: 'var(--lsc-text)',
     overflow: 'hidden',
   }
 
@@ -38,12 +38,12 @@ export function AddSourcePanel() {
             className="flex items-center justify-between px-3 py-2"
             style={{ borderBottom: '1px solid var(--lsc-border)', background: 'var(--lsc-sunken)' }}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--lsc-fg-dim)' }}>
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--lsc-text)' }}>
               Add Source
             </span>
             <button
               className="nodrag nopan"
-              style={{ color: 'var(--lsc-fg-dim)', cursor: 'pointer' }}
+              style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
               onClick={() => setOpen(false)}
             >
               <X size={12} />
@@ -66,10 +66,10 @@ export function AddSourcePanel() {
               onClick={() => { addChannel(type); setOpen(false) }}
             >
               <div className="flex items-center gap-2 mb-0.5">
-                <Icon size={12} style={{ color: 'var(--lsc-fg-dim)' }} />
+                <Icon size={12} style={{ color: 'var(--lsc-text)' }} />
                 <span className="font-semibold text-[12px]">{label}</span>
               </div>
-              <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>{description}</span>
+              <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{description}</span>
             </button>
           ))}
         </div>
@@ -92,8 +92,8 @@ export function AddSourcePanel() {
           }}
         >
           <Plus size={13} style={{ color: 'var(--lsc-accent)' }} />
-          <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-fg)' }}>Add Source</span>
-          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-fainter)' }}>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-text)' }}>Add Source</span>
+          <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
             {channels.length}/{limits.maxInputChannels}
           </span>
         </button>

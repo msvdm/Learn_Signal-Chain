@@ -80,7 +80,7 @@ export function CompressorCurve({
         <line
           x1={threshX} y1={0}
           x2={threshX} y2={SVG_H}
-          stroke="var(--lsc-fg-fainter)"
+          stroke="var(--lsc-text)"
           strokeWidth="1"
           strokeDasharray="3 2"
         />

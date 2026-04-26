@@ -70,7 +70,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
 
         {/* Ratio selector */}
         <div className="nodrag space-y-1">
-          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
             {t.nodes.comp.ratio}
           </span>
           <div className="flex gap-1">
@@ -82,7 +82,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
                 style={{
                   background: nodeState.compRatio === r ? 'var(--lsc-accent)' : 'var(--lsc-sunken)',
                   border: `1px solid ${nodeState.compRatio === r ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-                  color: nodeState.compRatio === r ? 'white' : 'var(--lsc-fg-dim)',
+                  color: nodeState.compRatio === r ? 'white' : 'var(--lsc-text)',
                   cursor: 'pointer',
                 }}
               >
@@ -94,12 +94,12 @@ export function CompressorNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
 
         {/* GR readout */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
             {t.nodes.comp.gainReduction}
           </span>
           <span
             className="text-[10px] font-mono font-semibold"
-            style={{ color: comp.gainReductionDb > 6 ? 'var(--signal-hot)' : 'var(--lsc-fg)' }}
+            style={{ color: comp.gainReductionDb > 6 ? 'var(--signal-hot)' : 'var(--lsc-text)' }}
           >
             -{comp.gainReductionDb.toFixed(1)} dB
           </span>

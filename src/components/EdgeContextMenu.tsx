@@ -61,7 +61,7 @@ export function EdgeContextMenu({
     overflow: 'hidden',
     fontFamily: 'var(--lsc-font-sans)',
     fontSize: 12,
-    color: 'var(--lsc-fg)',
+    color: 'var(--lsc-text)',
   }
 
   const sectionHeaderStyle: React.CSSProperties = {
@@ -73,7 +73,7 @@ export function EdgeContextMenu({
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
-    color: 'var(--lsc-fg-dim)',
+    color: 'var(--lsc-text)',
     background: 'var(--lsc-sunken)',
   }
 
@@ -85,13 +85,13 @@ export function EdgeContextMenu({
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    color: 'var(--lsc-fg)',
+    color: 'var(--lsc-text)',
     fontSize: 12,
   }
 
   const disabledStyle: React.CSSProperties = {
     ...itemStyle,
-    color: 'var(--lsc-fg-fainter)',
+    color: 'var(--lsc-text)',
     cursor: 'default',
     fontStyle: 'italic',
   }

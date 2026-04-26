@@ -37,7 +37,7 @@ export function LineInputNode({ id, data }: NodeProps<Node<ChannelNodeData>>) {
           formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dBu`}
           onChange={(v) => updateChannelNodeState(data.channelId, { lineInputDb: v })}
         />
-        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           +4 dBu = professional level. −10 dBu = consumer gear.
         </p>
       </div>

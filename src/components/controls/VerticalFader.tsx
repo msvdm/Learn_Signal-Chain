@@ -104,7 +104,7 @@ export function VerticalFader({
                 />
                 <span
                   className="absolute text-[7px] font-mono"
-                  style={{ right: 24, top: -4, color: isUnity ? 'var(--signal-good)' : 'var(--lsc-fg-fainter)' }}
+                  style={{ right: 24, top: -4, color: isUnity ? 'var(--signal-good)' : 'var(--lsc-text)' }}
                 >
                   {label}
                 </span>
@@ -121,20 +121,20 @@ export function VerticalFader({
             bottom: `${pct}%`,
             marginBottom: -7,
             background: 'linear-gradient(180deg, var(--lsc-track-3) 0%, var(--lsc-track-2) 100%)',
-            border: '1px solid var(--lsc-fg-fainter)',
+            border: '1px solid var(--lsc-text)',
             boxShadow: 'var(--lsc-shadow-fader)',
           }}
         >
           <div
             className="absolute left-1/2 top-1/2 h-px"
-            style={{ width: '60%', transform: 'translate(-50%,-50%)', background: 'var(--lsc-fg-faint)' }}
+            style={{ width: '60%', transform: 'translate(-50%,-50%)', background: 'var(--lsc-text)' }}
           />
         </div>
       </div>
 
       {/* Value readout */}
       <div className="text-center min-w-[36px]">
-        <div className="text-xs font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>
+        <div className="text-xs font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>
           {displayValue}
         </div>
         {value === 0 && (

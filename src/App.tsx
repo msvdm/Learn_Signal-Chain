@@ -71,10 +71,10 @@ function App() {
             <Radio size={16} />
           </div>
           <div>
-            <h1 className="text-sm font-bold leading-none" style={{ color: 'var(--lsc-fg)' }}>
+            <h1 className="text-sm font-bold leading-none" style={{ color: 'var(--lsc-text)' }}>
               {t.app.title}
             </h1>
-            <p className="text-[10px] mt-0.5 leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
+            <p className="text-[10px] mt-0.5 leading-none" style={{ color: 'var(--lsc-text)' }}>
               {t.app.tagline}
             </p>
           </div>
@@ -92,7 +92,7 @@ function App() {
                 style={{
                   border: `1px solid ${active ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
                   background: active ? 'var(--lsc-accent-bg)' : 'transparent',
-                  color: active ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg-dim)',
+                  color: active ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
                   cursor: 'pointer',
                 }}
               >
@@ -111,7 +111,7 @@ function App() {
               padding: 6,
               border: '1px solid var(--lsc-border)',
               background: 'transparent',
-              color: 'var(--lsc-fg-dim)',
+              color: 'var(--lsc-text)',
               cursor: 'pointer',
             }}
             title={t.app.resetButton}
@@ -127,7 +127,7 @@ function App() {
                 padding: 6,
                 border: `1px solid ${showSettings ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
                 background: showSettings ? 'var(--lsc-accent-bg)' : 'transparent',
-                color: showSettings ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg-dim)',
+                color: showSettings ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
                 cursor: 'pointer',
               }}
               title={t.app.settings}
@@ -146,7 +146,7 @@ function App() {
               >
                 <p
                   className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--lsc-fg-dim)' }}
+                  style={{ color: 'var(--lsc-text)' }}
                 >
                   {t.app.settings}
                 </p>
@@ -156,14 +156,14 @@ function App() {
                     onClick={() => handleLanguage(lang)}
                     className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between"
                     style={{
-                      color: language === lang ? 'var(--lsc-fg)' : 'var(--lsc-fg-dim)',
+                      color: language === lang ? 'var(--lsc-text)' : 'var(--lsc-text)',
                       background: language === lang ? 'rgba(0,0,0,0.04)' : 'transparent',
                       fontWeight: language === lang ? 600 : 400,
                     }}
                   >
                     {t.app.languages[lang]}
                     {language === lang && (
-                      <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>✓</span>
+                      <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>✓</span>
                     )}
                   </button>
                 ))}
@@ -195,7 +195,7 @@ function App() {
           className="w-full flex items-center justify-between px-4 py-1.5 transition-colors"
           style={{
             background: 'var(--lsc-header)',
-            color: 'var(--lsc-fg-dim)',
+            color: 'var(--lsc-text)',
             cursor: 'pointer',
             border: 'none',
           }}

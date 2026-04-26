@@ -18,7 +18,7 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
           {label}
         </span>
       )}
@@ -35,7 +35,7 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
         {/* Zone tick marks at -40 (46.5%), -12 (79.1%), 0 (93%) */}
         <div className="absolute top-0 h-full w-px" style={{ left: '46.5%', background: 'var(--lsc-border)' }} />
         <div className="absolute top-0 h-full w-px" style={{ left: '79.1%', background: 'var(--lsc-border)' }} />
-        <div className="absolute top-0 h-full w-px" style={{ left: '93%', background: 'var(--lsc-fg-fainter)' }} />
+        <div className="absolute top-0 h-full w-px" style={{ left: '93%', background: 'var(--lsc-text)' }} />
       </div>
       {showValue && (
         <div className="flex items-center justify-between">

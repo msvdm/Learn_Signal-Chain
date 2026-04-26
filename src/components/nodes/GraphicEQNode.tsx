@@ -38,7 +38,7 @@ export function GraphicEQNode({ id }: { id: string }) {
       <div className="space-y-2">
         {/* Input level bar */}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] w-8 text-right shrink-0" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[9px] w-8 text-right shrink-0" style={{ color: 'var(--lsc-text)' }}>
             {t.meters.input}
           </span>
           <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--lsc-sunken)' }}>
@@ -50,7 +50,7 @@ export function GraphicEQNode({ id }: { id: string }) {
               }}
             />
           </div>
-          <span className="text-[9px] w-10 shrink-0 font-mono" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[9px] w-10 shrink-0 font-mono" style={{ color: 'var(--lsc-text)' }}>
             {isFinite(input) ? `${input.toFixed(0)}dB` : '—'}
           </span>
         </div>
@@ -64,7 +64,7 @@ export function GraphicEQNode({ id }: { id: string }) {
           <div className="flex justify-end mb-1">
             <div className="flex flex-col justify-between mr-1" style={{ height: SLIDER_HEIGHT }}>
               {['+12', '+6', '0', '-6', '-12'].map((l) => (
-                <span key={l} className="text-[7px] font-mono leading-none" style={{ color: 'var(--lsc-fg-fainter)' }}>
+                <span key={l} className="text-[7px] font-mono leading-none" style={{ color: 'var(--lsc-text)' }}>
                   {l}
                 </span>
               ))}
@@ -111,7 +111,7 @@ export function GraphicEQNode({ id }: { id: string }) {
                   </div>
                   <span
                     className="text-[8px] font-mono leading-none"
-                    style={{ color: 'var(--lsc-fg-dim)' }}
+                    style={{ color: 'var(--lsc-text)' }}
                   >
                     {FREQ_LABELS[i]}
                   </span>
@@ -131,7 +131,7 @@ export function GraphicEQNode({ id }: { id: string }) {
 
         {/* Output level bar */}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] w-8 text-right shrink-0" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[9px] w-8 text-right shrink-0" style={{ color: 'var(--lsc-text)' }}>
             {t.meters.output}
           </span>
           <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--lsc-sunken)' }}>
@@ -143,7 +143,7 @@ export function GraphicEQNode({ id }: { id: string }) {
               }}
             />
           </div>
-          <span className="text-[9px] w-10 shrink-0 font-mono" style={{ color: 'var(--lsc-fg-dim)' }}>
+          <span className="text-[9px] w-10 shrink-0 font-mono" style={{ color: 'var(--lsc-text)' }}>
             {isFinite(result.out) ? `${result.out.toFixed(0)}dB` : '—'}
           </span>
         </div>

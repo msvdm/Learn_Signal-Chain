@@ -98,7 +98,7 @@ export function SignalLevelProfile() {
             x={PAD_LEFT - 8}
             y={dbToY(v) + 3}
             textAnchor="end"
-            fill="var(--lsc-fg-fainter)"
+            fill="var(--lsc-text)"
             fontSize="9"
             fontFamily="ui-monospace,monospace"
           >
@@ -108,7 +108,7 @@ export function SignalLevelProfile() {
 
         {/* Connecting polyline */}
         {stages.length > 1 && (
-          <polyline points={poly} fill="none" stroke="var(--lsc-fg-dim)" strokeWidth="1.5" strokeLinejoin="round" />
+          <polyline points={poly} fill="none" stroke="var(--lsc-text)" strokeWidth="1.5" strokeLinejoin="round" />
         )}
 
         {/* Stage dots and labels */}
@@ -123,7 +123,7 @@ export function SignalLevelProfile() {
               <circle cx={x} cy={y} r={6} fill={color} opacity="0.22" />
               <circle cx={x} cy={y} r={4} fill="white" stroke={color} strokeWidth="1.8" />
               <text x={x} y={labelAbove ? y - 10 : y + 16} fill={color} fontSize="10">{val}</text>
-              <text x={x} y={H - 10} fill="var(--lsc-fg-dim)" fontSize="10" fontFamily="system-ui" fontWeight="500">
+              <text x={x} y={H - 10} fill="var(--lsc-text)" fontSize="10" fontFamily="system-ui" fontWeight="500">
                 {stage.label}
               </text>
             </g>

@@ -62,9 +62,9 @@ export function BusNode({ data }: BusNodeProps) {
         className="flex items-center justify-between px-3 py-2"
         style={{ borderBottom: '1px solid var(--lsc-border)' }}
       >
-        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-fg-dim)' }}>
+        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-text)' }}>
           <Icon size={13} />
-          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-fg)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-text)' }}>
             {bus.label}
           </span>
         </div>
@@ -74,7 +74,7 @@ export function BusNode({ data }: BusNodeProps) {
               className="nodrag nopan flex items-center gap-1 text-[9px] rounded px-1 py-0.5 transition-colors"
               title={bus.isStereo ? 'Stereo — click for mono' : 'Mono — click for stereo'}
               style={{
-                color: 'var(--lsc-fg-dim)',
+                color: 'var(--lsc-text)',
                 background: 'var(--lsc-sunken)',
                 border: '1px solid var(--lsc-border)',
                 cursor: 'pointer',
@@ -90,9 +90,9 @@ export function BusNode({ data }: BusNodeProps) {
           <button
             className="nodrag nopan transition-colors"
             title="Remove bus"
-            style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
+            style={{ color: 'var(--lsc-text)', padding: '1px 2px', cursor: 'pointer' }}
             onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
             onClick={() => removeBus(bus.id)}
           >
             <X size={12} />
@@ -105,7 +105,7 @@ export function BusNode({ data }: BusNodeProps) {
         {/* Input signal */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>Receives</span>
+            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>Receives</span>
             <span
               className="text-[10px] font-mono font-semibold"
               style={{ color: getHealthStyle(inputHealth).color }}
@@ -129,7 +129,7 @@ export function BusNode({ data }: BusNodeProps) {
         {/* Output signal */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>Output</span>
+            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>Output</span>
             <span
               className="text-[10px] font-mono font-semibold"
               style={{ color: healthStyle.color }}

@@ -89,7 +89,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
               y1={dbToY(db)}
               x2={SVG_W}
               y2={dbToY(db)}
-              stroke={db === 0 ? 'var(--lsc-fg-fainter)' : 'var(--lsc-border-mute)'}
+              stroke={db === 0 ? 'var(--lsc-text)' : 'var(--lsc-border-mute)'}
               strokeWidth={db === 0 ? 1.5 : 1}
             />
           ))}
@@ -160,7 +160,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
               key={db}
               x={4}
               y={dbToY(db) - 2}
-              fill="var(--lsc-fg-fainter)"
+              fill="var(--lsc-text)"
               fontSize="9"
               fontFamily="monospace"
             >
@@ -178,7 +178,7 @@ export function EQCurve({ bands, hpfHz, onBandChange, onClose }: EQCurveProps) {
                 x={freqToX(freq)}
                 y={12}
                 textAnchor="middle"
-                fill="var(--lsc-fg-fainter)"
+                fill="var(--lsc-text)"
                 fontSize="9"
                 fontFamily="monospace"
               >

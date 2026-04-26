@@ -87,9 +87,9 @@ function buildChainEdge(
   isBypassed: boolean
 ): Edge {
   const style = isBypassed
-    ? { stroke: 'var(--lsc-fg-fainter)', strokeDasharray: '6 3', strokeWidth: 2 }
+    ? { stroke: 'var(--lsc-text)', strokeDasharray: '6 3', strokeWidth: 2 }
     : { stroke: healthColor, strokeWidth: 3 }
-  const markerColor = isBypassed ? 'var(--lsc-fg-fainter)' : healthColor
+  const markerColor = isBypassed ? 'var(--lsc-text)' : healthColor
   return {
     id: `e-${source}-${target}`,
     source,
@@ -178,7 +178,7 @@ export function SignalChain() {
         const srcId = `${ch.id}:${srcTypeKey}`
         const tgtId = `${ch.id}:${tgtTypeKey}`
         const stage = allStages[srcId]
-        const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-fg-fainter)'
+        const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-text)'
         const isBypassed = ch.bypassedNodes.has(srcTypeKey)
         edges.push(buildChainEdge(srcId, tgtId, healthColor, isBypassed))
       }
@@ -206,7 +206,7 @@ export function SignalChain() {
       const src = visibleMaster[i]
       const tgt = visibleMaster[i + 1]
       const stage = allStages[src]
-      const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-fg-fainter)'
+      const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-text)'
       edges.push(buildChainEdge(src, tgt, healthColor, false))
     }
 

@@ -75,7 +75,7 @@ export function InsertBusPanel() {
     borderRadius: 'var(--lsc-radius-md)',
     boxShadow: 'var(--lsc-shadow-popup)',
     fontSize: 12,
-    color: 'var(--lsc-fg)',
+    color: 'var(--lsc-text)',
     overflow: 'hidden',
   }
 
@@ -87,12 +87,12 @@ export function InsertBusPanel() {
             className="flex items-center justify-between px-3 py-2"
             style={{ borderBottom: '1px solid var(--lsc-border)', background: 'var(--lsc-sunken)' }}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--lsc-fg-dim)' }}>
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--lsc-text)' }}>
               Insert Bus
             </span>
             <button
               className="nodrag nopan"
-              style={{ color: 'var(--lsc-fg-dim)', cursor: 'pointer' }}
+              style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
               onClick={() => setOpen(false)}
             >
               <X size={12} />
@@ -129,14 +129,14 @@ export function InsertBusPanel() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <Icon size={12} style={{ color: 'var(--lsc-fg-dim)' }} />
+                    <Icon size={12} style={{ color: 'var(--lsc-text)' }} />
                     <span className="font-semibold text-[12px]">{label}</span>
                   </div>
                   {!allowed && reason && (
-                    <span className="text-[9px]" style={{ color: 'var(--lsc-fg-fainter)' }}>{reason}</span>
+                    <span className="text-[9px]" style={{ color: 'var(--lsc-text)' }}>{reason}</span>
                   )}
                 </div>
-                <span className="text-[10px]" style={{ color: 'var(--lsc-fg-dim)' }}>{description}</span>
+                <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{description}</span>
               </button>
             )
           })}
@@ -156,9 +156,9 @@ export function InsertBusPanel() {
           }}
         >
           <Plus size={13} style={{ color: 'var(--lsc-accent)' }} />
-          <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-fg)' }}>Insert Bus</span>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-text)' }}>Insert Bus</span>
           {buses.length > 0 && (
-            <span className="text-[10px]" style={{ color: 'var(--lsc-fg-fainter)' }}>{buses.length}</span>
+            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{buses.length}</span>
           )}
         </button>
       )}

@@ -123,10 +123,10 @@ export function KnobControl({
           transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         />
       </svg>
-      <span className="text-[9px] font-mono leading-none" style={{ color: 'var(--lsc-fg)' }}>
+      <span className="text-[9px] font-mono leading-none" style={{ color: 'var(--lsc-text)' }}>
         {display}
       </span>
-      <span className="text-[8px] uppercase tracking-wider leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
+      <span className="text-[8px] uppercase tracking-wider leading-none" style={{ color: 'var(--lsc-text)' }}>
         {label}
       </span>
     </div>

@@ -24,11 +24,7 @@
   --lsc-border-mute:   #f4f1e8;
 
   /* Text */
-  --lsc-fg:            #000000;
-  --lsc-fg-muted:      #000000;
-  --lsc-fg-dim:        #000000;
-  --lsc-fg-fainter:    #000000;
-  --lsc-fg-faint:      #000000;
+  --lsc-text: #000000;
 
   /* Signal health */
   --signal-too-quiet:        #5b8de8;
@@ -86,7 +82,7 @@ body {
   margin: 0;
   font-family: var(--lsc-font-sans);
   background: var(--lsc-canvas);
-  color: var(--lsc-fg);
+  color: var(--lsc-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -148,7 +144,7 @@ body {
 .react-flow__controls button {
   background: var(--lsc-node-bg) !important;
   border-color: var(--lsc-border) !important;
-  color: var(--lsc-fg-dim) !important;
+  color: var(--lsc-text) !important;
 }
 
 .react-flow__controls button:hover {
@@ -156,7 +152,7 @@ body {
 }
 
 .react-flow__panel {
-  color: var(--lsc-fg-dim);
+  color: var(--lsc-text);
 }
 
 /* Semantic type classes */
@@ -164,7 +160,7 @@ body {
   font-family: var(--lsc-font-sans);
   font-size: 10px;
   font-weight: 600;
-  color: var(--lsc-fg-dim);
+  color: var(--lsc-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -173,13 +169,13 @@ body {
   font-family: var(--lsc-font-mono);
   font-size: 10px;
   font-weight: 600;
-  color: var(--lsc-fg);
+  color: var(--lsc-text);
 }
 
 .lsc-value-sm {
   font-family: var(--lsc-font-mono);
   font-size: 9px;
-  color: var(--lsc-fg);
+  color: var(--lsc-text);
   line-height: 1;
 }
 
@@ -187,7 +183,7 @@ body {
   font-family: var(--lsc-font-sans);
   font-size: 8px;
   font-weight: 400;
-  color: var(--lsc-fg-dim);
+  color: var(--lsc-text);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   line-height: 1;
