@@ -7,7 +7,7 @@ export const FREQ_MAX = 20000
 export const DB_MIN = -12
 export const DB_MAX = 12
 
-export const BAND_COLORS = ['#6366f1', '#f59e0b', '#10b981']
+export const BAND_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444']
 
 export const FREQ_LABELS = [
   { freq: 50, label: '50' },
@@ -46,7 +46,14 @@ export function bellGain(freq: number, centerHz: number, gainDb: number, Q = 1.4
   return gainDb * Math.exp(-(logDist * logDist) / (2 * (1 / Q) * (1 / Q)))
 }
 
-export function buildCurvePath(bands: EQBand[], hpfHz: number): string {
+export function shelfGain(freq: number, cornerHz: number, gainDb: number, type: 'high-shelf' | 'low-shelf'): number {
+  if (gainDb === 0) return 0
+  const octaves = Math.log2(freq / cornerHz)
+  const normalized = Math.tanh(octaves * 1.5) * 0.5 + 0.5  // 0–1, S-curve centered at cornerHz
+  return type === 'high-shelf' ? gainDb * normalized : gainDb * (1 - normalized)
+}
+
+export function buildCurvePath(bands: EQBand[], hpfHz = 20): string {
   const points: [number, number][] = []
   const SAMPLES = 200
 
@@ -54,7 +61,12 @@ export function buildCurvePath(bands: EQBand[], hpfHz: number): string {
     const t = i / SAMPLES
     const freq = Math.pow(10, t * (Math.log10(FREQ_MAX) - Math.log10(FREQ_MIN)) + Math.log10(FREQ_MIN))
 
-    let totalGain = bands.reduce((acc, b) => acc + bellGain(freq, b.freqHz, b.gainDb), 0)
+    let totalGain = bands.reduce((acc, b) => {
+      if (b.type === 'high-shelf' || b.type === 'low-shelf') {
+        return acc + shelfGain(freq, b.freqHz, b.gainDb, b.type)
+      }
+      return acc + bellGain(freq, b.freqHz, b.gainDb, b.Q ?? 1.4)
+    }, 0)
 
     if (freq < hpfHz) {
       const octavesBelow = Math.log2(hpfHz / freq)

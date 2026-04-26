@@ -13,12 +13,13 @@ import '@xyflow/react/dist/style.css'
 
 import { SourceNode } from './nodes/SourceNode'
 import { PreampNode } from './nodes/PreampNode'
-import { EQNode } from './nodes/EQNode'
+import { HPFNode } from './nodes/HPFNode'
+import { ParamEQNode } from './nodes/ParamEQNode'
 import { CompressorNode } from './nodes/CompressorNode'
 import { FaderNode } from './nodes/FaderNode'
 import { MasterBusNode } from './nodes/MasterBusNode'
 import { MasterFaderNode } from './nodes/MasterFaderNode'
-import { OutputEQNode } from './nodes/OutputEQNode'
+import { GraphicEQNode } from './nodes/GraphicEQNode'
 import { SpeakerNode } from './nodes/SpeakerNode'
 import { BusNode } from './nodes/BusNode'
 import { EndNode } from './nodes/EndNode'
@@ -34,12 +35,13 @@ import { getHealthStyle } from '../hooks/useGainStaging'
 const nodeTypes = {
   source:      SourceNode,
   preamp:      PreampNode,
-  eq:          EQNode,
+  hpf:         HPFNode,
+  eq:          ParamEQNode,
   compressor:  CompressorNode,
   fader:       FaderNode,
   masterBus:   MasterBusNode,
   masterFader: MasterFaderNode,
-  outputEq:    OutputEQNode,
+  graphicEq:   GraphicEQNode,
   speaker:     SpeakerNode,
   bus:         BusNode,
   end:         EndNode,
@@ -53,6 +55,7 @@ const edgeTypes = {
 const CHANNEL_TYPE_MAP: Record<string, string> = {
   source:  'source',
   preamp:  'preamp',
+  hpf:     'hpf',
   eq:      'eq',
   comp:    'compressor',
   fader:   'fader',
@@ -62,14 +65,12 @@ const CHANNEL_TYPE_MAP: Record<string, string> = {
 const MASTER_TYPE_MAP: Record<string, string> = {
   'master-bus':   'masterBus',
   'master-fader': 'masterFader',
-  'output-eq':    'outputEq',
+  'graphic-eq':   'graphicEq',
   'speaker':      'speaker',
 }
 
-const MASTER_CHAIN = ['master-bus', 'master-fader', 'output-eq', 'speaker']
-
-const H_SPACING       = 300
-const V_SPACING       = 320
+const H_SPACING       = 420   // enough gap even for the wide advanced EQ card (380px)
+const V_SPACING       = 400   // prevents tall nodes from overlapping across channel rows
 const MASTER_X_OFFSET = 80
 
 function buildLayout(channels: ReturnType<typeof useSignalStore.getState>['channels']) {
@@ -101,10 +102,11 @@ function buildChainEdge(
 }
 
 export function SignalChain() {
-  const channels    = useSignalStore((s) => s.channels)
-  const buses       = useSignalStore((s) => s.buses)
-  const sends       = useSignalStore((s) => s.sends)
-  const updateBus   = useSignalStore((s) => s.updateBus)
+  const channels         = useSignalStore((s) => s.channels)
+  const masterChainOrder = useSignalStore((s) => s.masterChainOrder)
+  const buses            = useSignalStore((s) => s.buses)
+  const sends            = useSignalStore((s) => s.sends)
+  const updateBus        = useSignalStore((s) => s.updateBus)
   const { allStages } = useMultiChannelSignal()
 
   const { masterX, masterY, maxColCount } = useMemo(() => buildLayout(channels), [channels])
@@ -138,8 +140,8 @@ export function SignalChain() {
 
     // Master section (shared, vertically centered)
     let masterSectionX = masterX
-    const masterChainInState = MASTER_CHAIN.filter((id) => id in MASTER_TYPE_MAP)
-    for (const nodeId of masterChainInState) {
+    for (const nodeId of masterChainOrder) {
+      if (!(nodeId in MASTER_TYPE_MAP)) continue
       nodes.push({
         id: nodeId,
         type: MASTER_TYPE_MAP[nodeId],
@@ -163,7 +165,7 @@ export function SignalChain() {
     }
 
     return nodes
-  }, [channels, buses, masterX, masterY, maxColCount])
+  }, [channels, masterChainOrder, buses, masterX, masterY, maxColCount])
 
   const displayEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = []
@@ -199,10 +201,10 @@ export function SignalChain() {
     }
 
     // Master-internal edges
-    for (let i = 0; i < MASTER_CHAIN.length - 1; i++) {
-      const src = MASTER_CHAIN[i]
-      const tgt = MASTER_CHAIN[i + 1]
-      if (!(src in MASTER_TYPE_MAP) || !(tgt in MASTER_TYPE_MAP)) continue
+    const visibleMaster = masterChainOrder.filter((id) => id in MASTER_TYPE_MAP)
+    for (let i = 0; i < visibleMaster.length - 1; i++) {
+      const src = visibleMaster[i]
+      const tgt = visibleMaster[i + 1]
       const stage = allStages[src]
       const healthColor = stage ? getHealthStyle(stage.health).color : 'var(--lsc-fg-fainter)'
       edges.push(buildChainEdge(src, tgt, healthColor, false))
@@ -228,7 +230,7 @@ export function SignalChain() {
     }
 
     return edges
-  }, [channels, buses, sends, allStages])
+  }, [channels, masterChainOrder, buses, sends, allStages])
 
   function handleNodesChange(changes: NodeChange<Node>[]) {
     for (const change of changes) {

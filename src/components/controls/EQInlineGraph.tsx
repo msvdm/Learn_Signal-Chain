@@ -8,12 +8,12 @@ import {
 
 interface EQInlineGraphProps {
   bands: EQBand[]
-  hpfHz: number
+  hpfHz?: number
   onBandChange: (index: number, patch: Partial<EQBand>) => void
   height?: number
 }
 
-export function EQInlineGraph({ bands, hpfHz, onBandChange, height = 80 }: EQInlineGraphProps) {
+export function EQInlineGraph({ bands, hpfHz = 20, onBandChange, height = 80 }: EQInlineGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingBand = useRef<number | null>(null)
 

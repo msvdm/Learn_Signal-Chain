@@ -4,16 +4,16 @@ import { getStraightPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react'
 import { Plus, ArrowUpRight, Radio, Volume2, Headphones, Network, Check } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import { CHANNEL_NODE_ORDER } from '../data/levels'
+import { CHANNEL_NODE_ORDER, MASTER_NODE_ORDER } from '../data/levels'
 import type { BusType } from '../data/levels'
 
 const INSERT_LABELS: Record<string, string> = {
   preamp:        'Preamp / Gain',
-  eq:            'Equalizer',
+  hpf:           'High-Pass Filter',
+  eq:            'Parametric EQ',
   comp:          'Compressor',
   fader:         'Channel Fader',
-  'output-eq':   'Output EQ',
-  'output-gain': 'Output Gain',
+  'graphic-eq':  'Graphic EQ (10-band)',
 }
 
 const BUS_ICONS: Record<BusType, typeof Radio> = {
@@ -29,12 +29,14 @@ export function ChainEdge({
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const buses           = useSignalStore((s) => s.buses)
-  const sends           = useSignalStore((s) => s.sends)
-  const addSend         = useSignalStore((s) => s.addSend)
-  const insertChannelNode = useSignalStore((s) => s.insertChannelNode)
-  const complexityLevel = useSignalStore((s) => s.complexityLevel)
-  const { t }           = useTranslation()
+  const buses              = useSignalStore((s) => s.buses)
+  const sends              = useSignalStore((s) => s.sends)
+  const addSend            = useSignalStore((s) => s.addSend)
+  const insertChannelNode  = useSignalStore((s) => s.insertChannelNode)
+  const insertMasterNode   = useSignalStore((s) => s.insertMasterNode)
+  const masterChainOrder   = useSignalStore((s) => s.masterChainOrder)
+  const complexityLevel    = useSignalStore((s) => s.complexityLevel)
+  const { t }              = useTranslation()
 
   // Extract channelId and typeKeys from the edge source/target IDs
   const channelId     = source.includes(':') ? source.split(':')[0] : 'master'
@@ -45,24 +47,33 @@ export function ChainEdge({
 
   const [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY })
 
-  const BEGINNER_BLOCKED = new Set(['output-eq', 'output-gain'])
-
-  // For channel edges: find insertable type-keys between source and target
+  // Channel inserts: find type-keys that fit between this edge's source and target
   const srcPos = CHANNEL_NODE_ORDER.indexOf(srcTypeKey)
   const tgtPos = CHANNEL_NODE_ORDER.indexOf(tgtTypeKey)
   const availableInserts = channel
     ? CHANNEL_NODE_ORDER.filter((k) =>
         !channel.chainOrder.includes(k) &&
         CHANNEL_NODE_ORDER.indexOf(k) > srcPos &&
-        CHANNEL_NODE_ORDER.indexOf(k) < tgtPos &&
-        !(BEGINNER_BLOCKED.has(k) && complexityLevel === 'beginner')
+        CHANNEL_NODE_ORDER.indexOf(k) < tgtPos
+      )
+    : []
+
+  // Master inserts: graphic-eq is insertable between master-fader and speaker, advanced+ only
+  const isAdvanced = complexityLevel === 'advanced' || complexityLevel === 'routing-madness'
+  const srcMasterPos = MASTER_NODE_ORDER.indexOf(srcTypeKey)
+  const tgtMasterPos = MASTER_NODE_ORDER.indexOf(tgtTypeKey)
+  const availableMasterInserts = channelId === 'master' && isAdvanced
+    ? MASTER_NODE_ORDER.filter((k) =>
+        !masterChainOrder.includes(k) &&
+        MASTER_NODE_ORDER.indexOf(k) > srcMasterPos &&
+        MASTER_NODE_ORDER.indexOf(k) < tgtMasterPos
       )
     : []
 
   // Sends only make sense from channel nodes (not from the source node itself)
   const showSends = channelId !== 'master' && srcTypeKey !== 'source'
 
-  const canOpen = availableInserts.length > 0 || showSends
+  const canOpen = availableInserts.length > 0 || availableMasterInserts.length > 0 || showSends
 
   useEffect(() => {
     if (!open) return
@@ -116,7 +127,7 @@ export function ChainEdge({
                 color: 'var(--lsc-fg)',
               }}
             >
-              {/* Insert section — unchanged */}
+              {/* Channel inserts */}
               {availableInserts.length > 0 && (
                 <>
                   <div style={sectionStyle}>
@@ -139,10 +150,34 @@ export function ChainEdge({
                 </>
               )}
 
+              {/* Master inserts */}
+              {availableMasterInserts.length > 0 && (
+                <>
+                  {availableInserts.length > 0 && <div style={{ borderTop: '1px solid var(--lsc-border)' }} />}
+                  <div style={sectionStyle}>
+                    <Plus size={9} /> {t.chainMenu.insertTitle}
+                  </div>
+                  {availableMasterInserts.map((nodeId) => (
+                    <button
+                      key={nodeId}
+                      style={itemStyle}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                      onClick={() => {
+                        insertMasterNode(nodeId, srcTypeKey)
+                        setOpen(false)
+                      }}
+                    >
+                      {INSERT_LABELS[nodeId] ?? nodeId}
+                    </button>
+                  ))}
+                </>
+              )}
+
               {/* Send to Bus section — bus picker */}
               {showSends && (
                 <>
-                  {availableInserts.length > 0 && <div style={{ borderTop: '1px solid var(--lsc-border)' }} />}
+                  {(availableInserts.length > 0 || availableMasterInserts.length > 0) && <div style={{ borderTop: '1px solid var(--lsc-border)' }} />}
                   <div style={sectionStyle}>
                     <ArrowUpRight size={9} /> {t.chainMenu.sendTitle}
                   </div>

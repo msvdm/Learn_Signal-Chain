@@ -48,15 +48,16 @@ export interface Translations {
   nodes: {
     mic: { label: string; sensitivity: string; micInfo: string }
     preamp: { label: string; gain: string }
+    hpf: { label: string; cutoff: string }
     eq: {
       label: string
-      highPass: string
       curvePreview: string
       openCurve: string
       bandLow: string
       bandMid: string
       bandHigh: string
     }
+    graphicEq: { label: string }
     comp: {
       label: string
       threshold: string
@@ -174,14 +175,20 @@ export const translations: Record<Lang, Translations> = {
         micInfo: 'Dynamic mic output: approx. -60 dBu',
       },
       preamp: { label: 'Preamp / Gain', gain: 'Gain' },
+      hpf: {
+        label: 'High-Pass Filter',
+        cutoff: 'Cutoff frequency',
+      },
       eq: {
-        label: 'Equalizer (EQ)',
-        highPass: 'High-pass filter',
+        label: 'Parametric EQ',
         curvePreview: 'EQ curve preview',
         openCurve: 'Open EQ Curve',
         bandLow: 'Low',
         bandMid: 'Mid',
         bandHigh: 'High',
+      },
+      graphicEq: {
+        label: 'Graphic EQ',
       },
       comp: {
         label: 'Compressor',
@@ -237,10 +244,20 @@ export const translations: Record<Lang, Translations> = {
         why: 'Without enough gain here, all downstream processors — EQ, compressor, fader — work with a weak signal and introduce more noise. Too much gain causes distortion before anything else can help.',
         tip: 'Aim for the output to land in the green zone (-40 to -12 dBu). This is called gain staging, and it starts right here at the preamp.',
       },
+      hpf: {
+        what: 'The High-Pass Filter (HPF) removes frequencies below a chosen cutoff point. Everything below that frequency is rolled off — "blocked". Everything above it "passes" through unchanged.',
+        why: 'Microphones and instruments pick up low-frequency rumble: air conditioning, footsteps, handling noise, mic stand vibration. These frequencies serve no musical purpose and just muddy the mix. The HPF cleans them up before they reach the EQ or compressor.',
+        tip: 'For most vocals start at 80–120 Hz. For acoustic guitar, try 100–150 Hz. Never use HPF on a kick drum or bass — you\'ll cut the fundamental frequency you actually want. The curve display shows exactly which frequencies you\'re removing.',
+      },
       eq: {
-        what: 'The equalizer (EQ) shapes the tonal character of the signal by boosting or cutting specific frequency ranges. It does not change the overall level much — it shapes the sound.',
-        why: 'Every sound source has frequencies that help or hurt its purpose. A vocal may have too much low rumble (fix with a high-pass filter) or need more air in the highs (boost a shelf at 10 kHz).',
-        tip: "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix.",
+        what: 'The Parametric EQ shapes the tonal character of the signal by boosting or cutting specific frequency ranges. Each band targets a frequency area: Low (body), Mid (presence), High (air and clarity). Bell mode shapes a peak or dip; Shelf mode boosts or cuts everything above/below a corner frequency.',
+        why: 'Every sound source has frequencies that help or hurt its purpose. A vocal may need less boxiness around 400 Hz, more presence at 3 kHz, and more air at 10 kHz. The EQ lets you sculpt that precisely.',
+        tip: "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate mode you can switch Low and High bands to Shelf for a smoother, more musical result.",
+      },
+      'graphic-eq': {
+        what: 'The Graphic EQ divides the spectrum into fixed frequency bands (here: 10 bands, one per octave from 31 Hz to 16 kHz). Each band has its own fader — push it up to boost that octave, pull it down to cut.',
+        why: 'Graphic EQs are found on the master output of PA systems as the final tool for correcting room acoustics — a sudden peak at 4 kHz, a resonant boom at 63 Hz. They are less precise than parametric EQs but faster to use for broad shaping.',
+        tip: 'In live sound the graphic EQ on the master output is used mainly to prevent feedback and correct for the room, not to shape the mix. Keep moves gentle — small cuts (−3 to −6 dB) solve most problems. Large boosts cause feedback and distortion.',
       },
       comp: {
         what: 'The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter.',
@@ -341,14 +358,20 @@ export const translations: Record<Lang, Translations> = {
         micInfo: 'Изход на динамичен микрофон: приблизително -60 dBu',
       },
       preamp: { label: 'Предусилвател', gain: 'Усилване' },
+      hpf: {
+        label: 'Високочестотен филтър',
+        cutoff: 'Честота на прекъсване',
+      },
       eq: {
-        label: 'Еквалайзер (EQ)',
-        highPass: 'Високочестотен филтър',
+        label: 'Параметричен EQ',
         curvePreview: 'Преглед на EQ кривата',
         openCurve: 'Отвори EQ Кривата',
         bandLow: 'Ниски',
         bandMid: 'Средни',
         bandHigh: 'Високи',
+      },
+      graphicEq: {
+        label: 'Графичен EQ',
       },
       comp: {
         label: 'Компресор',
@@ -404,10 +427,20 @@ export const translations: Record<Lang, Translations> = {
         why: 'Без достатъчно усилване тук, всички следващи процесори — еквалайзер, компресор, фейдър — работят със слаб сигнал и въвеждат повече шум. Прекалено много усилване причинява изкривяване преди всичко останало да може да помогне.',
         tip: 'Цели изходът да е в зелената зона (от -40 до -12 dBu). Това се нарича стъпалост на усилването и започва точно тук, при предусилвателя.',
       },
+      hpf: {
+        what: 'Високочестотният филтър (HPF) премахва честотите под избрана точка на прекъсване. Всичко под нея се отрязва — "блокира се". Всичко над нея "преминава" непроменено.',
+        why: 'Микрофоните и инструментите улавят нискочестотен шум: климатик, стъпки, вибрации от стойката. Тези честоти нямат музикална цел и само замърсяват микса. HPF ги почиства преди да достигнат EQ или компресора.',
+        tip: 'За повечето вокали започни от 80–120 Hz. За акустична китара опитай 100–150 Hz. Никога не използвай HPF на бас барабан или бас — ще отрежеш основната честота, която всъщност искаш.',
+      },
       eq: {
-        what: 'Еквалайзерът (EQ) оформя тоналния характер на сигнала, като усилва или намалява определени честотни диапазони. Той не променя значително общото ниво — той оформя звука.',
-        why: 'Всеки звуков източник има честоти, които помагат или пречат на целта му. Вокалите може да имат прекалено много нисък тътен (поправи с високочестотен филтър) или да се нуждаят от повече въздух в горния диапазон (усили рафт при 10 kHz).',
-        tip: 'EQ е предимно субтрактивен в професионалната практика — намали това, което не ти трябва, вместо да усилваш всичко. Усилването добавя енергия; намалянето изчиства миксa.',
+        what: 'Параметричният EQ оформя тоналния характер на сигнала. Всяка лента насочва честотна зона: Ниски (тяло), Средни (присъствие), Високи (въздух и яснота). Режим Bell оформя връх или яма; Shelf усилва или намалява всичко над/под ъглова честота.',
+        why: 'Всеки звуков източник има честоти, които помагат или пречат. Вокалите може да се нуждаят от по-малко "кутия" около 400 Hz, повече присъствие при 3 kHz и повече въздух при 10 kHz.',
+        tip: 'EQ е предимно субтрактивен в практиката — намали нежеланото, вместо да усилваш всичко. В средно ниво можеш да превключваш Ниски и Високи ленти към Shelf за по-плавен резултат.',
+      },
+      'graphic-eq': {
+        what: 'Графичният EQ разделя спектъра на фиксирани честотни ленти (тук: 10 ленти, по една на октава от 31 Hz до 16 kHz). Всяка лента има свой фейдър — издърпай нагоре за усилване, надолу за намаляване.',
+        why: 'Графичните EQ се намират на главния изход на озвучителни системи за корекция на акустиката на помещението — внезапен връх при 4 kHz, резонанс при 63 Hz.',
+        tip: 'В живия звук графичният EQ на главния изход се използва главно за предотвратяване на обратна връзка и корекция на помещението. Дръж промените малки — малки намалявания (−3 до −6 dB) решават повечето проблеми.',
       },
       comp: {
         what: 'Компресорът намалява динамичния диапазон на сигнала — той автоматично намалява силните пикове и може да се използва с компенсиращо усилване за повишаване на общото ниво. Той прави тихите части относително по-силни, а силните — относително по-тихи.',

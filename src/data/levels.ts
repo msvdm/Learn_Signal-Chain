@@ -30,10 +30,10 @@ export const CHANNEL_COLORS = [
 ]
 
 // Canonical order of insertable node type-keys within a channel
-export const CHANNEL_NODE_ORDER = ['source', 'preamp', 'eq', 'comp', 'fader']
+export const CHANNEL_NODE_ORDER = ['source', 'preamp', 'hpf', 'eq', 'comp', 'fader']
 
 // Canonical order of master section node IDs
-export const MASTER_NODE_ORDER = ['master-bus', 'master-fader', 'output-eq', 'output-gain', 'speaker']
+export const MASTER_NODE_ORDER = ['master-bus', 'master-fader', 'graphic-eq', 'speaker']
 
-// Legacy — used by ChainEdge for insertable-node ordering within a channel
-export const CHAIN_ORDER = ['mic', 'preamp', 'eq', 'comp', 'fader', 'master-bus', 'master-fader', 'output-eq', 'output-gain', 'speaker']
+// Used by ChainEdge for insertable-node ordering within a channel
+export const CHAIN_ORDER = ['mic', 'preamp', 'hpf', 'eq', 'comp', 'fader', 'master-bus', 'master-fader', 'graphic-eq', 'speaker']

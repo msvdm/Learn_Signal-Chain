@@ -83,6 +83,12 @@ function computeChannelFader(input: number, state: ChannelNodeState): StageResul
   return { out, health: getHealth(out) }
 }
 
+function computeHPF(input: number): StageResult {
+  // HPF shapes the frequency spectrum but does not change the overall signal level
+  // in this educational model. The visual curve in HPFNode teaches the concept.
+  return { out: input, health: getHealth(input) }
+}
+
 function computeChannelNode(
   typeKey: string,
   input: number,
@@ -91,6 +97,7 @@ function computeChannelNode(
   switch (typeKey) {
     case 'source':  return computeSource(state)
     case 'preamp':  return computePreamp(input, state)
+    case 'hpf':     return computeHPF(input)
     case 'eq':      return computeEQ(input, state)
     case 'comp':    return computeCompressor(input, state)
     case 'fader':   return computeChannelFader(input, state)
@@ -143,8 +150,8 @@ function computeOutputGain(input: number, state: MasterState): StageResult {
   return { out, health: getHealth(out) }
 }
 
-function computeOutputEQ(input: number, state: MasterState): StageResult {
-  const bandSum = state.outputEqBands.reduce((acc, b) => acc + b.gainDb, 0)
+function computeGraphicEQ(input: number, state: MasterState): StageResult {
+  const bandSum = state.graphicEqBands.reduce((acc, b) => acc + b.gainDb, 0)
   const out = input + bandSum
   return { out, health: getHealth(out) }
 }
@@ -165,8 +172,8 @@ function computeMasterStages(
       case 'master-fader':
         stages[nodeId] = computeMasterFader(signal, masterState)
         break
-      case 'output-eq':
-        stages[nodeId] = computeOutputEQ(signal, masterState)
+      case 'graphic-eq':
+        stages[nodeId] = computeGraphicEQ(signal, masterState)
         break
       case 'speaker':
         // Speaker applies the output gain trim (merged with OutputGainNode)
@@ -244,11 +251,12 @@ function buildWarnings(
 // ── Main hook ─────────────────────────────────────────────────────────────────
 
 export function useMultiChannelSignal(): MultiChannelSignalResult {
-  const channels    = useSignalStore((s) => s.channels)
-  const masterState = useSignalStore((s) => s.masterState)
-  const buses       = useSignalStore((s) => s.buses)
-  const sends       = useSignalStore((s) => s.sends)
-  const { t, fmt }  = useTranslation()
+  const channels         = useSignalStore((s) => s.channels)
+  const masterState      = useSignalStore((s) => s.masterState)
+  const masterChainOrder = useSignalStore((s) => s.masterChainOrder)
+  const buses            = useSignalStore((s) => s.buses)
+  const sends            = useSignalStore((s) => s.sends)
+  const { t, fmt }       = useTranslation()
 
   return useMemo(() => {
     const channelResults: Record<string, { stages: Record<string, StageResult | CompressorResult>; outputDb: number }> = {}
@@ -265,11 +273,9 @@ export function useMultiChannelSignal(): MultiChannelSignalResult {
     }
 
     const masterInputDb = sumSignalsToDb(channelOutputDbs)
-    const masterChain = ['master-bus', 'master-fader', 'output-eq', 'speaker']
-    const masterStages = computeMasterStages(masterInputDb, masterState, masterChain)
-    // Track master section inputDb
+    const masterStages = computeMasterStages(masterInputDb, masterState, masterChainOrder)
     let masterSignal = masterInputDb
-    for (const nodeId of masterChain) {
+    for (const nodeId of masterChainOrder) {
       allInputDb[nodeId] = masterSignal
       masterSignal = masterStages[nodeId]?.out ?? masterSignal
     }
@@ -283,7 +289,7 @@ export function useMultiChannelSignal(): MultiChannelSignalResult {
 
     return { allStages, allInputDb, channelResults, masterStages, masterInputDb, busResults, overallHealth, warnings }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channels, masterState, buses, sends])
+  }, [channels, masterState, masterChainOrder, buses, sends])
 }
 
 // ── Backward-compat wrapper ───────────────────────────────────────────────────
@@ -299,7 +305,7 @@ export function useSignalChain(): SignalChainResult {
     ? firstChannel.chainOrder.map((k) => `${firstChannel.id}:${k}`)
     : []
 
-  const masterChain = ['master-bus', 'master-fader', 'output-eq', 'output-gain', 'speaker']
+  const masterChain = ['master-bus', 'master-fader', 'graphic-eq', 'speaker']
     .filter((id) => id in result.masterStages)
 
   const chainOrder = [...firstChain, ...masterChain]

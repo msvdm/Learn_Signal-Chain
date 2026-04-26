@@ -23,6 +23,8 @@ function getInitialComplexityLevel(): ComplexityLevel {
 export interface EQBand {
   freqHz: number
   gainDb: number
+  type?: 'bell' | 'high-shelf' | 'low-shelf'
+  Q?: number
 }
 
 // Per-channel slider state
@@ -33,7 +35,7 @@ export interface ChannelNodeState {
   instrumentInputDb: number
   preampGainDb: number
   eqHpfHz: number
-  eqBands: EQBand[]
+  eqBands: EQBand[]  // 4 bands: [Low(200Hz), LoMid(500Hz), Mid(1kHz), High(8kHz)]
   compThresholdDb: number
   compRatio: 2 | 4 | 8 | 100
   compMakeupGainDb: number
@@ -48,9 +50,10 @@ export const DEFAULT_CHANNEL_NODE_STATE: ChannelNodeState = {
   preampGainDb: 40,
   eqHpfHz: 80,
   eqBands: [
-    { freqHz: 200, gainDb: 0 },
-    { freqHz: 1000, gainDb: 0 },
-    { freqHz: 8000, gainDb: 0 },
+    { freqHz: 200,  gainDb: 0 },   // Low
+    { freqHz: 500,  gainDb: 0 },   // Lo-Mid (advanced only)
+    { freqHz: 1000, gainDb: 0 },   // Mid
+    { freqHz: 8000, gainDb: 0 },   // High
   ],
   compThresholdDb: 0,
   compRatio: 2,
@@ -62,17 +65,15 @@ export const DEFAULT_CHANNEL_NODE_STATE: ChannelNodeState = {
 export interface MasterState {
   masterFaderDb: number
   outputGainDb: number
-  outputEqBands: EQBand[]
+  graphicEqBands: EQBand[]  // 10-band graphic EQ at standard 1-octave frequencies
 }
+
+const GRAPHIC_EQ_FREQS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
 export const DEFAULT_MASTER_STATE: MasterState = {
   masterFaderDb: 0,
   outputGainDb: 0,
-  outputEqBands: [
-    { freqHz: 200, gainDb: 0 },
-    { freqHz: 1000, gainDb: 0 },
-    { freqHz: 8000, gainDb: 0 },
-  ],
+  graphicEqBands: GRAPHIC_EQ_FREQS.map((freqHz) => ({ freqHz, gainDb: 0 })),
 }
 
 // A single input channel with its own signal chain
@@ -127,6 +128,7 @@ interface SignalChainStore {
 
   channels: Channel[]
   masterState: MasterState
+  masterChainOrder: string[]  // dynamic master node sequence
   buses: Bus[]
   sends: Send[]
 
@@ -148,7 +150,9 @@ interface SignalChainStore {
 
   // Master mutations
   updateMasterState: (patch: Partial<MasterState>) => void
-  updateOutputEQBand: (index: number, patch: Partial<EQBand>) => void
+  updateGraphicEQBand: (index: number, patch: Partial<EQBand>) => void
+  insertMasterNode: (nodeId: string, afterNodeId: string) => void
+  removeMasterNode: (nodeId: string) => void
 
   // Bus management
   addBus: (busType: BusType, defaultPosition: { x: number; y: number }) => void
@@ -163,8 +167,8 @@ interface SignalChainStore {
 
 // Protected node type-keys within a channel — source cannot be removed, only the channel itself
 const CHANNEL_PROTECTED = new Set(['source'])
-// Globally protected master node IDs
-const MASTER_PROTECTED = new Set(['master-bus', 'master-fader'])
+// Globally protected master node IDs — speaker is always the final output, never removable
+const MASTER_PROTECTED = new Set(['master-bus', 'master-fader', 'speaker'])
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
@@ -173,6 +177,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   channels: getInitialChannels(),
   masterState: { ...DEFAULT_MASTER_STATE },
+  masterChainOrder: ['master-bus', 'master-fader', 'speaker'],
   buses: [],
   sends: [],
 
@@ -189,6 +194,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       complexityLevel: level,
       channels: getInitialChannels(),
       masterState: { ...DEFAULT_MASTER_STATE },
+      masterChainOrder: ['master-bus', 'master-fader', 'speaker'],
       buses: [],
       sends: [],
       activeTooltipId: null,
@@ -199,6 +205,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     set((s) => ({
       channels: getInitialChannels(),
       masterState: { ...DEFAULT_MASTER_STATE },
+      masterChainOrder: ['master-bus', 'master-fader', 'speaker'],
       buses: [],
       sends: [],
       activeTooltipId: null,
@@ -289,12 +296,27 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   updateMasterState: (patch) =>
     set((s) => ({ masterState: { ...s.masterState, ...patch } })),
 
-  updateOutputEQBand: (index, patch) =>
+  updateGraphicEQBand: (index, patch) =>
     set((s) => {
-      const bands = [...s.masterState.outputEqBands]
+      const bands = [...s.masterState.graphicEqBands]
       bands[index] = { ...bands[index], ...patch }
-      return { masterState: { ...s.masterState, outputEqBands: bands } }
+      return { masterState: { ...s.masterState, graphicEqBands: bands } }
     }),
+
+  insertMasterNode: (nodeId, afterNodeId) =>
+    set((s) => {
+      if (s.masterChainOrder.includes(nodeId)) return {}
+      const idx = s.masterChainOrder.indexOf(afterNodeId)
+      if (idx === -1) return {}
+      const next = [...s.masterChainOrder]
+      next.splice(idx + 1, 0, nodeId)
+      return { masterChainOrder: next }
+    }),
+
+  removeMasterNode: (nodeId) =>
+    set((s) => ({
+      masterChainOrder: s.masterChainOrder.filter((id) => id !== nodeId),
+    })),
 
   // ── Bus management ────────────────────────────────────────────────────────
 

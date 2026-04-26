@@ -7,6 +7,8 @@ import { HelpCircle, Power, X } from 'lucide-react'
 
 const HANDLE_STYLE = { visibility: 'hidden' as const }
 
+import type { CSSProperties } from 'react'
+
 interface NodeWrapperProps {
   nodeId: string
   channelId: string
@@ -16,6 +18,7 @@ interface NodeWrapperProps {
   accentColor?: string
   children?: ReactNode
   className?: string
+  style?: CSSProperties
   hasTarget?: boolean
   hasSource?: boolean
 }
@@ -29,6 +32,7 @@ export function NodeWrapper({
   accentColor,
   children,
   className = '',
+  style,
   hasTarget = true,
   hasSource = true,
 }: NodeWrapperProps) {
@@ -36,6 +40,7 @@ export function NodeWrapper({
   const activeTooltipId          = useSignalStore((s) => s.activeTooltipId)
   const toggleBypassChannelNode  = useSignalStore((s) => s.toggleBypassChannelNode)
   const removeChannelNode        = useSignalStore((s) => s.removeChannelNode)
+  const removeMasterNode         = useSignalStore((s) => s.removeMasterNode)
   const { t }                    = useTranslation()
 
   // Determine bypass state
@@ -43,7 +48,7 @@ export function NodeWrapper({
   const effectiveTypeKey = typeKey ?? ''
   const isBypassed = channel ? channel.bypassedNodes.has(effectiveTypeKey) : false
 
-  // A node is protected if it's a master-section node or a channel source node
+  const isMasterSection = channelId === 'master'
   const isMasterNode = MASTER_PROTECTED.has(nodeId)
   const isSourceNode = effectiveTypeKey === 'source'
   const isProtected  = isMasterNode || isSourceNode
@@ -65,6 +70,7 @@ export function NodeWrapper({
           : 'var(--lsc-shadow-node)',
         transition: 'border-color 0.15s',
         pointerEvents: 'auto',
+        ...style,
       }}
     >
       {hasTarget && <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />}
@@ -98,25 +104,30 @@ export function NodeWrapper({
         <div className="flex items-center gap-1">
           {!isProtected && (
             <>
-              <button
-                className="nodrag nopan transition-colors rounded"
-                title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
-                style={{
-                  color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg-fainter)',
-                  padding: '1px 2px',
-                  cursor: 'pointer',
-                }}
-                onClick={() => toggleBypassChannelNode(channelId, effectiveTypeKey)}
-              >
-                <Power size={12} />
-              </button>
+              {!isMasterSection && (
+                <button
+                  className="nodrag nopan transition-colors rounded"
+                  title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
+                  style={{
+                    color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg-fainter)',
+                    padding: '1px 2px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => toggleBypassChannelNode(channelId, effectiveTypeKey)}
+                >
+                  <Power size={12} />
+                </button>
+              )}
               <button
                 className="nodrag nopan transition-colors rounded"
                 title={t.nodeControls?.remove ?? 'Remove'}
                 style={{ color: 'var(--lsc-fg-fainter)', padding: '1px 2px', cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-fg-fainter)')}
-                onClick={() => removeChannelNode(channelId, effectiveTypeKey)}
+                onClick={() => {
+                  if (isMasterSection) removeMasterNode(nodeId)
+                  else removeChannelNode(channelId, effectiveTypeKey)
+                }}
               >
                 <X size={12} />
               </button>
