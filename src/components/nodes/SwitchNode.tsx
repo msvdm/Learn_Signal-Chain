@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 import { useSignalStore } from '../../store/signalStore'
 
 interface GraphSwitchData extends Record<string, unknown> {
@@ -8,14 +8,14 @@ interface GraphSwitchData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphSwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) {
+export function SwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
 
   const isOn = (node?.params.on as boolean) !== false
 
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey="switch"
       icon={isOn ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
@@ -36,6 +36,6 @@ export function GraphSwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) 
       >
         {isOn ? 'ON' : 'OFF'}
       </button>
-    </GraphInlineNode>
+    </InlineNode>
   )
 }

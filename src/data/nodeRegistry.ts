@@ -9,7 +9,14 @@ export type NodePort = {
 
 export type NodeCategory = 'source' | 'processor' | 'merge' | 'split' | 'sink'
 
-export type NodeParamValue = number | string | boolean
+export type EQBand = {
+  freqHz: number
+  gainDb: number
+  Q?: number
+  type?: 'bell' | 'low-shelf' | 'high-shelf'
+}
+
+export type NodeParamValue = number | string | boolean | EQBand[]
 
 export type NodeTypeDef = {
   typeKey: string
@@ -90,7 +97,14 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
-    defaultParams: { band0gainDb: 0, band1gainDb: 0, band2gainDb: 0, band3gainDb: 0 },
+    defaultParams: {
+      bands: [
+        { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
+        { freqHz: 500,  gainDb: 0, Q: 1.4, type: 'bell' },
+        { freqHz: 1000, gainDb: 0, Q: 1.4, type: 'bell' },
+        { freqHz: 8000, gainDb: 0, Q: 1.4, type: 'bell' },
+      ] as EQBand[],
+    },
   },
   comp: {
     typeKey: 'comp',

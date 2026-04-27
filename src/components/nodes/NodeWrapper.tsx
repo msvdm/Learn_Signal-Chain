@@ -14,7 +14,7 @@ const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'comp', 'fader', 'switch', 'split
 // Source and sink types cannot be bypassed or removed via the wrapper UI
 const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
 
-interface GraphNodeWrapperProps {
+interface NodeWrapperProps {
   nodeId: string
   typeKey: string
   icon: ReactNode
@@ -25,7 +25,7 @@ interface GraphNodeWrapperProps {
   style?: CSSProperties
 }
 
-export function GraphNodeWrapper({
+export function NodeWrapper({
   nodeId,
   typeKey,
   icon,
@@ -34,7 +34,7 @@ export function GraphNodeWrapper({
   children,
   className = '',
   style,
-}: GraphNodeWrapperProps) {
+}: NodeWrapperProps) {
   const setActiveTooltip    = useSignalStore((s) => s.setActiveTooltip)
   const activeTooltipId     = useSignalStore((s) => s.activeTooltipId)
   const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)

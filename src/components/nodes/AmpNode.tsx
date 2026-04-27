@@ -1,7 +1,7 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Radio } from 'lucide-react'
-import { GraphNodeWrapper } from './GraphNodeWrapper'
-import { ControlSlider } from './NodeWrapper'
+import { NodeWrapper } from './NodeWrapper'
+import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
@@ -12,7 +12,7 @@ interface GraphAmpData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphAmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
+export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
   const { stages, inputDb } = useGraphSignal()
   const node                = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
@@ -24,7 +24,7 @@ export function GraphAmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
   const gainDb = (params.gainDb as number) ?? 20
 
   return (
-    <GraphNodeWrapper
+    <NodeWrapper
       nodeId={id}
       typeKey="amp"
       icon={<Radio size={14} />}
@@ -45,6 +45,6 @@ export function GraphAmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
 
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
-    </GraphNodeWrapper>
+    </NodeWrapper>
   )
 }

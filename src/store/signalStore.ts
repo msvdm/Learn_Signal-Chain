@@ -5,7 +5,7 @@ import type { BusType } from '../data/levels'
 import type { NodeParamValue } from '../data/nodeRegistry'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 
-export type { SignalNode, SignalEdge, NodeParamValue } from '../data/nodeRegistry'
+export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced' | 'routing-madness'
 export type SourceType = 'mic' | 'line' | 'instrument'

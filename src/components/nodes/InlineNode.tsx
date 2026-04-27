@@ -14,7 +14,7 @@ const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'comp', 'fader', 'switch', 'split
 const PROTECTED_TYPES  = new Set(['mic', 'line-in', 'instrument', 'speaker'])
 const NO_BYPASS_TYPES  = new Set(['fader', 'switch', 'potentiometer'])
 
-interface GraphInlineNodeProps {
+interface InlineNodeProps {
   nodeId: string
   typeKey: string
   icon: ReactNode
@@ -24,7 +24,7 @@ interface GraphInlineNodeProps {
   children?: ReactNode
 }
 
-export function GraphInlineNode({
+export function InlineNode({
   nodeId,
   typeKey,
   icon,
@@ -32,7 +32,7 @@ export function GraphInlineNode({
   accentColor,
   value,
   children,
-}: GraphInlineNodeProps) {
+}: InlineNodeProps) {
   const { stages }       = useGraphSignal()
   const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
   const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)

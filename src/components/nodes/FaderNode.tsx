@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { SlidersHorizontal } from 'lucide-react'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 import { VerticalFader } from '../controls/VerticalFader'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -10,7 +10,7 @@ interface GraphFaderData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphFaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
+export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -18,7 +18,7 @@ export function GraphFaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
   const faderDb = (node?.params.faderDb as number) ?? 0
 
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey="fader"
       icon={<SlidersHorizontal size={20} />}
@@ -39,6 +39,6 @@ export function GraphFaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
           { db: -40, label: '-40' },
         ]}
       />
-    </GraphInlineNode>
+    </InlineNode>
   )
 }

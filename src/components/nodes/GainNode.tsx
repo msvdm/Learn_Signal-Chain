@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Zap } from 'lucide-react'
-import { GraphNodeWrapper } from './GraphNodeWrapper'
+import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
@@ -12,7 +12,7 @@ interface GraphGainData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphGainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
+export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
   const { stages, inputDb } = useGraphSignal()
   const node                = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
@@ -24,7 +24,7 @@ export function GraphGainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
   const gainDb = (params.gainDb as number) ?? 40
 
   return (
-    <GraphNodeWrapper
+    <NodeWrapper
       nodeId={id}
       typeKey="gain"
       icon={<Zap size={14} />}
@@ -49,6 +49,6 @@ export function GraphGainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
 
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
-    </GraphNodeWrapper>
+    </NodeWrapper>
   )
 }

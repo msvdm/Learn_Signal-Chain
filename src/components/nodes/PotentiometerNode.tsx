@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Gauge } from 'lucide-react'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
 
@@ -9,14 +9,14 @@ interface GraphPotentiometerData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphPotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiometerData>>) {
+export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiometerData>>) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
 
   const attenuationDb = (node?.params.attenuationDb as number) ?? 0
 
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey="potentiometer"
       icon={<Gauge size={20} />}
@@ -33,6 +33,6 @@ export function GraphPotentiometerNode({ id, data }: NodeProps<Node<GraphPotenti
         color="var(--lsc-accent)"
         size={40}
       />
-    </GraphInlineNode>
+    </InlineNode>
   )
 }

@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Mic, Cable, Guitar } from 'lucide-react'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -16,7 +16,7 @@ const ICONS: Record<string, typeof Mic> = {
   instrument: Guitar,
 }
 
-export function GraphMicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
+export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
   const node  = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const { t } = useTranslation()
 
@@ -26,7 +26,7 @@ export function GraphMicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
   const Icon            = ICONS[resolvedTypeKey] ?? Mic
 
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey={resolvedTypeKey}
       icon={<Icon size={20} />}

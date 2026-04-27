@@ -1,15 +1,15 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Split } from 'lucide-react'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 
 interface GraphSplitterData extends Record<string, unknown> {
   color?: string
   label?: string
 }
 
-export function GraphSplitterNode({ id, data }: NodeProps<Node<GraphSplitterData>>) {
+export function SplitterNode({ id, data }: NodeProps<Node<GraphSplitterData>>) {
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey="splitter"
       icon={<Split size={20} />}

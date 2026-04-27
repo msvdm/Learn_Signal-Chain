@@ -2,18 +2,18 @@ import { useMemo } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
 import { Merge } from 'lucide-react'
 import { Handle, Position } from '@xyflow/react'
-import { GraphNodeWrapper } from './GraphNodeWrapper'
+import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
-interface GraphMasterBusData extends Record<string, unknown> {
+interface MasterBusData extends Record<string, unknown> {
   color?: string
   label?: string
 }
 
-export function GraphMasterBusNode({ id, data }: NodeProps<Node<GraphMasterBusData>>) {
+export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
   const { stages }  = useGraphSignal()
   const allEdges    = useSignalStore((s) => s.edges)
   const sourceNodes = useSignalStore((s) => s.nodes)
@@ -62,8 +62,8 @@ export function GraphMasterBusNode({ id, data }: NodeProps<Node<GraphMasterBusDa
   )
 
   return (
-    // GraphNodeWrapper renders output handle from NODE_REGISTRY; we override inputs manually above
-    <GraphNodeWrapper
+    // NodeWrapper renders output handle from NODE_REGISTRY; we override inputs manually above
+    <NodeWrapper
       nodeId={id}
       typeKey="master-bus"
       icon={<Merge size={14} />}
@@ -81,6 +81,6 @@ export function GraphMasterBusNode({ id, data }: NodeProps<Node<GraphMasterBusDa
         </div>
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
-    </GraphNodeWrapper>
+    </NodeWrapper>
   )
 }

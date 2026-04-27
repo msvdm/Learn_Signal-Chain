@@ -10,16 +10,18 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { GraphMicNode }            from './nodes/GraphMicNode'
-import { GraphGainNode }           from './nodes/GraphGainNode'
-import { GraphFaderNode }          from './nodes/GraphFaderNode'
-import { GraphMasterBusNode }      from './nodes/GraphMasterBusNode'
-import { GraphAmpNode }            from './nodes/GraphAmpNode'
-import { GraphSpeakerNode }        from './nodes/GraphSpeakerNode'
-import { GraphSwitchNode }         from './nodes/GraphSwitchNode'
-import { GraphSplitterNode }       from './nodes/GraphSplitterNode'
-import { GraphPotentiometerNode }  from './nodes/GraphPotentiometerNode'
-import { GraphGenericNode }        from './nodes/GraphGenericNode'
+import { MicNode }            from './nodes/MicNode'
+import { GainNode }           from './nodes/GainNode'
+import { FaderNode }          from './nodes/FaderNode'
+import { MasterBusNode }      from './nodes/MasterBusNode'
+import { AmpNode }            from './nodes/AmpNode'
+import { SpeakerNode }        from './nodes/SpeakerNode'
+import { SwitchNode }         from './nodes/SwitchNode'
+import { SplitterNode }       from './nodes/SplitterNode'
+import { PotentiometerNode }  from './nodes/PotentiometerNode'
+import { GenericNode }        from './nodes/GenericNode'
+import { EQNode }             from './nodes/EQNode'
+import { GraphicEQNode }      from './nodes/GraphicEQNode'
 import { ChainEdge }               from './ChainEdge'
 import { AddSourcePanel }          from './AddSourcePanel'
 import { InsertBusPanel }          from './InsertBusPanel'
@@ -30,23 +32,23 @@ import { getHealthStyle }      from '../hooks/useGainStaging'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
-  mic:           GraphMicNode,
-  'line-in':     GraphMicNode,
-  instrument:    GraphMicNode,
-  gain:          GraphGainNode,
-  preamp:        GraphGainNode,
-  amp:           GraphAmpNode,
-  fader:         GraphFaderNode,
-  'master-bus':  GraphMasterBusNode,
-  bus:           GraphGenericNode,
-  hpf:           GraphGenericNode,
-  eq:            GraphGenericNode,
-  comp:          GraphGenericNode,
-  switch:        GraphSwitchNode,
-  splitter:      GraphSplitterNode,
-  potentiometer: GraphPotentiometerNode,
-  'graphic-eq':  GraphGenericNode,
-  speaker:       GraphSpeakerNode,
+  mic:           MicNode,
+  'line-in':     MicNode,
+  instrument:    MicNode,
+  gain:          GainNode,
+  preamp:        GainNode,
+  amp:           AmpNode,
+  fader:         FaderNode,
+  'master-bus':  MasterBusNode,
+  bus:           GenericNode,
+  hpf:           GenericNode,
+  eq:            EQNode,
+  comp:          GenericNode,
+  switch:        SwitchNode,
+  splitter:      SplitterNode,
+  potentiometer: PotentiometerNode,
+  'graphic-eq':  GraphicEQNode,
+  speaker:       SpeakerNode,
 }
 
 const edgeTypes = {

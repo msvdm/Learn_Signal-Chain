@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
@@ -107,11 +107,8 @@ function computeGraphNode(
     case 'hpf':
       return { out: input, health: getHealth(input) }
     case 'eq': {
-      const bandSum =
-        ((p.band0gainDb as number) ?? 0) +
-        ((p.band1gainDb as number) ?? 0) +
-        ((p.band2gainDb as number) ?? 0) +
-        ((p.band3gainDb as number) ?? 0)
+      const bands = (p.bands as EQBand[]) ?? []
+      const bandSum = bands.reduce((acc, b) => acc + b.gainDb, 0)
       const out = input + bandSum
       return { out, health: getHealth(out) }
     }

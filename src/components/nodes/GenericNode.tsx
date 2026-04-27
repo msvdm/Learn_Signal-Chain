@@ -1,8 +1,8 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Box } from 'lucide-react'
-import { GraphNodeWrapper } from './GraphNodeWrapper'
+import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { ControlSlider } from './NodeWrapper'
+import { ControlSlider } from './ControlSlider'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
@@ -13,7 +13,7 @@ interface GraphGenericData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphGenericNode({ id, data }: NodeProps<Node<GraphGenericData>>) {
+export function GenericNode({ id, data }: NodeProps<Node<GraphGenericData>>) {
   const { stages, inputDb } = useGraphSignal()
   const node                = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
@@ -30,7 +30,7 @@ export function GraphGenericNode({ id, data }: NodeProps<Node<GraphGenericData>>
   ) as [string, number][]
 
   return (
-    <GraphNodeWrapper
+    <NodeWrapper
       nodeId={id}
       typeKey={typeKey}
       icon={<Box size={14} />}
@@ -60,6 +60,6 @@ export function GraphGenericNode({ id, data }: NodeProps<Node<GraphGenericData>>
 
         <SignalMeter db={result.out} health={result.health} label="Output" />
       </div>
-    </GraphNodeWrapper>
+    </NodeWrapper>
   )
 }

@@ -1,7 +1,7 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { Volume2 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { GraphInlineNode } from './GraphInlineNode'
+import { InlineNode } from './InlineNode'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
@@ -10,7 +10,7 @@ interface GraphSpeakerData extends Record<string, unknown> {
   label?: string
 }
 
-export function GraphSpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
+export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
   const { stages }  = useGraphSignal()
   const result      = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const healthStyle = getHealthStyle(result.health)
@@ -19,7 +19,7 @@ export function GraphSpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>
   const isClipping = result.health === 'clipping'
 
   return (
-    <GraphInlineNode
+    <InlineNode
       nodeId={id}
       typeKey="speaker"
       icon={<Volume2 size={20} />}
@@ -42,6 +42,6 @@ export function GraphSpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         />
       </motion.svg>
-    </GraphInlineNode>
+    </InlineNode>
   )
 }
