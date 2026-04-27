@@ -37,7 +37,6 @@ const nodeTypes = {
   preamp:        GraphGainNode,
   amp:           GraphAmpNode,
   fader:         GraphFaderNode,
-  'master-fader': GraphFaderNode,
   'master-bus':  GraphMasterBusNode,
   bus:           GraphGenericNode,
   hpf:           GraphGenericNode,

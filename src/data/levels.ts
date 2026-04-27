@@ -63,7 +63,7 @@ export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]
   }
 
   // intermediate / advanced / routing-madness
-  // mic-1 → gain-1 → fader-ch → master-bus → fader-master → amp-1 → speaker-1
+  // mic-1 → gain-1 → fader-1 → master-bus → amp-1 → speaker-1
   const y = 0
   const nodes: SignalNode[] = [
     {
@@ -85,12 +85,12 @@ export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]
       color: CHANNEL_COLORS[0],
     },
     {
-      id: 'fader-ch',
+      id: 'fader-1',
       typeKey: 'fader',
       position: { x: H_SPACING * 2, y },
       params: { faderDb: 0 },
       bypassed: false,
-      label: 'Channel Fader',
+      label: 'Fader',
       color: CHANNEL_COLORS[0],
     },
     {
@@ -102,17 +102,9 @@ export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]
       label: 'Master Bus',
     },
     {
-      id: 'fader-master',
-      typeKey: 'fader',
-      position: { x: H_SPACING * 4, y },
-      params: { faderDb: 0 },
-      bypassed: false,
-      label: 'Master Fader',
-    },
-    {
       id: 'amp-1',
       typeKey: 'amp',
-      position: { x: H_SPACING * 5, y },
+      position: { x: H_SPACING * 4, y },
       params: { gainDb: 20 },
       bypassed: false,
       label: 'Amplifier',
@@ -120,7 +112,7 @@ export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]
     {
       id: 'speaker-1',
       typeKey: 'speaker',
-      position: { x: H_SPACING * 6, y },
+      position: { x: H_SPACING * 5, y },
       params: { outputTrimDb: 0 },
       bypassed: false,
       label: 'Speaker',
@@ -128,12 +120,11 @@ export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]
   ]
 
   const edges: SignalEdge[] = [
-    { id: 'e-mic1-gain1',       source: 'mic-1',       sourceHandle: 'out', target: 'gain-1',       targetHandle: 'in' },
-    { id: 'e-gain1-faderch',    source: 'gain-1',      sourceHandle: 'out', target: 'fader-ch',     targetHandle: 'in' },
-    { id: 'e-faderch-mbus',     source: 'fader-ch',    sourceHandle: 'out', target: 'master-bus',   targetHandle: 'in-1' },
-    { id: 'e-mbus-faderm',      source: 'master-bus',  sourceHandle: 'out', target: 'fader-master', targetHandle: 'in' },
-    { id: 'e-faderm-amp1',      source: 'fader-master',sourceHandle: 'out', target: 'amp-1',        targetHandle: 'in' },
-    { id: 'e-amp1-spk1',        source: 'amp-1',       sourceHandle: 'out', target: 'speaker-1',   targetHandle: 'in' },
+    { id: 'e-mic1-gain1',    source: 'mic-1',      sourceHandle: 'out', target: 'gain-1',     targetHandle: 'in' },
+    { id: 'e-gain1-fader1',  source: 'gain-1',     sourceHandle: 'out', target: 'fader-1',    targetHandle: 'in' },
+    { id: 'e-fader1-mbus',   source: 'fader-1',    sourceHandle: 'out', target: 'master-bus', targetHandle: 'in-1' },
+    { id: 'e-mbus-amp1',     source: 'master-bus', sourceHandle: 'out', target: 'amp-1',      targetHandle: 'in' },
+    { id: 'e-amp1-spk1',     source: 'amp-1',      sourceHandle: 'out', target: 'speaker-1',  targetHandle: 'in' },
   ]
 
   return { nodes, edges }

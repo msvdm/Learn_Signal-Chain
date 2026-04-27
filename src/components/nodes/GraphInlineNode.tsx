@@ -1,55 +1,60 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import type { ReactNode, CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Power, X, HelpCircle, Plus } from 'lucide-react'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
+import { useGraphSignal } from '../../hooks/useSignalChain'
+import { getHealthStyle } from '../../hooks/useGainStaging'
 
-// Processor types the user can insert on any edge
 const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
+const PROTECTED_TYPES  = new Set(['mic', 'line-in', 'instrument', 'speaker'])
+const NO_BYPASS_TYPES  = new Set(['fader', 'switch', 'potentiometer'])
 
-// Source and sink types cannot be bypassed or removed via the wrapper UI
-const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
-
-interface GraphNodeWrapperProps {
+interface GraphInlineNodeProps {
   nodeId: string
   typeKey: string
   icon: ReactNode
   label: string
   accentColor?: string
+  value?: string
   children?: ReactNode
-  className?: string
-  style?: CSSProperties
 }
 
-export function GraphNodeWrapper({
+export function GraphInlineNode({
   nodeId,
   typeKey,
   icon,
   label,
   accentColor,
+  value,
   children,
-  className = '',
-  style,
-}: GraphNodeWrapperProps) {
-  const setActiveTooltip    = useSignalStore((s) => s.setActiveTooltip)
-  const activeTooltipId     = useSignalStore((s) => s.activeTooltipId)
-  const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)
-  const removeNode          = useSignalStore((s) => s.removeNode)
-  const insertNodeOnEdge    = useSignalStore((s) => s.insertNodeOnEdge)
-  const edges               = useSignalStore((s) => s.edges)
-  const { t }               = useTranslation()
+}: GraphInlineNodeProps) {
+  const { stages }       = useGraphSignal()
+  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
+  const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
+  const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
+  const removeNode       = useSignalStore((s) => s.removeNode)
+  const insertNodeOnEdge = useSignalStore((s) => s.insertNodeOnEdge)
+  const edges            = useSignalStore((s) => s.edges)
+  const { t }            = useTranslation()
 
   const isBypassed  = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
   const isProtected = PROTECTED_TYPES.has(typeKey)
+  const isNoBypass  = NO_BYPASS_TYPES.has(typeKey)
   const hasTooltip  = Boolean(t.theory[typeKey])
 
   const def     = NODE_REGISTRY[typeKey]
-  const inputs  = def?.inputs ?? []
+  const inputs  = def?.inputs  ?? []
   const outputs = def?.outputs ?? []
+
+  const health      = stages[nodeId]?.health ?? 'too-quiet'
+  const healthStyle = getHealthStyle(health)
+
+  const showBypass = isBypassed && !isNoBypass
 
   const [insertMenu, setInsertMenu] = useState<{ edgeId: string; x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -89,27 +94,24 @@ export function GraphNodeWrapper({
     setInsertMenu(null)
   }
 
-  const borderAccent = accentColor
-    ? `3px solid ${isBypassed ? 'var(--signal-hot)' : accentColor}`
-    : `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`
-
   return (
     <div
-      className={`relative w-52 select-none cursor-default ${className}`}
+      className="relative select-none cursor-default"
       style={{
+        width: 100,
         background: 'var(--lsc-node-bg)',
-        border: `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
-        borderLeft: borderAccent,
-        borderRadius: 'var(--lsc-radius-lg)',
+        border: showBypass
+          ? '2px solid var(--signal-hot)'
+          : `1px solid ${healthStyle.border}`,
+        borderRadius: 'var(--lsc-radius-md)',
         boxShadow: activeTooltipId === nodeId
           ? '0 0 0 2px var(--lsc-accent)'
           : 'var(--lsc-shadow-node)',
         transition: 'border-color 0.15s',
         pointerEvents: 'auto',
-        ...style,
       }}
     >
-      {/* Input handles — visible colored dots on the left */}
+      {/* Input handles */}
       {inputs.map((port, i) => (
         <Handle
           key={port.id}
@@ -129,7 +131,7 @@ export function GraphNodeWrapper({
         />
       ))}
 
-      {/* Output handles — accent-colored dots on the right */}
+      {/* Output handles */}
       {outputs.map((port, i) => (
         <Handle
           key={port.id}
@@ -202,64 +204,84 @@ export function GraphNodeWrapper({
         document.body
       )}
 
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: '1px solid var(--lsc-border)' }}
-      >
-        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-text)' }}>
-          <span>{icon}</span>
-          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-text)' }}>{label}</span>
-          {isBypassed && (
-            <span
-              className="text-[9px] font-bold tracking-wide uppercase px-1 rounded"
-              style={{ background: 'var(--signal-hot)', color: '#fff', lineHeight: '1.4' }}
-            >
-              BYP
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {!isProtected && (
-            <>
-              <button
-                className="nodrag nopan transition-colors rounded"
-                title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
-                style={{
-                  color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-text)',
-                  padding: '1px 2px', cursor: 'pointer',
-                }}
-                onClick={() => toggleBypassNode(nodeId)}
-              >
-                <Power size={12} />
-              </button>
-              <button
-                className="nodrag nopan transition-colors rounded"
-                title={t.nodeControls?.remove ?? 'Remove'}
-                style={{ color: 'var(--lsc-text)', padding: '1px 2px', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
-                onClick={() => removeNode(nodeId)}
-              >
-                <X size={12} />
-              </button>
-            </>
-          )}
-          {hasTooltip && (
-            <button
-              className="nodrag nopan transition-colors"
-              style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
-              onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
-            >
-              <HelpCircle size={13} />
-            </button>
-          )}
-        </div>
+      {/* Action row */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '3px 4px 0' }}>
+        {!isProtected && !isNoBypass && (
+          <button
+            className="nodrag nopan"
+            title={isBypassed ? t.nodeControls.bypassed : t.nodeControls.bypass}
+            style={{
+              padding: '1px',
+              color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-text)',
+              cursor: 'pointer', background: 'none', border: 'none',
+            }}
+            onClick={() => toggleBypassNode(nodeId)}
+          >
+            <Power size={10} />
+          </button>
+        )}
+        {!isProtected && (
+          <button
+            className="nodrag nopan"
+            title={t.nodeControls.remove}
+            style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
+            onClick={() => removeNode(nodeId)}
+          >
+            <X size={10} />
+          </button>
+        )}
+        {hasTooltip && (
+          <button
+            className="nodrag nopan"
+            style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
+            onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
+          >
+            <HelpCircle size={10} />
+          </button>
+        )}
       </div>
 
-      {/* Content — dimmed when bypassed */}
-      <div className="p-3" style={{ opacity: isBypassed ? 0.5 : 1, transition: 'opacity 0.15s' }}>
+      {/* Icon + label body */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '2px 6px 8px',
+          gap: 3,
+          opacity: showBypass ? 0.55 : 1,
+          transition: 'opacity 0.15s',
+        }}
+      >
+        <div style={{ color: accentColor ?? 'var(--lsc-accent)', lineHeight: 1 }}>
+          {icon}
+        </div>
+        <span style={{
+          fontSize: 10, fontWeight: 600,
+          color: 'var(--lsc-text)',
+          textAlign: 'center', lineHeight: 1.2,
+          maxWidth: '100%', overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {label}
+        </span>
+        {showBypass && (
+          <span style={{
+            fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+            background: 'var(--signal-hot)', color: '#fff',
+            borderRadius: 2, padding: '1px 3px', lineHeight: 1.4,
+          }}>BYP</span>
+        )}
+        {value && !showBypass && (
+          <span style={{
+            fontSize: 9, fontFamily: 'var(--lsc-font-mono)',
+            color: 'var(--lsc-text)', lineHeight: 1,
+          }}>
+            {value}
+          </span>
+        )}
         {children}
       </div>
 
