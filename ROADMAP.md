@@ -35,23 +35,24 @@ connectable elements compose naturally into complex rigs.
 - [x] `src/components/ChainEdge.tsx` — stripped to plain colored edge (no `+` button)
 - [x] Beginner canvas: mic → speaker rendered from graph model
 - [x] Handle-click insertion: clicking an output or input dot opens a picker; `insertNodeOnEdge` shifts downstream nodes
-- [x] Source and sink nodes are draggable (position stored in `SignalNode.position`)
+- [x] Fixed-distance layout: inserting a node between A–C keeps A–B and B–C equal to the original A–C gap; all nodes shift uniformly
 
 ---
 
-## Phase 3 — New Node Types + Migrate Existing Nodes (Session 2b)
+## Phase 3 — New Node Types + Migrate Existing Nodes (Session 2b) ✅
 
 *New elements available for insertion; all nodes read from `data.params`.*
 
-- [ ] `src/components/nodes/SwitchNode.tsx` (NEW) — on/off signal break
-- [ ] `src/components/nodes/SplitterNode.tsx` (NEW) — 1 in, 2 out
-- [ ] `src/components/nodes/PotentiometerNode.tsx` (NEW) — attenuation knob
-- [ ] `src/components/nodes/AmpNode.tsx` (NEW) — gain boost (used in intermediate default)
-- [ ] `src/components/nodes/FaderNode.tsx` — generalized (replaces FaderNode + MasterFaderNode)
-- [ ] `src/components/nodes/SpeakerNode.tsx` — input only; hide trim control in beginner mode
-- [ ] Migrate all existing node components from `channels.find()` to `data.params`
-- [ ] `src/components/AddSourcePanel.tsx` — call `addInputChannel()` instead of `addChannel()`
-- [ ] `src/components/InsertBusPanel.tsx` — call `addBusNode()` instead of `addBus()`
+- [x] `src/components/nodes/GraphSwitchNode.tsx` (NEW) — on/off toggle with plain-English label
+- [x] `src/components/nodes/GraphSplitterNode.tsx` (NEW) — 1 in, 2 out with split visualization
+- [x] `src/components/nodes/GraphPotentiometerNode.tsx` (NEW) — attenuation knob (0–80 dB)
+- [x] `src/components/nodes/GraphAmpNode.tsx` (NEW) — gain boost (used in intermediate default)
+- [x] `src/components/nodes/GraphFaderNode.tsx` — generalized fader (channel + master)
+- [x] `src/components/nodes/GraphSpeakerNode.tsx` — input only, waveform animation
+- [x] All node components read from `data.params` via `updateNodeParams`
+- [x] `src/components/AddSourcePanel.tsx` — calls `addInputChannel()` + reads from `nodes[]`
+- [x] `src/components/InsertBusPanel.tsx` — calls `addBusNode()` + reads from `nodes[]`
+- [x] Both panels surfaced inside `SignalChain.tsx` React Flow canvas
 
 ---
 
@@ -93,7 +94,8 @@ connectable elements compose naturally into complex rigs.
 
 - H_SPACING = 420px between nodes horizontally
 - V_SPACING = 400px between channels vertically
-- Inserting a node on an edge: shift all nodes at `x >= targetNode.x` rightward by H_SPACING (draggable bus nodes exempt — user repositions manually)
+- Inserting a node on an edge: all nodes at `x >= newNode.x` shift rightward by H_SPACING — no exceptions
+- Bus nodes (aux/FX/PFL/matrix) sit at the master-bus x position, offset vertically; adding one triggers `fitView`
 - No connection filters — everything connects to everything
 - Signal computed by topological sort → BFS from source to sink
 - Merge nodes (master-bus, bus): `sumSignalsToDb(allInputs)` — existing function unchanged

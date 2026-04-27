@@ -1,24 +1,28 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
   type Edge,
   type Node,
-  type NodeChange,
   BackgroundVariant,
   MarkerType,
-  applyNodeChanges,
+  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { GraphMicNode }        from './nodes/GraphMicNode'
-import { GraphGainNode }       from './nodes/GraphGainNode'
-import { GraphFaderNode }      from './nodes/GraphFaderNode'
-import { GraphMasterBusNode }  from './nodes/GraphMasterBusNode'
-import { GraphAmpNode }        from './nodes/GraphAmpNode'
-import { GraphSpeakerNode }    from './nodes/GraphSpeakerNode'
-import { GraphGenericNode }    from './nodes/GraphGenericNode'
-import { ChainEdge }           from './ChainEdge'
+import { GraphMicNode }            from './nodes/GraphMicNode'
+import { GraphGainNode }           from './nodes/GraphGainNode'
+import { GraphFaderNode }          from './nodes/GraphFaderNode'
+import { GraphMasterBusNode }      from './nodes/GraphMasterBusNode'
+import { GraphAmpNode }            from './nodes/GraphAmpNode'
+import { GraphSpeakerNode }        from './nodes/GraphSpeakerNode'
+import { GraphSwitchNode }         from './nodes/GraphSwitchNode'
+import { GraphSplitterNode }       from './nodes/GraphSplitterNode'
+import { GraphPotentiometerNode }  from './nodes/GraphPotentiometerNode'
+import { GraphGenericNode }        from './nodes/GraphGenericNode'
+import { ChainEdge }               from './ChainEdge'
+import { AddSourcePanel }          from './AddSourcePanel'
+import { InsertBusPanel }          from './InsertBusPanel'
 
 import { useSignalStore }      from '../store/signalStore'
 import { useGraphSignal }      from '../hooks/useSignalChain'
@@ -39,9 +43,9 @@ const nodeTypes = {
   hpf:           GraphGenericNode,
   eq:            GraphGenericNode,
   comp:          GraphGenericNode,
-  switch:        GraphGenericNode,
-  splitter:      GraphGenericNode,
-  potentiometer: GraphGenericNode,
+  switch:        GraphSwitchNode,
+  splitter:      GraphSplitterNode,
+  potentiometer: GraphPotentiometerNode,
   'graphic-eq':  GraphGenericNode,
   speaker:       GraphSpeakerNode,
 }
@@ -50,11 +54,20 @@ const edgeTypes = {
   chain: ChainEdge,
 }
 
+// Rendered inside ReactFlow — calls fitView when a bus node is added
+function FitOnBusAdd() {
+  const busCount = useSignalStore((s) => s.nodes.filter((n) => n.typeKey === 'bus').length)
+  const { fitView } = useReactFlow()
+  useEffect(() => {
+    fitView({ padding: 0.25, duration: 300 })
+  }, [busCount, fitView])
+  return null
+}
+
 export function SignalChain() {
-  const graphNodes         = useSignalStore((s) => s.nodes)
-  const graphEdges         = useSignalStore((s) => s.edges)
-  const updateNodePosition = useSignalStore((s) => s.updateNodePosition)
-  const { stages }         = useGraphSignal()
+  const graphNodes = useSignalStore((s) => s.nodes)
+  const graphEdges = useSignalStore((s) => s.edges)
+  const { stages } = useGraphSignal()
 
   const displayNodes: Node[] = useMemo(
     () =>
@@ -63,7 +76,6 @@ export function SignalChain() {
         type:     node.typeKey,
         position: node.position,
         data:     { color: node.color, label: node.label, typeKey: node.typeKey },
-        draggable: node.draggable,
       })),
     [graphNodes]
   )
@@ -90,15 +102,6 @@ export function SignalChain() {
     [graphEdges, stages]
   )
 
-  function handleNodesChange(changes: NodeChange<Node>[]) {
-    for (const change of changes) {
-      if (change.type === 'position' && change.position) {
-        updateNodePosition(change.id, change.position)
-      }
-    }
-    void applyNodeChanges(changes, displayNodes)
-  }
-
   return (
     <div className="w-full h-full relative">
       <ReactFlow
@@ -106,10 +109,9 @@ export function SignalChain() {
         edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        nodesDraggable={true}
+        nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
-        onNodesChange={handleNodesChange}
         nodeOrigin={[0, 0.5]}
         fitView
         fitViewOptions={{ padding: 0.25 }}
@@ -124,6 +126,9 @@ export function SignalChain() {
           size={1}
           color="var(--lsc-grid)"
         />
+        <FitOnBusAdd />
+        <AddSourcePanel />
+        <InsertBusPanel />
       </ReactFlow>
     </div>
   )

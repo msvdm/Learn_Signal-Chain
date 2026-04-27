@@ -3,7 +3,7 @@ import { Panel } from '@xyflow/react'
 import { Plus, Radio, Volume2, Headphones, Network, X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { LEVEL_LIMITS } from '../data/levels'
-import type { BusType } from '../data/levels'
+import type { BusType } from '../store/signalStore'
 
 interface BusOption {
   type: BusType
@@ -19,29 +19,17 @@ const BUS_OPTIONS: BusOption[] = [
   { type: 'matrix', icon: Network,    label: 'Matrix Out',  description: 'Secondary output routing' },
 ]
 
-// Returns a position RELATIVE to (masterX, masterY).
-// x:0 means same X column as master; y is an offset above/below.
-function defaultBusRelativeOffset(
-  busType: BusType,
-  zoneCount: number
-): { x: number; y: number } {
-  const isAbove = busType === 'matrix'
-  const y = isAbove
-    ? -340 - zoneCount * 230
-    : 340 + zoneCount * 230
-  return { x: 0, y }
-}
-
 export function InsertBusPanel() {
   const [open, setOpen] = useState(false)
-  const buses          = useSignalStore((s) => s.buses)
+  const nodes          = useSignalStore((s) => s.nodes)
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
-  const addBus         = useSignalStore((s) => s.addBus)
+  const addBusNode     = useSignalStore((s) => s.addBusNode)
 
-  const limits = LEVEL_LIMITS[complexityLevel]
+  const limits   = LEVEL_LIMITS[complexityLevel]
+  const busNodes = nodes.filter((n) => n.typeKey === 'bus')
 
   function canAdd(type: BusType): { allowed: boolean; reason?: string } {
-    const existing = buses.filter((b) => b.busType === type).length
+    const existing = busNodes.filter((n) => n.params.busType === type).length
     if (type === 'pfl') {
       if (existing >= limits.maxPflBuses) return { allowed: false, reason: 'PFL already added' }
       return { allowed: true }
@@ -100,10 +88,6 @@ export function InsertBusPanel() {
           </div>
           {visibleOptions.map(({ type, icon: Icon, label, description }) => {
             const { allowed, reason } = canAdd(type)
-            const isAbove = type === 'matrix'
-            const zoneCount = isAbove
-              ? buses.filter((b) => b.busType === 'matrix').length
-              : buses.filter((b) => b.busType !== 'matrix').length
             return (
               <button
                 key={type}
@@ -123,7 +107,7 @@ export function InsertBusPanel() {
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 onClick={() => {
                   if (!allowed) return
-                  addBus(type, defaultBusRelativeOffset(type, zoneCount))
+                  addBusNode(type)
                   setOpen(false)
                 }}
               >
@@ -157,8 +141,8 @@ export function InsertBusPanel() {
         >
           <Plus size={13} style={{ color: 'var(--lsc-accent)' }} />
           <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-text)' }}>Insert Bus</span>
-          {buses.length > 0 && (
-            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{buses.length}</span>
+          {busNodes.length > 0 && (
+            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>{busNodes.length}</span>
           )}
         </button>
       )}

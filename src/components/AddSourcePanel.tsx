@@ -13,12 +13,13 @@ const SOURCE_OPTIONS: { type: SourceType; icon: typeof Mic; label: string; descr
 
 export function AddSourcePanel() {
   const [open, setOpen] = useState(false)
-  const channels       = useSignalStore((s) => s.channels)
+  const nodes           = useSignalStore((s) => s.nodes)
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
-  const addChannel     = useSignalStore((s) => s.addChannel)
+  const addInputChannel = useSignalStore((s) => s.addInputChannel)
 
-  const limits = LEVEL_LIMITS[complexityLevel]
-  const atMax  = channels.length >= limits.maxInputChannels
+  const limits       = LEVEL_LIMITS[complexityLevel]
+  const sourceCount  = nodes.filter((n) => n.typeKey === 'mic' || n.typeKey === 'line-in' || n.typeKey === 'instrument').length
+  const atMax        = sourceCount >= limits.maxInputChannels
 
   const baseStyle: React.CSSProperties = {
     background: 'var(--lsc-node-bg)',
@@ -63,7 +64,7 @@ export function AddSourcePanel() {
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-              onClick={() => { addChannel(type); setOpen(false) }}
+              onClick={() => { addInputChannel(type); setOpen(false) }}
             >
               <div className="flex items-center gap-2 mb-0.5">
                 <Icon size={12} style={{ color: 'var(--lsc-text)' }} />
@@ -94,7 +95,7 @@ export function AddSourcePanel() {
           <Plus size={13} style={{ color: 'var(--lsc-accent)' }} />
           <span className="text-[11px] font-semibold" style={{ color: 'var(--lsc-text)' }}>Add Source</span>
           <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
-            {channels.length}/{limits.maxInputChannels}
+            {sourceCount}/{limits.maxInputChannels}
           </span>
         </button>
       )}

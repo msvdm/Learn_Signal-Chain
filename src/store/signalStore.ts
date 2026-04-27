@@ -180,7 +180,6 @@ interface SignalChainStore {
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
   removeNode: (nodeId: string) => void
   updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
-  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
   toggleBypassNode: (nodeId: string) => void
   addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
   removeEdge: (edgeId: string) => void
@@ -428,22 +427,49 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     set((s) => ({ nodes: [...s.nodes, node] })),
 
   removeNode: (nodeId) =>
-    set((s) => ({
-      nodes: s.nodes.filter((n) => n.id !== nodeId),
-      edges: s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-    })),
+    set((s) => {
+      const node = s.nodes.find((n) => n.id === nodeId)
+      if (!node) return {}
+
+      const masterBus = s.nodes.find((n) => n.typeKey === 'master-bus')
+      const masterBusX = masterBus ? masterBus.position.x : Infinity
+      const isLeftSide = node.position.x < masterBusX
+      const removedX = node.position.x
+
+      // Close the gap: shift the shorter side back toward master-bus
+      const remainingNodes = s.nodes
+        .filter((n) => n.id !== nodeId)
+        .map((n) => {
+          if (isLeftSide && n.position.x < removedX)
+            return { ...n, position: { ...n.position, x: n.position.x + H_SPACING } }
+          if (!isLeftSide && n.position.x > removedX)
+            return { ...n, position: { ...n.position, x: n.position.x - H_SPACING } }
+          return n
+        })
+
+      // Reconnect predecessor → successor (only for simple 1-in 1-out nodes)
+      const inEdges  = s.edges.filter((e) => e.target === nodeId)
+      const outEdges = s.edges.filter((e) => e.source === nodeId)
+      const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+
+      if (inEdges.length === 1 && outEdges.length === 1) {
+        const bridge = {
+          id: `e-${inEdges[0].source}-${outEdges[0].target}`,
+          source: inEdges[0].source,
+          sourceHandle: inEdges[0].sourceHandle,
+          target: outEdges[0].target,
+          targetHandle: outEdges[0].targetHandle,
+        }
+        return { nodes: remainingNodes, edges: [...filteredEdges, bridge] }
+      }
+
+      return { nodes: remainingNodes, edges: filteredEdges }
+    }),
 
   updateNodeParams: (nodeId, patch) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n
-      ),
-    })),
-
-  updateNodePosition: (nodeId, position) =>
-    set((s) => ({
-      nodes: s.nodes.map((n) =>
-        n.id === nodeId ? { ...n, position } : n
       ),
     })),
 
@@ -472,8 +498,22 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       const def = NODE_REGISTRY[typeKey]
       if (!def) return {}
 
-      const newX = sourceNode.position.x + H_SPACING
+      const masterBus = s.nodes.find((n) => n.typeKey === 'master-bus')
+      const masterBusX = masterBus ? masterBus.position.x : Infinity
+
+      // Left side of master-bus: new node takes source's x, source+left grow further left.
+      // Right side (or no master-bus): new node goes right of source, target+right shift right.
+      const isLeftSide = sourceNode.position.x < masterBusX
+      const newX = isLeftSide ? sourceNode.position.x : sourceNode.position.x + H_SPACING
       const newY = sourceNode.position.y
+
+      const shiftedNodes = s.nodes.map((n) => {
+        if (isLeftSide && n.position.x <= sourceNode.position.x)
+          return { ...n, position: { ...n.position, x: n.position.x - H_SPACING } }
+        if (!isLeftSide && n.position.x >= newX && n.id !== sourceNode.id)
+          return { ...n, position: { ...n.position, x: n.position.x + H_SPACING } }
+        return n
+      })
 
       const newId = `${typeKey}-${Date.now()}`
       const newNode = {
@@ -482,21 +522,11 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
         position: { x: newX, y: newY },
         params: { ...def.defaultParams, ...extraParams },
         bypassed: false,
-        draggable: def.category === 'source' || def.category === 'sink' || typeKey === 'bus',
         label: def.label,
         color: sourceNode.color,
       }
 
-      // Shift non-draggable nodes that were at or beyond the target position
-      const shiftedNodes = s.nodes.map((n) => {
-        if (n.draggable) return n // buses and endpoints stay put
-        if (n.position.x >= newX && n.id !== sourceNode.id) {
-          return { ...n, position: { ...n.position, x: n.position.x + H_SPACING } }
-        }
-        return n
-      })
-
-      const inPortId = def.inputs[0]?.id ?? 'in'
+      const inPortId  = def.inputs[0]?.id  ?? 'in'
       const outPortId = def.outputs[0]?.id ?? 'out'
 
       const filteredEdges = s.edges.filter((e) => e.id !== edgeId)
@@ -544,7 +574,6 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
         position: { x: 0, y },
         params: sourceType === 'mic' ? { sensitivityDb: defaultSensitivity } : { levelDb: defaultSensitivity },
         bypassed: false,
-        draggable: true,
         label: typeKey === 'mic' ? 'Microphone' : typeKey === 'line-in' ? 'Line Input' : 'Instrument',
         color,
       }
@@ -564,7 +593,6 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
             position: { x: H_SPACING, y },
             params: { gainDb: 40 },
             bypassed: false,
-            draggable: false,
             label: 'Preamp',
             color,
           },
@@ -574,7 +602,6 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
             position: { x: H_SPACING * 2, y },
             params: { faderDb: 0 },
             bypassed: false,
-            draggable: false,
             label: 'Channel Fader',
             color,
           }
@@ -623,7 +650,6 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
         position: { x: refX, y: refY + yOffset },
         params: { faderDb: 0, isStereo: busType !== 'pfl', busType },
         bypassed: false,
-        draggable: true,
         label: labels[busType],
       }
 

@@ -27,7 +27,6 @@ export type SignalNode = {
   position: { x: number; y: number }
   params: Record<string, NodeParamValue>
   bypassed: boolean
-  draggable: boolean
   label?: string
   color?: string
 }

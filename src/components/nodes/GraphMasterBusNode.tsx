@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
 import { Merge } from 'lucide-react'
 import { Handle, Position } from '@xyflow/react'
@@ -13,9 +14,10 @@ interface GraphMasterBusData extends Record<string, unknown> {
 }
 
 export function GraphMasterBusNode({ id, data }: NodeProps<Node<GraphMasterBusData>>) {
-  const { stages }   = useGraphSignal()
-  const incomingEdges = useSignalStore((s) => s.edges.filter((e) => e.target === id))
-  const sourceNodes   = useSignalStore((s) => s.nodes)
+  const { stages }  = useGraphSignal()
+  const allEdges    = useSignalStore((s) => s.edges)
+  const sourceNodes = useSignalStore((s) => s.nodes)
+  const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
   const { t }         = useTranslation()
 
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
