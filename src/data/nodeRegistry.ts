@@ -47,8 +47,8 @@ export type SignalEdge = {
   targetHandle: string // port id, e.g. 'in' | 'in-1'
 }
 
-export const H_SPACING = 420
-export const V_SPACING = 400
+export const H_SPACING = 278
+export const V_SPACING = 200
 
 export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   mic: {
@@ -147,7 +147,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
-    defaultParams: { attenuationDb: 0 },
+    // position: 0–100 knob position. 0 = fully CCW (−∞), 75 = unity (0 dB), 100 = fully CW (+10 dB)
+    defaultParams: { position: 75 },
   },
   amp: {
     typeKey: 'amp',

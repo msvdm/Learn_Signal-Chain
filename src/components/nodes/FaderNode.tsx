@@ -32,11 +32,15 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
         step={1}
         formatValue={(v) => (v <= -80 ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)}
         onChange={(v) => updateNodeParams(id, { faderDb: v })}
-        height={72}
+        height={144}
         marks={[
-          { db: 0,   label: '0'   },
+          { db: 10,  label: '+10' },
+          { db: 0,   label:  '0'  },
+          { db: -10, label: '-10' },
           { db: -20, label: '-20' },
+          { db: -30, label: '-30' },
           { db: -40, label: '-40' },
+          { db: -60, label: '-60' },
         ]}
       />
     </InlineNode>

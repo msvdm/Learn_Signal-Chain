@@ -9,7 +9,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
 
 // Processor types the user can insert on any edge
-const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
+const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'graphic-eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
 
 // Source and sink types cannot be bypassed or removed via the wrapper UI
 const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])

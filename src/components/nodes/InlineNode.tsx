@@ -10,9 +10,9 @@ import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
-const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
+const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'graphic-eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
 const PROTECTED_TYPES  = new Set(['mic', 'line-in', 'instrument', 'speaker'])
-const NO_BYPASS_TYPES  = new Set(['fader', 'switch', 'potentiometer'])
+const NO_BYPASS_TYPES  = new Set(['fader', 'switch', 'potentiometer', 'gain'])
 
 interface InlineNodeProps {
   nodeId: string

@@ -20,6 +20,7 @@ import { SwitchNode }         from './nodes/SwitchNode'
 import { SplitterNode }       from './nodes/SplitterNode'
 import { PotentiometerNode }  from './nodes/PotentiometerNode'
 import { GenericNode }        from './nodes/GenericNode'
+import { HpfNode }           from './nodes/HpfNode'
 import { EQNode }             from './nodes/EQNode'
 import { GraphicEQNode }      from './nodes/GraphicEQNode'
 import { ChainEdge }               from './ChainEdge'
@@ -41,7 +42,7 @@ const nodeTypes = {
   fader:         FaderNode,
   'master-bus':  MasterBusNode,
   bus:           GenericNode,
-  hpf:           GenericNode,
+  hpf:           HpfNode,
   eq:            EQNode,
   comp:          GenericNode,
   switch:        SwitchNode,

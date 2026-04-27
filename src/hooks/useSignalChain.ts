@@ -25,6 +25,19 @@ export function getHealth(db: number): SignalHealth {
   return 'clipping'
 }
 
+// Audio-taper mapping for potentiometer position (0–100).
+// 0 = fully CCW → −∞,  75 = unity (0 dB),  100 = fully CW (+10 dB).
+// Below unity: log taper (−60 dB/octave feel). Above unity: linear boost to +10 dB.
+export function potPositionToDb(position: number): number {
+  if (position <= 0) return -Infinity
+  const t = position / 100
+  if (t <= 0.75) {
+    const normalized = t / 0.75                          // 0 → 1 as pot goes CCW → unity
+    return 60 * Math.log10(Math.max(normalized, 0.0001)) // −∞ → 0 dB
+  }
+  return ((t - 0.75) / 0.25) * 10                       // 0 → +10 dB above unity
+}
+
 // ── Signal summing ─────────────────────────────────────────────────────────────
 
 function sumSignalsToDb(dbs: number[]): number {
@@ -129,7 +142,8 @@ function computeGraphNode(
       return { out, health: getHealth(out) }
     }
     case 'potentiometer': {
-      const out = input - Math.abs((p.attenuationDb as number) ?? 0)
+      const db  = potPositionToDb((p.position as number) ?? 75)
+      const out = isFinite(db) ? input + db : -Infinity
       return { out, health: getHealth(out) }
     }
     case 'switch': {

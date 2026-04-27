@@ -1,12 +1,21 @@
-import { useRef, useEffect } from 'react'
+import { Fragment, useRef, useEffect } from 'react'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
-  { db: 0,   label: '0'   },
+  { db: 0,   label:  '0'  },
   { db: -10, label: '-10' },
   { db: -20, label: '-20' },
   { db: -40, label: '-40' },
+  { db: -60, label: '-60' },
 ]
+
+// Layout constants (px)
+const TRACK_LEFT = 8
+const TRACK_W    = 8
+const CAP_W      = 22
+const CAP_H      = 12
+const CAP_LEFT   = TRACK_LEFT + TRACK_W / 2 - CAP_W / 2   // centres cap on track
+const TICK_LEFT  = TRACK_LEFT + TRACK_W + 2                // right of track + gap
 
 interface VerticalFaderProps {
   value: number
@@ -27,39 +36,36 @@ export function VerticalFader({
   onChange,
   formatValue,
   marks = DEFAULT_MARKS,
-  height = 128,
+  height = 144,
 }: VerticalFaderProps) {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const isDragging = useRef(false)
-  const valueRef = useRef(value)
-  valueRef.current = value
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isDragging   = useRef(false)
+  const valueRef     = useRef(value)
+  valueRef.current   = value
 
-  const pct = ((value - min) / (max - min)) * 100
+  const pct          = ((value - min) / (max - min)) * 100
   const displayValue = formatValue
     ? formatValue(value)
     : `${value >= 0 ? '+' : ''}${value} dB`
 
-  function computeValueFromPointer(clientY: number): number {
-    if (!trackRef.current) return valueRef.current
-    const rect = trackRef.current.getBoundingClientRect()
-    const relY = Math.max(0, Math.min(rect.height, clientY - rect.top))
+  function computeFromPointer(clientY: number): number {
+    if (!containerRef.current) return valueRef.current
+    const rect     = containerRef.current.getBoundingClientRect()
+    const relY     = Math.max(0, Math.min(rect.height, clientY - rect.top))
     const fraction = 1 - relY / rect.height
-    const raw = min + fraction * (max - min)
-    const stepped = Math.round(raw / step) * step
+    const raw      = min + fraction * (max - min)
+    const stepped  = Math.round(raw / step) * step
     return Math.max(min, Math.min(max, stepped))
   }
 
   useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      if (!isDragging.current) return
-      onChange(computeValueFromPointer(e.clientY))
-    }
-    const onUp = () => { isDragging.current = false }
+    const onMove = (e: PointerEvent) => { if (isDragging.current) onChange(computeFromPointer(e.clientY)) }
+    const onUp   = () => { isDragging.current = false }
     window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointerup',   onUp)
     return () => {
       window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointerup',   onUp)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [min, max, step, onChange])
@@ -68,79 +74,84 @@ export function VerticalFader({
     e.stopPropagation()
     e.preventDefault()
     isDragging.current = true
-    onChange(computeValueFromPointer(e.clientY))
+    onChange(computeFromPointer(e.clientY))
   }
 
   return (
-    <div className="nodrag nopan flex items-center justify-center gap-4 py-1">
+    <div className="nodrag nopan" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+
+      {/* Draggable fader area */}
       <div
-        ref={trackRef}
-        className="relative w-8 flex items-center justify-center select-none"
-        style={{ height, touchAction: 'none', cursor: 'ns-resize' }}
+        ref={containerRef}
+        style={{ position: 'relative', width: 72, height, touchAction: 'none', cursor: 'ns-resize' }}
         onPointerDown={handlePointerDown}
       >
-        {/* Track */}
-        <div
-          className="absolute w-2 h-full rounded-full pointer-events-none"
-          style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
-        />
+        {/* Track groove */}
+        <div style={{
+          position: 'absolute', left: TRACK_LEFT, top: 0, bottom: 0, width: TRACK_W,
+          borderRadius: 4,
+          background: 'var(--lsc-sunken)',
+          border: '1px solid var(--lsc-border)',
+          pointerEvents: 'none',
+        }} />
 
-        {/* dB scale markers */}
-        {marks
-          .filter((m) => m.db >= min && m.db <= max)
-          .map(({ db, label }) => {
-            const markPct = ((db - min) / (max - min)) * 100
-            const top = `${100 - markPct}%`
-            const isUnity = db === 0
-            return (
-              <div key={db} className="absolute w-full pointer-events-none" style={{ top }}>
-                <div
-                  className="absolute h-px"
-                  style={{
-                    width: isUnity ? 20 : 12,
-                    right: isUnity ? -4 : 0,
-                    background: isUnity ? 'var(--signal-good)' : 'var(--lsc-border)',
-                  }}
-                />
-                <span
-                  className="absolute text-[7px] font-mono"
-                  style={{ right: 24, top: -4, color: isUnity ? 'var(--signal-good)' : 'var(--lsc-text)' }}
-                >
-                  {label}
-                </span>
-              </div>
-            )
-          })}
+        {/* Scale: ticks + labels to the right of the track */}
+        {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label }) => {
+          const topPct  = 100 - ((db - min) / (max - min)) * 100
+          const isUnity = db === 0
+          return (
+            <Fragment key={db}>
+              <div style={{
+                position: 'absolute',
+                top: `${topPct}%`, left: TICK_LEFT,
+                width: isUnity ? 8 : 5, height: 1,
+                background: isUnity ? 'var(--signal-good)' : 'var(--lsc-border)',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+              }} />
+              <span style={{
+                position: 'absolute',
+                top: `${topPct}%`, left: TICK_LEFT + (isUnity ? 10 : 7),
+                transform: 'translateY(-50%)',
+                fontSize: 7, fontFamily: 'monospace', lineHeight: 1,
+                color: isUnity ? 'var(--signal-good)' : 'var(--lsc-text)',
+                opacity: isUnity ? 1 : 0.65,
+                pointerEvents: 'none', userSelect: 'none',
+              }}>
+                {label}
+              </span>
+            </Fragment>
+          )
+        })}
 
         {/* Fader cap */}
-        <div
-          className="absolute z-10 rounded-sm pointer-events-none"
-          style={{
-            width: 28,
-            height: 14,
-            bottom: `${pct}%`,
-            marginBottom: -7,
-            background: 'linear-gradient(180deg, var(--lsc-track-3) 0%, var(--lsc-track-2) 100%)',
-            border: '1px solid var(--lsc-text)',
-            boxShadow: 'var(--lsc-shadow-fader)',
-          }}
-        >
-          <div
-            className="absolute left-1/2 top-1/2 h-px"
-            style={{ width: '60%', transform: 'translate(-50%,-50%)', background: 'var(--lsc-text)' }}
-          />
+        <div style={{
+          position: 'absolute',
+          left: CAP_LEFT, width: CAP_W, height: CAP_H,
+          top: `${100 - pct}%`, marginTop: -(CAP_H / 2),
+          background: 'linear-gradient(180deg, var(--lsc-track-3) 0%, var(--lsc-track-2) 100%)',
+          border: '1px solid var(--lsc-text)',
+          borderRadius: 2,
+          boxShadow: 'var(--lsc-shadow-fader)',
+          pointerEvents: 'none',
+        }}>
+          {/* Centre line on cap */}
+          <div style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: '60%', height: 1,
+            transform: 'translate(-50%, -50%)',
+            background: 'var(--lsc-text)',
+          }} />
         </div>
       </div>
 
       {/* Value readout */}
-      <div className="text-center min-w-[36px]">
-        <div className="text-xs font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>
+      <div style={{ textAlign: 'center', lineHeight: 1 }}>
+        <div style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: 'var(--lsc-text)' }}>
           {displayValue}
         </div>
         {value === 0 && (
-          <div className="text-[9px] mt-0.5" style={{ color: 'var(--signal-good)' }}>
-            unity
-          </div>
+          <div style={{ fontSize: 8, color: 'var(--signal-good)', marginTop: 2 }}>unity</div>
         )}
       </div>
     </div>
