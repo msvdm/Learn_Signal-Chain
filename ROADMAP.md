@@ -56,14 +56,22 @@ connectable elements compose naturally into complex rigs.
 
 ---
 
-## Phase 4 — Polish (Session 3)
+## Phase 4 — Polish + Cleanup (Session 3) ✅
 
-- [ ] Translations for 4 new node types (en + bg)
-- [ ] `GainStagingBanner` warnings: traverse by `typeKey` not `channelId:typeKey`
-- [ ] `SignalLevelProfile` — topological sort for ordered stage display
-- [ ] Bus layout: master-bus fixed center, aux/FX below, matrix above
-- [ ] Auto-scaling: `fitView` triggers after node insertion
-- [ ] Remove all backward-compat shims from store + hooks
+- [ ] Translations for 4 new node types (en + bg) — copy exists; wired to GraphNodeWrapper tooltip
+- [x] `GainStagingBanner` — removed (unmounted, dead code deleted)
+- [x] `SignalLevelProfile` — rewired to `useGraphSignal()`; primary path via x-position grouping
+- [x] Bus layout: master-bus fixed center, aux/FX below, matrix above (`addBusNode` V_SPACING offset)
+- [x] Auto-scaling: `fitView` triggers after bus node insertion (`FitOnBusAdd` in SignalChain)
+- [x] Remove all backward-compat shims from store + hooks — complete
+
+### Codebase cleanup (Session 3)
+- [x] Deleted 15 legacy node components (old channel-model, never rendered)
+- [x] Deleted 3 legacy controls (CompressorCurve, EQInlineGraph, eqMath — only used by dead nodes)
+- [x] Deleted EQCurve, GainStagingBanner (unreferenced)
+- [x] `NodeWrapper.tsx` stripped to `ControlSlider` only
+- [x] `useSignalChain.ts`: removed 250+ lines of old-model code (`useMultiChannelSignal`, `useSignalChain` compat wrapper, all channel/master compute functions)
+- [x] `signalStore.ts`: removed 350+ lines of old-model state + mutations (channels, masterState, buses/sends, all old actions)
 
 ---
 
@@ -98,5 +106,5 @@ connectable elements compose naturally into complex rigs.
 - Bus nodes (aux/FX/PFL/matrix) sit at the master-bus x position, offset vertically; adding one triggers `fitView`
 - No connection filters — everything connects to everything
 - Signal computed by topological sort → BFS from source to sink
-- Merge nodes (master-bus, bus): `sumSignalsToDb(allInputs)` — existing function unchanged
+- Merge nodes (master-bus, bus): ontinue on the roadmap and `sumSignalsToDb(allInputs)` — existing function unchanged
 - Split nodes (splitter): signal duplicated to both outputs

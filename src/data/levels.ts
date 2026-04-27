@@ -32,15 +32,6 @@ export const CHANNEL_COLORS = [
   '#84cc16',
 ]
 
-// Canonical order of insertable node type-keys within a channel
-export const CHANNEL_NODE_ORDER = ['source', 'preamp', 'hpf', 'eq', 'comp', 'fader']
-
-// Canonical order of master section node IDs
-export const MASTER_NODE_ORDER = ['master-bus', 'master-fader', 'graphic-eq', 'speaker']
-
-// Used by ChainEdge for insertable-node ordering within a channel
-export const CHAIN_ORDER = ['mic', 'preamp', 'hpf', 'eq', 'comp', 'fader', 'master-bus', 'master-fader', 'graphic-eq', 'speaker']
-
 // ── Default graph per level ───────────────────────────────────────────────────
 
 export function buildDefaultGraph(level: ComplexityLevel): { nodes: SignalNode[]; edges: SignalEdge[] } {

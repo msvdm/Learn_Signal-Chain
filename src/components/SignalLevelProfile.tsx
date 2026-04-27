@@ -1,4 +1,5 @@
-import { useSignalChain } from '../hooks/useSignalChain'
+import { useSignalStore } from '../store/signalStore'
+import { useGraphSignal } from '../hooks/useSignalChain'
 import type { SignalHealth } from '../hooks/useSignalChain'
 
 const W = 900
@@ -9,7 +10,6 @@ const PAD_LEFT = 56
 const PAD_RIGHT = 24
 const PLOT_H = H - PAD_TOP - PAD_BOT
 
-// y range: +5 (top) → -65 (bottom), 70 units
 function dbToY(db: number): number {
   const clamped = Math.max(-65, Math.min(5, db))
   return PAD_TOP + ((5 - clamped) / 70) * PLOT_H
@@ -22,16 +22,6 @@ const HEALTH_COLORS: Record<SignalHealth, string> = {
   clipping: 'var(--signal-clipping)',
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  mic: 'Mic',
-  preamp: 'Preamp',
-  eq: 'EQ',
-  comp: 'Comp',
-  fader: 'Fader',
-  master: 'Master',
-  speaker: 'Out',
-}
-
 interface StagePoint {
   id: string
   label: string
@@ -40,13 +30,25 @@ interface StagePoint {
 }
 
 export function SignalLevelProfile() {
-  const { stages: stageMap, chainOrder } = useSignalChain()
+  const graphNodes = useSignalStore((s) => s.nodes)
+  const { stages } = useGraphSignal()
 
-  const stages: StagePoint[] = chainOrder.map((id) => ({
-    id,
-    label: STAGE_LABELS[id] ?? id,
-    db: stageMap[id]?.out ?? -Infinity,
-    health: stageMap[id]?.health ?? 'too-quiet',
+  // Build the primary path: group nodes by x position and pick the one
+  // with the smallest y at each column (= the first/top channel row).
+  const byX = new Map<number, typeof graphNodes[0]>()
+  for (const node of graphNodes) {
+    const existing = byX.get(node.position.x)
+    if (!existing || node.position.y < existing.position.y) {
+      byX.set(node.position.x, node)
+    }
+  }
+  const primaryPath = [...byX.values()].sort((a, b) => a.position.x - b.position.x)
+
+  const stagePoints: StagePoint[] = primaryPath.map((node) => ({
+    id: node.id,
+    label: node.label ?? node.typeKey,
+    db: stages[node.id]?.out ?? -Infinity,
+    health: stages[node.id]?.health ?? 'too-quiet',
   }))
 
   const xPlotStart = PAD_LEFT
@@ -54,16 +56,13 @@ export function SignalLevelProfile() {
   const plotW = xPlotEnd - xPlotStart
 
   const xFor = (i: number) =>
-    stages.length > 1 ? PAD_LEFT + (i / (stages.length - 1)) * plotW : PAD_LEFT + plotW / 2
+    stagePoints.length > 1 ? PAD_LEFT + (i / (stagePoints.length - 1)) * plotW : PAD_LEFT + plotW / 2
 
-  const pts = stages.map((_, i) => [xFor(i), dbToY(_.db)] as [number, number])
+  const pts = stagePoints.map((_, i) => [xFor(i), dbToY(_.db)] as [number, number])
   const poly = pts.map(([x, y]) => `${x},${y}`).join(' ')
 
   return (
-    <div
-      className="flex-shrink-0"
-      style={{ background: 'var(--lsc-header)' }}
-    >
+    <div className="flex-shrink-0" style={{ background: 'var(--lsc-header)' }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
@@ -107,12 +106,12 @@ export function SignalLevelProfile() {
         ))}
 
         {/* Connecting polyline */}
-        {stages.length > 1 && (
+        {stagePoints.length > 1 && (
           <polyline points={poly} fill="none" stroke="var(--lsc-text)" strokeWidth="1.5" strokeLinejoin="round" />
         )}
 
         {/* Stage dots and labels */}
-        {stages.map((stage, i) => {
+        {stagePoints.map((stage, i) => {
           const [x, y] = pts[i]
           const color = HEALTH_COLORS[stage.health]
           const val = stage.db <= -60 ? '−∞' : `${stage.db >= 0 ? '+' : ''}${Math.round(stage.db)}`
