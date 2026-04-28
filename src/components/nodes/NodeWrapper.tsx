@@ -1,15 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import type { ReactNode, CSSProperties } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Power, X, HelpCircle, Plus, GitFork } from 'lucide-react'
-import { NODE_REGISTRY } from '../../data/nodeRegistry'
+import { Power, X, HelpCircle } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
-
-// Processor types the user can insert on any edge
-const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'graphic-eq', 'comp', 'fader', 'switch', 'potentiometer', 'amp']
+import { NODE_REGISTRY } from '../../data/nodeRegistry'
 
 // Source and sink types cannot be bypassed or removed via the wrapper UI
 const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
@@ -39,9 +34,6 @@ export function NodeWrapper({
   const activeTooltipId     = useSignalStore((s) => s.activeTooltipId)
   const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)
   const removeNode          = useSignalStore((s) => s.removeNode)
-  const insertNodeOnEdge    = useSignalStore((s) => s.insertNodeOnEdge)
-  const startSplitDraw      = useSignalStore((s) => s.startSplitDraw)
-  const edges               = useSignalStore((s) => s.edges)
   const { t }               = useTranslation()
 
   const isBypassed  = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
@@ -51,44 +43,6 @@ export function NodeWrapper({
   const def     = NODE_REGISTRY[typeKey]
   const inputs  = def?.inputs ?? []
   const outputs = def?.outputs ?? []
-
-  const [insertMenu, setInsertMenu] = useState<{ edgeId: string; x: number; y: number } | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!insertMenu) return
-    function onDown(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setInsertMenu(null)
-    }
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setInsertMenu(null) }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [insertMenu])
-
-  function openMenuForEdge(edgeId: string, e: React.MouseEvent) {
-    e.stopPropagation()
-    setInsertMenu({ edgeId, x: e.clientX + 8, y: e.clientY })
-  }
-
-  function handleOutputClick(handleId: string, e: React.MouseEvent) {
-    const edge = edges.find((ed) => ed.source === nodeId && ed.sourceHandle === handleId)
-    if (edge) openMenuForEdge(edge.id, e)
-  }
-
-  function handleInputClick(handleId: string, e: React.MouseEvent) {
-    const edge = edges.find((ed) => ed.target === nodeId && ed.targetHandle === handleId)
-    if (edge) openMenuForEdge(edge.id, e)
-  }
-
-  function handleInsert(newTypeKey: string) {
-    if (!insertMenu) return
-    insertNodeOnEdge(insertMenu.edgeId, newTypeKey)
-    setInsertMenu(null)
-  }
 
   const borderAccent = accentColor
     ? `3px solid ${isBypassed ? 'var(--signal-hot)' : accentColor}`
@@ -117,16 +71,15 @@ export function NodeWrapper({
           id={port.id}
           type="target"
           position={Position.Left}
-          title={`${port.label} — click to insert before`}
+          title={port.label}
           style={{
             top: inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`,
             width: 10, height: 10,
             background: 'var(--lsc-border)',
             border: '2px solid var(--lsc-node-bg)',
             borderRadius: '50%',
-            cursor: 'pointer',
+            cursor: 'crosshair',
           }}
-          onClick={(e) => handleInputClick(port.id, e)}
         />
       ))}
 
@@ -137,86 +90,17 @@ export function NodeWrapper({
           id={port.id}
           type="source"
           position={Position.Right}
-          title={`${port.label} — click to insert after`}
+          title={port.label}
           style={{
             top: outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`,
             width: 10, height: 10,
             background: accentColor ?? 'var(--lsc-accent)',
             border: '2px solid var(--lsc-node-bg)',
             borderRadius: '50%',
-            cursor: 'pointer',
+            cursor: 'crosshair',
           }}
-          onClick={(e) => handleOutputClick(port.id, e)}
         />
       ))}
-
-      {/* Insertion picker — portalled to body to escape React Flow's CSS transform */}
-      {insertMenu && createPortal(
-        <div
-          ref={menuRef}
-          style={{
-            position: 'fixed',
-            left: insertMenu.x,
-            top: insertMenu.y,
-            zIndex: 9999,
-            background: 'var(--lsc-node-bg)',
-            border: '1px solid var(--lsc-border)',
-            borderRadius: 'var(--lsc-radius-md)',
-            boxShadow: 'var(--lsc-shadow-popup)',
-            minWidth: 180,
-            overflow: 'hidden',
-            fontSize: 12,
-            color: 'var(--lsc-text)',
-          }}
-        >
-          {/* Add Split — top action, separated from the insert list */}
-          <button
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              width: '100%', padding: '7px 12px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--lsc-accent)', textAlign: 'left', fontSize: 12, fontWeight: 600,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-            onClick={() => { startSplitDraw(insertMenu.edgeId); setInsertMenu(null) }}
-          >
-            <GitFork size={13} /> Add Split
-          </button>
-          <div style={{ height: 1, background: 'var(--lsc-border)', margin: '0 8px' }} />
-          <div
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px 3px',
-              fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-              color: 'var(--lsc-text)', background: 'var(--lsc-sunken)',
-            }}
-          >
-            <Plus size={9} /> Insert on this connection
-          </div>
-          {INSERTABLE_TYPES.map((key) => {
-            const typeDef = NODE_REGISTRY[key]
-            if (!typeDef) return null
-            return (
-              <button
-                key={key}
-                style={{
-                  display: 'block', width: '100%',
-                  padding: '5px 12px',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--lsc-text)', textAlign: 'left', fontSize: 12,
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-                onClick={() => handleInsert(key)}
-              >
-                {typeDef.label}
-              </button>
-            )
-          })}
-        </div>,
-        document.body
-      )}
 
       {/* Header */}
       <div

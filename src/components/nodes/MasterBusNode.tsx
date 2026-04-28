@@ -22,16 +22,18 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
 
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
-  // Render one input handle per connected channel, spaced vertically
-  const channelHandles = incomingEdges.map((e, i) => {
-    const srcNode = sourceNodes.find((n) => n.id === e.source)
-    const top = incomingEdges.length === 1
-      ? '50%'
-      : `${((i + 1) / (incomingEdges.length + 1)) * 100}%`
+  // Render one handle per connected channel PLUS one empty slot for the next connection.
+  // This ensures there is always a visible target handle in Connect mode.
+  const totalHandles = incomingEdges.length + 1
+  const channelHandles = Array.from({ length: totalHandles }, (_, i) => {
+    const edge = incomingEdges[i]
+    const srcNode = edge ? sourceNodes.find((n) => n.id === edge.source) : undefined
+    const handleId = edge ? (edge.targetHandle ?? `in-${i + 1}`) : `in-${i + 1}`
+    const top = totalHandles === 1 ? '50%' : `${((i + 1) / (totalHandles + 1)) * 100}%`
     return (
       <Handle
-        key={e.targetHandle ?? e.id}
-        id={e.targetHandle ?? 'in'}
+        key={handleId}
+        id={handleId}
         type="target"
         position={Position.Left}
         style={{
@@ -40,26 +42,11 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
           background: srcNode?.color ?? 'var(--lsc-border)',
           border: '2px solid var(--lsc-node-bg)',
           borderRadius: '50%',
+          cursor: 'crosshair',
         }}
       />
     )
   })
-
-  // If no channels connected yet, show a generic input placeholder
-  const placeholderHandle = incomingEdges.length === 0 && (
-    <Handle
-      id="in-1"
-      type="target"
-      position={Position.Left}
-      style={{
-        top: '50%',
-        width: 10, height: 10,
-        background: 'var(--lsc-border)',
-        border: '2px solid var(--lsc-node-bg)',
-        borderRadius: '50%',
-      }}
-    />
-  )
 
   return (
     // NodeWrapper renders output handle from NODE_REGISTRY; we override inputs manually above
@@ -69,9 +56,8 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
       icon={<Merge size={14} />}
       label={data.label ?? 'Master Bus'}
     >
-      {/* Dynamic input handles rendered outside the wrapper's handle loop */}
+      {/* Dynamic input handles: N connected + 1 empty slot for next connection */}
       {channelHandles}
-      {placeholderHandle}
 
       <div className="space-y-2">
         <div className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>

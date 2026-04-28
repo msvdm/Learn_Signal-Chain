@@ -7,7 +7,7 @@ export type NodePort = {
   side: 'left' | 'right'
 }
 
-export type NodeCategory = 'source' | 'processor' | 'merge' | 'split' | 'sink'
+export type NodeCategory = 'source' | 'processor' | 'merge' | 'sink'
 
 export type EQBand = {
   freqHz: number
@@ -46,9 +46,6 @@ export type SignalEdge = {
   target: string
   targetHandle: string // port id, e.g. 'in' | 'in-1'
 }
-
-export const H_SPACING = 278
-export const V_SPACING = 200
 
 export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   mic: {
@@ -130,17 +127,6 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     category: 'processor',
     defaultParams: { on: true },
   },
-  splitter: {
-    typeKey: 'splitter',
-    label: 'Splitter',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [
-      { id: 'out-1', label: 'Out A', side: 'right' },
-      { id: 'out-2', label: 'Out B', side: 'right' },
-    ],
-    category: 'split',
-    defaultParams: {},
-  },
   potentiometer: {
     typeKey: 'potentiometer',
     label: 'Potentiometer',
@@ -190,13 +176,5 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     outputs: [],
     category: 'sink',
     defaultParams: { outputTrimDb: 0 },
-  },
-  'conn-point': {
-    typeKey: 'conn-point',
-    label: 'Connection Point',
-    inputs:  [{ id: 'in',  label: 'Input',  side: 'left'  }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
-    category: 'processor',
-    defaultParams: {},
   },
 }

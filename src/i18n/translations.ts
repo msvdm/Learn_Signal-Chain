@@ -22,11 +22,6 @@ export interface Translations {
     'routing-madness': { title: string; description: string }
     switchConfirm: string
   }
-  palette: {
-    heading: string
-    empty: string
-    nodes: { preamp: string; eq: string; comp: string; fader: string; master: string }
-  }
   meters: { input: string; output: string }
   health: { 'too-quiet': string; good: string; hot: string; clipping: string }
   warnings: {
@@ -89,14 +84,6 @@ export interface Translations {
     bypassed: string
     remove: string
   }
-  chainMenu: {
-    insertTitle: string
-    sendTitle: string
-    auxBus: string
-    fxEngine: string
-    pflMonitor: string
-    allStagesInUse: string
-  }
   theory: Record<string, TheoryEntry>
 }
 
@@ -128,17 +115,6 @@ export const translations: Record<Lang, Translations> = {
         description: 'No rules. Pure fun.',
       },
       switchConfirm: 'Switch to {title}? This will reset all controls to defaults.',
-    },
-    palette: {
-      heading: 'Elements',
-      empty: 'All elements placed!',
-      nodes: {
-        preamp: 'Preamp / Gain',
-        eq: 'EQ',
-        comp: 'Compressor',
-        fader: 'Fader',
-        master: 'Master Bus',
-      },
     },
     meters: { input: 'Input', output: 'Output' },
     health: {
@@ -225,14 +201,6 @@ export const translations: Record<Lang, Translations> = {
       bypassed: 'Bypassed — signal passes through unchanged',
       remove: 'Remove from chain',
     },
-    chainMenu: {
-      insertTitle: 'Insert',
-      sendTitle: 'Send',
-      auxBus: 'Aux Bus',
-      fxEngine: 'FX Engine',
-      pflMonitor: 'PFL Monitor',
-      allStagesInUse: 'All stages already in chain',
-    },
     theory: {
       mic: {
         what: 'The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.',
@@ -310,17 +278,6 @@ export const translations: Record<Lang, Translations> = {
       },
       switchConfirm:
         'Превключване към {title}? Всички контроли ще се нулират.',
-    },
-    palette: {
-      heading: 'Елементи',
-      empty: 'Всички елементи са поставени!',
-      nodes: {
-        preamp: 'Предусилвател',
-        eq: 'Еквалайзер',
-        comp: 'Компресор',
-        fader: 'Фейдър',
-        master: 'Мастър Бус',
-      },
     },
     meters: { input: 'Вход', output: 'Изход' },
     health: {
@@ -407,14 +364,6 @@ export const translations: Record<Lang, Translations> = {
       bypass: 'Байпас',
       bypassed: 'Байпас — сигналът минава без промяна',
       remove: 'Премахни от веригата',
-    },
-    chainMenu: {
-      insertTitle: 'Вмъкни',
-      sendTitle: 'Изпрати',
-      auxBus: 'Aux шина',
-      fxEngine: 'FX двигател',
-      pflMonitor: 'PFL монитор',
-      allStagesInUse: 'Всички елементи вече са в сигналната верига',
     },
     theory: {
       mic: {

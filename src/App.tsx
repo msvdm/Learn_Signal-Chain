@@ -5,6 +5,7 @@ import type { ComplexityLevel } from './store/signalStore'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { SignalLevelProfile } from './components/SignalLevelProfile'
+import { ElementPalette } from './components/ElementPalette'
 import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 
@@ -173,8 +174,9 @@ function App() {
         </div>
       </header>
 
-      {/* Main canvas */}
-      <main className="flex-1 overflow-hidden min-h-0">
+      {/* Main canvas with left palette */}
+      <main className="flex-1 overflow-hidden min-h-0 flex flex-row">
+        <ElementPalette />
         <ReactFlowProvider>
           <SignalChain />
         </ReactFlowProvider>
