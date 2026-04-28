@@ -23,9 +23,11 @@ import { GenericNode }        from './nodes/GenericNode'
 import { HpfNode }           from './nodes/HpfNode'
 import { EQNode }             from './nodes/EQNode'
 import { GraphicEQNode }      from './nodes/GraphicEQNode'
+import { ConnPointNode }           from './nodes/ConnPointNode'
 import { ChainEdge }               from './ChainEdge'
 import { AddSourcePanel }          from './AddSourcePanel'
 import { InsertBusPanel }          from './InsertBusPanel'
+import { SplitDrawOverlay }        from './SplitDrawOverlay'
 
 import { useSignalStore }      from '../store/signalStore'
 import { useGraphSignal }      from '../hooks/useSignalChain'
@@ -50,6 +52,7 @@ const nodeTypes = {
   potentiometer: PotentiometerNode,
   'graphic-eq':  GraphicEQNode,
   speaker:       SpeakerNode,
+  'conn-point':  ConnPointNode,
 }
 
 const edgeTypes = {
@@ -131,6 +134,7 @@ export function SignalChain() {
         <FitOnBusAdd />
         <AddSourcePanel />
         <InsertBusPanel />
+        <SplitDrawOverlay />
       </ReactFlow>
     </div>
   )

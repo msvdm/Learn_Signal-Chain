@@ -151,6 +151,7 @@ function computeGraphNode(
       return { out, health: getHealth(out) }
     }
     case 'splitter':
+    case 'conn-point':
       return { out: input, health: getHealth(input) }
     case 'master-bus':
     case 'bus': {

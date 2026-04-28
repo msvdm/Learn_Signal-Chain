@@ -191,4 +191,12 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     category: 'sink',
     defaultParams: { outputTrimDb: 0 },
   },
+  'conn-point': {
+    typeKey: 'conn-point',
+    label: 'Connection Point',
+    inputs:  [{ id: 'in',  label: 'Input',  side: 'left'  }],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: {},
+  },
 }

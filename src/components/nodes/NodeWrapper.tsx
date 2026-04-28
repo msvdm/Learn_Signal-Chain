@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode, CSSProperties } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Power, X, HelpCircle, Plus } from 'lucide-react'
+import { Power, X, HelpCircle, Plus, GitFork } from 'lucide-react'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { TooltipPanel } from '../Tooltip'
 
 // Processor types the user can insert on any edge
-const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'graphic-eq', 'comp', 'fader', 'switch', 'splitter', 'potentiometer', 'amp']
+const INSERTABLE_TYPES = ['gain', 'hpf', 'eq', 'graphic-eq', 'comp', 'fader', 'switch', 'potentiometer', 'amp']
 
 // Source and sink types cannot be bypassed or removed via the wrapper UI
 const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
@@ -40,6 +40,7 @@ export function NodeWrapper({
   const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)
   const removeNode          = useSignalStore((s) => s.removeNode)
   const insertNodeOnEdge    = useSignalStore((s) => s.insertNodeOnEdge)
+  const startSplitDraw      = useSignalStore((s) => s.startSplitDraw)
   const edges               = useSignalStore((s) => s.edges)
   const { t }               = useTranslation()
 
@@ -168,6 +169,21 @@ export function NodeWrapper({
             color: 'var(--lsc-text)',
           }}
         >
+          {/* Add Split — top action, separated from the insert list */}
+          <button
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              width: '100%', padding: '7px 12px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--lsc-accent)', textAlign: 'left', fontSize: 12, fontWeight: 600,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+            onClick={() => { startSplitDraw(insertMenu.edgeId); setInsertMenu(null) }}
+          >
+            <GitFork size={13} /> Add Split
+          </button>
+          <div style={{ height: 1, background: 'var(--lsc-border)', margin: '0 8px' }} />
           <div
             style={{
               display: 'flex', alignItems: 'center', gap: 5,

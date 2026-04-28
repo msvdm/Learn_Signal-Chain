@@ -7,6 +7,11 @@ import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 
+export interface SplitDrawState {
+  sourceNodeId: string   // the node whose output port the branch starts from
+  sourceHandle: string   // e.g. 'out'
+}
+
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced' | 'routing-madness'
 export type SourceType = 'mic' | 'line' | 'instrument'
 export { type BusType }
@@ -28,6 +33,7 @@ interface SignalChainStore {
   language: Lang
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
+  splitDraw: SplitDrawState | null
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -46,6 +52,14 @@ interface SignalChainStore {
 
   insertNodeOnEdge: (edgeId: string, typeKey: string, extraParams?: Record<string, NodeParamValue>) => void
 
+  // Split-draw actions
+  startSplitDraw: (sourceEdgeId: string) => void
+  cancelSplitDraw: () => void
+  // Add a new edge from the split source to an existing node input
+  commitSplitToNode: (targetNodeId: string, targetHandle: string) => void
+  // Drop a conn-point node at a flow-space position and wire the split to it
+  commitSplitToCanvas: (flowX: number, flowY: number) => void
+
   addInputChannel: (sourceType: SourceType) => void
   addBusNode: (busType: BusType) => void
 }
@@ -54,6 +68,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
+  splitDraw: null,
 
   ...buildDefaultGraph(getInitialComplexityLevel()),
 
@@ -199,6 +214,68 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       return {
         nodes: [...shiftedNodes, newNode],
         edges: [...filteredEdges, edgeA, edgeB],
+      }
+    }),
+
+  // ── Split-draw ────────────────────────────────────────────────────────────
+
+  startSplitDraw: (sourceEdgeId) =>
+    set((s) => {
+      const edge = s.edges.find((e) => e.id === sourceEdgeId)
+      if (!edge) return {}
+      return { splitDraw: { sourceNodeId: edge.source, sourceHandle: edge.sourceHandle } }
+    }),
+
+  cancelSplitDraw: () => set({ splitDraw: null }),
+
+  // Original edge is UNTOUCHED. Just add a new edge from the same source port.
+  commitSplitToNode: (targetNodeId, targetHandle) =>
+    set((s) => {
+      const sd = s.splitDraw
+      if (!sd) return {}
+      const newEdge: import('../data/nodeRegistry').SignalEdge = {
+        id: `e-split-${sd.sourceNodeId}-${targetNodeId}-${Date.now()}`,
+        source: sd.sourceNodeId,
+        sourceHandle: sd.sourceHandle,
+        target: targetNodeId,
+        targetHandle,
+      }
+      return { edges: [...s.edges, newEdge], splitDraw: null }
+    }),
+
+  // Original edge is UNTOUCHED. Create a conn-point node where user clicked,
+  // add a new edge from the same source port to that node.
+  commitSplitToCanvas: (flowX, flowY) =>
+    set((s) => {
+      const sd = s.splitDraw
+      if (!sd) return {}
+      const sourceNode = s.nodes.find((n) => n.id === sd.sourceNodeId)
+      if (!sourceNode) return { splitDraw: null }
+
+      const ts = Date.now()
+      const connPointId = `conn-point-${ts}`
+
+      const connPoint: import('../data/nodeRegistry').SignalNode = {
+        id: connPointId,
+        typeKey: 'conn-point',
+        position: { x: flowX, y: flowY },
+        params: {},
+        bypassed: false,
+        label: 'Connection Point',
+        color: sourceNode.color,
+      }
+      const newEdge: import('../data/nodeRegistry').SignalEdge = {
+        id: `e-split-${sd.sourceNodeId}-${connPointId}`,
+        source: sd.sourceNodeId,
+        sourceHandle: sd.sourceHandle,
+        target: connPointId,
+        targetHandle: 'in',
+      }
+
+      return {
+        nodes: [...s.nodes, connPoint],
+        edges: [...s.edges, newEdge],
+        splitDraw: null,
       }
     }),
 
