@@ -131,6 +131,7 @@ body {
   border-radius: 50% !important;
   border: 2px solid var(--lsc-border) !important;
   background: var(--lsc-node-bg) !important;
+  transition: width 0.1s, height 0.1s, opacity 0.1s;
 }
 
 .react-flow__handle-left {
@@ -139,6 +140,31 @@ body {
 
 .react-flow__handle-right {
   right: -6px !important;
+}
+
+/* Connect mode — handles become larger, clickable, and clearly visible */
+.lsc-connect-mode .react-flow__handle {
+  width: 14px !important;
+  height: 14px !important;
+  opacity: 1 !important;
+  cursor: crosshair !important;
+  pointer-events: all !important;  /* React Flow defaults to none; we need them hittable */
+}
+
+.lsc-connect-mode .react-flow__handle-right {
+  right: -8px !important;
+  background: var(--lsc-accent) !important;
+  border-color: var(--lsc-node-bg) !important;
+}
+
+.lsc-connect-mode .react-flow__handle-left {
+  left: -8px !important;
+  background: var(--lsc-border) !important;
+  border-color: var(--lsc-node-bg) !important;
+}
+
+.lsc-connect-mode .react-flow__pane {
+  cursor: crosshair !important;
 }
 
 .react-flow__controls button {

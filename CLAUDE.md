@@ -30,8 +30,14 @@ The app is a **pure client-side React SPA** — no backend, no API calls. All si
 The canvas works like a drawing app:
 1. **Left palette** (`ElementPalette`) — drag any node type onto the blank canvas to place it
 2. **Select mode** (default, key `S`) — drag nodes to reposition them
-3. **Connect mode** (key `C` or `L`) — drag from any output handle (right dot) to any input handle (left dot) to draw a signal connection; arrow indicates direction
-4. **Delete a connection** — right-click any edge → "Delete connection", or select it and press `Delete`/`Backspace`
+3. **Connect mode** (key `C` or `L`, or the "Connect Tool" button at the top of the left palette) — uses a **click-once pen-tool interaction, never drag**:
+   - Hover over a node → source handles (right dots, purple) and target handles (left dots, grey) grow and become hittable
+   - **Click once** on a source handle → wire begins; mouse is immediately released
+   - **Move freely** → a dashed orthogonal (right-angle-only) preview routes live to the cursor
+   - **Click in empty space** → commits a corner waypoint, locking that segment; routing continues from the waypoint
+   - **Click a target handle** → completes the connection (a snap ring appears on hover to confirm the landing point)
+   - **Right-click or Escape** → cancels the wire in progress; Escape when idle returns to Select mode
+4. **Delete a connection** — right-click any edge → "Delete connection"
 
 The canvas starts blank. There is no preset layout. Levels control which node types appear in the palette, not the graph structure.
 
@@ -57,9 +63,9 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params. |
 | `src/data/levels.ts` | `buildDefaultGraph(level)` — always returns empty graph (blank canvas). `BusType` type lives here. |
 | `src/i18n/translations.ts` | All UI text and tooltip educational content (`theory` key). Edit copy here only. |
-| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, edge color computation, tool mode state, drag-drop handlers, `onConnect`, edge delete menu. |
-| `src/components/ElementPalette.tsx` | Left sidebar with draggable node type items. Level-gated visibility via `PALETTE_BY_LEVEL`. |
-| `src/components/ToolBar.tsx` | Select / Connect mode toggle rendered above the canvas. |
+| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, edge color computation, SVG wire-preview overlay, capture-phase mousedown for click-to-connect, `WireDrawing` state, drag-drop handlers, edge delete menu. |
+| `src/components/ElementPalette.tsx` | Left sidebar with draggable node type items and the Connect Tool toggle button at the top. Level-gated visibility via `PALETTE_BY_LEVEL`. Accepts `toolMode`/`onToolModeChange` props from `App.tsx`. |
+| `src/components/ToolBar.tsx` | **Unused** — the Connect Tool was moved into `ElementPalette`. File kept but not rendered. |
 | `src/components/nodes/NodeWrapper.tsx` | Card-style shell for complex nodes (208px wide): handles, bypass/remove/help buttons, tooltip. |
 | `src/components/nodes/InlineNode.tsx` | Compact shell for simple nodes (100px wide): health-colored border, bypass/remove/help buttons. |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
@@ -116,9 +122,11 @@ The math is intentionally simplified. It teaches the concept correctly without I
 - All interactive elements inside nodes (sliders, buttons) carry `nodrag nopan` CSS classes so the canvas does not intercept their pointer events.
 - Edges are colored from health values computed by `useGraphSignal`, not stored in React Flow state.
 - The edge delete context menu uses `createPortal` to `document.body` — React Flow's CSS `transform` on the viewport breaks `position: fixed` inside its DOM tree.
-- `nodesDraggable`, `nodesConnectable`, `elementsSelectable` are toggled by `toolMode` state in `SignalChain.tsx`.
+- `nodesDraggable` and `elementsSelectable` are toggled by `toolMode`. `nodesConnectable` is always `false` — connections are handled entirely by the custom click system, not React Flow's drag mechanism.
 - **`Node` name collision**: ReactFlow exports `Node`; the DOM also has `Node`. Import ReactFlow's as `type Node as FlowNode` to avoid conflicts.
-- `MasterBusNode` renders N+1 input handles (one per connected edge, plus one empty slot) so there is always a free target for new connections.
+- `MasterBusNode` renders N+1 input handles (one per connected edge, plus one empty slot) and is reused for the `bus` node type — it reads `typeKey` from `data` to get the correct label and registry entry.
+- **Handle pointer-events**: React Flow sets `pointer-events: none` on handles by default. The `.lsc-connect-mode` CSS class (added to the canvas wrapper) overrides this to `all`, making handles hittable by `document.elementsFromPoint`. Handle type (source vs target) is detected via `classList.contains('source'/'target')` — there is no `data-handletype` attribute.
+- The wire preview SVG is rendered as an absolutely-positioned sibling of the ReactFlow div. It uses `useViewport()` to apply the same `translate/scale` transform as the flow canvas, so the preview stays aligned during pan and zoom.
 
 ### Adding a new node
 

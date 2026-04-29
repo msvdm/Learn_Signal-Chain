@@ -2,10 +2,12 @@ import type { ReactNode } from 'react'
 import {
   Mic, Cable, Guitar,
   Zap, Filter, Activity, Box, SlidersHorizontal, ToggleLeft, Gauge, Sliders, Radio,
-  Merge, Volume2,
+  Merge, Volume2, Link2,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
+
+type ToolMode = 'select' | 'connect'
 
 interface PaletteItem {
   typeKey: string
@@ -52,10 +54,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_ORDER = ['source', 'processing', 'routing', 'output']
 
-export function ElementPalette() {
+interface ElementPaletteProps {
+  toolMode: ToolMode
+  onToolModeChange: (mode: ToolMode) => void
+}
+
+export function ElementPalette({ toolMode, onToolModeChange }: ElementPaletteProps) {
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
   const visibleKeys = PALETTE_BY_LEVEL[complexityLevel]
   const visibleItems = ALL_ITEMS.filter((item) => visibleKeys.includes(item.typeKey))
+  const isConnect = toolMode === 'connect'
 
   function onDragStart(e: React.DragEvent, typeKey: string) {
     e.dataTransfer.setData('application/lsc-node-type', typeKey)
@@ -78,10 +86,40 @@ export function ElementPalette() {
         userSelect: 'none',
       }}
     >
+      {/* Connect Tool toggle */}
+      <div style={{ padding: '10px 10px 6px' }}>
+        <button
+          className="nodrag nopan"
+          onClick={() => onToolModeChange(isConnect ? 'select' : 'connect')}
+          title="Connect Tool (C) — drag from an output dot to an input dot to wire nodes together"
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            padding: '6px 10px',
+            borderRadius: 'var(--lsc-radius-md)',
+            border: `1px solid ${isConnect ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+            background: isConnect ? 'var(--lsc-accent-bg)' : 'transparent',
+            color: isConnect ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
+            fontSize: 12,
+            fontWeight: isConnect ? 700 : 500,
+            cursor: 'pointer',
+            transition: 'background 0.1s, border-color 0.1s, color 0.1s',
+          }}
+        >
+          <Link2 size={13} />
+          Connect Tool
+        </button>
+      </div>
+
       <div style={{
-        padding: '10px 12px 6px',
+        padding: '4px 12px 6px',
         fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
         color: 'var(--lsc-text)', opacity: 0.5,
+        borderTop: '1px solid var(--lsc-border)',
+        marginBottom: 2,
+        paddingTop: 8,
       }}>
         Elements
       </div>

@@ -11,6 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 interface MasterBusData extends Record<string, unknown> {
   color?: string
   label?: string
+  typeKey?: string
 }
 
 export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
@@ -21,6 +22,8 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
   const { t }         = useTranslation()
 
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const resolvedTypeKey = (data.typeKey as string) ?? 'master-bus'
+  const defaultLabel = resolvedTypeKey === 'bus' ? 'Bus / Aux' : 'Master Bus'
 
   // Render one handle per connected channel PLUS one empty slot for the next connection.
   // This ensures there is always a visible target handle in Connect mode.
@@ -52,9 +55,9 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
     // NodeWrapper renders output handle from NODE_REGISTRY; we override inputs manually above
     <NodeWrapper
       nodeId={id}
-      typeKey="master-bus"
+      typeKey={resolvedTypeKey}
       icon={<Merge size={14} />}
-      label={data.label ?? 'Master Bus'}
+      label={data.label ?? defaultLabel}
     >
       {/* Dynamic input handles: N connected + 1 empty slot for next connection */}
       {channelHandles}

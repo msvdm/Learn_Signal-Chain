@@ -8,8 +8,7 @@ import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
-const PROTECTED_TYPES  = new Set(['mic', 'line-in', 'instrument', 'speaker'])
-const NO_BYPASS_TYPES  = new Set(['fader', 'switch', 'potentiometer', 'gain'])
+const NO_BYPASS_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker', 'fader', 'switch', 'potentiometer', 'gain'])
 
 interface InlineNodeProps {
   nodeId: string
@@ -37,10 +36,9 @@ export function InlineNode({
   const removeNode       = useSignalStore((s) => s.removeNode)
   const { t }            = useTranslation()
 
-  const isBypassed  = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
-  const isProtected = PROTECTED_TYPES.has(typeKey)
-  const isNoBypass  = NO_BYPASS_TYPES.has(typeKey)
-  const hasTooltip  = Boolean(t.theory[typeKey])
+  const isBypassed = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
+  const isNoBypass = NO_BYPASS_TYPES.has(typeKey)
+  const hasTooltip = Boolean(t.theory[typeKey])
 
   const def     = NODE_REGISTRY[typeKey]
   const inputs  = def?.inputs  ?? []
@@ -108,7 +106,7 @@ export function InlineNode({
 
       {/* Action row */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '3px 4px 0' }}>
-        {!isProtected && !isNoBypass && (
+        {!isNoBypass && (
           <button
             className="nodrag nopan"
             title={isBypassed ? t.nodeControls.bypassed : t.nodeControls.bypass}
@@ -122,18 +120,16 @@ export function InlineNode({
             <Power size={10} />
           </button>
         )}
-        {!isProtected && (
-          <button
-            className="nodrag nopan"
-            title={t.nodeControls.remove}
-            style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
-            onClick={() => removeNode(nodeId)}
-          >
-            <X size={10} />
-          </button>
-        )}
+        <button
+          className="nodrag nopan"
+          title={t.nodeControls.remove}
+          style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
+          onClick={() => removeNode(nodeId)}
+        >
+          <X size={10} />
+        </button>
         {hasTooltip && (
           <button
             className="nodrag nopan"
