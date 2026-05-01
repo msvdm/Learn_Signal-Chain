@@ -39,6 +39,7 @@ interface SignalChainStore {
   toggleBypassNode: (nodeId: string) => void
   addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
   removeEdge: (edgeId: string) => void
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
 }
 
 export const useSignalStore = create<SignalChainStore>((set) => ({
@@ -112,4 +113,9 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeEdge: (edgeId) =>
     set((s) => ({ edges: s.edges.filter((e) => e.id !== edgeId) })),
+
+  updateNodePosition: (nodeId, position) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => n.id === nodeId ? { ...n, position } : n),
+    })),
 }))

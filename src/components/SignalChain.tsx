@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import {
   ReactFlow,
   Background,
@@ -30,6 +29,7 @@ import { useSignalStore }     from '../store/signalStore'
 import { useGraphSignal }     from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
+import { activeDragTypeKey }  from '../utils/dragState'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -52,6 +52,60 @@ const nodeTypes = {
 }
 
 const edgeTypes = { chain: ChainEdge }
+
+// ── Grid & layout constants ────────────────────────────────────────────────────
+
+const GRID = 36
+
+const INLINE_TYPE_KEYS = new Set([
+  'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
+])
+
+// ── Overlap helpers ────────────────────────────────────────────────────────────
+
+function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
+  const inline = INLINE_TYPE_KEYS.has(typeKey)
+  return {
+    w: measuredW ?? (inline ? 100 : 208),
+    h: measuredH ?? (inline ? 72  : 120),
+  }
+}
+
+// nodeOrigin=[0,0.5]: position is the left edge, vertical center
+function nodeRect(pos: { x: number; y: number }, w: number, h: number) {
+  return { left: pos.x, right: pos.x + w, top: pos.y - h / 2, bottom: pos.y + h / 2 }
+}
+
+function rectsOverlap(a: ReturnType<typeof nodeRect>, b: ReturnType<typeof nodeRect>) {
+  const PAD = 8
+  return (
+    a.left   < b.right  + PAD &&
+    a.right  > b.left   - PAD &&
+    a.top    < b.bottom + PAD &&
+    a.bottom > b.top    - PAD
+  )
+}
+
+function resolveOverlap(
+  pos: { x: number; y: number },
+  w: number,
+  h: number,
+  others: FlowNode[],
+  skipId?: string,
+): { x: number; y: number } {
+  let cur = { ...pos }
+  for (let i = 0; i < 50; i++) {
+    const r = nodeRect(cur, w, h)
+    const clash = others.find((n) => {
+      if (n.id === skipId) return false
+      const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
+      return rectsOverlap(r, nodeRect(n.position, d.w, d.h))
+    })
+    if (!clash) return cur
+    cur = { x: cur.x, y: cur.y + GRID }
+  }
+  return cur
+}
 
 // ── Wire drawing types ─────────────────────────────────────────────────────────
 
@@ -122,19 +176,20 @@ interface SignalChainProps {
 }
 
 export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
-  const graphNodes  = useSignalStore((s) => s.nodes)
-  const graphEdges  = useSignalStore((s) => s.edges)
-  const addNode     = useSignalStore((s) => s.addNode)
-  const addEdge     = useSignalStore((s) => s.addEdge)
-  const removeEdge  = useSignalStore((s) => s.removeEdge)
-  const { stages }  = useGraphSignal()
-  const { screenToFlowPosition } = useReactFlow()
-  const { x: vpX, y: vpY, zoom: vpZoom } = useViewport()
+  const graphNodes         = useSignalStore((s) => s.nodes)
+  const graphEdges         = useSignalStore((s) => s.edges)
+  const addNode            = useSignalStore((s) => s.addNode)
+  const addEdge            = useSignalStore((s) => s.addEdge)
+  const removeEdge         = useSignalStore((s) => s.removeEdge)
+  const updateNodePosition = useSignalStore((s) => s.updateNodePosition)
+  const { stages }         = useGraphSignal()
+  const { screenToFlowPosition, getNodes } = useReactFlow()
+  const { x: vpX, y: vpY, zoom: vpZoom }  = useViewport()
 
-  const [drawing, setDrawing]   = useState<WireDrawing>({ active: false })
-  const [snapPos, setSnapPos]   = useState<Pt | null>(null)
-  const [edgeMenu, setEdgeMenu] = useState<{ edgeId: string; x: number; y: number } | null>(null)
-  const edgeMenuRef = useRef<HTMLDivElement>(null)
+  const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
+  const [snapPos, setSnapPos]               = useState<Pt | null>(null)
+  const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
+  const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt } | null>(null)
 
   // Mutable refs so document-level handlers always see current state
   const drawingRef    = useRef(drawing)
@@ -165,24 +220,12 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
           setSnapPos(null)
         } else {
           onToolModeChange('select')
-          setEdgeMenu(null)
         }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onToolModeChange])
-
-  // Dismiss edge context menu on outside click
-  useEffect(() => {
-    if (!edgeMenu) return
-    function onDown(e: MouseEvent) {
-      if (edgeMenuRef.current && !edgeMenuRef.current.contains(e.target as HTMLElement))
-        setEdgeMenu(null)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [edgeMenu])
 
   // Live cursor tracking while drawing
   useEffect(() => {
@@ -298,15 +341,38 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   function onDragOver(e: React.DragEvent) {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
+    const typeKey = activeDragTypeKey
+    if (!typeKey) return
+    const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    setDropPreview({
+      typeKey,
+      pos: {
+        x: Math.round(raw.x / GRID) * GRID,
+        y: Math.round(raw.y / GRID) * GRID,
+      },
+    })
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    const rt = e.relatedTarget as Node | null
+    if (rt && (e.currentTarget as Element).contains(rt)) return
+    setDropPreview(null)
   }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
+    setDropPreview(null)
     const typeKey = e.dataTransfer.getData('application/lsc-node-type')
     if (!typeKey) return
     const def = NODE_REGISTRY[typeKey]
     if (!def) return
-    const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const snapped = {
+      x: Math.round(raw.x / GRID) * GRID,
+      y: Math.round(raw.y / GRID) * GRID,
+    }
+    const { w, h } = nodeDims(typeKey)
+    const pos = resolveOverlap(snapped, w, h, getNodes())
     addNode({
       id:       `${typeKey}-${Date.now()}`,
       typeKey,
@@ -317,9 +383,25 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     })
   }
 
-  function onEdgeContextMenu(e: React.MouseEvent, edge: Edge) {
-    e.preventDefault()
-    setEdgeMenu({ edgeId: edge.id, x: e.clientX + 4, y: e.clientY })
+  function onNodeDrag(_e: React.MouseEvent, node: FlowNode) {
+    const snapped = {
+      x: Math.round(node.position.x / GRID) * GRID,
+      y: Math.round(node.position.y / GRID) * GRID,
+    }
+    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
+    const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
+    setDragNodePreview({ typeKey: node.type ?? '', pos: resolved })
+  }
+
+  function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
+    setDragNodePreview(null)
+    const snapped = {
+      x: Math.round(node.position.x / GRID) * GRID,
+      y: Math.round(node.position.y / GRID) * GRID,
+    }
+    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
+    const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
+    updateNodePosition(node.id, resolved)
   }
 
   const displayNodes: FlowNode[] = useMemo(
@@ -367,7 +449,10 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   const dash = `${6 / vpZoom} ${4 / vpZoom}`
 
   return (
-    <div className={`w-full h-full relative ${toolMode === 'connect' ? 'lsc-connect-mode' : ''}`}>
+    <div
+      className={`w-full h-full relative ${toolMode === 'connect' ? 'lsc-connect-mode' : ''}`}
+      onDragLeave={onDragLeave}
+    >
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
@@ -386,7 +471,8 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
         style={{ background: 'var(--lsc-canvas)' }}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        onEdgeContextMenu={onEdgeContextMenu}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onEdgesDelete={(eds) => eds.forEach((e) => removeEdge(e.id))}
       >
         <Background
@@ -442,41 +528,40 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
         </svg>
       )}
 
-      {/* Edge right-click delete menu */}
-      {edgeMenu && createPortal(
-        <div
-          ref={edgeMenuRef}
-          style={{
-            position: 'fixed',
-            left: edgeMenu.x,
-            top: edgeMenu.y,
-            zIndex: 9999,
-            background: 'var(--lsc-node-bg)',
-            border: '1px solid var(--lsc-border)',
-            borderRadius: 'var(--lsc-radius-md)',
-            boxShadow: 'var(--lsc-shadow-popup)',
-            overflow: 'hidden',
-            fontSize: 12,
-            color: 'var(--lsc-text)',
-            minWidth: 140,
-          }}
-        >
-          <button
+      {/* Ghost previews — palette drop and canvas node drag share the same look */}
+      {(dropPreview ?? dragNodePreview) && (() => {
+        const src = (dropPreview ?? dragNodePreview)!
+        const inline = INLINE_TYPE_KEYS.has(src.typeKey)
+        const w = inline ? 100 : 208
+        const h = inline ? 72  : 120
+        const { x, y } = src.pos
+        return (
+          <svg
             style={{
-              display: 'block', width: '100%',
-              padding: '7px 12px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--signal-clipping)', textAlign: 'left', fontSize: 12,
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%',
+              pointerEvents: 'none',
+              zIndex: 99,
+              overflow: 'visible',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--lsc-sunken)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-            onClick={() => { removeEdge(edgeMenu.edgeId); setEdgeMenu(null) }}
           >
-            Delete connection
-          </button>
-        </div>,
-        document.body
-      )}
+            <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
+              <rect
+                x={x}
+                y={y - h / 2}
+                width={w}
+                height={h}
+                rx={inline ? 8 : 12}
+                fill="var(--lsc-accent)"
+                fillOpacity={0.15}
+                stroke="var(--lsc-accent)"
+                strokeWidth={1.5 / vpZoom}
+                strokeDasharray={`${6 / vpZoom} ${3 / vpZoom}`}
+              />
+            </g>
+          </svg>
+        )
+      })()}
     </div>
   )
 }

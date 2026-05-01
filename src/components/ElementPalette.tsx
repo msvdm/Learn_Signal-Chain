@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
+import { setActiveDragTypeKey } from '../utils/dragState'
 
 type ToolMode = 'select' | 'connect'
 
@@ -66,6 +67,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
   const isConnect = toolMode === 'connect'
 
   function onDragStart(e: React.DragEvent, typeKey: string) {
+    setActiveDragTypeKey(typeKey)
     e.dataTransfer.setData('application/lsc-node-type', typeKey)
     e.dataTransfer.effectAllowed = 'copy'
   }
@@ -141,6 +143,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
                 key={item.typeKey}
                 draggable
                 onDragStart={(e) => onDragStart(e, item.typeKey)}
+                onDragEnd={() => setActiveDragTypeKey(null)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
