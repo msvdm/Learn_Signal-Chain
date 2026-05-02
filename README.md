@@ -10,6 +10,14 @@ Learn Signal Chain lets you visualise and interact with a standard audio signal 
 
 The signal is your hero — represented as a flowing line with a dB value. Every element you add or adjust changes the signal in real time, with colour-coded feedback showing whether your gain staging is healthy (green), hot (yellow), or clipping (red).
 
+## Try It Online
+
+No installation needed! Visit the live app here:
+
+🌐 **[https://msvdm.github.io/Learn_Signal-Chain/](https://msvdm.github.io/Learn_Signal-Chain/)**
+
+The app runs entirely in your browser with no dependencies or backend required.
+
 ## Learning Levels
 
 | Level | What you can do |
