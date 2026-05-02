@@ -1,5 +1,4 @@
 import { useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
 
 interface KnobControlProps {
   value: number
@@ -115,12 +114,14 @@ export function KnobControl({
           />
         )}
 
-        {/* Indicator dot */}
-        <motion.circle
+        {/* Indicator dot — plain circle with CSS transition avoids framer-motion
+            SVG attribute initialisation issues (cx/cy undefined on first paint) */}
+        <circle
+          cx={indicatorTip.x}
+          cy={indicatorTip.y}
           r={2.5}
           fill="white"
-          animate={{ cx: indicatorTip.x, cy: indicatorTip.y }}
-          transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
       <span className="text-[9px] font-mono leading-none" style={{ color: 'var(--lsc-text)' }}>

@@ -26,6 +26,7 @@ import { GraphicEQNode }      from './nodes/GraphicEQNode'
 import { ChainEdge }          from './ChainEdge'
 
 import { useSignalStore }     from '../store/signalStore'
+import type { SignalEdge }    from '../store/signalStore'
 import { useGraphSignal }     from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
@@ -56,18 +57,43 @@ const edgeTypes = { chain: ChainEdge }
 // ── Grid & layout constants ────────────────────────────────────────────────────
 
 const GRID = 36
+/** Minimum empty space kept between any two directly connected nodes.
+ *  Sized to roughly one switch/fader element so there is always room to insert one. */
+const MIN_GAP = 3 * GRID   // 108 px ≈ inline node width (100 px)
 
 const INLINE_TYPE_KEYS = new Set([
   'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
 ])
+
+/**
+ * Default rendered widths per node type, matching each component's explicit
+ * `style.width` override (or NodeWrapper's 208 px default where none is set).
+ * Used as the fallback when React Flow has not yet measured a node — which is
+ * always the case for a node that is about to be dropped but hasn't rendered.
+ * For existing nodes the actual `measured.width` from React Flow takes precedence.
+ *
+ * EQ uses 380 (the advanced-level 4-band layout) as the conservative upper bound;
+ * over-estimating spacing is always safer than under-estimating.
+ */
+const NODE_DEFAULT_W: Record<string, number> = {
+  // Inline nodes
+  'mic': 100, 'line-in': 100, 'instrument': 100,
+  'fader': 100, 'switch': 100, 'potentiometer': 100, 'speaker': 100,
+  // Custom-width cards
+  'hpf': 140,
+  'eq': 380,
+  'graphic-eq': 340,
+  // Standard NodeWrapper cards (208 px default, listed for clarity)
+  'gain': 208, 'amp': 208, 'comp': 208, 'master-bus': 208, 'bus': 208,
+}
 
 // ── Overlap helpers ────────────────────────────────────────────────────────────
 
 function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
   const inline = INLINE_TYPE_KEYS.has(typeKey)
   return {
-    w: measuredW ?? (inline ? 100 : 208),
-    h: measuredH ?? (inline ? 72  : 120),
+    w: measuredW ?? NODE_DEFAULT_W[typeKey] ?? (inline ? 100 : 208),
+    h: measuredH ?? (inline ? 72 : 120),
   }
 }
 
@@ -105,6 +131,89 @@ function resolveOverlap(
     cur = { x: cur.x, y: cur.y + GRID }
   }
   return cur
+}
+
+// ── Spacing helpers ────────────────────────────────────────────────────────────
+
+/** Push every node whose left edge is at X ≥ fromX rightward by `amount` (grid-snapped).
+ *  Updates the local nodeMap in-place so subsequent calls in the same pass cascade. */
+function pushDownstream(
+  fromX: number,
+  amount: number,
+  nodes: FlowNode[],
+  nodeMap: Map<string, FlowNode>,
+  updatePos: (id: string, pos: { x: number; y: number }) => void,
+) {
+  const snapped = Math.ceil(amount / GRID) * GRID
+  for (const n of nodes) {
+    if (n.position.x >= fromX - GRID / 2) {
+      const newPos = { x: n.position.x + snapped, y: n.position.y }
+      nodeMap.set(n.id, { ...n, position: newPos })
+      updatePos(n.id, newPos)
+    }
+  }
+}
+
+/** Ensure source→target pair has at least MIN_GAP between them, pushing target
+ *  (and everything downstream) right if needed. */
+function enforceGap(
+  srcId: string,
+  tgtId: string,
+  nodes: FlowNode[],
+  updatePos: (id: string, pos: { x: number; y: number }) => void,
+) {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+  const src = nodeMap.get(srcId)
+  const tgt = nodeMap.get(tgtId)
+  if (!src || !tgt) return
+  const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
+  const gap  = tgt.position.x - (src.position.x + srcDims.w)
+  if (gap < MIN_GAP) {
+    pushDownstream(tgt.position.x, MIN_GAP - gap, nodes, nodeMap, updatePos)
+  }
+}
+
+// ── Edge insertion helpers ─────────────────────────────────────────────────────
+
+const HIT_THRESHOLD = 48 // flow-coordinate pixels
+
+/** Returns the edge that "owns" the given flow-coordinate drop point.
+ *
+ *  Each edge is assigned the horizontal band between the CENTRE of its source
+ *  node and the CENTRE of its target node.  Adjacent edges share a boundary at
+ *  the centre of the shared (bridge) node — so zones never overlap and the
+ *  correct edge is always selected regardless of measured node widths.
+ *
+ *  Vertical tolerance is ±HIT_THRESHOLD around the two node centres. */
+function findEdgeAtPoint(
+  point: { x: number; y: number },
+  edges: SignalEdge[],
+  nodes: FlowNode[],
+): SignalEdge | null {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+  for (const edge of edges) {
+    const src = nodeMap.get(edge.source)
+    const tgt = nodeMap.get(edge.target)
+    if (!src || !tgt) continue
+    const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
+    const tgtDims = nodeDims(tgt.type ?? '', tgt.measured?.width, tgt.measured?.height)
+    // X zone: source centre → target centre (non-overlapping for adjacent edges)
+    const srcCX = src.position.x + srcDims.w / 2
+    const tgtCX = tgt.position.x + tgtDims.w / 2
+    if (point.x < srcCX || point.x > tgtCX) continue
+    // Y zone: covers both node heights + threshold
+    const minY = Math.min(src.position.y, tgt.position.y) - HIT_THRESHOLD
+    const maxY = Math.max(src.position.y, tgt.position.y) + HIT_THRESHOLD
+    if (point.y < minY || point.y > maxY) continue
+    return edge
+  }
+  return null
+}
+
+/** True only for nodes that have both an input and an output port (can be inserted mid-chain). */
+function canInsertMidChain(typeKey: string): boolean {
+  const def = NODE_REGISTRY[typeKey]
+  return !!def && def.inputs.length > 0 && def.outputs.length > 0
 }
 
 // ── Wire drawing types ─────────────────────────────────────────────────────────
@@ -183,7 +292,7 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   const removeEdge         = useSignalStore((s) => s.removeEdge)
   const updateNodePosition = useSignalStore((s) => s.updateNodePosition)
   const { stages }         = useGraphSignal()
-  const { screenToFlowPosition, getNodes } = useReactFlow()
+  const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
   const { x: vpX, y: vpY, zoom: vpZoom }  = useViewport()
 
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
@@ -297,6 +406,8 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
             target:       targetNodeId,
             targetHandle: targetHandleId,
           })
+          // Ensure the two newly connected nodes respect the minimum gap
+          enforceGap(d.sourceNodeId, targetNodeId, getNodes(), updateNodePosition)
         }
         setDrawing({ active: false })
         setSnapPos(null)
@@ -336,7 +447,7 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('contextmenu', onContext, true)
     }
-  }, [screenToFlowPosition, addEdge])
+  }, [screenToFlowPosition, addEdge, getNodes, updateNodePosition])
 
   function onDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -372,9 +483,62 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       y: Math.round(raw.y / GRID) * GRID,
     }
     const { w, h } = nodeDims(typeKey)
+    const newId = `${typeKey}-${Date.now()}`
+
+    // ── Smart edge insertion ───────────────────────────────────────────────────
+    // Use graphEdges from the Zustand store — always in sync, unlike
+    // getEdges() from useReactFlow() which can lag one render behind.
+    if (canInsertMidChain(typeKey)) {
+      const allNodes      = getNodes()
+      // Build node lookup from graphNodes (always current) enriched with React Flow
+      // measured dimensions where available.
+      const nodePositions = new Map(
+        graphNodes.map(n => [n.id, {
+          id:       n.id,
+          type:     n.typeKey,
+          position: n.position,
+          measured: allNodes.find(r => r.id === n.id)?.measured,
+        }])
+      )
+      const hitEdge = findEdgeAtPoint(snapped, graphEdges, [...nodePositions.values()] as unknown as FlowNode[])
+
+      if (hitEdge) {
+        const src = nodePositions.get(hitEdge.source)
+        const tgt = nodePositions.get(hitEdge.target)
+        if (src && tgt) {
+          const srcDims  = nodeDims(src.type, (src as any).measured?.width, (src as any).measured?.height)
+          const srcRight = src.position.x + srcDims.w
+          const tgtLeft  = tgt.position.x
+
+          const minInsertX   = Math.round((srcRight + MIN_GAP) / GRID) * GRID
+          const insertX      = Math.max(minInsertX, Math.round(snapped.x / GRID) * GRID)
+          const insertY      = Math.round(snapped.y / GRID) * GRID
+          const newNodeRight = insertX + w
+          const rightGap     = tgtLeft - newNodeRight
+
+          if (rightGap < MIN_GAP) {
+            const push    = Math.ceil((MIN_GAP - rightGap) / GRID) * GRID
+            const nmNodes = [...nodePositions.values()] as unknown as FlowNode[]
+            const nm      = new Map(nmNodes.map((n) => [n.id, n]))
+            pushDownstream(tgtLeft, push, nmNodes, nm, updateNodePosition)
+          }
+
+          addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false, label: def.label })
+          removeEdge(hitEdge.id)
+          const ts = Date.now()
+          addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: def.inputs[0].id  })
+          addEdge({ id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: def.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle })
+          // Fit all nodes into view after insertion — the pushed target may be off-screen
+          setTimeout(() => fitView({ padding: 0.25, duration: 400 }), 50)
+          return
+        }
+      }
+    }
+
+    // ── Normal placement (no edge hit) ────────────────────────────────────────
     const pos = resolveOverlap(snapped, w, h, getNodes())
     addNode({
-      id:       `${typeKey}-${Date.now()}`,
+      id:       newId,
       typeKey,
       position: pos,
       params:   { ...def.defaultParams },
