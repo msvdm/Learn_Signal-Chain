@@ -144,19 +144,108 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     category: 'processor',
     defaultParams: { gainDb: 20 },
   },
+  'di-box': {
+    typeKey: 'di-box',
+    label: 'DI Box',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [
+      { id: 'out', label: 'XLR Out', side: 'right' },
+      { id: 'direct', label: 'Direct Out', side: 'right' },
+    ],
+    category: 'processor',
+    defaultParams: { groundLift: false },
+  },
+  'noise-gate': {
+    typeKey: 'noise-gate',
+    label: 'Noise Gate',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: { thresholdDb: -40 },
+  },
+  limiter: {
+    typeKey: 'limiter',
+    label: 'Limiter',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: { thresholdDb: -3 },
+  },
+  deesser: {
+    typeKey: 'deesser',
+    label: 'De-esser',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
+  },
+  relay: {
+    typeKey: 'relay',
+    label: 'Relay',
+    inputs: [
+      { id: 'in-a', label: 'Input A', side: 'left' },
+      { id: 'in-b', label: 'Input B', side: 'left' },
+    ],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: { selectedInput: 'a' },
+  },
+  pan: {
+    typeKey: 'pan',
+    label: 'Pan',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [
+      { id: 'out-l', label: 'Left', side: 'right' },
+      { id: 'out-r', label: 'Right', side: 'right' },
+    ],
+    category: 'processor',
+    defaultParams: { panPosition: 50 },
+  },
+  'audio-interface': {
+    typeKey: 'audio-interface',
+    label: 'Audio Interface',
+    inputs: [], // dynamic at runtime — one per connected channel
+    outputs: [],
+    category: 'sink',
+    defaultParams: {},
+  },
+  adc: {
+    typeKey: 'adc',
+    label: 'ADC',
+    inputs: [{ id: 'in', label: 'Analog In', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Digital Out', side: 'right' }],
+    category: 'processor',
+    // alignmentDb: offset between analog reference level and digital full scale
+    // Standard: -18 dBu = 0 dBFS (EBU R68). So a -18 dBu signal becomes 0 dBFS.
+    defaultParams: { alignmentDb: 18 },
+  },
+  dac: {
+    typeKey: 'dac',
+    label: 'DAC',
+    inputs: [{ id: 'in', label: 'Digital In', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Analog Out', side: 'right' }],
+    category: 'processor',
+    defaultParams: { alignmentDb: 18 },
+  },
   'master-bus': {
     typeKey: 'master-bus',
     label: 'Master Bus',
     inputs: [], // dynamic at runtime — one per connected channel
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [
+      { id: 'out-l', label: 'Left Out',  side: 'right' },
+      { id: 'out-r', label: 'Right Out', side: 'right' },
+    ],
     category: 'merge',
-    defaultParams: {},
+    defaultParams: { isStereo: true },
   },
   bus: {
     typeKey: 'bus',
     label: 'Bus',
     inputs: [], // dynamic at runtime
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [
+      { id: 'out-l', label: 'Left Out',  side: 'right' },
+      { id: 'out-r', label: 'Right Out', side: 'right' },
+    ],
     category: 'merge',
     defaultParams: { faderDb: 0, isStereo: true, busType: 'aux' },
   },

@@ -29,6 +29,12 @@ export interface Translations {
     heavyCompression: string
     masterClipping: string
     masterTooQuiet: string
+    // domain / ADC / DAC warnings
+    domainMixedBus?: string
+    digitalToAmp?: string
+    digitalToSpeaker?: string
+    adcExpectsAnalog?: string
+    dacExpectsDigital?: string
   }
   tooltip: {
     whatIsThis: string
@@ -80,6 +86,16 @@ export interface Translations {
       label: string
       volume: string
     }
+    // New nodes — optional so older locale files remain valid during translation
+    'di-box'?: { label?: string; groundLift?: string; xlrOut?: string; directOut?: string; description?: string }
+    'noise-gate'?: { label?: string; threshold?: string; statusOpen?: string; statusClosed?: string }
+    limiter?: { label?: string; ceiling?: string; limiting?: string }
+    deesser?: { label?: string; threshold?: string; frequency?: string; gainReduction?: string }
+    relay?: { label?: string }
+    pan?: { label?: string }
+    'audio-interface'?: { label?: string; noChannels?: string; digitalIn?: string; analogIn?: string }
+    adc?: { label?: string }
+    dac?: { label?: string }
   }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {
@@ -90,7 +106,7 @@ export interface Translations {
   palette: {
     connectTool: string
     elements: string
-    categories: { source: string; processing: string; routing: string; output: string }
+    categories: { source: string; processing: string; structural?: string; routing: string; output: string }
     items: Record<string, string>
   }
   theory: Record<string, TheoryEntry>

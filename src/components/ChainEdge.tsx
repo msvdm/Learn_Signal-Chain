@@ -6,14 +6,21 @@ import { useSignalStore } from '../store/signalStore'
 export function ChainEdge({
   id, sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition, style, markerEnd,
+  data,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
   const removeEdge = useSignalStore((s) => s.removeEdge)
+
+  // Stagger parallel edges that share the same target node by shifting their center X.
+  // centerXOffset is computed in SignalChain.tsx and passed via edge data.
+  const centerXOffset = ((data as Record<string, unknown>)?.centerXOffset as number) ?? 0
+  const defaultCenterX = (sourceX + targetX) / 2
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX, sourceY, targetX, targetY,
     sourcePosition, targetPosition,
     borderRadius: 0,
+    centerX: defaultCenterX + centerXOffset,
   })
 
   return (

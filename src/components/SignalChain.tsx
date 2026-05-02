@@ -24,6 +24,14 @@ import { CompressorNode }      from './nodes/CompressorNode'
 import { HpfNode }             from './nodes/HpfNode'
 import { EQNode }              from './nodes/EQNode'
 import { GraphicEQNode }       from './nodes/GraphicEQNode'
+import { DIBoxNode }           from './nodes/DIBoxNode'
+import { NoiseGateNode }       from './nodes/NoiseGateNode'
+import { LimiterNode }         from './nodes/LimiterNode'
+import { DeesserNode }         from './nodes/DeesserNode'
+import { RelayNode }           from './nodes/RelayNode'
+import { PanNode }             from './nodes/PanNode'
+import { AudioInterfaceNode }  from './nodes/AudioInterfaceNode'
+import { AdcDacNode }          from './nodes/AdcDacNode'
 import { ChainEdge }           from './ChainEdge'
 
 import { useSignalStore }     from '../store/signalStore'
@@ -35,23 +43,32 @@ import { activeDragTypeKey }  from '../utils/dragState'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
-  mic:              MicNode,
-  'line-in':        MicNode,
-  instrument:       MicNode,
-  gain:             GainNode,
-  preamp:           GainNode,
-  amp:              AmpNode,
-  fader:            FaderNode,
-  'master-bus':     MasterBusNode,
-  bus:              MasterBusNode,
-  hpf:              HpfNode,
-  eq:               EQNode,
-  comp:             CompressorNode,
-  switch:           SwitchNode,
-  potentiometer:    PotentiometerNode,
-  'graphic-eq':     GraphicEQNode,
-  speaker:          SpeakerNode,
-  'active-speaker': ActiveSpeakerNode,
+  mic:                MicNode,
+  'line-in':          MicNode,
+  instrument:         MicNode,
+  'di-box':           DIBoxNode,
+  gain:               GainNode,
+  preamp:             GainNode,
+  amp:                AmpNode,
+  fader:              FaderNode,
+  'noise-gate':       NoiseGateNode,
+  limiter:            LimiterNode,
+  deesser:            DeesserNode,
+  'master-bus':       MasterBusNode,
+  bus:                MasterBusNode,
+  'audio-interface':  AudioInterfaceNode,
+  hpf:                HpfNode,
+  eq:                 EQNode,
+  comp:               CompressorNode,
+  switch:             SwitchNode,
+  potentiometer:      PotentiometerNode,
+  relay:              RelayNode,
+  pan:                PanNode,
+  'graphic-eq':       GraphicEQNode,
+  speaker:            SpeakerNode,
+  'active-speaker':   ActiveSpeakerNode,
+  adc:                AdcDacNode,
+  dac:                AdcDacNode,
 }
 
 const edgeTypes = { chain: ChainEdge }
@@ -65,6 +82,7 @@ const MIN_GAP = 3 * GRID   // 108 px ≈ inline node width (100 px)
 
 const INLINE_TYPE_KEYS = new Set([
   'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
+  'gain', 'adc', 'dac',
 ])
 // active-speaker is a NodeWrapper card (208px), not inline
 
@@ -79,16 +97,20 @@ const INLINE_TYPE_KEYS = new Set([
  * over-estimating spacing is always safer than under-estimating.
  */
 const NODE_DEFAULT_W: Record<string, number> = {
-  // Inline nodes
+  // Inline nodes (100px)
   'mic': 100, 'line-in': 100, 'instrument': 100,
   'fader': 100, 'switch': 100, 'potentiometer': 100, 'speaker': 100,
+  'gain': 100, 'adc': 100, 'dac': 100,
+  // Wider inline-style nodes
+  'relay': 130, 'pan': 130,
   // Custom-width cards
   'hpf': 140,
   'eq': 380,
   'graphic-eq': 340,
+  'di-box': 208, 'noise-gate': 220, 'limiter': 208, 'deesser': 208,
   // Standard NodeWrapper cards (208 px default, listed for clarity)
-  'gain': 208, 'amp': 208, 'comp': 220, 'master-bus': 208, 'bus': 208,
-  'active-speaker': 208,
+  'amp': 208, 'comp': 220, 'master-bus': 208, 'bus': 208,
+  'audio-interface': 208, 'active-speaker': 208,
 }
 
 // ── Overlap helpers ────────────────────────────────────────────────────────────
@@ -583,27 +605,41 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     [graphNodes]
   )
 
-  const displayEdges: Edge[] = useMemo(
-    () =>
-      graphEdges.map((edge) => {
-        const sourceStage = stages[edge.source]
-        const healthColor = sourceStage
-          ? getHealthStyle(sourceStage.health).color
-          : 'var(--lsc-text)'
-        return {
-          id:           edge.id,
-          source:       edge.source,
-          sourceHandle: edge.sourceHandle,
-          target:       edge.target,
-          targetHandle: edge.targetHandle,
-          type:         'chain',
-          animated:     false,
-          style:        { stroke: healthColor, strokeWidth: 3 },
-          markerEnd:    { type: MarkerType.ArrowClosed, color: healthColor, width: 18, height: 18 },
-        }
-      }),
-    [graphEdges, stages]
-  )
+  const displayEdges: Edge[] = useMemo(() => {
+    // Stagger parallel edges that share the same target node.
+    // Edges going to the same target are offset at their center X so their
+    // elbow points separate, preventing overlap.
+    const edgesByTarget = new Map<string, string[]>()
+    for (const e of graphEdges) {
+      const arr = edgesByTarget.get(e.target) ?? []
+      arr.push(e.id)
+      edgesByTarget.set(e.target, arr)
+    }
+
+    return graphEdges.map((edge) => {
+      const sourceStage = stages[edge.source]
+      const healthColor = sourceStage
+        ? getHealthStyle(sourceStage.health).color
+        : 'var(--lsc-text)'
+
+      const siblings   = edgesByTarget.get(edge.target) ?? [edge.id]
+      const idx        = siblings.indexOf(edge.id)
+      const centerXOffset = (idx - (siblings.length - 1) / 2) * 20
+
+      return {
+        id:           edge.id,
+        source:       edge.source,
+        sourceHandle: edge.sourceHandle,
+        target:       edge.target,
+        targetHandle: edge.targetHandle,
+        type:         'chain',
+        animated:     false,
+        style:        { stroke: healthColor, strokeWidth: 3 },
+        markerEnd:    { type: MarkerType.ArrowClosed, color: healthColor, width: 18, height: 18 },
+        data:         { centerXOffset },
+      }
+    })
+  }, [graphEdges, stages])
 
   // Build live wire preview path
   const wirePath = (() => {

@@ -8,7 +8,7 @@ import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
-const NO_BYPASS_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker', 'fader', 'switch', 'potentiometer', 'gain'])
+const NO_BYPASS_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker', 'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac'])
 
 interface InlineNodeProps {
   nodeId: string

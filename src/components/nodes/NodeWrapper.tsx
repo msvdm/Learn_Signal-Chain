@@ -9,7 +9,7 @@ import { NODE_REGISTRY } from '../../data/nodeRegistry'
 // Sources and passive speaker — no bypass, no remove button
 const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
 // These nodes can be removed but bypassing them makes no sense
-const NO_BYPASS_TYPES = new Set(['amp', 'master-bus', 'bus', 'active-speaker'])
+const NO_BYPASS_TYPES = new Set(['amp', 'master-bus', 'bus', 'active-speaker', 'audio-interface'])
 
 interface NodeWrapperProps {
   nodeId: string

@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 import {
-  Mic, Cable, Guitar,
-  Zap, Filter, Activity, Box, SlidersHorizontal, ToggleLeft, Gauge, Sliders, Radio,
-  Merge, Volume2, MonitorSpeaker, Link2,
+  Mic, Cable, Guitar, Plug,
+  Zap, Filter, Activity, Box, ToggleLeft, Radio, Sliders,
+  AudioWaveform, ShieldAlert, DoorClosed,
+  Merge, Volume2, MonitorSpeaker, Link2, Cpu,
+  SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
+  ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
@@ -14,39 +17,69 @@ type ToolMode = 'select' | 'connect'
 interface PaletteItem {
   typeKey: string
   icon: ReactNode
-  category: 'source' | 'processing' | 'routing' | 'output'
+  category: 'source' | 'processing' | 'structural' | 'routing' | 'output'
 }
 
 const ALL_ITEMS: PaletteItem[] = [
   // Sources
-  { typeKey: 'mic',           icon: <Mic size={16} />,              category: 'source' },
-  { typeKey: 'line-in',       icon: <Cable size={16} />,            category: 'source' },
-  { typeKey: 'instrument',    icon: <Guitar size={16} />,           category: 'source' },
+  { typeKey: 'mic',              icon: <Mic size={16} />,              category: 'source' },
+  { typeKey: 'line-in',          icon: <Cable size={16} />,            category: 'source' },
+  { typeKey: 'instrument',       icon: <Guitar size={16} />,           category: 'source' },
+  { typeKey: 'di-box',           icon: <Plug size={16} />,             category: 'source' },
   // Processing
-  { typeKey: 'gain',          icon: <Zap size={16} />,              category: 'processing' },
-  { typeKey: 'fader',         icon: <SlidersHorizontal size={16} />, category: 'processing' },
-  { typeKey: 'hpf',           icon: <Filter size={16} />,           category: 'processing' },
-  { typeKey: 'eq',            icon: <Activity size={16} />,         category: 'processing' },
-  { typeKey: 'comp',          icon: <Box size={16} />,              category: 'processing' },
-  { typeKey: 'switch',        icon: <ToggleLeft size={16} />,       category: 'processing' },
-  { typeKey: 'potentiometer', icon: <Gauge size={16} />,            category: 'processing' },
-  { typeKey: 'amp',           icon: <Radio size={16} />,            category: 'processing' },
-  { typeKey: 'graphic-eq',    icon: <Sliders size={16} />,          category: 'processing' },
+  { typeKey: 'gain',             icon: <Zap size={16} />,              category: 'processing' },
+  { typeKey: 'hpf',              icon: <Filter size={16} />,           category: 'processing' },
+  { typeKey: 'eq',               icon: <Activity size={16} />,         category: 'processing' },
+  { typeKey: 'comp',             icon: <Box size={16} />,              category: 'processing' },
+  { typeKey: 'deesser',          icon: <AudioWaveform size={16} />,    category: 'processing' },
+  { typeKey: 'noise-gate',       icon: <DoorClosed size={16} />,       category: 'processing' },
+  { typeKey: 'limiter',          icon: <ShieldAlert size={16} />,      category: 'processing' },
+  { typeKey: 'amp',              icon: <Radio size={16} />,            category: 'processing' },
+  { typeKey: 'graphic-eq',       icon: <Sliders size={16} />,          category: 'processing' },
+  // Structural Elements (formerly some of processing)
+  { typeKey: 'fader',            icon: <SlidersHorizontal size={16} />, category: 'structural' },
+  { typeKey: 'switch',           icon: <ToggleLeft size={16} />,       category: 'structural' },
+  { typeKey: 'potentiometer',    icon: <Gauge size={16} />,            category: 'structural' },
+  { typeKey: 'relay',            icon: <GitBranch size={16} />,        category: 'structural' },
+  { typeKey: 'pan',              icon: <MoveHorizontal size={16} />,   category: 'structural' },
+  { typeKey: 'adc',              icon: <ArrowRight size={16} />,       category: 'structural' },
+  { typeKey: 'dac',              icon: <ArrowLeft size={16} />,        category: 'structural' },
   // Routing
-  { typeKey: 'master-bus',    icon: <Merge size={16} />,            category: 'routing' },
-  { typeKey: 'bus',           icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'master-bus',       icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'bus',              icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'audio-interface',  icon: <Cpu size={16} />,              category: 'routing' },
   // Output
-  { typeKey: 'active-speaker', icon: <MonitorSpeaker size={16} />, category: 'output' },
-  { typeKey: 'speaker',        icon: <Volume2 size={16} />,        category: 'output' },
+  { typeKey: 'active-speaker',   icon: <MonitorSpeaker size={16} />,   category: 'output' },
+  { typeKey: 'speaker',          icon: <Volume2 size={16} />,          category: 'output' },
 ]
 
 const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
-  beginner:     ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader'],
-  intermediate: ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
-  advanced:     ['mic', 'line-in', 'instrument', 'active-speaker', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
+  beginner: [
+    'mic', 'line-in', 'instrument', 'di-box',
+    'active-speaker',
+    'gain', 'fader',
+  ],
+  intermediate: [
+    'mic', 'line-in', 'instrument', 'di-box',
+    'active-speaker',
+    'gain', 'fader', 'hpf', 'eq', 'comp',
+    'noise-gate', 'limiter', 'deesser',
+    'switch', 'relay', 'pan',
+    'master-bus', 'bus', 'audio-interface',
+  ],
+  advanced: [
+    'mic', 'line-in', 'instrument', 'di-box',
+    'active-speaker', 'speaker',
+    'gain', 'fader', 'hpf', 'eq', 'comp',
+    'noise-gate', 'limiter', 'deesser',
+    'switch', 'potentiometer', 'relay', 'pan',
+    'amp', 'graphic-eq',
+    'master-bus', 'bus', 'audio-interface',
+    'adc', 'dac',
+  ],
 }
 
-const CATEGORY_ORDER = ['source', 'processing', 'routing', 'output']
+const CATEGORY_ORDER = ['source', 'processing', 'structural', 'routing', 'output']
 
 interface ElementPaletteProps {
   toolMode: ToolMode

@@ -48,18 +48,28 @@ function graphicEqPinkNoiseLevelChange(gains: number[]): number {
 }
 
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
+export type SignalDomain = 'analog' | 'digital'
 
 export interface StageResult {
   out: number
   health: SignalHealth
+  domain: SignalDomain
+  outL?: number                     // stereo bus / pan node left channel
+  outR?: number                     // stereo bus / pan node right channel
+  warning?: string                  // domain violation or blocked signal
+  portOutputs?: Record<string, number> // per-port overrides for multi-output nodes
 }
 
 export interface CompressorResult extends StageResult {
   gainReductionDb: number
 }
 
-export const DEFAULT_STAGE: StageResult = { out: -Infinity, health: 'too-quiet' }
-export const DEFAULT_COMP: CompressorResult = { out: -Infinity, health: 'too-quiet', gainReductionDb: 0 }
+export interface DeesserResult extends StageResult {
+  gainReductionDb: number
+}
+
+export const DEFAULT_STAGE: StageResult = { out: -Infinity, health: 'too-quiet', domain: 'analog' }
+export const DEFAULT_COMP: CompressorResult = { out: -Infinity, health: 'too-quiet', domain: 'analog', gainReductionDb: 0 }
 
 export function getHealth(db: number): SignalHealth {
   if (db < -40) return 'too-quiet'
@@ -135,38 +145,58 @@ function topoSort(nodes: SignalNode[], edges: SignalEdge[]): SignalNode[] {
 
 function computeGraphNode(
   node: SignalNode,
-  inputSignals: number[]
-): StageResult | CompressorResult {
+  inputSignals: number[],
+  inputDomain: SignalDomain,
+  domainMismatch: boolean,
+  portInputs: Record<string, number> = {},
+): StageResult | CompressorResult | DeesserResult {
   const input = inputSignals[0] ?? -Infinity
   const p = node.params
+  const domain = inputDomain // most nodes pass domain through unchanged
+
+  // Domain mismatch in bus nodes — cannot sum analog and digital signals
+  if (domainMismatch && (node.typeKey === 'master-bus' || node.typeKey === 'bus' || node.typeKey === 'audio-interface')) {
+    return { out: -Infinity, health: 'too-quiet', domain, warning: 'domainMixedBus' }
+  }
+
+  // Amp and speakers cannot process digital signals
+  if (inputDomain === 'digital' && (node.typeKey === 'amp' || node.typeKey === 'speaker' || node.typeKey === 'active-speaker')) {
+    const warning = node.typeKey === 'amp' ? 'digitalToAmp' : 'digitalToSpeaker'
+    return { out: -Infinity, health: 'too-quiet', domain, warning }
+  }
 
   switch (node.typeKey) {
     case 'mic': {
       const out = (p.sensitivityDb as number) ?? -60
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain: 'analog' }
     }
     case 'line-in':
     case 'instrument': {
       const out = (p.levelDb as number) ?? -10
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain: 'analog' }
+    }
+    case 'di-box': {
+      // Passive DI: impedance conversion only, no level change. Both outputs carry same signal.
+      const out = input
+      return { out, health: getHealth(out), domain: 'analog' }
     }
     case 'gain':
     case 'preamp': {
       const gain = (p.gainDb as number) ?? (p.preampGainDb as number) ?? 40
       const out = Math.min(input + gain, 20)
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'amp': {
       const out = Math.min(input + ((p.gainDb as number) ?? 20), 20)
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'hpf':
-      return { out: input, health: getHealth(input) }
+      return { out: input, health: getHealth(input), domain }
     case 'eq': {
       const bands = (p.bands as EQBand[]) ?? []
       const levelChange = eqPinkNoiseLevelChange(bands)
       const out = input + levelChange
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'comp': {
       const threshold = (p.thresholdDb as number) ?? 0
@@ -177,52 +207,109 @@ function computeGraphNode(
         gainReductionDb = (input - threshold) * (1 - 1 / ratio)
       }
       const out = input - gainReductionDb + makeup
-      return { out, health: getHealth(out), gainReductionDb }
+      return { out, health: getHealth(out), gainReductionDb, domain }
+    }
+    case 'noise-gate': {
+      const threshold = (p.thresholdDb as number) ?? -40
+      const out = input >= threshold ? input : -Infinity
+      return { out, health: getHealth(out), domain }
+    }
+    case 'limiter': {
+      const ceiling = (p.thresholdDb as number) ?? -3
+      const out = Math.min(input, ceiling)
+      return { out, health: getHealth(out), domain }
+    }
+    case 'deesser': {
+      const threshold = (p.thresholdDb as number) ?? -20
+      // 8:1 ratio on sibilant frequencies — simplified to overall level reduction
+      const gainReductionDb = Math.max(0, (input - threshold) * (1 - 1 / 8))
+      const out = input - gainReductionDb
+      return { out, health: getHealth(out), gainReductionDb, domain }
     }
     case 'fader':
     case 'master-fader': {
       const out = input + ((p.faderDb as number) ?? (p.masterFaderDb as number) ?? 0)
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'potentiometer': {
       const db  = potPositionToDb((p.position as number) ?? 75)
       const out = isFinite(db) ? input + db : -Infinity
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'switch': {
       const out = (p.on as boolean) !== false ? input : -Infinity
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
+    }
+    case 'relay': {
+      // 2 inputs (in-a, in-b) → 1 output; selectedInput picks which source passes
+      const selected = (p.selectedInput as string) ?? 'a'
+      const out = portInputs[`in-${selected}`] ?? -Infinity
+      return { out, health: getHealth(out), domain }
+    }
+    case 'pan': {
+      const pos = (p.panPosition as number) ?? 50
+      const ratio = pos / 100
+      const leftGain  = Math.cos(ratio * Math.PI / 2)
+      const rightGain = Math.sin(ratio * Math.PI / 2)
+      const outL = isFinite(input) ? input + 20 * Math.log10(Math.max(leftGain,  1e-10)) : -Infinity
+      const outR = isFinite(input) ? input + 20 * Math.log10(Math.max(rightGain, 1e-10)) : -Infinity
+      const out  = isFinite(input) ? Math.max(outL, outR) : -Infinity
+      return {
+        out,
+        health: getHealth(out),
+        domain,
+        outL,
+        outR,
+        portOutputs: { 'out-l': outL, 'out-r': outR },
+      }
     }
     case 'master-bus':
-    case 'bus': {
+    case 'bus':
+    case 'audio-interface': {
       const summed = sumSignalsToDb(inputSignals)
       const fader = (p.faderDb as number) ?? 0
       const out = isFinite(summed) ? summed + fader : -Infinity
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'graphic-eq': {
       const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
       const levelChange = graphicEqPinkNoiseLevelChange(gains)
       const out = input + levelChange
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
+    }
+    case 'adc': {
+      if (inputDomain === 'digital') {
+        return { out: -Infinity, health: 'too-quiet', domain: 'digital', warning: 'adcExpectsAnalog' }
+      }
+      const alignment = (p.alignmentDb as number) ?? 18
+      const out = isFinite(input) ? input + alignment : -Infinity
+      return { out, health: getHealth(out), domain: 'digital' }
+    }
+    case 'dac': {
+      if (inputDomain === 'analog') {
+        return { out: -Infinity, health: 'too-quiet', domain: 'analog', warning: 'dacExpectsDigital' }
+      }
+      const alignment = (p.alignmentDb as number) ?? 18
+      const out = isFinite(input) ? input - alignment : -Infinity
+      return { out, health: getHealth(out), domain: 'analog' }
     }
     case 'speaker': {
       // Handled in useGraphSignal with upstream amp check; this path only runs when amp is present
       const out = input + ((p.outputTrimDb as number) ?? 0)
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     case 'active-speaker': {
       const volumeDb = (p.volumeDb as number) ?? 0
       const out = isFinite(input) ? input + volumeDb : -Infinity
-      return { out, health: getHealth(out) }
+      return { out, health: getHealth(out), domain }
     }
     default:
-      return { out: input, health: getHealth(input) }
+      return { out: input, health: getHealth(input), domain }
   }
 }
 
 export interface GraphSignalResult {
-  stages: Record<string, StageResult | CompressorResult>
+  stages: Record<string, StageResult | CompressorResult | DeesserResult>
   inputDb: Record<string, number>
   portSignal: Map<string, number>
   overallHealth: SignalHealth
@@ -237,7 +324,7 @@ export function useGraphSignal(): GraphSignalResult {
   return useMemo(() => {
     const sorted = topoSort(nodes, edges)
     const portSignal = new Map<string, number>()
-    const stages: Record<string, StageResult | CompressorResult> = {}
+    const stages: Record<string, StageResult | CompressorResult | DeesserResult> = {}
     const inputDb: Record<string, number> = {}
     // Track which node typeKeys exist anywhere upstream of each node
     const upstreamTypes = new Map<string, Set<string>>()
@@ -264,23 +351,100 @@ export function useGraphSignal(): GraphSignalResult {
       const def = NODE_REGISTRY[node.typeKey]
       const outputs = def?.outputs ?? [{ id: 'out', label: '', side: 'right' as const }]
 
+      // Map each target handle to its incoming signal value
+      const portInputs: Record<string, number> = {}
+      for (const edge of incoming) {
+        portInputs[edge.targetHandle] = portSignal.get(`${edge.source}:${edge.sourceHandle}`) ?? -Infinity
+      }
+
+      // Determine input domain from upstream stages
+      let inputDomain: SignalDomain = 'analog'
+      let domainMismatch = false
+      if (incoming.length > 0) {
+        const inputDomains = incoming.map((e) => stages[e.source]?.domain ?? 'analog')
+        const unique = new Set(inputDomains)
+        domainMismatch = unique.size > 1
+        inputDomain = inputDomains[0] ?? 'analog'
+      }
+
+      // Relay: output domain follows the selected input, not all inputs
+      if (node.typeKey === 'relay') {
+        const selected = (node.params.selectedInput as string) ?? 'a'
+        const selEdge = incoming.find((e) => e.targetHandle === `in-${selected}`)
+        inputDomain = selEdge ? (stages[selEdge.source]?.domain ?? 'analog') : 'analog'
+        domainMismatch = false
+      }
+
       // Passive speaker requires a power amplifier (amp node) somewhere upstream
       if (node.typeKey === 'speaker' && !myUpstream.has('amp') && incoming.length > 0) {
-        const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet' }
+        const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet', domain: inputDomain }
         stages[node.id] = noAmpResult
         for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, -Infinity)
         continue
       }
 
+      let result: StageResult | CompressorResult | DeesserResult
+
       if (node.bypassed && incoming.length > 0) {
         const bypassSig = inputSignals[0] ?? -Infinity
-        const result: StageResult = { out: bypassSig, health: getHealth(bypassSig) }
+        result = { out: bypassSig, health: getHealth(bypassSig), domain: inputDomain }
         stages[node.id] = result
         for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, bypassSig)
       } else {
-        const result = computeGraphNode(node, inputSignals)
+        result = computeGraphNode(node, inputSignals, inputDomain, domainMismatch, portInputs)
         stages[node.id] = result
-        for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, result.out)
+
+        // Apply per-port overrides for multi-output nodes (relay, pan, di-box)
+        if (result.portOutputs) {
+          for (const [portId, value] of Object.entries(result.portOutputs)) {
+            portSignal.set(`${node.id}:${portId}`, value)
+          }
+          // Set any remaining ports to result.out as fallback
+          for (const port of outputs) {
+            if (!(port.id in result.portOutputs)) {
+              portSignal.set(`${node.id}:${port.id}`, result.out)
+            }
+          }
+        } else {
+          for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, result.out)
+        }
+      }
+
+      // Compute stereo L/R for bus nodes (master-bus, bus, audio-interface)
+      if (
+        node.typeKey === 'master-bus' ||
+        node.typeKey === 'bus' ||
+        node.typeKey === 'audio-interface'
+      ) {
+        const lInputs: number[] = []
+        const rInputs: number[] = []
+        for (const edge of incoming) {
+          if (edge.sourceHandle === 'out-l') {
+            const sig = portSignal.get(`${edge.source}:out-l`) ?? -Infinity
+            lInputs.push(sig)
+          } else if (edge.sourceHandle === 'out-r') {
+            const sig = portSignal.get(`${edge.source}:out-r`) ?? -Infinity
+            rInputs.push(sig)
+          } else {
+            const sig = portSignal.get(`${edge.source}:${edge.sourceHandle}`) ?? -Infinity
+            if (isFinite(sig)) {
+              lInputs.push(sig)
+              rInputs.push(sig)
+            }
+          }
+        }
+        const fader = (node.params.faderDb as number) ?? 0
+        const sumL = sumSignalsToDb(lInputs)
+        const sumR = sumSignalsToDb(rInputs)
+        result.outL = isFinite(sumL) ? sumL + fader : -Infinity
+        result.outR = isFinite(sumR) ? sumR + fader : -Infinity
+
+        // Push the actual L/R values to their dedicated output ports so
+        // downstream nodes reading portSignal get the correct per-channel level.
+        if (node.typeKey === 'master-bus' || node.typeKey === 'bus') {
+          portSignal.set(`${node.id}:out-l`, result.outL)
+          portSignal.set(`${node.id}:out-r`, result.outR)
+        }
       }
     }
 

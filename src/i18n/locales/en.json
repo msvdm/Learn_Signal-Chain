@@ -34,7 +34,12 @@
     "eqClipping": "EQ is boosting the signal into clipping. Reduce EQ boost or lower preamp gain.",
     "heavyCompression": "Heavy compression: {amount} dB of gain reduction. The signal may sound pumped or squashed.",
     "masterClipping": "Master output is clipping. Lower the fader or master trim to prevent distortion.",
-    "masterTooQuiet": "Master output is too quiet. Increase gain earlier in the chain."
+    "masterTooQuiet": "Master output is too quiet. Increase gain earlier in the chain.",
+    "domainMixedBus": "Cannot mix analog and digital signals — insert a DAC before this bus, or keep signals in the same domain.",
+    "digitalToAmp": "Amp cannot amplify a digital signal. Insert a DAC before the amp to convert back to analog.",
+    "digitalToSpeaker": "Speaker cannot receive a digital signal. Insert a DAC before the speaker.",
+    "adcExpectsAnalog": "ADC expects an analog input. Connect it after analog gear, not after another ADC or digital node.",
+    "dacExpectsDigital": "DAC expects a digital input. Connect it after an ADC or other digital node."
   },
   "tooltip": {
     "whatIsThis": "What is this?",
@@ -92,6 +97,48 @@
     "activeSpeaker": {
       "label": "Active Speaker",
       "volume": "Volume"
+    },
+    "di-box": {
+      "label": "DI Box",
+      "groundLift": "Ground Lift",
+      "xlrOut": "XLR Out",
+      "directOut": "Direct Out",
+      "description": "Converts high-impedance instrument signal to balanced mic-level XLR."
+    },
+    "noise-gate": {
+      "label": "Noise Gate",
+      "threshold": "Threshold",
+      "statusOpen": "Open",
+      "statusClosed": "Closed"
+    },
+    "limiter": {
+      "label": "Limiter",
+      "ceiling": "Ceiling",
+      "limiting": "Limiting"
+    },
+    "deesser": {
+      "label": "De-esser",
+      "threshold": "Threshold",
+      "frequency": "Frequency",
+      "gainReduction": "Sibilance reduction"
+    },
+    "relay": {
+      "label": "Relay"
+    },
+    "pan": {
+      "label": "Pan"
+    },
+    "audio-interface": {
+      "label": "Audio Interface",
+      "noChannels": "No channels connected",
+      "digitalIn": "↓ Digital — End of chain",
+      "analogIn": "↓ Analog — End of chain"
+    },
+    "adc": {
+      "label": "ADC"
+    },
+    "dac": {
+      "label": "DAC"
     }
   },
   "eqCurve": {
@@ -110,6 +157,7 @@
     "categories": {
       "source": "Sources",
       "processing": "Processing",
+      "structural": "Structural Elements",
       "routing": "Routing",
       "output": "Output"
     },
@@ -117,17 +165,26 @@
       "mic": "Microphone",
       "line-in": "Line Input",
       "instrument": "Instrument",
+      "di-box": "DI Box",
       "gain": "Preamp / Gain",
-      "fader": "Fader",
       "hpf": "High-Pass Filter",
       "eq": "Parametric EQ",
       "comp": "Compressor",
-      "switch": "Switch / Mute",
-      "potentiometer": "Potentiometer",
+      "deesser": "De-esser",
+      "noise-gate": "Noise Gate",
+      "limiter": "Limiter",
       "amp": "Amplifier",
       "graphic-eq": "Graphic EQ",
+      "fader": "Fader",
+      "switch": "Switch / Mute",
+      "potentiometer": "Potentiometer",
+      "relay": "Relay",
+      "pan": "Pan Knob",
+      "adc": "ADC",
+      "dac": "DAC",
       "master-bus": "Master Bus",
       "bus": "Bus / Aux",
+      "audio-interface": "Audio Interface",
       "active-speaker": "Active Speaker",
       "speaker": "Speaker (passive)"
     }
@@ -222,6 +279,51 @@
       "what": "An active (powered) speaker has a built-in amplifier. It accepts line-level signals directly from a mixer, audio interface, or any line-level output — no separate power amp needed.",
       "why": "Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.",
       "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain."
+    },
+    "di-box": {
+      "what": "A DI box (Direct Injection) converts a high-impedance unbalanced instrument signal — like a guitar or keyboard — into a low-impedance balanced signal that travels cleanly over long cables to a mixing desk. It has two outputs: an XLR output (balanced, for the preamp) and a Direct Output (instrument-level thru, for connecting to an amplifier at the same time).",
+      "why": "Guitar pickups and keyboards have a high output impedance. Running them directly into a mixer causes high-frequency tone loss and picks up interference over long cables. The DI box solves both: it presents the correct high-impedance load to the instrument and converts the signal to a noise-resistant balanced format.",
+      "tip": "The Ground Lift switch disconnects the cable screen at the DI box end, which breaks ground loops — a common cause of low-frequency hum. If you hear a 50 or 60 Hz buzz, try switching ground lift on."
+    },
+    "noise-gate": {
+      "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",
+      "why": "Every microphone and cable picks up some background noise — air conditioning hum, electrical interference, room ambience. Between musical phrases, when the performer is quiet, that noise is audible. The gate simply closes during those quiet moments, removing the noise before it reaches the mix.",
+      "tip": "Set the threshold just above the noise floor and just below the quietest musical content. Too high, and the gate clips the start of notes (chatter). Too low, and the noise gets through. The OPEN/CLOSED indicator shows you exactly when the gate fires."
+    },
+    "limiter": {
+      "what": "A limiter is a compressor with an extremely high ratio — effectively infinite. It sets a hard ceiling: no signal can exceed the threshold, no matter how loud the input gets. Below the ceiling, the signal passes through unchanged.",
+      "why": "Limiters protect equipment and listeners from sudden loud peaks. A drum hit, a mic bump, a loud vocal phrase — without limiting, any of these can clip the mix bus, damage amplifiers, or cause hearing damage at high volumes. The limiter is the safety net at the end of the chain.",
+      "tip": "Unlike a compressor, a limiter is meant to be invisible — you should not hear it working. If you see the 'Limiting' indicator light up often, the signal going into the limiter is too hot. Fix it earlier in the chain rather than relying on the limiter to tame a consistently loud signal."
+    },
+    "deesser": {
+      "what": "A de-esser is a frequency-selective compressor. It listens for harsh sibilance — the sharp hissing sounds of letters like 'S', 'SH', and 'CH' in vocal recordings — and automatically reduces only those frequencies when they get too loud. You set the frequency and threshold; the de-esser does the rest automatically.",
+      "why": "Microphones and certain processing (especially EQ boosts in the 5–10 kHz range) can exaggerate sibilance until it becomes painful to listen to. A broadband compressor would make everything quieter, which is not the goal. The de-esser targets only the problem frequencies, leaving the rest of the voice untouched.",
+      "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy."
+    },
+    "relay": {
+      "what": "A relay is an electronic switch that routes your signal to one of two outputs. You choose Output A or Output B — the chosen path gets the signal; the other carries nothing. This is used for A/B routing: for example, sending a guitar to an amp (A) or directly to the interface (B) without unplugging cables.",
+      "why": "In live sound and recording, you often need to switch between two signal paths instantly — different monitor mixes, parallel processing chains, or backup routes. A relay does this cleanly without noise or clicks.",
+      "tip": "The active output is highlighted in green; the inactive one is grey. Try connecting Output A to a reverb bus and Output B to a dry speaker to instantly switch between wet and dry monitoring."
+    },
+    "pan": {
+      "what": "A pan knob distributes a mono signal between the left and right channels of a stereo mix. Turned fully left, the signal goes only to the left speaker. Fully right, only to the right. In the centre, it is split equally between both — but at −3 dB each, so the total loudness stays the same (equal-power law).",
+      "why": "In a stereo mix, every instrument has a position in the left-right field. Panning creates the sense of space and separation that makes a mix feel wide and clear. Without panning, everything piles up in the centre and the mix sounds crowded.",
+      "tip": "Connect the L output and R output of the pan knob to the left and right inputs of the Master Bus separately. The stereo bus will then show different levels for L and R, reflecting where you have placed the sound in the stereo field."
+    },
+    "audio-interface": {
+      "what": "An audio interface is the device that connects your studio to your computer. It receives the final analog signal from your mixer or monitor controller, converts it to digital, and sends it to your recording software. In this signal chain, it is the last stop — nothing comes after it.",
+      "why": "Every recording studio needs a way to get audio into a computer. The audio interface takes the balanced analog outputs from your desk and converts them to digital data that your DAW can record. It also handles the reverse — playing back digital audio from your computer as analog signal for monitoring.",
+      "tip": "The level reaching the audio interface matters. Aim for a signal that peaks in the green zone (−20 to −12 dBFS in digital terms, roughly −18 to −12 dBu in the analog chain). This gives the converter enough signal to work cleanly while leaving headroom for unexpected peaks."
+    },
+    "adc": {
+      "what": "An Analog-to-Digital Converter (ADC) samples the continuously varying analog voltage from your gear thousands of times per second and converts each measurement into a digital number. The level scale changes from dBu (analog) to dBFS (digital full scale). With the standard alignment of −18 dBu = 0 dBFS, a signal at −18 dBu becomes 0 dBFS.",
+      "why": "Computers work with numbers, not voltages. The ADC is the bridge between the physical world of microphones and amplifiers and the digital world of DAWs and plugins. Everything after the ADC is math, not electricity.",
+      "tip": "0 dBFS is the ceiling in digital audio — there is no louder. Unlike analog gear which can go a few dB over nominal before distorting, digital clips instantly and harshly at 0 dBFS. Aim to keep peaks well below 0 dBFS (−18 to −6 dBFS) to protect against sudden transients."
+    },
+    "dac": {
+      "what": "A Digital-to-Analog Converter (DAC) does the reverse of an ADC: it reads the digital numbers from your computer and reconstructs a continuously varying analog voltage. Using the same −18 dBu = 0 dBFS alignment, 0 dBFS becomes −18 dBu, and anything after the DAC is back in the analog world.",
+      "why": "Speakers and amplifiers are analog devices — they respond to voltage, not numbers. The DAC converts the digital mix back into real electrical signal so you can hear it through speakers. Without a DAC, digital audio stays in the computer.",
+      "tip": "Place the DAC before any analog gear that follows — amplifiers, passive speakers, analog signal processors. The domain indicator on the node turns green (analog) after the DAC, confirming that everything downstream is back in the correct electrical domain."
     }
   }
 }
