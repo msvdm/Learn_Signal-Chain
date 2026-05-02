@@ -188,7 +188,7 @@ function App() {
       <div
         className="flex-shrink-0 transition-all duration-200 ease-out"
         style={{
-          maxHeight: showSignalProfile ? 220 : 36,
+          maxHeight: showSignalProfile ? 480 : 36,
           overflow: 'hidden',
           borderTop: '1px solid var(--lsc-border)',
         }}

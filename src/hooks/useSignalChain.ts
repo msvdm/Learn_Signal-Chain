@@ -3,6 +3,49 @@ import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
+import { bellGain, shelfGain } from '../components/controls/eqMath'
+
+// ── Pink-noise-weighted EQ level change ───────────────────────────────────────
+// Pink noise has equal power per octave. Sampling log-uniformly from 20–20kHz
+// gives each octave the same weight, which is the correct weighting for perceptual
+// level change estimation (as opposed to just summing band gains).
+const GRAPHIC_EQ_CENTERS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+const EQ_SAMPLES = 64
+
+function eqPinkNoiseLevelChange(bands: EQBand[]): number {
+  if (bands.every((b) => b.gainDb === 0)) return 0
+  let sumPower = 0
+  for (let i = 0; i < EQ_SAMPLES; i++) {
+    const t = i / (EQ_SAMPLES - 1)
+    const freq = Math.pow(10, t * (Math.log10(20000) - Math.log10(20)) + Math.log10(20))
+    let gain = 0
+    for (const band of bands) {
+      if (band.type === 'high-shelf' || band.type === 'low-shelf') {
+        gain += shelfGain(freq, band.freqHz, band.gainDb, band.type)
+      } else {
+        gain += bellGain(freq, band.freqHz, band.gainDb, band.Q ?? 1.4)
+      }
+    }
+    sumPower += Math.pow(10, gain / 10)
+  }
+  return 10 * Math.log10(sumPower / EQ_SAMPLES)
+}
+
+function graphicEqPinkNoiseLevelChange(gains: number[]): number {
+  if (gains.every((g) => g === 0)) return 0
+  let sumPower = 0
+  for (let i = 0; i < EQ_SAMPLES; i++) {
+    const t = i / (EQ_SAMPLES - 1)
+    const freq = Math.pow(10, t * (Math.log10(20000) - Math.log10(20)) + Math.log10(20))
+    let gain = 0
+    for (let b = 0; b < 10; b++) {
+      // Q=1.4 gives about one-octave bandwidth, matching a graphic EQ band
+      gain += bellGain(freq, GRAPHIC_EQ_CENTERS[b], gains[b], 1.4)
+    }
+    sumPower += Math.pow(10, gain / 10)
+  }
+  return 10 * Math.log10(sumPower / EQ_SAMPLES)
+}
 
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
 
@@ -121,8 +164,8 @@ function computeGraphNode(
       return { out: input, health: getHealth(input) }
     case 'eq': {
       const bands = (p.bands as EQBand[]) ?? []
-      const bandSum = bands.reduce((acc, b) => acc + b.gainDb, 0)
-      const out = input + bandSum
+      const levelChange = eqPinkNoiseLevelChange(bands)
+      const out = input + levelChange
       return { out, health: getHealth(out) }
     }
     case 'comp': {
@@ -158,15 +201,19 @@ function computeGraphNode(
       return { out, health: getHealth(out) }
     }
     case 'graphic-eq': {
-      const bandSum = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].reduce(
-        (acc, i) => acc + ((p[`b${i}`] as number) ?? 0),
-        0
-      )
-      const out = input + bandSum
+      const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
+      const levelChange = graphicEqPinkNoiseLevelChange(gains)
+      const out = input + levelChange
       return { out, health: getHealth(out) }
     }
     case 'speaker': {
-      const out = input + ((p.outputTrimDb as number) ?? (p.outputGainDb as number) ?? 0)
+      // Handled in useGraphSignal with upstream amp check; this path only runs when amp is present
+      const out = input + ((p.outputTrimDb as number) ?? 0)
+      return { out, health: getHealth(out) }
+    }
+    case 'active-speaker': {
+      const volumeDb = (p.volumeDb as number) ?? 0
+      const out = isFinite(input) ? input + volumeDb : -Infinity
       return { out, health: getHealth(out) }
     }
     default:
@@ -192,6 +239,9 @@ export function useGraphSignal(): GraphSignalResult {
     const portSignal = new Map<string, number>()
     const stages: Record<string, StageResult | CompressorResult> = {}
     const inputDb: Record<string, number> = {}
+    // Track which node typeKeys exist anywhere upstream of each node
+    const upstreamTypes = new Map<string, Set<string>>()
+    for (const n of nodes) upstreamTypes.set(n.id, new Set())
 
     for (const node of sorted) {
       const incoming = edges.filter((e) => e.target === node.id)
@@ -199,10 +249,28 @@ export function useGraphSignal(): GraphSignalResult {
         (e) => portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity
       )
 
+      // Accumulate upstream types from all source nodes
+      const myUpstream = new Set<string>()
+      for (const edge of incoming) {
+        const srcTypes = upstreamTypes.get(edge.source) ?? new Set()
+        for (const t of srcTypes) myUpstream.add(t)
+        const srcNode = nodes.find((n) => n.id === edge.source)
+        if (srcNode) myUpstream.add(srcNode.typeKey)
+      }
+      upstreamTypes.set(node.id, myUpstream)
+
       inputDb[node.id] = inputSignals.length > 0 ? inputSignals[0] : -Infinity
 
       const def = NODE_REGISTRY[node.typeKey]
       const outputs = def?.outputs ?? [{ id: 'out', label: '', side: 'right' as const }]
+
+      // Passive speaker requires a power amplifier (amp node) somewhere upstream
+      if (node.typeKey === 'speaker' && !myUpstream.has('amp') && incoming.length > 0) {
+        const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet' }
+        stages[node.id] = noAmpResult
+        for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, -Infinity)
+        continue
+      }
 
       if (node.bypassed && incoming.length > 0) {
         const bypassSig = inputSignals[0] ?? -Infinity

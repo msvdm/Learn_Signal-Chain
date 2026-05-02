@@ -11,19 +11,20 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { MicNode }            from './nodes/MicNode'
-import { GainNode }           from './nodes/GainNode'
-import { FaderNode }          from './nodes/FaderNode'
-import { MasterBusNode }      from './nodes/MasterBusNode'
-import { AmpNode }            from './nodes/AmpNode'
-import { SpeakerNode }        from './nodes/SpeakerNode'
-import { SwitchNode }         from './nodes/SwitchNode'
-import { PotentiometerNode }  from './nodes/PotentiometerNode'
-import { GenericNode }        from './nodes/GenericNode'
-import { HpfNode }            from './nodes/HpfNode'
-import { EQNode }             from './nodes/EQNode'
-import { GraphicEQNode }      from './nodes/GraphicEQNode'
-import { ChainEdge }          from './ChainEdge'
+import { MicNode }             from './nodes/MicNode'
+import { GainNode }            from './nodes/GainNode'
+import { FaderNode }           from './nodes/FaderNode'
+import { MasterBusNode }       from './nodes/MasterBusNode'
+import { AmpNode }             from './nodes/AmpNode'
+import { SpeakerNode }         from './nodes/SpeakerNode'
+import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
+import { SwitchNode }          from './nodes/SwitchNode'
+import { PotentiometerNode }   from './nodes/PotentiometerNode'
+import { CompressorNode }      from './nodes/CompressorNode'
+import { HpfNode }             from './nodes/HpfNode'
+import { EQNode }              from './nodes/EQNode'
+import { GraphicEQNode }       from './nodes/GraphicEQNode'
+import { ChainEdge }           from './ChainEdge'
 
 import { useSignalStore }     from '../store/signalStore'
 import type { SignalEdge }    from '../store/signalStore'
@@ -34,22 +35,23 @@ import { activeDragTypeKey }  from '../utils/dragState'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
-  mic:           MicNode,
-  'line-in':     MicNode,
-  instrument:    MicNode,
-  gain:          GainNode,
-  preamp:        GainNode,
-  amp:           AmpNode,
-  fader:         FaderNode,
-  'master-bus':  MasterBusNode,
-  bus:           MasterBusNode,
-  hpf:           HpfNode,
-  eq:            EQNode,
-  comp:          GenericNode,
-  switch:        SwitchNode,
-  potentiometer: PotentiometerNode,
-  'graphic-eq':  GraphicEQNode,
-  speaker:       SpeakerNode,
+  mic:              MicNode,
+  'line-in':        MicNode,
+  instrument:       MicNode,
+  gain:             GainNode,
+  preamp:           GainNode,
+  amp:              AmpNode,
+  fader:            FaderNode,
+  'master-bus':     MasterBusNode,
+  bus:              MasterBusNode,
+  hpf:              HpfNode,
+  eq:               EQNode,
+  comp:             CompressorNode,
+  switch:           SwitchNode,
+  potentiometer:    PotentiometerNode,
+  'graphic-eq':     GraphicEQNode,
+  speaker:          SpeakerNode,
+  'active-speaker': ActiveSpeakerNode,
 }
 
 const edgeTypes = { chain: ChainEdge }
@@ -64,6 +66,7 @@ const MIN_GAP = 3 * GRID   // 108 px ≈ inline node width (100 px)
 const INLINE_TYPE_KEYS = new Set([
   'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
 ])
+// active-speaker is a NodeWrapper card (208px), not inline
 
 /**
  * Default rendered widths per node type, matching each component's explicit
@@ -84,7 +87,8 @@ const NODE_DEFAULT_W: Record<string, number> = {
   'eq': 380,
   'graphic-eq': 340,
   // Standard NodeWrapper cards (208 px default, listed for clarity)
-  'gain': 208, 'amp': 208, 'comp': 208, 'master-bus': 208, 'bus': 208,
+  'gain': 208, 'amp': 208, 'comp': 220, 'master-bus': 208, 'bus': 208,
+  'active-speaker': 208,
 }
 
 // ── Overlap helpers ────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import {
   Mic, Cable, Guitar,
   Zap, Filter, Activity, Box, SlidersHorizontal, ToggleLeft, Gauge, Sliders, Radio,
-  Merge, Volume2, Link2,
+  Merge, Volume2, MonitorSpeaker, Link2,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
@@ -36,13 +36,14 @@ const ALL_ITEMS: PaletteItem[] = [
   { typeKey: 'master-bus',   label: 'Master Bus',   icon: <Merge size={16} />,            category: 'routing' },
   { typeKey: 'bus',          label: 'Bus / Aux',    icon: <Merge size={16} />,            category: 'routing' },
   // Output
-  { typeKey: 'speaker',      label: 'Speaker',      icon: <Volume2 size={16} />,          category: 'output' },
+  { typeKey: 'active-speaker', label: 'Active Speaker', icon: <MonitorSpeaker size={16} />, category: 'output' },
+  { typeKey: 'speaker',        label: 'Speaker (passive)', icon: <Volume2 size={16} />,     category: 'output' },
 ]
 
 const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
-  beginner:     ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader'],
-  intermediate: ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
-  advanced:     ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
+  beginner:     ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader'],
+  intermediate: ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
+  advanced:     ['mic', 'line-in', 'instrument', 'active-speaker', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
 }
 
 const CATEGORY_LABELS: Record<string, string> = {

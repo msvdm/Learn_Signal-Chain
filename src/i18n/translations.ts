@@ -75,6 +75,11 @@ export interface Translations {
       statusHot: string
       statusClipping: string
       statusQuiet: string
+      needsAmp: string
+    }
+    activeSpeaker: {
+      label: string
+      volume: string
     }
   }
   eqCurve: { title: string; subtitle: string; band: string }
@@ -184,6 +189,11 @@ export const translations: Record<Lang, Translations> = {
         statusHot: 'Loud — near limit',
         statusClipping: 'Distortion! Signal clipping',
         statusQuiet: 'Too quiet — noise audible',
+        needsAmp: 'Needs a power amplifier — connect an Amp node before this speaker',
+      },
+      activeSpeaker: {
+        label: 'Active Speaker',
+        volume: 'Volume',
       },
     },
     eqCurve: {
@@ -201,6 +211,21 @@ export const translations: Record<Lang, Translations> = {
         what: 'The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.',
         why: 'Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.',
         tip: "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that.",
+      },
+      'line-in': {
+        what: 'A line input accepts signals that are already at "line level" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.',
+        why: 'Line-level signals are strong enough to drive mixing and processing gear directly without a preamp. They sit well above the noise floor and well below the clipping point.',
+        tip: 'If your line-level signal looks green (-40 to -12 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain.',
+      },
+      instrument: {
+        what: 'An instrument input (also called "Hi-Z" or high impedance) is designed for direct connection of guitars, basses, and similar passive pickups. The signal is louder than a microphone but still below true line level — typically -30 to -10 dBu.',
+        why: 'Guitar pickups have a high output impedance. Connecting them to a standard line input or mic input causes tone loss (the high frequencies get loaded down). An instrument input has the correct impedance — 1 MΩ or more — to let the signal pass without colouring it.',
+        tip: 'Going direct (DI) from an instrument bypasses the amp entirely. This is common in recording and live sound. A DI box can also be used to convert the high-impedance signal to a low-impedance balanced mic-level signal, which travels well over long cables.',
+      },
+      gain: {
+        what: 'The preamp/gain stage boosts the input signal up to a usable working level. For a microphone, this can be +40 to +60 dB of gain. For a line-level source, you may only need +10 to +20 dB.',
+        why: 'Without enough gain here, all downstream processors work with a weak signal and introduce more noise. Too much gain causes clipping before anything else in the chain can help. Getting this stage right is the foundation of gain staging.',
+        tip: 'Aim for the output to land in the green zone (−40 to −12 dBu). This is called gain staging, and it starts right here.',
       },
       preamp: {
         what: 'The preamplifier (preamp) boosts the weak microphone-level signal up to "line level" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB.',
@@ -232,15 +257,45 @@ export const translations: Record<Lang, Translations> = {
         why: 'Every instrument in a mix needs to sit at the right level relative to everything else. The fader is how you set that balance. It is the primary mixing control.',
         tip: 'In a mix, most faders end up below unity. The art of mixing is in the relative balance between all channels, not in making each one as loud as possible.',
       },
+      amp: {
+        what: 'A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound.',
+        why: 'Line-level signals are powerful enough for mixing and processing, but not powerful enough to physically move a speaker cone. The power amp provides the current needed to do the work.',
+        tip: 'Power amps are rated in watts. For studio monitors you typically need 50–100 W. For live PA systems, 500–2000 W per side is common. More wattage = more headroom before clipping, not necessarily more loudness.',
+      },
+      switch: {
+        what: 'A switch (or mute button) is the simplest control in a signal chain. When it is on, the signal passes through unchanged. When it is off, the signal is completely cut — silence.',
+        why: 'Muting is used to silence a channel between takes, to prevent feedback when a microphone is not in use, or to isolate a track during a mix.',
+        tip: 'In live sound, muting microphones when not in use prevents bleed, handling noise, and feedback. It is a habit every sound engineer develops quickly.',
+      },
+      potentiometer: {
+        what: 'A potentiometer (pot) is a variable resistor used as a volume or level control. It uses an audio taper curve, which matches how human hearing perceives loudness — most of the usable range is in the upper half of the knob rotation.',
+        why: 'Audio equipment uses pots for volume controls, send levels, trim controls, and effects returns. The audio taper ensures that the control feels linear even though loudness is logarithmic.',
+        tip: 'The 12 o\'clock position (50%) is not unity gain on an audio taper pot — unity is typically at 75% of the rotation. This node models that correctly: full CCW = silence, 75% = 0 dB, full CW = +10 dB.',
+      },
+      bus: {
+        what: 'A bus (or auxiliary bus) collects signals from multiple channels and combines them into a single output. It is used for grouping, effects sends, monitor mixes, and submixes.',
+        why: 'Grouping related channels (e.g., all drum channels) onto a bus lets you control their combined level with one fader. Effects sends use a bus to route a copy of multiple channels to a reverb or delay unit.',
+        tip: 'Keep bus levels well below 0 dBu — each channel feeding the bus adds to the total, so with many inputs the bus output can be much louder than any individual channel.',
+      },
+      'master-bus': {
+        what: 'The master bus is the final summing point where all channels are combined before the signal leaves the system. Every fader move, every processing decision, ultimately ends up here.',
+        why: 'The master bus controls the overall output level. It is also the place for final mix bus processing — subtle compression or limiting to control peaks and add cohesion.',
+        tip: 'Leave headroom on the master bus — ideally keep peaks below −6 dBu. This gives a mastering engineer (or limiter) room to work. A master bus that is already at 0 dBu has nowhere to go.',
+      },
       master: {
         what: 'The master bus receives all channel signals mixed together. It is the final stage before the signal leaves the system. A small trim here adjusts the overall output level.',
         why: 'The master bus is where your final mix level is controlled. It also applies any final processing — in professional studios, subtle compression and limiting are applied here to glue the mix.',
         tip: 'Leave some headroom on the master bus — ideally peaks should not exceed -6 dBu. This leaves room for a mastering engineer (or limiter) to do their job without distortion.',
       },
       speaker: {
-        what: 'The speaker (or monitor) converts the electrical signal back into sound waves — the reverse of the microphone. What you hear is the result of every decision made in the signal chain.',
-        why: 'The speaker is the final judge. A healthy green signal here means good gain staging throughout. A red signal means distortion. A blue signal means the signal is too quiet and noise will be audible.',
-        tip: 'Professional studio monitors are designed to reveal problems in the mix, not flatter it. If it sounds good on accurate monitors, it will translate well to any playback system.',
+        what: 'A passive speaker converts electrical signal back into sound, but it has no built-in amplifier. It needs a separate power amplifier (Amp node) to drive it — connecting one directly to line level will produce no sound.',
+        why: 'Passive speakers are the standard in live sound PA systems and hi-fi setups. The amplifier is a separate unit chosen for its power output and impedance matching to the speaker.',
+        tip: 'Connect an Amp node before this speaker. The amplifier provides the current needed to physically move the speaker cone. Without it, the signal is there but nothing moves.',
+      },
+      'active-speaker': {
+        what: 'An active (powered) speaker has a built-in amplifier. It accepts line-level signals directly from a mixer, audio interface, or any line-level output — no separate power amp needed.',
+        why: 'Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.',
+        tip: 'The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain.',
       },
     },
   },
@@ -344,6 +399,11 @@ export const translations: Record<Lang, Translations> = {
         statusHot: 'Силно — близо до лимита',
         statusClipping: 'Изкривяване! Сигналът клипира',
         statusQuiet: 'Прекалено тихо — шумът ще е чуваем',
+        needsAmp: 'Нужен е усилвател — свържете Amp възел преди тази тонколона',
+      },
+      activeSpeaker: {
+        label: 'Активна тонколона',
+        volume: 'Сила на звука',
       },
     },
     eqCurve: {
@@ -361,6 +421,21 @@ export const translations: Record<Lang, Translations> = {
         what: 'Микрофонът преобразува звука (акустична енергия) в електрически сигнал. Той изхожда много слабо напрежение — обикновено около -60 dBu за динамичен микрофон.',
         why: 'Всичко започва тук. Качеството и позицията на микрофона определят суровия материал за цялата сигнална верига. Добрият изходен сигнал прави всичко надолу по веригата по-лесно.',
         tip: 'Сигналът е в синята (прекалено тиха) зона — това е напълно нормално и очаквано на този етап. Задачата на предусилвателя е да го поправи.',
+      },
+      'line-in': {
+        what: 'Линейният вход приема сигнали, които вече са на "линейно ниво" — приблизително -10 dBu за потребителска техника, +4 dBu за професионална. Това е стандартното ниво между устройствата: от клавиатура, аудио интерфейс или ефект-процесор към миксер.',
+        why: 'Линейните сигнали са достатъчно силни за директно смесване и обработка без предусилвател. Те са далеч над шумовия праг и под точката на клипиране.',
+        tip: 'Ако линейният сигнал е зелен (-40 до -12 dBu), всичко е наред. Ако е прекалено тих, изходното ниво на изходното устройство може да има собствен регулатор — регулирай него първо.',
+      },
+      instrument: {
+        what: 'Инструменталният вход (Hi-Z или висок импеданс) е предназначен за директно свързване на китари, баси и подобни пасивни звукосниматели. Сигналът е по-силен от микрофон, но под линейно ниво — обикновено от -30 до -10 dBu.',
+        why: 'Китарните звукосниматели имат висок изходен импеданс. Свързването им към стандартен линеен или микрофонен вход причинява загуба на тон. Инструменталният вход има правилния импеданс — 1 МΩ или повече.',
+        tip: 'Директното включване (DI) на инструмент заобикаля усилвателя изцяло. Кутия за директно включване (DI box) преобразува сигнала с висок импеданс в балансиран микрофонен сигнал с нисък импеданс.',
+      },
+      gain: {
+        what: 'Предусилвателят/регулаторът на усилване усилва входния сигнал до работно ниво. За микрофон това може да е от +40 до +60 dB усилване. За линеен сигнал може да са нужни само +10 до +20 dB.',
+        why: 'Без достатъчно усилване тук, всички следващи процесори работят със слаб сигнал и въвеждат повече шум. Прекалено много усилване причинява клипиране преди нещо друго да може да помогне.',
+        tip: 'Цели изходът да е в зелената зона (от −40 до −12 dBu). Това се нарича стъпалост на усилването и започва точно тук.',
       },
       preamp: {
         what: 'Предусилвателят усилва слабия сигнал от микрофонно ниво до "линейно ниво" — достатъчно силен, за да работи останалата верига. Типично усилване: от +20 до +60 dB.',
@@ -392,15 +467,45 @@ export const translations: Record<Lang, Translations> = {
         why: 'Всеки инструмент в миксa трябва да е на правилното ниво спрямо всичко останало. Фейдърът е начинът да зададеш този баланс. Той е основният контрол за миксиране.',
         tip: 'В миксa повечето фейдъри завършват под единичното ниво. Изкуството на миксирането е в относителния баланс между всички канали, а не в правенето на всеки от тях колкото се може по-силен.',
       },
+      amp: {
+        what: 'Крайният усилвател взима линеен сигнал и го усилва до ниво за задвижване на говорители — добавя значителен ток, а не само напрежение. Пасивен говорител (без вграден усилвател) изисква крайния усилвател, за да произведе звук.',
+        why: 'Линейните сигнали са достатъчно силни за смесване и обработка, но не и за физическото движение на конуса на говорителя. Крайният усилвател осигурява необходимия ток.',
+        tip: 'Крайните усилватели се оценяват в вата. За студийни монитори обикновено са нужни 50–100 W. За живи озвучителни системи — 500–2000 W на канал. Повече вата = повече запас преди клипиране.',
+      },
+      switch: {
+        what: 'Превключвателят (или бутонът за заглушаване) е най-простият контрол в сигналната верига. Когато е включен, сигналът преминава непроменен. Когато е изключен, сигналът е напълно отрязан — тишина.',
+        why: 'Заглушаването се използва за заглушаване на канал между записи, за предотвратяване на обратна връзка, когато микрофонът не се използва, или за изолиране на запис по време на миксиране.',
+        tip: 'В живия звук заглушаването на микрофони, когато не се използват, предотвратява просмукване, шум от ръкохватката и обратна връзка.',
+      },
+      potentiometer: {
+        what: 'Потенциометърът (пот) е променливо съпротивление, използвано като регулатор на ниво. Използва аудио крива, която съответства на начина, по който човешкото ухо възприема силата на звука.',
+        why: 'Аудио оборудването използва потенциометри за регулатори на силата на звука, нива на изпращане и тримери. Аудио кривата гарантира, че управлението изглежда линейно, въпреки че силата на звука е логаритмична.',
+        tip: 'Позицията 12 часа (50%) не е единично усилване при аудио потенциометър — единичното е обикновено при 75% от въртенето. Тук: пълно ляво = тишина, 75% = 0 dB, пълно дясно = +10 dB.',
+      },
+      bus: {
+        what: 'Шината (или спомагателната шина) събира сигнали от множество канали и ги комбинира в един изход. Използва се за групиране, изпращане към ефекти, монитор миксове и субмиксове.',
+        why: 'Групирането на свързани канали (например всички барабанни канали) върху шина ти позволява да контролираш комбинираното им ниво с един фейдър.',
+        tip: 'Дръж нивата на шините далеч под 0 dBu — всеки канал, захранващ шината, добавя към общото, така че с много входове изходът може да е много по-силен от всеки отделен канал.',
+      },
+      'master-bus': {
+        what: 'Мастър шината е последната точка на сумиране, където всички канали се комбинират преди сигналът да напусне системата. Всяко движение на фейдъра, всяко решение за обработка, в крайна сметка завършва тук.',
+        why: 'Мастър шината контролира общото изходно ниво. Тя е и мястото за финална обработка — фина компресия или ограничаване за контрол на пиковете и добавяне на кохезия.',
+        tip: 'Оставяй запас на мастър шината — пиковете в идеалния случай трябва да са под −6 dBu. Мастър шина, която вече е на 0 dBu, няма накъде да отиде.',
+      },
       master: {
         what: 'Мастър бусът получава всички канални сигнали, смесени заедно. Той е последният етап преди сигналът да напусне системата. Малко изравняване тук регулира общото изходно ниво.',
         why: 'Мастър бусът е там, където се контролира финалното ниво на миксa. Той прилага и всяка финална обработка — в професионалните студия, тук се прилага фина компресия и ограничаване за "сплотяване" на миксa.',
         tip: 'Оставяй запас на мастър буса — пиковете в идеалния случай не трябва да надвишават -6 dBu. Това оставя място за мастеринг инженер (или ограничител) да си свърши работата без изкривяване.',
       },
       speaker: {
-        what: 'Говорителят (или монитор) преобразува електрическия сигнал обратно в звукови вълни — обратното на микрофона. Това, което чуваш, е резултат от всяко решение, взето в сигналната верига.',
-        why: 'Говорителят е последният съдник. Здравият зелен сигнал тук означава добра стъпалост на усилването навсякъде. Червеният сигнал означава изкривяване. Синият сигнал означава, че сигналът е прекалено тих и шумът ще е чуваем.',
-        tip: 'Професионалните студийни монитори са проектирани да разкриват проблемите в миксa, а не да го ласкаят. Ако звучи добре на точни монитори, то ще се пренесе добре към всяка система за възпроизвеждение.',
+        what: 'Пасивният говорител преобразува електрически сигнал обратно в звук, но няма вграден усилвател. Нуждае се от отделен усилвател (Amp възел) — свързването директно към линейно ниво не произвежда звук.',
+        why: 'Пасивните говорители са стандарт в живи озвучителни системи и hi-fi инсталации. Усилвателят е отделен блок, избран за мощността и съпротивлението му.',
+        tip: 'Свържете Amp възел преди този говорител. Усилвателят осигурява тока, необходим за физическото движение на конуса. Без него сигналът е налице, но нищо не се движи.',
+      },
+      'active-speaker': {
+        what: 'Активната (захранена) тонколона има вграден усилвател. Приема линейни сигнали директно от миксер, аудио интерфейс или всеки друг линеен изход — не е нужен отделен усилвател.',
+        why: 'Активните тонколони са стандарт в съвременните студийни монитори и преносими PA системи. Вграденият усилвател е съчетан с говорителя, поради което захранените монитори имат по-консистентен и точен звук.',
+        tip: 'Потенциометърът за сила на звука настройва финалното изходно ниво. Добрата стъпалост означава зелен сигнал до тази тонколона — след това използвай регулатора за сила на звука, за да зададеш желаната сила на слушане.',
       },
     },
   },

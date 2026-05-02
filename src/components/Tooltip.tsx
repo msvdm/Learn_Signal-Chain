@@ -3,20 +3,21 @@ import { useTranslation } from '../i18n/useTranslation'
 import { X } from 'lucide-react'
 
 interface TooltipProps {
-  nodeId: string
+  instanceId: string  // the node's unique instance ID — used to match against the store
+  typeKey: string     // the node type — used to look up theory content
 }
 
-export function TooltipPanel({ nodeId }: TooltipProps) {
+export function TooltipPanel({ instanceId, typeKey }: TooltipProps) {
   const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
   const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
   const { t } = useTranslation()
 
-  if (activeTooltipId !== nodeId) return null
+  if (activeTooltipId !== instanceId) return null
 
-  const entry = t.theory[nodeId]
+  const entry = t.theory[typeKey]
   if (!entry) return null
 
-  const nodeLabel = t.nodes[nodeId as keyof typeof t.nodes]?.label ?? nodeId
+  const nodeLabel = t.nodes[typeKey as keyof typeof t.nodes]?.label ?? typeKey
 
   return (
     <div

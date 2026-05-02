@@ -109,7 +109,7 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
-    defaultParams: { thresholdDb: 0, ratio: 2, makeupGainDb: 0 },
+    defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0 },
   },
   fader: {
     typeKey: 'fader',
@@ -175,6 +175,16 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [],
     category: 'sink',
+    // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
     defaultParams: { outputTrimDb: 0 },
+  },
+  'active-speaker': {
+    typeKey: 'active-speaker',
+    label: 'Active Speaker',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [],
+    category: 'sink',
+    // Active/powered speaker — has built-in amplification, works directly from line level
+    defaultParams: { volumeDb: 0 },
   },
 }

@@ -183,7 +183,7 @@ export function InlineNode({
         {children}
       </div>
 
-      {hasTooltip && <TooltipPanel nodeId={typeKey} />}
+      {hasTooltip && <TooltipPanel instanceId={nodeId} typeKey={typeKey} />}
     </div>
   )
 }
