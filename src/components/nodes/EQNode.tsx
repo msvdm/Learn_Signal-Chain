@@ -224,7 +224,7 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     updateNodeParams(id, { bands: newBands })
   }
 
-  const isAdvanced = complexityLevel === 'advanced' || complexityLevel === 'routing-madness'
+  const isAdvanced = complexityLevel === 'advanced'
 
   return (
     <NodeWrapper

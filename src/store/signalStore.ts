@@ -5,7 +5,7 @@ import type { NodeParamValue } from '../data/nodeRegistry'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 
-export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced' | 'routing-madness'
+export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 
 function getInitialLanguage(): Lang {
   const stored = localStorage.getItem('lsc-language')
@@ -16,7 +16,7 @@ function getInitialLanguage(): Lang {
 function getInitialComplexityLevel(): ComplexityLevel {
   const stored = localStorage.getItem('lsc-complexity-level')
   if (stored === 'beginner' || stored === 'intermediate' ||
-      stored === 'advanced' || stored === 'routing-madness') return stored
+      stored === 'advanced') return stored
   return 'beginner'
 }
 

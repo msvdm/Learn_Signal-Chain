@@ -82,7 +82,7 @@ Compact nodes show signal health via border color instead of SignalMeter bars. F
 
 ### Level system
 
-The active complexity level is stored as `complexityLevel: ComplexityLevel` in `signalStore.ts`. The type is `'beginner' | 'intermediate' | 'advanced' | 'routing-madness'`, persisted to `localStorage`.
+The active complexity level is stored as `complexityLevel: ComplexityLevel` in `signalStore.ts`. The type is `'beginner' | 'intermediate' | 'advanced'`, persisted to `localStorage`.
 
 Levels control **palette visibility only** — they do not auto-populate the graph:
 
@@ -91,7 +91,6 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 | Beginner | mic, line-in, instrument, speaker, gain, fader |
 | Intermediate | + hpf, eq, comp, switch |
 | Advanced | + potentiometer, amp, graphic-eq, master-bus, bus |
-| Routing Madness | same as advanced |
 
 Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }`.
 

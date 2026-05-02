@@ -12,14 +12,13 @@ The signal is your hero — represented as a flowing line with a dB value. Every
 
 ## Learning Levels
 
-| Level | Name | What you can do |
-|---|---|---|
-| 1 | Watch & Learn | Guided tour — click each element to learn what it does and why |
-| 2 | Adjust | Controls unlocked — move faders and knobs, watch the signal react |
-| 3 | Build | Drag elements from a palette onto the canvas and connect them |
-| 4 | Experiment | Full access — reorder elements, try unusual configs, break things |
+| Level | What you can do |
+|---|---|
+| Beginner | Core elements only: microphone, preamp, fader, speaker |
+| Intermediate | Adds filters, EQ, compressor, and switch |
+| Advanced | Full toolkit — all processing stages including graphic EQ, bus routing, and amplifier |
 
-EQ complexity also scales: Level 2 shows simple shelving sliders; Level 4 unlocks a full interactive frequency response curve.
+Switch levels at any time from the header. Switching clears the canvas (with confirmation).
 
 ## Signal Theory
 
@@ -38,14 +37,11 @@ Sources: Warm Audio, Berklee Online, LibreTexts Humanities, Sweetwater, Audio Un
 ## Run Locally
 
 ```bash
-# Install Bun (if not already installed)
-curl -fsSL https://bun.sh/install | bash
-
 # Install dependencies
-bun install
+npm install
 
 # Start the dev server
-bun dev
+npx vite dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
@@ -53,7 +49,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ## Build for Production
 
 ```bash
-bun run build
+npx vite build
 # Output is in the dist/ folder — deploy anywhere static hosting is available
 ```
 
@@ -70,9 +66,8 @@ bun run build
 
 Contributions are welcome! Feel free to open issues or pull requests.
 
-Ideas for future levels:
+Ideas for future features:
 - Live frequency spectrum analyser
-- Multi-channel mixing (adding a second signal source)
 - Reverb/delay effects chain
 - Export signal chain as a diagram
 

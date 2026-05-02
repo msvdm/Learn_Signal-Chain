@@ -40,10 +40,9 @@ const ALL_ITEMS: PaletteItem[] = [
 ]
 
 const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
-  beginner:          ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader'],
-  intermediate:      ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
-  advanced:          ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
-  'routing-madness': ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
+  beginner:     ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader'],
+  intermediate: ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
+  advanced:     ['mic', 'line-in', 'instrument', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
 }
 
 const CATEGORY_LABELS: Record<string, string> = {

@@ -25,10 +25,9 @@ function App() {
   const settingsRef = useRef<HTMLDivElement>(null)
 
   const LEVELS: { id: ComplexityLevel; label: string }[] = [
-    { id: 'beginner',        label: t.levels.beginner.title },
-    { id: 'intermediate',    label: t.levels.intermediate.title },
-    { id: 'advanced',        label: t.levels.advanced.title },
-    { id: 'routing-madness', label: t.levels['routing-madness'].title },
+    { id: 'beginner',     label: t.levels.beginner.title },
+    { id: 'intermediate', label: t.levels.intermediate.title },
+    { id: 'advanced',     label: t.levels.advanced.title },
   ]
 
   const handleReset = () => {

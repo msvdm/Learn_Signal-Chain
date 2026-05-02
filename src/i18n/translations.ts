@@ -16,10 +16,9 @@ export interface Translations {
     languages: { en: string; bg: string }
   }
   levels: {
-    beginner:          { title: string; description: string }
-    intermediate:      { title: string; description: string }
-    advanced:          { title: string; description: string }
-    'routing-madness': { title: string; description: string }
+    beginner:     { title: string; description: string }
+    intermediate: { title: string; description: string }
+    advanced:     { title: string; description: string }
     switchConfirm: string
   }
   meters: { input: string; output: string }
@@ -109,10 +108,6 @@ export const translations: Record<Lang, Translations> = {
       advanced: {
         title: 'Advanced',
         description: 'Full chain with all processing stages.',
-      },
-      'routing-madness': {
-        title: 'Routing Madness',
-        description: 'No rules. Pure fun.',
       },
       switchConfirm: 'Switch to {title}? This will reset all controls to defaults.',
     },
@@ -271,10 +266,6 @@ export const translations: Record<Lang, Translations> = {
       advanced: {
         title: 'Напреднал',
         description: 'Пълна верига с всички обработващи стъпала.',
-      },
-      'routing-madness': {
-        title: 'Луд Рутинг',
-        description: 'Без правила. Чисто забавление.',
       },
       switchConfirm:
         'Превключване към {title}? Всички контроли ще се нулират.',
