@@ -1,6 +1,5 @@
 import { useSignalStore } from '../store/signalStore'
 import { useGraphSignal } from '../hooks/useSignalChain'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
 import type { SignalHealth } from '../hooks/useSignalChain'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 
@@ -42,9 +41,7 @@ interface Chain {
   color: string
 }
 
-const SOURCE_TYPES = new Set(['mic', 'line-in', 'instrument'])
-const SINK_TYPES   = new Set(['speaker', 'active-speaker'])
-const BUS_TYPES    = new Set(['bus', 'master-bus'])
+const BUS_TYPES = new Set(['bus', 'master-bus'])
 
 function traceChains(graphNodes: SignalNode[], edges: SignalEdge[]): Chain[] {
   if (graphNodes.length === 0) return []
@@ -217,8 +214,7 @@ export function SignalLevelProfile() {
       <g>
         {/* Section title */}
         <text x={PAD_L} y={offsetY + 14} fill="var(--lsc-text)" fontSize="9"
-          fontFamily="system-ui" fontWeight="700" opacity="0.45" letterSpacing="0.08em"
-          textTransform="uppercase">
+          fontFamily="system-ui" fontWeight="700" opacity="0.45" letterSpacing="0.08em">
           {title.toUpperCase()}
         </text>
         {/* Section rows */}
