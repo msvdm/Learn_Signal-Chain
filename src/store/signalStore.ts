@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Lang } from '../i18n/translations'
+import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import { buildDefaultGraph } from '../data/levels'
 import type { NodeParamValue } from '../data/nodeRegistry'
 
@@ -9,8 +10,9 @@ export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 
 function getInitialLanguage(): Lang {
   const stored = localStorage.getItem('lsc-language')
-  if (stored === 'en' || stored === 'bg') return stored
-  return navigator.language.startsWith('bg') ? 'bg' : 'en'
+  if (stored && stored in LOCALES) return stored
+  const browserLang = navigator.language.split('-')[0]
+  return browserLang in LOCALES ? browserLang : DEFAULT_LANG
 }
 
 function getInitialComplexityLevel(): ComplexityLevel {

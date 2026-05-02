@@ -1,6 +1,7 @@
 import { useSignalStore } from '../store/signalStore'
-import { translations, fmt } from './translations'
+import { fmt } from './translations'
 import type { Translations } from './translations'
+import { LOCALES, DEFAULT_LANG } from './locales/index'
 
 export interface UseTranslationResult {
   t: Translations
@@ -9,5 +10,6 @@ export interface UseTranslationResult {
 
 export function useTranslation(): UseTranslationResult {
   const language = useSignalStore((s) => s.language)
-  return { t: translations[language], fmt }
+  const t = (LOCALES[language] ?? LOCALES[DEFAULT_LANG]).translations
+  return { t, fmt }
 }

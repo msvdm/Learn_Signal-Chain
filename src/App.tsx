@@ -8,6 +8,7 @@ import { SignalLevelProfile } from './components/SignalLevelProfile'
 import { ElementPalette } from './components/ElementPalette'
 import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import type { Lang } from './i18n/translations'
+import { LOCALES } from './i18n/locales/index'
 
 type ToolMode = 'select' | 'connect'
 
@@ -153,19 +154,19 @@ function App() {
                 >
                   {t.app.settings}
                 </p>
-                {(['en', 'bg'] as Lang[]).map((lang) => (
+                {Object.entries(LOCALES).map(([code, locale]) => (
                   <button
-                    key={lang}
-                    onClick={() => handleLanguage(lang)}
+                    key={code}
+                    onClick={() => handleLanguage(code as Lang)}
                     className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between"
                     style={{
-                      color: language === lang ? 'var(--lsc-text)' : 'var(--lsc-text)',
-                      background: language === lang ? 'rgba(0,0,0,0.04)' : 'transparent',
-                      fontWeight: language === lang ? 600 : 400,
+                      color: 'var(--lsc-text)',
+                      background: language === code ? 'rgba(0,0,0,0.04)' : 'transparent',
+                      fontWeight: language === code ? 600 : 400,
                     }}
                   >
-                    {t.app.languages[lang]}
-                    {language === lang && (
+                    {locale.nativeName}
+                    {language === code && (
                       <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>✓</span>
                     )}
                   </button>
