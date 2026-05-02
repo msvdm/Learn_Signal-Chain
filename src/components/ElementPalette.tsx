@@ -7,50 +7,43 @@ import {
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
 import { setActiveDragTypeKey } from '../utils/dragState'
+import { useTranslation } from '../i18n/useTranslation'
 
 type ToolMode = 'select' | 'connect'
 
 interface PaletteItem {
   typeKey: string
-  label: string
   icon: ReactNode
   category: 'source' | 'processing' | 'routing' | 'output'
 }
 
 const ALL_ITEMS: PaletteItem[] = [
   // Sources
-  { typeKey: 'mic',          label: 'Microphone',   icon: <Mic size={16} />,              category: 'source' },
-  { typeKey: 'line-in',      label: 'Line Input',   icon: <Cable size={16} />,            category: 'source' },
-  { typeKey: 'instrument',   label: 'Instrument',   icon: <Guitar size={16} />,           category: 'source' },
+  { typeKey: 'mic',           icon: <Mic size={16} />,              category: 'source' },
+  { typeKey: 'line-in',       icon: <Cable size={16} />,            category: 'source' },
+  { typeKey: 'instrument',    icon: <Guitar size={16} />,           category: 'source' },
   // Processing
-  { typeKey: 'gain',         label: 'Preamp / Gain',   icon: <Zap size={16} />,           category: 'processing' },
-  { typeKey: 'fader',        label: 'Fader',           icon: <SlidersHorizontal size={16} />, category: 'processing' },
-  { typeKey: 'hpf',          label: 'High-Pass Filter',icon: <Filter size={16} />,        category: 'processing' },
-  { typeKey: 'eq',           label: 'Parametric EQ',   icon: <Activity size={16} />,      category: 'processing' },
-  { typeKey: 'comp',         label: 'Compressor',      icon: <Box size={16} />,           category: 'processing' },
-  { typeKey: 'switch',       label: 'Switch',          icon: <ToggleLeft size={16} />,    category: 'processing' },
-  { typeKey: 'potentiometer',label: 'Potentiometer',   icon: <Gauge size={16} />,         category: 'processing' },
-  { typeKey: 'amp',          label: 'Amplifier',       icon: <Radio size={16} />,         category: 'processing' },
-  { typeKey: 'graphic-eq',   label: 'Graphic EQ',      icon: <Sliders size={16} />,       category: 'processing' },
+  { typeKey: 'gain',          icon: <Zap size={16} />,              category: 'processing' },
+  { typeKey: 'fader',         icon: <SlidersHorizontal size={16} />, category: 'processing' },
+  { typeKey: 'hpf',           icon: <Filter size={16} />,           category: 'processing' },
+  { typeKey: 'eq',            icon: <Activity size={16} />,         category: 'processing' },
+  { typeKey: 'comp',          icon: <Box size={16} />,              category: 'processing' },
+  { typeKey: 'switch',        icon: <ToggleLeft size={16} />,       category: 'processing' },
+  { typeKey: 'potentiometer', icon: <Gauge size={16} />,            category: 'processing' },
+  { typeKey: 'amp',           icon: <Radio size={16} />,            category: 'processing' },
+  { typeKey: 'graphic-eq',    icon: <Sliders size={16} />,          category: 'processing' },
   // Routing
-  { typeKey: 'master-bus',   label: 'Master Bus',   icon: <Merge size={16} />,            category: 'routing' },
-  { typeKey: 'bus',          label: 'Bus / Aux',    icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'master-bus',    icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'bus',           icon: <Merge size={16} />,            category: 'routing' },
   // Output
-  { typeKey: 'active-speaker', label: 'Active Speaker', icon: <MonitorSpeaker size={16} />, category: 'output' },
-  { typeKey: 'speaker',        label: 'Speaker (passive)', icon: <Volume2 size={16} />,     category: 'output' },
+  { typeKey: 'active-speaker', icon: <MonitorSpeaker size={16} />, category: 'output' },
+  { typeKey: 'speaker',        icon: <Volume2 size={16} />,        category: 'output' },
 ]
 
 const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
   beginner:     ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader'],
   intermediate: ['mic', 'line-in', 'instrument', 'active-speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch'],
   advanced:     ['mic', 'line-in', 'instrument', 'active-speaker', 'speaker', 'gain', 'fader', 'hpf', 'eq', 'comp', 'switch', 'potentiometer', 'amp', 'graphic-eq', 'master-bus', 'bus'],
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  source:     'Sources',
-  processing: 'Processing',
-  routing:    'Routing',
-  output:     'Output',
 }
 
 const CATEGORY_ORDER = ['source', 'processing', 'routing', 'output']
@@ -62,6 +55,7 @@ interface ElementPaletteProps {
 
 export function ElementPalette({ toolMode, onToolModeChange }: ElementPaletteProps) {
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const { t } = useTranslation()
   const visibleKeys = PALETTE_BY_LEVEL[complexityLevel]
   const visibleItems = ALL_ITEMS.filter((item) => visibleKeys.includes(item.typeKey))
   const isConnect = toolMode === 'connect'
@@ -93,7 +87,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
         <button
           className="nodrag nopan"
           onClick={() => onToolModeChange(isConnect ? 'select' : 'connect')}
-          title="Connect Tool (C) — drag from an output dot to an input dot to wire nodes together"
+          title={t.palette.connectTool}
           style={{
             width: '100%',
             display: 'flex',
@@ -111,7 +105,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
           }}
         >
           <Link2 size={13} />
-          Connect Tool
+          {t.palette.connectTool}
         </button>
       </div>
 
@@ -123,7 +117,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
         marginBottom: 2,
         paddingTop: 8,
       }}>
-        Elements
+        {t.palette.elements}
       </div>
 
       {CATEGORY_ORDER.map((cat) => {
@@ -136,7 +130,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
               fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
               color: 'var(--lsc-accent)',
             }}>
-              {CATEGORY_LABELS[cat]}
+              {t.palette.categories[cat as keyof typeof t.palette.categories]}
             </div>
             {items.map((item) => (
               <div
@@ -159,7 +153,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <span style={{ color: 'var(--lsc-accent)', flexShrink: 0 }}>{item.icon}</span>
-                <span style={{ lineHeight: 1.3 }}>{item.label}</span>
+                <span style={{ lineHeight: 1.3 }}>{t.palette.items[item.typeKey] ?? item.typeKey}</span>
               </div>
             ))}
           </div>
