@@ -95,7 +95,7 @@
       "gainReduction": "Gain reduction"
     },
     "fader": {
-      "label": "Channel Fader",
+      "label": "Fader",
       "unity": "Unity"
     },
     "master": {

@@ -8,15 +8,13 @@
 
 :root {
   /* Core surfaces */
-  --lsc-canvas:        #fbfaf7;
-  --lsc-header:        #ffffff;
-  --lsc-node-bg:       #f0f0e6;
-  --lsc-sunken:        #f5f3ee;
-  --lsc-node-bg-2:     #faf8f3;
+  --lsc-canvas:        #ffffff;
+  --lsc-header:        #f9f9f9;
+  --lsc-node-bg:       #f2f5f7;
+  --lsc-sunken:        #edfbff;
+  --lsc-node-bg-2:     #ffffff;
   --lsc-track:         #e6e2d8;
-  --lsc-track-2:       #efece4;
-  --lsc-track-3:       #f6f4ed;
-  --lsc-grid:          #ece8dd;
+  --lsc-grid:          #3b3b8a;  
 
   /* Borders */
   --lsc-border:        #e6e2d8;
@@ -27,7 +25,7 @@
   --lsc-text: #000000;
 
   /* Signal health */
-  --signal-too-quiet:        #5b8de8;
+  --signal-too-quiet:        #bacff8;
   --signal-good:             #4fa876;
   --signal-hot:              #efd545;
   --signal-clipping:         #fc0000;
@@ -41,8 +39,8 @@
   --signal-clipping-border:  rgba(216,107,107,0.24);
 
   /* Accent */
-  --lsc-accent:        #9a7fd4;
-  --lsc-accent-soft:   #b8a3de;
+  --lsc-accent:        #192361;
+  --lsc-accent-soft:   #1b214a;
   --lsc-accent-bg:     rgba(154,127,212,0.08);
 
   /* EQ band palette */

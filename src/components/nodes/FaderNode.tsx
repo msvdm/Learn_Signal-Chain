@@ -21,7 +21,7 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
     <InlineNode
       nodeId={id}
       typeKey="fader"
-      icon={<SlidersHorizontal size={20} />}
+      icon={<SlidersHorizontal size={30} />}
       label={data.label ?? t.nodes.fader.label}
       accentColor={data.color}
     >
@@ -32,7 +32,7 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
         step={1}
         formatValue={(v) => (v <= -80 ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)}
         onChange={(v) => updateNodeParams(id, { faderDb: v })}
-        height={144}
+        height={150}
         marks={[
           { db: 10,  label: '+10' },
           { db: 0,   label:  '0'  },
@@ -41,6 +41,7 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
           { db: -30, label: '-30' },
           { db: -40, label: '-40' },
           { db: -60, label: '-60' },
+          { db: -80, label: '−∞'  },
         ]}
       />
     </InlineNode>
