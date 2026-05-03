@@ -155,7 +155,10 @@ function computeGraphNode(
   const domain = inputDomain // most nodes pass domain through unchanged
 
   // Domain mismatch in bus nodes — cannot sum analog and digital signals
-  if (domainMismatch && (node.typeKey === 'master-bus' || node.typeKey === 'bus' || node.typeKey === 'audio-interface')) {
+  if (domainMismatch && (
+    node.typeKey === 'master-bus' || node.typeKey === 'mono-bus' ||
+    node.typeKey === 'stereo-bus' || node.typeKey === 'audio-interface'
+  )) {
     return { out: -Infinity, health: 'too-quiet', domain, warning: 'domainMixedBus' }
   }
 
@@ -264,12 +267,35 @@ function computeGraphNode(
       }
     }
     case 'master-bus':
-    case 'bus':
+    case 'stereo-bus':
+    case 'mono-bus':
     case 'audio-interface': {
       const summed = sumSignalsToDb(inputSignals)
       const fader = (p.faderDb as number) ?? 0
       const out = isFinite(summed) ? summed + fader : -Infinity
       return { out, health: getHealth(out), domain }
+    }
+    case 'stereo-fader': {
+      const fader = (p.faderDb as number) ?? 0
+      const inL = portInputs['in-l'] ?? inputSignals[0] ?? -Infinity
+      const inR = portInputs['in-r'] ?? inputSignals[1] ?? inputSignals[0] ?? -Infinity
+      const outL = isFinite(inL) ? inL + fader : -Infinity
+      const outR = isFinite(inR) ? inR + fader : -Infinity
+      const out  = Math.max(isFinite(outL) ? outL : -Infinity, isFinite(outR) ? outR : -Infinity)
+      return { out, health: getHealth(out), domain, outL, outR, portOutputs: { 'out-l': outL, 'out-r': outR } }
+    }
+    case 'balance': {
+      const pos  = ((p.balancePosition as number) ?? 50) / 100  // 0..1
+      const inL  = portInputs['in-l'] ?? inputSignals[0] ?? -Infinity
+      const inR  = portInputs['in-r'] ?? inputSignals[1] ?? inputSignals[0] ?? -Infinity
+      // Left gain: full at pos=0..0.5, fades to 0 at pos=1
+      const leftGainLin  = pos <= 0.5 ? 1 : 1 - (pos - 0.5) * 2
+      // Right gain: 0 at pos=0, full at pos=0.5..1
+      const rightGainLin = pos >= 0.5 ? 1 : pos * 2
+      const outL = isFinite(inL) && leftGainLin  > 0 ? inL  + 20 * Math.log10(leftGainLin)  : -Infinity
+      const outR = isFinite(inR) && rightGainLin > 0 ? inR  + 20 * Math.log10(rightGainLin) : -Infinity
+      const out  = Math.max(isFinite(outL) ? outL : -Infinity, isFinite(outR) ? outR : -Infinity)
+      return { out, health: getHealth(out), domain, outL, outR, portOutputs: { 'out-l': outL, 'out-r': outR } }
     }
     case 'graphic-eq': {
       const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
@@ -386,10 +412,21 @@ export function useGraphSignal(): GraphSignalResult {
       let result: StageResult | CompressorResult | DeesserResult
 
       if (node.bypassed && incoming.length > 0) {
-        const bypassSig = inputSignals[0] ?? -Infinity
-        result = { out: bypassSig, health: getHealth(bypassSig), domain: inputDomain }
-        stages[node.id] = result
-        for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, bypassSig)
+        // Stereo pass-through nodes: preserve L/R channel mapping on bypass
+        if (node.typeKey === 'stereo-fader' || node.typeKey === 'balance') {
+          const bypassL = portInputs['in-l'] ?? inputSignals[0] ?? -Infinity
+          const bypassR = portInputs['in-r'] ?? inputSignals[0] ?? -Infinity
+          const out = Math.max(isFinite(bypassL) ? bypassL : -Infinity, isFinite(bypassR) ? bypassR : -Infinity)
+          result = { out, health: getHealth(out), domain: inputDomain, portOutputs: { 'out-l': bypassL, 'out-r': bypassR } }
+          stages[node.id] = result
+          portSignal.set(`${node.id}:out-l`, bypassL)
+          portSignal.set(`${node.id}:out-r`, bypassR)
+        } else {
+          const bypassSig = inputSignals[0] ?? -Infinity
+          result = { out: bypassSig, health: getHealth(bypassSig), domain: inputDomain }
+          stages[node.id] = result
+          for (const port of outputs) portSignal.set(`${node.id}:${port.id}`, bypassSig)
+        }
       } else {
         result = computeGraphNode(node, inputSignals, inputDomain, domainMismatch, portInputs)
         stages[node.id] = result
@@ -410,10 +447,10 @@ export function useGraphSignal(): GraphSignalResult {
         }
       }
 
-      // Compute stereo L/R for bus nodes (master-bus, bus, audio-interface)
+      // Compute stereo L/R for bus nodes (master-bus, stereo-bus, audio-interface)
       if (
         node.typeKey === 'master-bus' ||
-        node.typeKey === 'bus' ||
+        node.typeKey === 'stereo-bus' ||
         node.typeKey === 'audio-interface'
       ) {
         const lInputs: number[] = []
@@ -441,7 +478,7 @@ export function useGraphSignal(): GraphSignalResult {
 
         // Push the actual L/R values to their dedicated output ports so
         // downstream nodes reading portSignal get the correct per-channel level.
-        if (node.typeKey === 'master-bus' || node.typeKey === 'bus') {
+        if (node.typeKey === 'master-bus' || node.typeKey === 'stereo-bus') {
           portSignal.set(`${node.id}:out-l`, result.outL)
           portSignal.set(`${node.id}:out-r`, result.outR)
         }

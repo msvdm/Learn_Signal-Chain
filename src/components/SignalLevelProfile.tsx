@@ -41,7 +41,7 @@ interface Chain {
   color: string
 }
 
-const BUS_TYPES = new Set(['bus', 'master-bus'])
+const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
 
 function traceChains(graphNodes: SignalNode[], edges: SignalEdge[]): Chain[] {
   if (graphNodes.length === 0) return []

@@ -77,6 +77,9 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeNode: (nodeId) =>
     set((s) => {
+      const target = s.nodes.find((n) => n.id === nodeId)
+      if (target?.typeKey === 'master-bus' && s.complexityLevel !== 'beginner') return {}
+
       const inEdges  = s.edges.filter((e) => e.target === nodeId)
       const outEdges = s.edges.filter((e) => e.source === nodeId)
       const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)

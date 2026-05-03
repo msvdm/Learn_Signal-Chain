@@ -23,7 +23,8 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
 
   const result          = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const resolvedTypeKey = (data.typeKey as string) ?? 'master-bus'
-  const defaultLabel    = resolvedTypeKey === 'bus' ? 'Bus / Aux' : 'Master Bus'
+  const defaultLabel    =
+    resolvedTypeKey === 'stereo-bus' ? 'Stereo Bus / Aux' : 'Master Bus'
   const domain          = (result as { domain?: string }).domain ?? 'analog'
   const unit            = domain === 'digital' ? 'dBFS' : 'dBu'
   const domainWarning   = (result as { warning?: string }).warning === 'domainMixedBus'

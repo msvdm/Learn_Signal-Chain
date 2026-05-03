@@ -96,6 +96,10 @@ export interface Translations {
     'audio-interface'?: { label?: string; noChannels?: string; digitalIn?: string; analogIn?: string }
     adc?: { label?: string }
     dac?: { label?: string }
+    'mono-bus'?: { label?: string; channels?: string; noChannels?: string }
+    'stereo-bus'?: { label?: string }
+    'stereo-fader'?: { label?: string; fader?: string }
+    balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {

@@ -42,11 +42,14 @@ const ALL_ITEMS: PaletteItem[] = [
   { typeKey: 'potentiometer',    icon: <Gauge size={16} />,            category: 'structural' },
   { typeKey: 'relay',            icon: <GitBranch size={16} />,        category: 'structural' },
   { typeKey: 'pan',              icon: <MoveHorizontal size={16} />,   category: 'structural' },
+  { typeKey: 'stereo-fader',     icon: <SlidersHorizontal size={16} />, category: 'structural' },
+  { typeKey: 'balance',          icon: <MoveHorizontal size={16} />,   category: 'structural' },
   { typeKey: 'adc',              icon: <ArrowRight size={16} />,       category: 'structural' },
   { typeKey: 'dac',              icon: <ArrowLeft size={16} />,        category: 'structural' },
   // Routing
   { typeKey: 'master-bus',       icon: <Merge size={16} />,            category: 'routing' },
-  { typeKey: 'bus',              icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'mono-bus',         icon: <Merge size={16} />,            category: 'routing' },
+  { typeKey: 'stereo-bus',       icon: <Merge size={16} />,            category: 'routing' },
   { typeKey: 'audio-interface',  icon: <Cpu size={16} />,              category: 'routing' },
   // Output
   { typeKey: 'active-speaker',   icon: <MonitorSpeaker size={16} />,   category: 'output' },
@@ -64,18 +67,20 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
     'active-speaker',
     'gain', 'fader', 'hpf', 'eq', 'comp',
     'noise-gate', 'limiter', 'deesser',
-    'switch', 'relay', 'pan',
-    'master-bus', 'bus', 'audio-interface',
+    'switch', 'relay', 'pan', 'stereo-fader', 'balance',
+    'mono-bus', 'stereo-bus', 'audio-interface',
+    // master-bus is pre-placed and non-removable in intermediate — not shown in palette
   ],
   advanced: [
     'mic', 'line-in', 'instrument', 'di-box',
     'active-speaker', 'speaker',
     'gain', 'fader', 'hpf', 'eq', 'comp',
     'noise-gate', 'limiter', 'deesser',
-    'switch', 'potentiometer', 'relay', 'pan',
+    'switch', 'potentiometer', 'relay', 'pan', 'stereo-fader', 'balance',
     'amp', 'graphic-eq',
-    'master-bus', 'bus', 'audio-interface',
+    'mono-bus', 'stereo-bus', 'audio-interface',
     'adc', 'dac',
+    // master-bus is pre-placed and non-removable in advanced — not shown in palette
   ],
 }
 

@@ -139,6 +139,24 @@
     },
     "dac": {
       "label": "DAC"
+    },
+    "mono-bus": {
+      "label": "Mono Bus / Aux",
+      "channels": "{n} channel{s} mixed",
+      "noChannels": "No channels connected"
+    },
+    "stereo-bus": {
+      "label": "Stereo Bus / Aux"
+    },
+    "stereo-fader": {
+      "label": "Stereo Fader",
+      "fader": "Fader"
+    },
+    "balance": {
+      "label": "Balance",
+      "leftLabel": "L",
+      "rightLabel": "R",
+      "centerLabel": "C"
     }
   },
   "eqCurve": {
@@ -183,7 +201,10 @@
       "adc": "ADC",
       "dac": "DAC",
       "master-bus": "Master Bus",
-      "bus": "Bus / Aux",
+      "mono-bus": "Mono Bus / Aux",
+      "stereo-bus": "Stereo Bus / Aux",
+      "stereo-fader": "Stereo Fader",
+      "balance": "Balance",
       "audio-interface": "Audio Interface",
       "active-speaker": "Active Speaker",
       "speaker": "Speaker (passive)"
@@ -255,10 +276,25 @@
       "why": "Audio equipment uses pots for volume controls, send levels, trim controls, and effects returns. The audio taper ensures that the control feels linear even though loudness is logarithmic.",
       "tip": "The 12 o'clock position (50%) is not unity gain on an audio taper pot — unity is typically at 75% of the rotation. This node models that correctly: full CCW = silence, 75% = 0 dB, full CW = +10 dB."
     },
-    "bus": {
-      "what": "A bus (or auxiliary bus) collects signals from multiple channels and combines them into a single output. It is used for grouping, effects sends, monitor mixes, and submixes.",
-      "why": "Grouping related channels (e.g., all drum channels) onto a bus lets you control their combined level with one fader. Effects sends use a bus to route a copy of multiple channels to a reverb or delay unit.",
-      "tip": "Keep bus levels well below 0 dBu — each channel feeding the bus adds to the total, so with many inputs the bus output can be much louder than any individual channel."
+    "mono-bus": {
+      "what": "A mono bus collects signals from multiple channels and combines them into a single mono output.",
+      "why": "Use it to merge several microphones or instruments before sending them to the master bus. Grouping related channels (e.g., all backing vocals) lets you control their combined level with one fader.",
+      "tip": "Watch the output meter — if it clips after combining many channels, lower the gain on the individual channels feeding into it. Each source adds to the total, so the more you combine the louder it gets."
+    },
+    "stereo-bus": {
+      "what": "A stereo bus collects signals from multiple channels and combines them into a stereo (Left/Right) output, preserving any left-right positioning set by pan knobs upstream.",
+      "why": "Use it to collect a group of sources — like all your drum tracks — and control their combined stereo level before sending everything to the master bus.",
+      "tip": "Connect pan nodes before the stereo bus so each source sits correctly in the stereo field. The left and right meters show you the final balance of the group."
+    },
+    "stereo-fader": {
+      "what": "A stereo fader has separate Left and Right inputs and outputs. It applies the same level adjustment to both channels simultaneously, so the stereo image stays intact.",
+      "why": "Use it to ride the level of a stereo source — a keyboard, a stereo effects return, or the output of a stereo bus — without collapsing it to mono.",
+      "tip": "Connect the L Out and R Out of a pan knob or stereo bus into the L In and R In here. Moving the fader down attenuates both channels equally, preserving the left-right balance."
+    },
+    "balance": {
+      "what": "A balance control adjusts the relative loudness between the Left and Right channels of a stereo signal. At centre, both channels pass through equally. Turning left fades out the right channel; turning right fades out the left channel.",
+      "why": "Useful when a stereo source sounds off-centre — for example, a recording where the guitarist is too far left — nudge the balance to compensate without re-mixing the source.",
+      "tip": "Balance is different from pan: pan positions a mono signal, balance shifts an already-stereo signal. Keep it near centre unless you specifically need to compensate for an off-centre stereo source."
     },
     "master-bus": {
       "what": "The master bus is the final summing point where all channels are combined before the signal leaves the system. Every fader move, every processing decision, ultimately ends up here.",

@@ -173,6 +173,14 @@ body {
   color: var(--lsc-text) !important;
 }
 
+/* Connection rejected feedback — handle flashes red briefly */
+.lsc-handle-rejected {
+  background: var(--signal-clipping) !important;
+  border-color: var(--signal-clipping) !important;
+  transform: scale(1.7) !important;
+  transition: transform 0.15s ease-out, background 0.15s !important;
+}
+
 .react-flow__controls button:hover {
   background: var(--lsc-sunken) !important;
 }

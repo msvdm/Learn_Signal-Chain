@@ -238,16 +238,52 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     category: 'merge',
     defaultParams: { isStereo: true },
   },
-  bus: {
-    typeKey: 'bus',
-    label: 'Bus',
-    inputs: [], // dynamic at runtime
+  'mono-bus': {
+    typeKey: 'mono-bus',
+    label: 'Mono Bus / Aux',
+    inputs: [], // dynamic at runtime — one per connected channel
+    outputs: [{ id: 'out', label: 'Out', side: 'right' }],
+    category: 'merge',
+    defaultParams: { faderDb: 0, busType: 'aux' },
+  },
+  'stereo-bus': {
+    typeKey: 'stereo-bus',
+    label: 'Stereo Bus / Aux',
+    inputs: [], // dynamic at runtime — one per connected channel
     outputs: [
       { id: 'out-l', label: 'Left Out',  side: 'right' },
       { id: 'out-r', label: 'Right Out', side: 'right' },
     ],
     category: 'merge',
-    defaultParams: { faderDb: 0, isStereo: true, busType: 'aux' },
+    defaultParams: { faderDb: 0, busType: 'aux' },
+  },
+  'stereo-fader': {
+    typeKey: 'stereo-fader',
+    label: 'Stereo Fader',
+    inputs: [
+      { id: 'in-l', label: 'L In', side: 'left' },
+      { id: 'in-r', label: 'R In', side: 'left' },
+    ],
+    outputs: [
+      { id: 'out-l', label: 'L Out', side: 'right' },
+      { id: 'out-r', label: 'R Out', side: 'right' },
+    ],
+    category: 'processor',
+    defaultParams: { faderDb: 0 },
+  },
+  balance: {
+    typeKey: 'balance',
+    label: 'Balance',
+    inputs: [
+      { id: 'in-l', label: 'L In', side: 'left' },
+      { id: 'in-r', label: 'R In', side: 'left' },
+    ],
+    outputs: [
+      { id: 'out-l', label: 'L Out', side: 'right' },
+      { id: 'out-r', label: 'R Out', side: 'right' },
+    ],
+    category: 'processor',
+    defaultParams: { balancePosition: 50 },
   },
   'graphic-eq': {
     typeKey: 'graphic-eq',

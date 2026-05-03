@@ -15,6 +15,9 @@ import { MicNode }             from './nodes/MicNode'
 import { GainNode }            from './nodes/GainNode'
 import { FaderNode }           from './nodes/FaderNode'
 import { MasterBusNode }       from './nodes/MasterBusNode'
+import { MonoBusNode }         from './nodes/MonoBusNode'
+import { StereoFaderNode }     from './nodes/StereoFaderNode'
+import { BalanceNode }         from './nodes/BalanceNode'
 import { AmpNode }             from './nodes/AmpNode'
 import { SpeakerNode }         from './nodes/SpeakerNode'
 import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
@@ -40,6 +43,7 @@ import { useGraphSignal }     from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
+import { MASTER_BUS_FLOW_POS, CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND } from '../data/zoneConstants'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -55,7 +59,10 @@ const nodeTypes = {
   limiter:            LimiterNode,
   deesser:            DeesserNode,
   'master-bus':       MasterBusNode,
-  bus:                MasterBusNode,
+  'mono-bus':         MonoBusNode,
+  'stereo-bus':       MasterBusNode,
+  'stereo-fader':     StereoFaderNode,
+  balance:            BalanceNode,
   'audio-interface':  AudioInterfaceNode,
   hpf:                HpfNode,
   eq:                 EQNode,
@@ -109,7 +116,8 @@ const NODE_DEFAULT_W: Record<string, number> = {
   'graphic-eq': 340,
   'di-box': 208, 'noise-gate': 220, 'limiter': 208, 'deesser': 208,
   // Standard NodeWrapper cards (208 px default, listed for clarity)
-  'amp': 208, 'comp': 220, 'master-bus': 208, 'bus': 208,
+  'amp': 208, 'comp': 220, 'master-bus': 208,
+  'mono-bus': 208, 'stereo-bus': 208, 'stereo-fader': 208, balance: 208,
   'audio-interface': 208, 'active-speaker': 208,
 }
 
@@ -162,7 +170,8 @@ function resolveOverlap(
 // ── Spacing helpers ────────────────────────────────────────────────────────────
 
 /** Push every node whose left edge is at X ≥ fromX rightward by `amount` (grid-snapped).
- *  Updates the local nodeMap in-place so subsequent calls in the same pass cascade. */
+ *  Updates the local nodeMap in-place so subsequent calls in the same pass cascade.
+ *  Master-bus is always skipped — it is the fixed anchor. */
 function pushDownstream(
   fromX: number,
   amount: number,
@@ -172,8 +181,43 @@ function pushDownstream(
 ) {
   const snapped = Math.ceil(amount / GRID) * GRID
   for (const n of nodes) {
+    if (n.type === 'master-bus') continue
     if (n.position.x >= fromX - GRID / 2) {
       const newPos = { x: n.position.x + snapped, y: n.position.y }
+      nodeMap.set(n.id, { ...n, position: newPos })
+      updatePos(n.id, newPos)
+    }
+  }
+}
+
+// ── Zone system ────────────────────────────────────────────────────────────────
+
+const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
+
+function getZone(x: number): 'left' | 'center' | 'right' {
+  if (x < CENTER_LEFT_BOUND)  return 'left'
+  if (x > CENTER_RIGHT_BOUND) return 'right'
+  return 'center'
+}
+
+/** Push every node whose right edge is ≤ fromX leftward by `amount` (grid-snapped).
+ *  Mirror of pushDownstream for left-zone insertions.
+ *  Master-bus is always skipped — it is the fixed anchor. */
+function pushUpstream(
+  fromX: number,
+  amount: number,
+  nodes: FlowNode[],
+  nodeMap: Map<string, FlowNode>,
+  updatePos: (id: string, pos: { x: number; y: number }) => void,
+  skipId?: string,
+) {
+  const snapped = Math.ceil(amount / GRID) * GRID
+  for (const n of nodes) {
+    if (n.id === skipId) continue
+    if (n.type === 'master-bus') continue
+    const dims = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
+    if (n.position.x + dims.w <= fromX + GRID / 2) {
+      const newPos = { x: n.position.x - snapped, y: n.position.y }
       nodeMap.set(n.id, { ...n, position: newPos })
       updatePos(n.id, newPos)
     }
@@ -310,9 +354,18 @@ interface SignalChainProps {
   onToolModeChange: (mode: ToolMode) => void
 }
 
+// Input limits per node type — enforced at connection time
+const INPUT_LIMITS: Record<string, number> = {
+  gain: 1, hpf: 1, eq: 1, comp: 1, fader: 1, switch: 1, amp: 1,
+  'di-box': 1, 'noise-gate': 1, limiter: 1, deesser: 1, potentiometer: 1,
+  pan: 1, adc: 1, dac: 1, 'graphic-eq': 1, speaker: 1, 'active-speaker': 1,
+  'stereo-fader': 2, balance: 2,
+}
+
 export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   const graphNodes         = useSignalStore((s) => s.nodes)
   const graphEdges         = useSignalStore((s) => s.edges)
+  const complexityLevel    = useSignalStore((s) => s.complexityLevel)
   const addNode            = useSignalStore((s) => s.addNode)
   const addEdge            = useSignalStore((s) => s.addEdge)
   const removeEdge         = useSignalStore((s) => s.removeEdge)
@@ -327,12 +380,16 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt } | null>(null)
 
   // Mutable refs so document-level handlers always see current state
-  const drawingRef    = useRef(drawing)
-  drawingRef.current  = drawing
-  const toolModeRef   = useRef(toolMode)
-  toolModeRef.current = toolMode
-  const edgesRef      = useRef(graphEdges)
-  edgesRef.current    = graphEdges
+  const drawingRef        = useRef(drawing)
+  drawingRef.current      = drawing
+  const toolModeRef       = useRef(toolMode)
+  toolModeRef.current     = toolMode
+  const edgesRef          = useRef(graphEdges)
+  edgesRef.current        = graphEdges
+  const graphNodesRef     = useRef(graphNodes)
+  graphNodesRef.current   = graphNodes
+  const complexityRef     = useRef(complexityLevel)
+  complexityRef.current   = complexityLevel
 
   // Cancel drawing when leaving connect mode
   useEffect(() => {
@@ -424,7 +481,22 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
             edge.target       === targetNodeId      &&
             edge.targetHandle === targetHandleId
         )
+
         if (!isDup && d.sourceNodeId !== targetNodeId) {
+          // Check input connection limit for target node
+          const targetTypeKey = graphNodesRef.current.find((n) => n.id === targetNodeId)?.typeKey
+          const limit = targetTypeKey ? INPUT_LIMITS[targetTypeKey] : undefined
+          const existingInputs = edgesRef.current.filter((e) => e.target === targetNodeId).length
+
+          if (limit !== undefined && existingInputs >= limit) {
+            // Flash the handle to signal rejection
+            hEl.classList.add('lsc-handle-rejected')
+            setTimeout(() => hEl.classList.remove('lsc-handle-rejected'), 600)
+            setDrawing({ active: false })
+            setSnapPos(null)
+            return
+          }
+
           addEdge({
             id:           `e-${d.sourceNodeId}-${targetNodeId}-${Date.now()}`,
             source:       d.sourceNodeId,
@@ -481,10 +553,15 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     const typeKey = activeDragTypeKey
     if (!typeKey) return
     const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const { w } = nodeDims(typeKey)
+    let posX = Math.round(raw.x / GRID) * GRID
+    if (BUS_TYPES.has(typeKey) && complexityLevel !== 'beginner') {
+      posX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, posX))
+    }
     setDropPreview({
       typeKey,
       pos: {
-        x: Math.round(raw.x / GRID) * GRID,
+        x: posX,
         y: Math.round(raw.y / GRID) * GRID,
       },
     })
@@ -535,18 +612,43 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
           const srcDims  = nodeDims(src.type, (src as any).measured?.width, (src as any).measured?.height)
           const srcRight = src.position.x + srcDims.w
           const tgtLeft  = tgt.position.x
+          const insertY  = Math.round(snapped.y / GRID) * GRID
 
-          const minInsertX   = Math.round((srcRight + MIN_GAP) / GRID) * GRID
-          const insertX      = Math.max(minInsertX, Math.round(snapped.x / GRID) * GRID)
-          const insertY      = Math.round(snapped.y / GRID) * GRID
+          // Determine zone from the raw drop position, before adjusting insertX
+          const dropZone = complexityLevel !== 'beginner'
+            ? getZone(Math.round(snapped.x / GRID) * GRID)
+            : 'right'
+
+          let insertX: number
+          if (dropZone === 'left') {
+            // Anchor new node just left of target (with MIN_GAP clearance).
+            // Never constrain to srcRight — pushUpstream will move the source left
+            // by however much is needed, even if the new node is very wide.
+            const maxInsertX = Math.round((tgtLeft - w - MIN_GAP) / GRID) * GRID
+            insertX = Math.min(maxInsertX, Math.round(snapped.x / GRID) * GRID)
+          } else {
+            // Anchor new node close to the source; target will be pushed right.
+            const minInsertX = Math.round((srcRight + MIN_GAP) / GRID) * GRID
+            insertX = Math.max(minInsertX, Math.round(snapped.x / GRID) * GRID)
+          }
+
           const newNodeRight = insertX + w
           const rightGap     = tgtLeft - newNodeRight
 
-          if (rightGap < MIN_GAP) {
-            const push    = Math.ceil((MIN_GAP - rightGap) / GRID) * GRID
-            const nmNodes = [...nodePositions.values()] as unknown as FlowNode[]
-            const nm      = new Map(nmNodes.map((n) => [n.id, n]))
-            pushDownstream(tgtLeft, push, nmNodes, nm, updateNodePosition)
+          const nmNodes = [...nodePositions.values()] as unknown as FlowNode[]
+          const nm      = new Map(nmNodes.map((n) => [n.id, n]))
+
+          if (dropZone === 'left') {
+            // Canvas grows leftward — push source chain left, target stays.
+            const leftGap = insertX - srcRight
+            if (leftGap < MIN_GAP) {
+              pushUpstream(insertX, MIN_GAP - leftGap, nmNodes, nm, updateNodePosition, newId)
+            }
+          } else {
+            // Canvas grows rightward — push target chain right, source stays.
+            if (rightGap < MIN_GAP) {
+              pushDownstream(tgtLeft, MIN_GAP - rightGap, nmNodes, nm, updateNodePosition)
+            }
           }
 
           addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false, label: def.label })
@@ -562,11 +664,16 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     }
 
     // ── Normal placement (no edge hit) ────────────────────────────────────────
-    const pos = resolveOverlap(snapped, w, h, getNodes())
+    let finalPos = resolveOverlap(snapped, w, h, getNodes())
+    // Snap bus nodes into the center zone in intermediate/advanced
+    if (BUS_TYPES.has(typeKey) && complexityLevel !== 'beginner') {
+      const clampedX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, finalPos.x))
+      finalPos = resolveOverlap({ x: clampedX, y: finalPos.y }, w, h, getNodes())
+    }
     addNode({
       id:       newId,
       typeKey,
-      position: pos,
+      position: finalPos,
       params:   { ...def.defaultParams },
       bypassed: false,
       label:    def.label,
@@ -585,11 +692,19 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
 
   function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
     setDragNodePreview(null)
-    const snapped = {
+    // Belt-and-suspenders: master-bus should not be draggable, but if it somehow is, reset it
+    if (node.type === 'master-bus' && complexityLevel !== 'beginner') {
+      updateNodePosition(node.id, MASTER_BUS_FLOW_POS)
+      return
+    }
+    let snapped = {
       x: Math.round(node.position.x / GRID) * GRID,
       y: Math.round(node.position.y / GRID) * GRID,
     }
     const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
+    if (BUS_TYPES.has(node.type ?? '') && complexityLevel !== 'beginner') {
+      snapped.x = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, snapped.x))
+    }
     const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
     updateNodePosition(node.id, resolved)
   }
@@ -600,9 +715,10 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
         id:       node.id,
         type:     node.typeKey,
         position: node.position,
+        draggable: !(node.typeKey === 'master-bus' && complexityLevel !== 'beginner'),
         data:     { color: node.color, label: node.label, typeKey: node.typeKey },
       })),
-    [graphNodes]
+    [graphNodes, complexityLevel]
   )
 
   const displayEdges: Edge[] = useMemo(() => {
@@ -686,6 +802,32 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
           color="var(--lsc-grid)"
         />
       </ReactFlow>
+
+      {/* Zone dividers — visible in intermediate/advanced modes */}
+      {complexityLevel !== 'beginner' && (
+        <svg
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none',
+            zIndex: 50,
+            overflow: 'visible',
+          }}
+        >
+          <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
+            <line
+              x1={CENTER_LEFT_BOUND}  y1={-10000} x2={CENTER_LEFT_BOUND}  y2={10000}
+              stroke="var(--lsc-text)" strokeWidth={1 / vpZoom}
+              opacity={0.25}
+            />
+            <line
+              x1={CENTER_RIGHT_BOUND} y1={-10000} x2={CENTER_RIGHT_BOUND} y2={10000}
+              stroke="var(--lsc-text)" strokeWidth={1 / vpZoom}
+              opacity={0.25}
+            />
+          </g>
+        </svg>
+      )}
 
       {/* Live wire preview SVG — rendered in flow-coordinate space */}
       {wirePath && (
