@@ -46,7 +46,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
             {/* dB axis labels */}
             <div className="flex flex-col justify-between pb-5 shrink-0" style={{ height: SLIDER_HEIGHT + 20 }}>
               {['+12', '+6', '0', '−6', '−12'].map((l) => (
-                <span key={l} className="text-[7px] font-mono leading-none" style={{ color: 'var(--lsc-fg-fainter)' }}>
+                <span key={l} className="text-[var(--node-text-3xs)] font-mono leading-none" style={{ color: 'var(--lsc-fg-fainter)' }}>
                   {l}
                 </span>
               ))}
@@ -83,11 +83,11 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
                       } as React.CSSProperties}
                     />
                   </div>
-                  <span className="text-[8px] font-mono leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
+                  <span className="text-[var(--node-text-2xs)] font-mono leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
                     {FREQ_LABELS[i]}
                   </span>
                   {gain !== 0 && (
-                    <span className="text-[7px] font-mono leading-none" style={{ color: 'var(--lsc-accent)' }}>
+                    <span className="text-[var(--node-text-3xs)] font-mono leading-none" style={{ color: 'var(--lsc-accent)' }}>
                       {gain > 0 ? `+${gain}` : gain}
                     </span>
                   )}

@@ -63,7 +63,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
       {channelHandles}
 
       <div className="space-y-2">
-        <div className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
+        <div className="text-[var(--node-text-sm)] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           {incomingEdges.length > 0
             ? `${incomingEdges.length} channel${incomingEdges.length > 1 ? 's' : ''} received`
             : t.nodes['audio-interface']?.noChannels ?? 'No channels connected'}
@@ -72,7 +72,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
         {domainWarning && (
           <div
             style={{
-              fontSize: 9, fontWeight: 600, color: 'var(--signal-clipping)',
+              fontSize: 'var(--node-text-xs)', fontWeight: 600, color: 'var(--signal-clipping)',
               padding: '3px 6px', borderRadius: 'var(--lsc-radius-sm)',
               border: '1px solid var(--signal-clipping)',
               background: 'var(--signal-clipping-bg)',
@@ -94,7 +94,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
 
         <div
           style={{
-            fontSize: 9, fontWeight: 600, letterSpacing: '0.06em',
+            fontSize: 'var(--node-text-xs)', fontWeight: 600, letterSpacing: '0.06em',
             color: 'var(--lsc-accent)', textTransform: 'uppercase',
             opacity: 0.7,
           }}

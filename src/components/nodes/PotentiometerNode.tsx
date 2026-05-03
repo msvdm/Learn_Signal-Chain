@@ -3,6 +3,7 @@ import { Gauge } from 'lucide-react'
 import { InlineNode } from './InlineNode'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 import { potPositionToDb } from '../../hooks/useSignalChain'
 
 interface GraphPotentiometerData extends Record<string, unknown> {
@@ -20,6 +21,7 @@ function formatDb(position: number): string {
 export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiometerData>>) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const { t }            = useTranslation()
 
   const position = (node?.params.position as number) ?? 75
 
@@ -28,8 +30,9 @@ export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiomete
       nodeId={id}
       typeKey="potentiometer"
       icon={<Gauge size={20} />}
-      label={data.label ?? 'Potentiometer'}
+      label={data.label ?? t.palette.items['potentiometer']}
       accentColor={data.color}
+      width={200}
     >
       <KnobControl
         value={position}

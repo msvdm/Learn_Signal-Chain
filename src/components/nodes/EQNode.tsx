@@ -34,13 +34,14 @@ function ShelfToggle({
   shelfType: 'high-shelf' | 'low-shelf'
   onChange: (patch: Partial<EQBand>) => void
 }) {
+  const { t }   = useTranslation()
   const isShelf = band.type === shelfType
   return (
     <button
       className="nodrag nopan"
       onClick={() => onChange({ type: isShelf ? 'bell' : shelfType })}
       style={{
-        fontSize: 9,
+        fontSize: 'var(--node-text-xs)',
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
@@ -52,9 +53,8 @@ function ShelfToggle({
         cursor: 'pointer',
         transition: 'all 0.12s',
       }}
-      title={isShelf ? 'Switch to Bell (peaking)' : 'Switch to Shelf (tilts all freqs above/below)'}
     >
-      {isShelf ? 'Shelf ✓' : 'Shelf'}
+      {isShelf ? (t.nodes.eq.shelfOn ?? 'Shelf ✓') : (t.nodes.eq.shelf ?? 'Shelf')}
     </button>
   )
 }
@@ -62,8 +62,9 @@ function ShelfToggle({
 // ── Beginner: 3 fixed-frequency gain knobs ─────────────────────────────────────
 
 function BeginnerView({ bands, updateBand }: { bands: EQBand[]; updateBand: (i: number, patch: Partial<EQBand>) => void }) {
+  const { t }          = useTranslation()
   const visibleIndices = [0, 2, 3]
-  const labels = ['Low', 'Mid', 'High']
+  const labels         = [t.nodes.eq.bandLow, t.nodes.eq.bandMid, t.nodes.eq.bandHigh]
   return (
     <div className="space-y-3">
       <EQInlineGraph
@@ -96,7 +97,9 @@ function BeginnerView({ bands, updateBand }: { bands: EQBand[]; updateBand: (i: 
 // ── Intermediate: 3 bands, Low/High shelf toggles, Mid has freq slider ─────────
 
 function IntermediateView({ bands, updateBand }: { bands: EQBand[]; updateBand: (i: number, patch: Partial<EQBand>) => void }) {
+  const { t }          = useTranslation()
   const visibleIndices = [0, 2, 3]
+  const gainLabel      = t.nodes.eq.gain ?? 'Gain'
   return (
     <div className="space-y-2">
       <EQInlineGraph
@@ -107,24 +110,24 @@ function IntermediateView({ bands, updateBand }: { bands: EQBand[]; updateBand: 
 
       <div className="rounded p-2 space-y-1" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold" style={{ color: BAND_COLORS[0] }}>Low · 200 Hz</span>
+          <span className="text-[var(--node-text-sm)] font-semibold" style={{ color: BAND_COLORS[0] }}>{t.nodes.eq.bandLow} · 200 Hz</span>
           <ShelfToggle band={bands[0]} shelfType="low-shelf" onChange={(p) => updateBand(0, p)} />
         </div>
-        <KnobControl value={bands[0].gainDb} min={-12} max={12} step={0.5} label="Gain"
+        <KnobControl value={bands[0].gainDb} min={-12} max={12} step={0.5} label={gainLabel}
           formatValue={(v) => `${v >= 0 ? '+' : ''}${v}dB`} onChange={(v) => updateBand(0, { gainDb: v })}
           color={BAND_COLORS[0]} size={38} />
       </div>
 
       <div className="rounded p-2 space-y-1" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
-        <span className="text-[10px] font-semibold" style={{ color: BAND_COLORS[2] }}>
-          Mid · {bands[2].freqHz >= 1000 ? `${bands[2].freqHz / 1000}k` : bands[2].freqHz} Hz
+        <span className="text-[var(--node-text-sm)] font-semibold" style={{ color: BAND_COLORS[2] }}>
+          {t.nodes.eq.bandMid} · {bands[2].freqHz >= 1000 ? `${bands[2].freqHz / 1000}k` : bands[2].freqHz} Hz
         </span>
         <div className="flex items-center gap-3">
-          <KnobControl value={bands[2].gainDb} min={-12} max={12} step={0.5} label="Gain"
+          <KnobControl value={bands[2].gainDb} min={-12} max={12} step={0.5} label={gainLabel}
             formatValue={(v) => `${v >= 0 ? '+' : ''}${v}dB`} onChange={(v) => updateBand(2, { gainDb: v })}
             color={BAND_COLORS[2]} size={38} />
           <div className="flex-1">
-            <ControlSlider value={bands[2].freqHz} min={200} max={5000} label="Frequency"
+            <ControlSlider value={bands[2].freqHz} min={200} max={5000} label={t.nodes.eq.frequency ?? 'Frequency'}
               formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k Hz` : `${v} Hz`}
               onChange={(v) => updateBand(2, { freqHz: v })} />
           </div>
@@ -133,10 +136,10 @@ function IntermediateView({ bands, updateBand }: { bands: EQBand[]; updateBand: 
 
       <div className="rounded p-2 space-y-1" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold" style={{ color: BAND_COLORS[3] }}>High · 8k Hz</span>
+          <span className="text-[var(--node-text-sm)] font-semibold" style={{ color: BAND_COLORS[3] }}>{t.nodes.eq.bandHigh} · 8k Hz</span>
           <ShelfToggle band={bands[3]} shelfType="high-shelf" onChange={(p) => updateBand(3, p)} />
         </div>
-        <KnobControl value={bands[3].gainDb} min={-12} max={12} step={0.5} label="Gain"
+        <KnobControl value={bands[3].gainDb} min={-12} max={12} step={0.5} label={gainLabel}
           formatValue={(v) => `${v >= 0 ? '+' : ''}${v}dB`} onChange={(v) => updateBand(3, { gainDb: v })}
           color={BAND_COLORS[3]} size={38} />
       </div>
@@ -146,7 +149,6 @@ function IntermediateView({ bands, updateBand }: { bands: EQBand[]; updateBand: 
 
 // ── Advanced: 4 fully parametric bands in a 2×2 grid ──────────────────────────
 
-const BAND_NAMES = ['Low', 'Lo-Mid', 'Mid', 'High']
 const BAND_SHELF_TYPE: Array<'low-shelf' | 'high-shelf' | null> = ['low-shelf', null, null, 'high-shelf']
 
 function AdvancedBandCell({ band, storeIndex, updateBand }: {
@@ -154,32 +156,34 @@ function AdvancedBandCell({ band, storeIndex, updateBand }: {
   storeIndex: number
   updateBand: (i: number, patch: Partial<EQBand>) => void
 }) {
-  const isBell = !band.type || band.type === 'bell'
+  const { t }       = useTranslation()
+  const bandNames   = [t.nodes.eq.bandLow, t.nodes.eq.bandLoMid ?? 'Lo-Mid', t.nodes.eq.bandMid, t.nodes.eq.bandHigh]
+  const isBell      = !band.type || band.type === 'bell'
   const shelfOption = BAND_SHELF_TYPE[storeIndex]
   const freqDisplay = band.freqHz >= 1000 ? `${(band.freqHz / 1000).toFixed(1)}k` : `${band.freqHz}`
-  const freqMin = [40, 200, 500, 2000][storeIndex]
-  const freqMax = [500, 1500, 5000, 16000][storeIndex]
+  const freqMin     = [40, 200, 500, 2000][storeIndex]
+  const freqMax     = [500, 1500, 5000, 16000][storeIndex]
 
   return (
     <div className="rounded p-2 flex flex-col gap-1" style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold" style={{ color: BAND_COLORS[storeIndex] }}>
-          {BAND_NAMES[storeIndex]} · {freqDisplay} Hz
+        <span className="text-[var(--node-text-sm)] font-semibold" style={{ color: BAND_COLORS[storeIndex] }}>
+          {bandNames[storeIndex]} · {freqDisplay} Hz
         </span>
         {shelfOption && (
           <ShelfToggle band={band} shelfType={shelfOption} onChange={(p) => updateBand(storeIndex, p)} />
         )}
       </div>
       <div className="flex items-start gap-2">
-        <KnobControl value={band.gainDb} min={-12} max={12} step={0.5} label="Gain"
+        <KnobControl value={band.gainDb} min={-12} max={12} step={0.5} label={t.nodes.eq.gain ?? 'Gain'}
           formatValue={(v) => `${v >= 0 ? '+' : ''}${v}dB`} onChange={(v) => updateBand(storeIndex, { gainDb: v })}
           color={BAND_COLORS[storeIndex]} size={34} />
         <div className="flex-1 flex flex-col gap-1">
-          <ControlSlider value={band.freqHz} min={freqMin} max={freqMax} label="Freq"
+          <ControlSlider value={band.freqHz} min={freqMin} max={freqMax} label={t.nodes.eq.freq ?? 'Freq'}
             formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k Hz` : `${v} Hz`}
             onChange={(v) => updateBand(storeIndex, { freqHz: v })} />
           {isBell && (
-            <ControlSlider value={band.Q ?? 1.4} min={0.3} max={10} step={0.1} label="Width (Q)"
+            <ControlSlider value={band.Q ?? 1.4} min={0.3} max={10} step={0.1} label={t.nodes.eq.widthQ ?? 'Width (Q)'}
               formatValue={(v) => v.toFixed(1)}
               onChange={(v) => updateBand(storeIndex, { Q: v })} />
           )}
@@ -190,11 +194,12 @@ function AdvancedBandCell({ band, storeIndex, updateBand }: {
 }
 
 function AdvancedView({ bands, updateBand }: { bands: EQBand[]; updateBand: (i: number, patch: Partial<EQBand>) => void }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-2">
       <EQInlineGraph bands={bands} onBandChange={(i, patch) => updateBand(i, patch)} height={72} />
-      <p className="text-[9px] text-center" style={{ color: 'var(--lsc-fg-fainter)' }}>
-        Drag handles on graph · Bell = peak boost/cut · Shelf = tilt all highs or lows
+      <p className="text-[var(--node-text-xs)] text-center" style={{ color: 'var(--lsc-fg-fainter)' }}>
+        {t.nodes.eq.graphHint ?? 'Drag handles on graph · Bell = peak boost/cut · Shelf = tilt all highs or lows'}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {bands.map((band, i) => (

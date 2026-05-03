@@ -28,7 +28,7 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
       nodeId={id}
       typeKey="amp"
       icon={<Radio size={14} />}
-      label={data.label ?? 'Amplifier'}
+      label={data.label ?? t.palette.items['amp']}
       accentColor={data.color}
     >
       <div className="space-y-3">
@@ -38,7 +38,7 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
           value={gainDb}
           min={0}
           max={40}
-          label="Amp gain"
+          label={t.nodes.preamp.gain}
           formatValue={(v) => `+${v} dB`}
           onChange={(v) => updateNodeParams(id, { gainDb: v })}
         />

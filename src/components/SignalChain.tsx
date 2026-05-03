@@ -651,7 +651,7 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
             }
           }
 
-          addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false, label: def.label })
+          addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
           removeEdge(hitEdge.id)
           const ts = Date.now()
           addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: def.inputs[0].id  })
@@ -676,7 +676,6 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       position: finalPos,
       params:   { ...def.defaultParams },
       bypassed: false,
-      label:    def.label,
     })
   }
 

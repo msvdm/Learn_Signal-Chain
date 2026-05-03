@@ -18,7 +18,7 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
+        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>
           {label}
         </span>
       )}
@@ -39,10 +39,10 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
       </div>
       {showValue && (
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-semibold" style={{ color: style.color }}>
+          <span className="text-[var(--node-text-sm)] font-mono font-semibold" style={{ color: style.color }}>
             {formatDb(db)}
           </span>
-          <span className="text-[10px] font-medium" style={{ color: style.color }}>
+          <span className="text-[var(--node-text-sm)] font-medium" style={{ color: style.color }}>
             {t.health[health]}
           </span>
         </div>

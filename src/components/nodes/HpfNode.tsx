@@ -1,8 +1,8 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Filter } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 
 // ── HPF curve math ────────────────────────────────────────────────────────────
 
@@ -162,6 +162,7 @@ interface HpfData extends Record<string, unknown> {
 export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const { t }            = useTranslation()
 
   const cutoffHz = (node?.params.cutoffHz as number) ?? 80
   const bypassed = node?.bypassed ?? false
@@ -176,8 +177,12 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="hpf"
-      icon={<Filter size={14} />}
-      label={data.label ?? 'High-Pass Filter'}
+      icon={
+        <svg width="16" height="11" viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M3 13 C3 1 9 1 12 1 L22 1" />
+        </svg>
+      }
+      label={data.label ?? t.nodes.hpf.label}
       accentColor={data.color}
       style={{ width: 140 }}
     >
@@ -189,7 +194,7 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
           min={0}
           max={100}
           step={0.5}
-          label="Cut below"
+          label={t.nodes.hpf.cutoff}
           formatValue={() => formatHz(cutoffHz)}
           onChange={(v) => updateNodeParams(id, { cutoffHz: sliderToHz(v) })}
         />

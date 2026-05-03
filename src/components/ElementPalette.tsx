@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import {
-  Mic, Cable, Guitar, Plug,
-  Zap, Filter, Activity, Box, ToggleLeft, Radio, Sliders,
+  Mic, Guitar, Plug,
+  Zap, Activity, Box, ToggleLeft, Radio, Sliders,
   AudioWaveform, ShieldAlert, DoorClosed,
-  Merge, Volume2, MonitorSpeaker, Link2, Cpu,
+  Merge, Volume2, Link2, Cpu,
   SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
@@ -23,12 +23,12 @@ interface PaletteItem {
 const ALL_ITEMS: PaletteItem[] = [
   // Sources
   { typeKey: 'mic',              icon: <Mic size={16} />,              category: 'source' },
-  { typeKey: 'line-in',          icon: <Cable size={16} />,            category: 'source' },
+  { typeKey: 'line-in',          icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-45 12 12)"><line x1="10.5" y1="22" x2="10.5" y2="20"/><line x1="13.5" y1="22" x2="13.5" y2="20"/><rect x="8.5" y="13" width="7" height="7.5" rx="1.5"/><line x1="10" y1="13" x2="10" y2="11"/><line x1="14" y1="13" x2="14" y2="11"/><line x1="10" y1="11" x2="14" y2="11"/><path d="M10 11 L10 6.5 Q10 4 12 4 Q14 4 14 6.5 L14 11"/><line x1="10" y1="8.5" x2="14" y2="8.5"/></g></svg>, category: 'source' },
   { typeKey: 'instrument',       icon: <Guitar size={16} />,           category: 'source' },
   { typeKey: 'di-box',           icon: <Plug size={16} />,             category: 'source' },
   // Processing
   { typeKey: 'gain',             icon: <Zap size={16} />,              category: 'processing' },
-  { typeKey: 'hpf',              icon: <Filter size={16} />,           category: 'processing' },
+  { typeKey: 'hpf',              icon: <svg width="16" height="11" viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 13 C3 1 9 1 12 1 L22 1" /></svg>, category: 'processing' },
   { typeKey: 'eq',               icon: <Activity size={16} />,         category: 'processing' },
   { typeKey: 'comp',             icon: <Box size={16} />,              category: 'processing' },
   { typeKey: 'deesser',          icon: <AudioWaveform size={16} />,    category: 'processing' },
@@ -52,7 +52,7 @@ const ALL_ITEMS: PaletteItem[] = [
   { typeKey: 'stereo-bus',       icon: <Merge size={16} />,            category: 'routing' },
   { typeKey: 'audio-interface',  icon: <Cpu size={16} />,              category: 'routing' },
   // Output
-  { typeKey: 'active-speaker',   icon: <MonitorSpeaker size={16} />,   category: 'output' },
+  { typeKey: 'active-speaker',   icon: <Volume2 size={16} />,          category: 'output' },
   { typeKey: 'speaker',          icon: <Volume2 size={16} />,          category: 'output' },
 ]
 

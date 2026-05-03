@@ -7,6 +7,7 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealthStyle } from '../../hooks/useGainStaging'
+import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphActiveSpeakerData extends Record<string, unknown> {
   color?: string
@@ -23,6 +24,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
 
+  const { t }      = useTranslation()
   const params     = node?.params ?? {}
   const input      = inputDb[id] ?? -Infinity
   const result     = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
@@ -37,11 +39,11 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
       nodeId={id}
       typeKey="active-speaker"
       icon={<Volume2 size={14} />}
-      label={data.label ?? 'Active Speaker'}
+      label={data.label ?? t.nodes.activeSpeaker.label}
       accentColor={data.color}
     >
       <div className="space-y-3">
-        <SignalMeter db={input} health={getHealth(input)} label="Input" />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <KnobControl
@@ -49,7 +51,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
             min={-20}
             max={10}
             step={0.5}
-            label="Volume"
+            label={t.nodes.activeSpeaker.volume}
             formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
             onChange={(v) => updateNodeParams(id, { volumeDb: v })}
             color="var(--signal-good)"
@@ -72,7 +74,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
           />
         </motion.svg>
 
-        <SignalMeter db={result.out} health={result.health} label="Output" />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

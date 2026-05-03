@@ -55,6 +55,14 @@ export interface Translations {
       bandLow: string
       bandMid: string
       bandHigh: string
+      bandLoMid?: string
+      gain?: string
+      frequency?: string
+      freq?: string
+      widthQ?: string
+      shelf?: string
+      shelfOn?: string
+      graphHint?: string
     }
     graphicEq: { label: string }
     comp: {

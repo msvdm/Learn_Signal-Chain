@@ -115,10 +115,10 @@ export function NodeWrapper({
       >
         <div className="flex items-center gap-2" style={{ color: 'var(--lsc-text)' }}>
           <span>{icon}</span>
-          <span className="text-xs font-semibold" style={{ color: 'var(--lsc-text)' }}>{label}</span>
+          <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600, color: 'var(--lsc-text)' }}>{label}</span>
           {isBypassed && (
             <span
-              className="text-[9px] font-bold tracking-wide uppercase px-1 rounded"
+              className="text-[var(--node-text-xs)] font-bold tracking-wide uppercase px-1 rounded"
               style={{ background: 'var(--signal-hot)', color: '#fff', lineHeight: '1.4' }}
             >
               BYP

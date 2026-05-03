@@ -110,7 +110,7 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
       <div style={{ padding: '2px 8px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--lsc-accent)' }}>
           <GitBranch size={12} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--lsc-text)' }}>
+          <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600, color: 'var(--lsc-text)' }}>
             {data.label ?? t.nodes.relay?.label ?? 'Relay'}
           </span>
         </div>
@@ -124,7 +124,7 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
               onClick={() => updateNodeParams(id, { selectedInput: ch })}
               style={{
                 flex: 1, padding: '3px 0',
-                fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                fontSize: 'var(--node-text-xs)', fontWeight: 700, textTransform: 'uppercase',
                 borderRadius: 'var(--lsc-radius-sm)',
                 border: `1px solid ${selected === ch ? 'var(--signal-good)' : 'var(--lsc-border)'}`,
                 background: selected === ch ? 'var(--signal-good-bg)' : 'transparent',
@@ -147,11 +147,11 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
                 key={ch}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
-                <span style={{ fontSize: 8, fontWeight: 700, color: active ? 'var(--signal-good)' : 'var(--lsc-text)', opacity: active ? 1 : 0.4 }}>
+                <span style={{ fontSize: 'var(--node-text-2xs)', fontWeight: 700, color: active ? 'var(--signal-good)' : 'var(--lsc-text)', opacity: active ? 1 : 0.4 }}>
                   In {ch.toUpperCase()}
                 </span>
                 <span style={{
-                  fontSize: 8, fontFamily: 'var(--lsc-font-mono)',
+                  fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)',
                   color: active ? getHealthStyle(result?.health ?? 'too-quiet').color : 'var(--lsc-text)',
                   opacity: active ? 1 : 0.4,
                 }}>

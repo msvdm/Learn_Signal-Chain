@@ -72,6 +72,13 @@
   /* Type */
   --lsc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --lsc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Node card text scale — edit here to resize all in-card text globally */
+  --node-text-3xs: 8px;   /* graph axis labels */
+  --node-text-2xs: 10px;  /* channel labels, compact values */
+  --node-text-xs:  11px;  /* knob labels, status text */
+  --node-text-sm:  12px;  /* slider/meter labels, band names */
+  --node-text-md:  22px;  /* node header title */
 }
 
 * {
@@ -192,7 +199,7 @@ body {
 /* Semantic type classes */
 .lsc-overline {
   font-family: var(--lsc-font-sans);
-  font-size: 10px;
+  font-size: var(--node-text-sm);
   font-weight: 600;
   color: var(--lsc-text);
   text-transform: uppercase;

@@ -18,6 +18,7 @@ interface InlineNodeProps {
   accentColor?: string
   value?: string
   children?: ReactNode
+  width?: number
 }
 
 export function InlineNode({
@@ -28,6 +29,7 @@ export function InlineNode({
   accentColor,
   value,
   children,
+  width = 100,
 }: InlineNodeProps) {
   const { stages }       = useGraphSignal()
   const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
@@ -53,7 +55,7 @@ export function InlineNode({
     <div
       className="relative select-none cursor-default"
       style={{
-        width: 100,
+        width,
         background: 'var(--lsc-node-bg)',
         border: showBypass
           ? '2px solid var(--signal-hot)'
@@ -157,7 +159,7 @@ export function InlineNode({
           {icon}
         </div>
         <span style={{
-          fontSize: 10, fontWeight: 600,
+          fontSize: 'var(--node-text-md)', fontWeight: 600,
           color: 'var(--lsc-text)',
           textAlign: 'center', lineHeight: 1.2,
           maxWidth: '100%', overflow: 'hidden',
@@ -167,14 +169,14 @@ export function InlineNode({
         </span>
         {showBypass && (
           <span style={{
-            fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+            fontSize: 'var(--node-text-2xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
             background: 'var(--signal-hot)', color: '#fff',
             borderRadius: 2, padding: '1px 3px', lineHeight: 1.4,
           }}>BYP</span>
         )}
         {value && !showBypass && (
           <span style={{
-            fontSize: 9, fontFamily: 'var(--lsc-font-mono)',
+            fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)',
             color: 'var(--lsc-text)', lineHeight: 1,
           }}>
             {value}

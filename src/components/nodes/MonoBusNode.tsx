@@ -6,6 +6,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 
 interface MonoBusData extends Record<string, unknown> {
   color?: string
@@ -17,6 +18,7 @@ export function MonoBusNode({ id, data }: NodeProps<Node<MonoBusData>>) {
   const { stages }    = useGraphSignal()
   const allEdges      = useSignalStore((s) => s.edges)
   const sourceNodes   = useSignalStore((s) => s.nodes)
+  const { t, fmt }    = useTranslation()
   const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
 
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
@@ -52,20 +54,20 @@ export function MonoBusNode({ id, data }: NodeProps<Node<MonoBusData>>) {
       nodeId={id}
       typeKey="mono-bus"
       icon={<Merge size={14} />}
-      label={data.label ?? 'Mono Bus / Aux'}
+      label={data.label ?? t.nodes['mono-bus']?.label ?? 'Mono Bus / Aux'}
     >
       {channelHandles}
 
       <div className="space-y-2">
-        <div className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
+        <div className="text-[var(--node-text-sm)] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           {incomingEdges.length > 0
-            ? `${incomingEdges.length} channel${incomingEdges.length > 1 ? 's' : ''} mixed`
-            : 'No channels connected'}
+            ? fmt(t.nodes['mono-bus']?.channels ?? '{n} channel{s} mixed', { n: String(incomingEdges.length), s: incomingEdges.length > 1 ? 's' : '' })
+            : (t.nodes['mono-bus']?.noChannels ?? 'No channels connected')}
         </div>
 
         <SignalMeter db={result.out} health={result.health} label={unit} showValue={false} />
 
-        <div style={{ fontSize: 8, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', textAlign: 'right' }}>
+        <div style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', textAlign: 'right' }}>
           {isFinite(result.out) ? `${result.out.toFixed(1)}` : '−∞'} {unit}
         </div>
       </div>

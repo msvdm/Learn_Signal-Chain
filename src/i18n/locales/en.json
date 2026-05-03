@@ -21,7 +21,10 @@
     },
     "switchConfirm": "Switch to {title}? This will reset all controls to defaults."
   },
-  "meters": { "input": "Input", "output": "Output" },
+  "meters": {
+    "input": "Input",
+    "output": "Output"
+  },
   "health": {
     "too-quiet": "Too Quiet",
     "good": "Good",
@@ -48,14 +51,19 @@
     "next": "Next",
     "finishTour": "Finish Tour"
   },
-  "banner": { "gainStaging": "Gain Staging" },
+  "banner": {
+    "gainStaging": "Gain Staging"
+  },
   "nodes": {
     "mic": {
       "label": "Microphone",
       "sensitivity": "Sensitivity",
       "micInfo": "Dynamic mic output: approx. -60 dBu"
     },
-    "preamp": { "label": "Preamp / Gain", "gain": "Gain" },
+    "preamp": {
+      "label": "Preamp / Gain",
+      "gain": "Gain"
+    },
     "hpf": {
       "label": "High-Pass Filter",
       "cutoff": "Cutoff frequency"
@@ -66,9 +74,19 @@
       "openCurve": "Open EQ Curve",
       "bandLow": "Low",
       "bandMid": "Mid",
-      "bandHigh": "High"
+      "bandHigh": "High",
+      "bandLoMid": "Lo-Mid",
+      "gain": "Gain",
+      "frequency": "Frequency",
+      "freq": "Freq",
+      "widthQ": "Width (Q)",
+      "shelf": "Shelf",
+      "shelfOn": "Shelf ✓",
+      "graphHint": "Drag handles on graph · Bell = peak boost/cut · Shelf = tilt all highs or lows"
     },
-    "graphicEq": { "label": "Graphic EQ" },
+    "graphicEq": {
+      "label": "Graphic EQ"
+    },
     "comp": {
       "label": "Compressor",
       "threshold": "Threshold",
@@ -76,7 +94,10 @@
       "makeupGain": "Makeup gain",
       "gainReduction": "Gain reduction"
     },
-    "fader": { "label": "Channel Fader", "unity": "Unity" },
+    "fader": {
+      "label": "Channel Fader",
+      "unity": "Unity"
+    },
     "master": {
       "label": "Master Bus",
       "outputTrim": "Output trim",

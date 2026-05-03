@@ -66,11 +66,11 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
         {/* Gain reduction meter */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>
+            <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>
               {t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'}
             </span>
             <span
-              className="text-[9px] font-mono"
+              className="text-[var(--node-text-xs)] font-mono"
               style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-text)', fontWeight: isActive ? 700 : 400 }}
             >
               {isActive ? `−${gr.toFixed(1)} dB` : '—'}

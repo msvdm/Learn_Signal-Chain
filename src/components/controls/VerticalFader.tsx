@@ -113,7 +113,7 @@ export function VerticalFader({
                 position: 'absolute',
                 top: `${topPct}%`, left: TICK_LEFT + (isUnity ? 10 : 7),
                 transform: 'translateY(-50%)',
-                fontSize: 7, fontFamily: 'monospace', lineHeight: 1,
+                fontSize: 'var(--node-text-3xs)', fontFamily: 'monospace', lineHeight: 1,
                 color: isUnity ? 'var(--signal-good)' : 'var(--lsc-text)',
                 opacity: isUnity ? 1 : 0.65,
                 pointerEvents: 'none', userSelect: 'none',
@@ -147,11 +147,11 @@ export function VerticalFader({
 
       {/* Value readout */}
       <div style={{ textAlign: 'center', lineHeight: 1 }}>
-        <div style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: 'var(--lsc-text)' }}>
+        <div style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'monospace', fontWeight: 600, color: 'var(--lsc-text)' }}>
           {displayValue}
         </div>
         {value === 0 && (
-          <div style={{ fontSize: 8, color: 'var(--signal-good)', marginTop: 2 }}>unity</div>
+          <div style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--signal-good)', marginTop: 2 }}>unity</div>
         )}
       </div>
     </div>

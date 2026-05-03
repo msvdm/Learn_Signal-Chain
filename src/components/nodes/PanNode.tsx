@@ -114,7 +114,7 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
       <div style={{ padding: '2px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <MoveHorizontal size={12} style={{ color: 'var(--lsc-accent)' }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--lsc-text)' }}>
+          <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600, color: 'var(--lsc-text)' }}>
             {data.label ?? t.nodes.pan?.label ?? 'Pan'}
           </span>
         </div>
@@ -140,7 +140,7 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
             <div key={ch} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span
                 style={{
-                  fontSize: 8, fontWeight: 700,
+                  fontSize: 'var(--node-text-2xs)', fontWeight: 700,
                   color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-text)',
                 }}
               >
@@ -148,7 +148,7 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
               </span>
               <span
                 style={{
-                  fontSize: 8, fontFamily: 'var(--lsc-font-mono)',
+                  fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)',
                   color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-text)',
                 }}
               >

@@ -24,6 +24,7 @@ export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
       icon={<Zap size={20} />}
       label={data.label ?? t.nodes.preamp.label}
       accentColor={data.color}
+      width={200}
     >
       <KnobControl
         value={gainDb}

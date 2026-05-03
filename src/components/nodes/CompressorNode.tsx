@@ -6,6 +6,7 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphCompData extends Record<string, unknown> {
   color?: string
@@ -148,6 +149,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
   const { stages, inputDb } = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const { t }            = useTranslation()
 
   const params      = node?.params ?? {}
   const input       = inputDb[id] ?? -Infinity
@@ -163,12 +165,12 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
       nodeId={id}
       typeKey="comp"
       icon={<Box size={14} />}
-      label={data.label ?? 'Compressor'}
+      label={data.label ?? t.nodes.comp.label}
       accentColor={data.color}
       style={{ width: 220 }}
     >
       <div className="space-y-3">
-        <SignalMeter db={input} health={getHealth(input)} label="Input" />
+        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
 
         <DynamicsCurve
           threshold={threshold}
@@ -185,7 +187,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             min={-60}
             max={0}
             step={0.5}
-            label="Threshold"
+            label={t.nodes.comp.threshold}
             formatValue={(v) => `${v} dB`}
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
             color="var(--signal-hot)"
@@ -196,7 +198,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             min={1}
             max={20}
             step={0.5}
-            label="Ratio"
+            label={t.nodes.comp.ratio}
             formatValue={(v) => `${v}:1`}
             onChange={(v) => updateNodeParams(id, { ratio: v })}
             color="var(--lsc-accent)"
@@ -207,7 +209,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             min={0}
             max={20}
             step={0.5}
-            label="Makeup"
+            label={t.nodes.comp.makeupGain}
             formatValue={(v) => `+${v} dB`}
             onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
             color="var(--signal-good)"
@@ -217,7 +219,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
 
         {/* GR meter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 9, color: 'var(--lsc-text)', opacity: 0.6, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', opacity: 0.6, whiteSpace: 'nowrap' }}>
             GR
           </span>
           <div
@@ -239,12 +241,12 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
               }}
             />
           </div>
-          <span style={{ fontSize: 9, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 28, textAlign: 'right' }}>
+          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 28, textAlign: 'right' }}>
             {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
           </span>
         </div>
 
-        <SignalMeter db={result.out} health={result.health} label="Output" />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { InlineNode } from './InlineNode'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
+import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphSpeakerData extends Record<string, unknown> {
   color?: string
@@ -14,6 +15,7 @@ export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
   const { stages }  = useGraphSignal()
   const result      = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const healthStyle = getHealthStyle(result.health)
+  const { t }       = useTranslation()
 
   const amplitude  = Math.max(2, Math.min(18, ((result.out + 60) / 80) * 24))
   const isClipping = result.health === 'clipping'
@@ -23,7 +25,7 @@ export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
       nodeId={id}
       typeKey="speaker"
       icon={<Volume2 size={20} />}
-      label={data.label ?? 'Speaker'}
+      label={data.label ?? t.nodes.speaker.label}
       accentColor={data.color}
     >
       <motion.svg

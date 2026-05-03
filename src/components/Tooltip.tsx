@@ -41,7 +41,7 @@ export function TooltipPanel({ instanceId, typeKey }: TooltipProps) {
       />
 
       <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold leading-tight" style={{ color: 'var(--lsc-text)' }}>
+        <h3 className="font-semibold leading-tight" style={{ fontSize: 'var(--node-text-md)', color: 'var(--lsc-text)' }}>
           {nodeLabel}
         </h3>
         <button
@@ -53,14 +53,14 @@ export function TooltipPanel({ instanceId, typeKey }: TooltipProps) {
         </button>
       </div>
 
-      <div className="space-y-2 text-xs" style={{ color: 'var(--lsc-text)' }}>
+      <div className="space-y-2" style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-text)' }}>
         <div>
           <span className="lsc-overline">{t.tooltip.whatIsThis}</span>
-          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 11 }}>{entry.what}</p>
+          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 'var(--node-text-xs)' }}>{entry.what}</p>
         </div>
         <div>
           <span className="lsc-overline">{t.tooltip.whyIsItHere}</span>
-          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 11 }}>{entry.why}</p>
+          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 'var(--node-text-xs)' }}>{entry.why}</p>
         </div>
         <div
           style={{
@@ -71,12 +71,12 @@ export function TooltipPanel({ instanceId, typeKey }: TooltipProps) {
           }}
         >
           <span
-            className="text-[10px] font-semibold uppercase tracking-wide"
+            className="text-[var(--node-text-sm)] font-semibold uppercase tracking-wide"
             style={{ color: 'var(--lsc-tip)' }}
           >
             {t.tooltip.proTip}
           </span>
-          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 11, color: 'var(--lsc-tip-fg)' }}>
+          <p className="mt-0.5 leading-relaxed" style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-tip-fg)' }}>
             {entry.tip}
           </p>
         </div>

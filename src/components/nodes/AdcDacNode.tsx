@@ -41,7 +41,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       {/* Conversion label */}
       <div
         style={{
-          fontSize: 8, fontWeight: 700,
+          fontSize: 'var(--node-text-2xs)', fontWeight: 700,
           fontFamily: 'var(--lsc-font-mono)',
           textAlign: 'center',
           color: hasWarning ? 'var(--signal-clipping)' : 'var(--lsc-accent)',
@@ -55,7 +55,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       {isFinite(inputLevel) && (
         <div
           style={{
-            fontSize: 8,
+            fontSize: 'var(--node-text-2xs)',
             fontFamily: 'var(--lsc-font-mono)',
             textAlign: 'center',
             color: 'var(--lsc-text)',
@@ -78,7 +78,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       {hasWarning && (
         <div
           style={{
-            fontSize: 8, fontWeight: 700,
+            fontSize: 'var(--node-text-2xs)', fontWeight: 700,
             color: 'var(--signal-clipping)',
             textAlign: 'center',
             textTransform: 'uppercase',
@@ -96,7 +96,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       {/* Domain indicator */}
       <div
         style={{
-          fontSize: 8,
+          fontSize: 'var(--node-text-2xs)',
           textAlign: 'center',
           color: domain === 'digital' ? 'var(--lsc-accent)' : 'var(--signal-good)',
           fontWeight: 600,

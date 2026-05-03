@@ -59,10 +59,10 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
               border: '1px solid var(--signal-hot)',
             }}
           >
-            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--signal-hot)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: 'var(--node-text-xs)', fontWeight: 700, color: 'var(--signal-hot)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {t.nodes.limiter?.limiting ?? 'Limiting'}
             </span>
-            <span style={{ fontSize: 9, fontFamily: 'var(--lsc-font-mono)', color: 'var(--signal-hot)' }}>
+            <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--signal-hot)' }}>
               −{gainReductionDb.toFixed(1)} dB
             </span>
           </div>

@@ -19,12 +19,14 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
   const allEdges       = useSignalStore((s) => s.edges)
   const sourceNodes    = useSignalStore((s) => s.nodes)
   const incomingEdges  = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
-  const { t }          = useTranslation()
+  const { t, fmt }     = useTranslation()
 
   const result          = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const resolvedTypeKey = (data.typeKey as string) ?? 'master-bus'
   const defaultLabel    =
-    resolvedTypeKey === 'stereo-bus' ? 'Stereo Bus / Aux' : 'Master Bus'
+    resolvedTypeKey === 'stereo-bus'
+      ? (t.nodes['stereo-bus']?.label ?? 'Stereo Bus / Aux')
+      : (t.nodes.master.label ?? 'Master Bus')
   const domain          = (result as { domain?: string }).domain ?? 'analog'
   const unit            = domain === 'digital' ? 'dBFS' : 'dBu'
   const domainWarning   = (result as { warning?: string }).warning === 'domainMixedBus'
@@ -72,17 +74,17 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
 
       <div className="space-y-2">
         {/* Channel count */}
-        <div className="text-[10px] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
+        <div className="text-[var(--node-text-sm)] leading-relaxed" style={{ color: 'var(--lsc-text)' }}>
           {incomingEdges.length > 0
-            ? `${incomingEdges.length} channel${incomingEdges.length > 1 ? 's' : ''} mixed`
-            : 'No channels connected'}
+            ? fmt(t.nodes['mono-bus']?.channels ?? '{n} channel{s} mixed', { n: String(incomingEdges.length), s: incomingEdges.length > 1 ? 's' : '' })
+            : (t.nodes['mono-bus']?.noChannels ?? 'No channels connected')}
         </div>
 
         {/* Domain mismatch warning */}
         {domainWarning && (
           <div
             style={{
-              fontSize: 9, fontWeight: 600, color: 'var(--signal-clipping)',
+              fontSize: 'var(--node-text-xs)', fontWeight: 600, color: 'var(--signal-clipping)',
               padding: '3px 6px', borderRadius: 'var(--lsc-radius-sm)',
               border: '1px solid var(--signal-clipping)',
               background: 'var(--signal-clipping-bg)',
@@ -97,7 +99,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span
               style={{
-                fontSize: 8, fontWeight: 800, letterSpacing: '0.04em',
+                fontSize: 'var(--node-text-2xs)', fontWeight: 800, letterSpacing: '0.04em',
                 color: 'var(--lsc-accent)', minWidth: 8,
               }}
             >
@@ -106,14 +108,14 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
             <div style={{ flex: 1 }}>
               <SignalMeter db={outL} health={result.health} label={unit} showValue={false} />
             </div>
-            <span style={{ fontSize: 8, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 36, textAlign: 'right' }}>
+            <span style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 36, textAlign: 'right' }}>
               {isFinite(outL) ? `${outL.toFixed(1)}` : '−∞'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span
               style={{
-                fontSize: 8, fontWeight: 800, letterSpacing: '0.04em',
+                fontSize: 'var(--node-text-2xs)', fontWeight: 800, letterSpacing: '0.04em',
                 color: 'var(--lsc-accent)', minWidth: 8,
               }}
             >
@@ -122,7 +124,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
             <div style={{ flex: 1 }}>
               <SignalMeter db={outR} health={result.health} label={unit} showValue={false} />
             </div>
-            <span style={{ fontSize: 8, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 36, textAlign: 'right' }}>
+            <span style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 36, textAlign: 'right' }}>
               {isFinite(outR) ? `${outR.toFixed(1)}` : '−∞'}
             </span>
           </div>
@@ -132,7 +134,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
         <div
           style={{
             display: 'flex', justifyContent: 'space-between',
-            fontSize: 8, color: 'var(--lsc-text)', opacity: 0.5,
+            fontSize: 'var(--node-text-2xs)', color: 'var(--lsc-text)', opacity: 0.5,
             paddingTop: 2,
           }}
         >

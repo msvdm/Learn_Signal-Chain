@@ -66,7 +66,15 @@
       "openCurve": "Покажи еквалайзер кривата",
       "bandLow": "Ниски",
       "bandMid": "Средни",
-      "bandHigh": "Високи"
+      "bandHigh": "Високи",
+      "bandLoMid": "Средни-ниски",
+      "gain": "Усилване",
+      "frequency": "Честота",
+      "freq": "Честота",
+      "widthQ": "Ширина (Q)",
+      "shelf": "Шелф",
+      "shelfOn": "Шелф ✓",
+      "graphHint": "Дърпай дръжките · Bell = пик/спад · Shelf = накланя честотите"
     },
     "graphicEq": { "label": "Графичен еквалайзер" },
     "comp": {
@@ -76,7 +84,7 @@
       "makeupGain": "Компенсиращо усилване",
       "gainReduction": "Намаление на усилването"
     },
-    "fader": { "label": "Канален плъзгач", "unity": "Нула (0 dB)" },
+    "fader": { "label": "Плъзгач", "unity": "Нула (0 dB)" },
     "master": {
       "label": "Мастър смесителна шина",
       "outputTrim": "Изходно изравняване",
@@ -106,7 +114,7 @@
       "description": "Converts high-impedance instrument signal to balanced mic-level XLR."
     },
     "noise-gate": {
-      "label": "Шумов порт",
+      "label": "Гейт",
       "threshold": "Праг",
       "statusOpen": "Отворен",
       "statusClosed": "Затворен"
@@ -126,7 +134,7 @@
       "label": "Реле"
     },
     "pan": {
-      "label": "Панорамиране"
+      "label": "Панорамa"
     },
     "audio-interface": {
       "label": "Аудио Интерфейс",
@@ -139,6 +147,24 @@
     },
     "dac": {
       "label": "ЦАП"
+    },
+    "mono-bus": {
+      "label": "Моно шина / Aux",
+      "channels": "{n} канал{s} смесен",
+      "noChannels": "Няма свързани канали"
+    },
+    "stereo-bus": {
+      "label": "Стерео шина / Aux"
+    },
+    "stereo-fader": {
+      "label": "Стерео плъзгач",
+      "fader": "Плъзгач"
+    },
+    "balance": {
+      "label": "Баланс",
+      "leftLabel": "Л",
+      "rightLabel": "Д",
+      "centerLabel": "Ц"
     }
   },
   "eqCurve": {
@@ -186,7 +212,11 @@
       "bus": "Допълнителна смесителна шина / Aux",
       "audio-interface": "Аудио Интерфейс",
       "active-speaker": "Активен говорител",
-      "speaker": "Пасивен говорител"
+      "speaker": "Пасивен говорител",
+      "mono-bus": "Моно шина / Aux",
+      "stereo-bus": "Стерео шина / Aux",
+      "stereo-fader": "Стерео плъзгач",
+      "balance": "Баланс"
     }
   },
   "theory": {
