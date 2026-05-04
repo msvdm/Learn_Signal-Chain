@@ -43,7 +43,9 @@ import { useGraphSignal }     from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
-import { MASTER_BUS_FLOW_POS, CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND } from '../data/zoneConstants'
+import { MASTER_BUS_FLOW_POS, CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND, MIN_NODE_GAP, getZone } from '../data/zoneConstants'
+import { buildWirePath } from '../utils/wirePath'
+import { wirePassesThroughNode } from '../utils/wireValidation'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -83,9 +85,6 @@ const edgeTypes = { chain: ChainEdge }
 // ── Grid & layout constants ────────────────────────────────────────────────────
 
 const GRID = 36
-/** Minimum empty space kept between any two directly connected nodes.
- *  Sized to roughly one switch/fader element so there is always room to insert one. */
-const MIN_GAP = 3 * GRID   // 108 px ≈ inline node width (100 px)
 
 const INLINE_TYPE_KEYS = new Set([
   'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
@@ -112,7 +111,7 @@ const NODE_DEFAULT_W: Record<string, number> = {
   'relay': 130, 'pan': 130,
   // Custom-width cards
   'hpf': 140,
-  'eq': 380,
+  'eq': 600,   // advanced mode renders at 600px — use max as safe fallback
   'graphic-eq': 340,
   'di-box': 208, 'noise-gate': 220, 'limiter': 208, 'deesser': 208,
   // Standard NodeWrapper cards (208 px default, listed for clarity)
@@ -136,8 +135,9 @@ function nodeRect(pos: { x: number; y: number }, w: number, h: number) {
   return { left: pos.x, right: pos.x + w, top: pos.y - h / 2, bottom: pos.y + h / 2 }
 }
 
+// PAD = MIN_NODE_GAP / 2 so that clearance between any two rects ≥ MIN_NODE_GAP in both axes.
 function rectsOverlap(a: ReturnType<typeof nodeRect>, b: ReturnType<typeof nodeRect>) {
-  const PAD = 8
+  const PAD = MIN_NODE_GAP / 2
   return (
     a.left   < b.right  + PAD &&
     a.right  > b.left   - PAD &&
@@ -154,7 +154,7 @@ function resolveOverlap(
   skipId?: string,
 ): { x: number; y: number } {
   let cur = { ...pos }
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 60; i++) {
     const r = nodeRect(cur, w, h)
     const clash = others.find((n) => {
       if (n.id === skipId) return false
@@ -162,16 +162,47 @@ function resolveOverlap(
       return rectsOverlap(r, nodeRect(n.position, d.w, d.h))
     })
     if (!clash) return cur
-    cur = { x: cur.x, y: cur.y + GRID }
+    // Alternate axis nudging — Y first (less disruptive), then X on the next iteration
+    if (i % 2 === 0) {
+      cur = { x: cur.x, y: cur.y + GRID }
+    } else {
+      cur = { x: cur.x + GRID, y: cur.y }
+    }
   }
   return cur
 }
 
 // ── Spacing helpers ────────────────────────────────────────────────────────────
 
-/** Push every node whose left edge is at X ≥ fromX rightward by `amount` (grid-snapped).
- *  Updates the local nodeMap in-place so subsequent calls in the same pass cascade.
- *  Master-bus is always skipped — it is the fixed anchor. */
+// ── Zone system ────────────────────────────────────────────────────────────────
+// getZone is imported from zoneConstants — single source of truth.
+
+const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
+
+/** Snap a non-bus node out of the center zone to the nearest zone boundary.
+ *  Returns the position unchanged in beginner mode or if already outside center. */
+function snapOutOfCenter(
+  pos: { x: number; y: number },
+  w: number,
+  isAdvancedOrIntermediate: boolean,
+): { x: number; y: number } {
+  if (!isAdvancedOrIntermediate) return pos
+  if (getZone(pos.x) !== 'center') return pos
+  const nodeMidX = pos.x + w / 2
+  const centerMidX = (CENTER_LEFT_BOUND + CENTER_RIGHT_BOUND) / 2
+  if (nodeMidX <= centerMidX) {
+    // Snap left: place node's right edge at CENTER_LEFT_BOUND
+    return { ...pos, x: Math.floor((CENTER_LEFT_BOUND - w) / GRID) * GRID }
+  } else {
+    // Snap right: place node's left edge at CENTER_RIGHT_BOUND
+    return { ...pos, x: Math.ceil(CENTER_RIGHT_BOUND / GRID) * GRID }
+  }
+}
+
+// ── Spacing helpers ────────────────────────────────────────────────────────────
+
+/** Push every node rightward by `amount` (grid-snapped).
+ *  Skips bus nodes — they never move from insertions. */
 function pushDownstream(
   fromX: number,
   amount: number,
@@ -181,7 +212,7 @@ function pushDownstream(
 ) {
   const snapped = Math.ceil(amount / GRID) * GRID
   for (const n of nodes) {
-    if (n.type === 'master-bus') continue
+    if (BUS_TYPES.has(n.type ?? '')) continue
     if (n.position.x >= fromX - GRID / 2) {
       const newPos = { x: n.position.x + snapped, y: n.position.y }
       nodeMap.set(n.id, { ...n, position: newPos })
@@ -190,19 +221,8 @@ function pushDownstream(
   }
 }
 
-// ── Zone system ────────────────────────────────────────────────────────────────
-
-const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
-
-function getZone(x: number): 'left' | 'center' | 'right' {
-  if (x < CENTER_LEFT_BOUND)  return 'left'
-  if (x > CENTER_RIGHT_BOUND) return 'right'
-  return 'center'
-}
-
-/** Push every node whose right edge is ≤ fromX leftward by `amount` (grid-snapped).
- *  Mirror of pushDownstream for left-zone insertions.
- *  Master-bus is always skipped — it is the fixed anchor. */
+/** Push every node leftward by `amount` (grid-snapped).
+ *  Skips bus nodes — they never move from insertions. */
 function pushUpstream(
   fromX: number,
   amount: number,
@@ -214,7 +234,7 @@ function pushUpstream(
   const snapped = Math.ceil(amount / GRID) * GRID
   for (const n of nodes) {
     if (n.id === skipId) continue
-    if (n.type === 'master-bus') continue
+    if (BUS_TYPES.has(n.type ?? '')) continue
     const dims = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
     if (n.position.x + dims.w <= fromX + GRID / 2) {
       const newPos = { x: n.position.x - snapped, y: n.position.y }
@@ -224,8 +244,8 @@ function pushUpstream(
   }
 }
 
-/** Ensure source→target pair has at least MIN_GAP between them, pushing target
- *  (and everything downstream) right if needed. */
+/** Ensure source→target pair has at least MIN_NODE_GAP between them,
+ *  pushing the target (and everything downstream) right if needed. */
 function enforceGap(
   srcId: string,
   tgtId: string,
@@ -237,9 +257,9 @@ function enforceGap(
   const tgt = nodeMap.get(tgtId)
   if (!src || !tgt) return
   const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
-  const gap  = tgt.position.x - (src.position.x + srcDims.w)
-  if (gap < MIN_GAP) {
-    pushDownstream(tgt.position.x, MIN_GAP - gap, nodes, nodeMap, updatePos)
+  const gap = tgt.position.x - (src.position.x + srcDims.w)
+  if (gap < MIN_NODE_GAP) {
+    pushDownstream(tgt.position.x, MIN_NODE_GAP - gap, nodes, nodeMap, updatePos)
   }
 }
 
@@ -324,35 +344,7 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
   return toFlow({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
 }
 
-/**
- * Build an orthogonal SVG path through a series of flow-coordinate points.
- * The first segment exits to the right (source handle is always on the right).
- * Subsequent segments use a simple H→V→H elbow.
- */
-function buildWirePath(points: Pt[]): string {
-  if (points.length < 2) return ''
-  const MIN_EXIT = 40
-  let d = `M ${points[0].x} ${points[0].y}`
-  for (let i = 0; i < points.length - 1; i++) {
-    const a = points[i]
-    const b = points[i + 1]
-    // First segment: guarantee minimum rightward exit from the source handle
-    const pivot = i === 0
-      ? Math.max(a.x + MIN_EXIT, (a.x + b.x) / 2)
-      : (a.x + b.x) / 2
-    d += ` H ${pivot} V ${b.y} H ${b.x}`
-  }
-  return d
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
-
-type ToolMode = 'select' | 'connect'
-
-interface SignalChainProps {
-  toolMode: ToolMode
-  onToolModeChange: (mode: ToolMode) => void
-}
 
 // Input limits per node type — enforced at connection time
 const INPUT_LIMITS: Record<string, number> = {
@@ -362,22 +354,38 @@ const INPUT_LIMITS: Record<string, number> = {
   'stereo-fader': 2, balance: 2,
 }
 
-export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
-  const graphNodes         = useSignalStore((s) => s.nodes)
-  const graphEdges         = useSignalStore((s) => s.edges)
-  const complexityLevel    = useSignalStore((s) => s.complexityLevel)
-  const addNode            = useSignalStore((s) => s.addNode)
-  const addEdge            = useSignalStore((s) => s.addEdge)
-  const removeEdge         = useSignalStore((s) => s.removeEdge)
-  const updateNodePosition = useSignalStore((s) => s.updateNodePosition)
+// Reshape state — which edge waypoint (or segment midpoint) is being dragged
+type Reshaping = {
+  edgeId: string
+  // index into the waypoints array; -1 means we're inserting at segmentIndex
+  waypointIndex: number
+  // if inserting: which segment (between waypoints[i] and waypoints[i+1])
+  segmentIndex: number
+  inserting: boolean
+  livePos: Pt
+}
+
+export function SignalChain() {
+  const graphNodes            = useSignalStore((s) => s.nodes)
+  const graphEdges            = useSignalStore((s) => s.edges)
+  const complexityLevel       = useSignalStore((s) => s.complexityLevel)
+  const toolMode              = useSignalStore((s) => s.toolMode)
+  const setToolMode           = useSignalStore((s) => s.setToolMode)
+  const addNode               = useSignalStore((s) => s.addNode)
+  const addEdge               = useSignalStore((s) => s.addEdge)
+  const removeEdge            = useSignalStore((s) => s.removeEdge)
+  const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
+  const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
   const { stages }         = useGraphSignal()
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
   const { x: vpX, y: vpY, zoom: vpZoom }  = useViewport()
 
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
   const [snapPos, setSnapPos]               = useState<Pt | null>(null)
+  const [wireWarning, setWireWarning]       = useState(false)
   const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
   const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt } | null>(null)
+  const [reshaping, setReshaping]           = useState<Reshaping | null>(null)
 
   // Mutable refs so document-level handlers always see current state
   const drawingRef        = useRef(drawing)
@@ -404,20 +412,20 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-      if (e.key === 's' || e.key === 'S') onToolModeChange('select')
-      if (e.key === 'c' || e.key === 'C' || e.key === 'l' || e.key === 'L') onToolModeChange('connect')
+      if (e.key === 's' || e.key === 'S') setToolMode('select')
+      if (e.key === 'c' || e.key === 'C' || e.key === 'l' || e.key === 'L') setToolMode('connect')
       if (e.key === 'Escape') {
         if (drawingRef.current.active) {
           setDrawing({ active: false })
           setSnapPos(null)
         } else {
-          onToolModeChange('select')
+          setToolMode('select')
         }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onToolModeChange])
+  }, [setToolMode])
 
   // Live cursor tracking while drawing
   useEffect(() => {
@@ -436,16 +444,75 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       } else {
         setSnapPos(null)
       }
+
+      // Routing warning: check if the live wire passes through any node
+      const endPos = snapPos ?? flowPos
+      const allPts = [d.startPos, ...d.waypoints, endPos]
+      const nodesForValidation = graphNodesRef.current.map((n) => ({
+        id: n.id, position: n.position,
+      }))
+      const passes = wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId])
+      setWireWarning(passes)
     }
     document.addEventListener('mousemove', onMove)
     return () => document.removeEventListener('mousemove', onMove)
   }, [screenToFlowPosition])
+
+  // Wire reshape: track pointer during reshape drag and commit on release
+  const reshapingRef = useRef(reshaping)
+  reshapingRef.current = reshaping
+
+  useEffect(() => {
+    function onReshapeMove(e: MouseEvent) {
+      const r = reshapingRef.current
+      if (!r) return
+      const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      setReshaping((prev) => prev ? { ...prev, livePos: fp } : prev)
+    }
+    function onReshapeUp(e: MouseEvent) {
+      const r = reshapingRef.current
+      if (!r) return
+      e.stopPropagation()
+      const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const edge = edgesRef.current.find((ed) => ed.id === r.edgeId)
+      if (edge) {
+        const wps = [...(edge.waypoints ?? [])]
+        if (r.inserting) {
+          wps.splice(r.segmentIndex + 1, 0, fp)
+        } else {
+          wps[r.waypointIndex] = fp
+        }
+        updateEdgeWaypoints(r.edgeId, wps)
+      }
+      setReshaping(null)
+    }
+    document.addEventListener('mousemove', onReshapeMove)
+    document.addEventListener('mouseup', onReshapeUp, true)
+    return () => {
+      document.removeEventListener('mousemove', onReshapeMove)
+      document.removeEventListener('mouseup', onReshapeUp, true)
+    }
+  }, [screenToFlowPosition, updateEdgeWaypoints])
 
   // Click interception — capture phase fires before React Flow's own handlers
   useEffect(() => {
     function onDown(e: MouseEvent) {
       if (toolModeRef.current !== 'connect') return
       if (e.button !== 0) return
+
+      // Check if a reshape handle (waypoint drag circle) is under the cursor
+      const reshapeEl = document.elementsFromPoint(e.clientX, e.clientY)
+        .find((el) => el.classList.contains('lsc-reshape-handle')) as Element | null
+      if (reshapeEl) {
+        e.stopPropagation()
+        const edgeId       = reshapeEl.getAttribute('data-edgeid')!
+        const waypointIndex = parseInt(reshapeEl.getAttribute('data-wpidx') ?? '-1')
+        const segmentIndex  = parseInt(reshapeEl.getAttribute('data-segidx') ?? '0')
+        const inserting    = reshapeEl.getAttribute('data-inserting') === 'true'
+        const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        setReshaping({ edgeId, waypointIndex, segmentIndex, inserting, livePos: fp })
+        return
+      }
 
       const d     = drawingRef.current
       const hEl   = handleUnder(e.clientX, e.clientY)
@@ -503,12 +570,14 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
             sourceHandle: d.sourceHandleId,
             target:       targetNodeId,
             targetHandle: targetHandleId,
+            waypoints:    d.waypoints.length > 0 ? d.waypoints : undefined,
           })
           // Ensure the two newly connected nodes respect the minimum gap
           enforceGap(d.sourceNodeId, targetNodeId, getNodes(), updateNodePosition)
         }
         setDrawing({ active: false })
         setSnapPos(null)
+        setWireWarning(false)
         return
       }
 
@@ -554,17 +623,17 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     if (!typeKey) return
     const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
     const { w } = nodeDims(typeKey)
-    let posX = Math.round(raw.x / GRID) * GRID
-    if (BUS_TYPES.has(typeKey) && complexityLevel !== 'beginner') {
-      posX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, posX))
+    let pos = {
+      x: Math.round(raw.x / GRID) * GRID,
+      y: Math.round(raw.y / GRID) * GRID,
     }
-    setDropPreview({
-      typeKey,
-      pos: {
-        x: posX,
-        y: Math.round(raw.y / GRID) * GRID,
-      },
-    })
+    const notBeginner = complexityLevel !== 'beginner'
+    if (BUS_TYPES.has(typeKey) && notBeginner) {
+      pos.x = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, pos.x))
+    } else {
+      pos = snapOutOfCenter(pos, w, notBeginner)
+    }
+    setDropPreview({ typeKey, pos })
   }
 
   function onDragLeave(e: React.DragEvent) {
@@ -621,14 +690,18 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
 
           let insertX: number
           if (dropZone === 'left') {
-            // Anchor new node just left of target (with MIN_GAP clearance).
-            // Never constrain to srcRight — pushUpstream will move the source left
-            // by however much is needed, even if the new node is very wide.
-            const maxInsertX = Math.round((tgtLeft - w - MIN_GAP) / GRID) * GRID
+            // Floor (not round) so maxInsertX never exceeds tgtLeft-w-MIN_NODE_GAP,
+            // guaranteeing the gap to the target is always ≥ MIN_NODE_GAP.
+            const maxInsertX = Math.floor((tgtLeft - w - MIN_NODE_GAP) / GRID) * GRID
             insertX = Math.min(maxInsertX, Math.round(snapped.x / GRID) * GRID)
+          } else if (dropZone === 'center') {
+            // Center zone: only insert if there is already enough gap — never push center nodes.
+            const available = tgtLeft - srcRight
+            if (available < w + MIN_NODE_GAP * 2) return  // not enough room, abort
+            insertX = Math.round(snapped.x / GRID) * GRID
           } else {
-            // Anchor new node close to the source; target will be pushed right.
-            const minInsertX = Math.round((srcRight + MIN_GAP) / GRID) * GRID
+            // Right zone: anchor close to source; target pushed right.
+            const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
             insertX = Math.max(minInsertX, Math.round(snapped.x / GRID) * GRID)
           }
 
@@ -639,15 +712,15 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
           const nm      = new Map(nmNodes.map((n) => [n.id, n]))
 
           if (dropZone === 'left') {
-            // Canvas grows leftward — push source chain left, target stays.
+            // Mirror of right: push source chain left, target stays.
             const leftGap = insertX - srcRight
-            if (leftGap < MIN_GAP) {
-              pushUpstream(insertX, MIN_GAP - leftGap, nmNodes, nm, updateNodePosition, newId)
+            if (leftGap < MIN_NODE_GAP) {
+              pushUpstream(srcRight, MIN_NODE_GAP - leftGap, nmNodes, nm, updateNodePosition, newId)
             }
-          } else {
+          } else if (dropZone !== 'center') {
             // Canvas grows rightward — push target chain right, source stays.
-            if (rightGap < MIN_GAP) {
-              pushDownstream(tgtLeft, MIN_GAP - rightGap, nmNodes, nm, updateNodePosition)
+            if (rightGap < MIN_NODE_GAP) {
+              pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
             }
           }
 
@@ -664,11 +737,16 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
     }
 
     // ── Normal placement (no edge hit) ────────────────────────────────────────
+    const notBeginner = complexityLevel !== 'beginner'
     let finalPos = resolveOverlap(snapped, w, h, getNodes())
-    // Snap bus nodes into the center zone in intermediate/advanced
-    if (BUS_TYPES.has(typeKey) && complexityLevel !== 'beginner') {
+    if (BUS_TYPES.has(typeKey) && notBeginner) {
+      // Buses must stay inside the center zone
       const clampedX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, finalPos.x))
       finalPos = resolveOverlap({ x: clampedX, y: finalPos.y }, w, h, getNodes())
+    } else if (notBeginner) {
+      // Non-bus nodes cannot enter the center zone
+      finalPos = snapOutOfCenter(finalPos, w, true)
+      finalPos = resolveOverlap(finalPos, w, h, getNodes())
     }
     addNode({
       id:       newId,
@@ -680,18 +758,21 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
   }
 
   function onNodeDrag(_e: React.MouseEvent, node: FlowNode) {
-    const snapped = {
+    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
+    let snapped = {
       x: Math.round(node.position.x / GRID) * GRID,
       y: Math.round(node.position.y / GRID) * GRID,
     }
-    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
+    if (!BUS_TYPES.has(node.type ?? '')) {
+      snapped = snapOutOfCenter(snapped, w, complexityLevel !== 'beginner')
+    }
     const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
     setDragNodePreview({ typeKey: node.type ?? '', pos: resolved })
   }
 
   function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
     setDragNodePreview(null)
-    // Belt-and-suspenders: master-bus should not be draggable, but if it somehow is, reset it
+    // Master-bus is locked — reset to its fixed position no matter what.
     if (node.type === 'master-bus' && complexityLevel !== 'beginner') {
       updateNodePosition(node.id, MASTER_BUS_FLOW_POS)
       return
@@ -701,8 +782,14 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       y: Math.round(node.position.y / GRID) * GRID,
     }
     const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
-    if (BUS_TYPES.has(node.type ?? '') && complexityLevel !== 'beginner') {
-      snapped.x = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, snapped.x))
+    const notBeginner = complexityLevel !== 'beginner'
+    if (BUS_TYPES.has(node.type ?? '') && node.type !== 'master-bus' && notBeginner) {
+      // Center-zone buses move vertically only — restore original X.
+      const originalX = graphNodes.find((n) => n.id === node.id)?.position.x ?? snapped.x
+      snapped.x = Math.round(originalX / GRID) * GRID
+    } else if (!BUS_TYPES.has(node.type ?? '')) {
+      // Non-bus nodes cannot enter the center zone.
+      snapped = snapOutOfCenter(snapped, w, notBeginner)
     }
     const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
     updateNodePosition(node.id, resolved)
@@ -731,6 +818,8 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       edgesByTarget.set(e.target, arr)
     }
 
+    const nodesForValidation = graphNodes.map((n) => ({ id: n.id, position: n.position }))
+
     return graphEdges.map((edge) => {
       const sourceStage = stages[edge.source]
       const healthColor = sourceStage
@@ -740,6 +829,13 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
       const siblings   = edgesByTarget.get(edge.target) ?? [edge.id]
       const idx        = siblings.indexOf(edge.id)
       const centerXOffset = (idx - (siblings.length - 1) / 2) * 20
+
+      // Routing warning: only meaningful when the edge has stored waypoints,
+      // since the auto-elbow uses React Flow's source/target positions which
+      // we can't compute here without measuring. Flag it when waypoints exist.
+      const routingWarning = (edge.waypoints?.length ?? 0) > 0
+        ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
+        : false
 
       return {
         id:           edge.id,
@@ -751,10 +847,10 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
         animated:     false,
         style:        { stroke: healthColor, strokeWidth: 3 },
         markerEnd:    { type: MarkerType.ArrowClosed, color: healthColor, width: 18, height: 18 },
-        data:         { centerXOffset },
+        data:         { centerXOffset, waypoints: edge.waypoints, routingWarning },
       }
     })
-  }, [graphEdges, stages])
+  }, [graphEdges, stages, graphNodes])
 
   // Build live wire preview path
   const wirePath = (() => {
@@ -828,6 +924,71 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
         </svg>
       )}
 
+      {/* Reshape overlay — waypoint drag handles for committed edges (connect mode, intermediate/advanced) */}
+      {toolMode === 'connect' && complexityLevel !== 'beginner' && (
+        <svg
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none',
+            zIndex: 95,
+            overflow: 'visible',
+          }}
+        >
+          <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
+            {graphEdges.map((edge) => {
+              const wps = edge.waypoints ?? []
+              if (wps.length === 0) return null
+              return (
+                <g key={edge.id}>
+                  {/* Segment midpoint handles — for inserting new waypoints */}
+                  {wps.slice(0, -1).map((wp, i) => {
+                    const next = wps[i + 1]
+                    const mx = (wp.x + next.x) / 2
+                    const my = (wp.y + next.y) / 2
+                    return (
+                      <circle
+                        key={`mid-${i}`}
+                        className="lsc-reshape-handle"
+                        data-edgeid={edge.id}
+                        data-wpidx={-1}
+                        data-segidx={i}
+                        data-inserting="true"
+                        cx={mx} cy={my}
+                        r={4 / vpZoom}
+                        fill="var(--lsc-accent)"
+                        opacity={0.35}
+                        style={{ pointerEvents: 'all', cursor: 'crosshair' }}
+                      />
+                    )
+                  })}
+                  {/* Waypoint handles — for moving existing waypoints */}
+                  {wps.map((wp, i) => {
+                    const isActive = reshaping?.edgeId === edge.id && !reshaping.inserting && reshaping.waypointIndex === i
+                    const displayPt = isActive ? reshaping!.livePos : wp
+                    return (
+                      <circle
+                        key={`wp-${i}`}
+                        className="lsc-reshape-handle"
+                        data-edgeid={edge.id}
+                        data-wpidx={i}
+                        data-segidx={-1}
+                        data-inserting="false"
+                        cx={displayPt.x} cy={displayPt.y}
+                        r={5 / vpZoom}
+                        fill="var(--lsc-accent)"
+                        opacity={0.75}
+                        style={{ pointerEvents: 'all', cursor: 'move' }}
+                      />
+                    )
+                  })}
+                </g>
+              )
+            })}
+          </g>
+        </svg>
+      )}
+
       {/* Live wire preview SVG — rendered in flow-coordinate space */}
       {wirePath && (
         <svg
@@ -840,11 +1001,11 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
           }}
         >
           <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
-            {/* Wire path */}
+            {/* Wire path — orange when it passes through a node */}
             <path
               d={wirePath}
               fill="none"
-              stroke="var(--lsc-accent)"
+              stroke={wireWarning ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
               strokeWidth={sw}
               strokeDasharray={dash}
               strokeLinecap="square"
@@ -855,7 +1016,7 @@ export function SignalChain({ toolMode, onToolModeChange }: SignalChainProps) {
                 cx={snapPos.x} cy={snapPos.y}
                 r={7 / vpZoom}
                 fill="none"
-                stroke="var(--lsc-accent)"
+                stroke={wireWarning ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
                 strokeWidth={sw}
               />
             )}

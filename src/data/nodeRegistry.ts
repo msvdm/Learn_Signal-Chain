@@ -45,6 +45,9 @@ export type SignalEdge = {
   sourceHandle: string // port id, e.g. 'out' | 'out-1' | 'out-2'
   target: string
   targetHandle: string // port id, e.g. 'in' | 'in-1'
+  // Optional intermediate corner points in flow coordinates.
+  // When present, the wire follows these waypoints instead of a plain two-point elbow.
+  waypoints?: { x: number; y: number }[]
 }
 
 export const NODE_REGISTRY: Record<string, NodeTypeDef> = {

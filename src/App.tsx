@@ -10,8 +10,6 @@ import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
 
-type ToolMode = 'select' | 'connect'
-
 function App() {
   const language = useSignalStore((s) => s.language)
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
@@ -22,7 +20,6 @@ function App() {
 
   const [showSettings, setShowSettings] = useState(false)
   const [showSignalProfile, setShowSignalProfile] = useState(false)
-  const [toolMode, setToolMode] = useState<ToolMode>('select')
   const settingsRef = useRef<HTMLDivElement>(null)
 
   const LEVELS: { id: ComplexityLevel; label: string }[] = [
@@ -179,9 +176,9 @@ function App() {
 
       {/* Main canvas with left palette */}
       <main className="flex-1 overflow-hidden min-h-0 flex flex-row">
-        <ElementPalette toolMode={toolMode} onToolModeChange={setToolMode} />
+        <ElementPalette />
         <ReactFlowProvider>
-          <SignalChain toolMode={toolMode} onToolModeChange={setToolMode} />
+          <SignalChain />
         </ReactFlowProvider>
       </main>
 

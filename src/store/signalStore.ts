@@ -3,8 +3,10 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import { buildDefaultGraph } from '../data/levels'
 import type { NodeParamValue } from '../data/nodeRegistry'
+import type { ToolMode } from '../types'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
+export type { ToolMode } from '../types'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 
@@ -26,6 +28,7 @@ interface SignalChainStore {
   language: Lang
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
+  toolMode: ToolMode
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -33,6 +36,7 @@ interface SignalChainStore {
   setLanguage: (lang: Lang) => void
   setActiveTooltip: (id: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
+  setToolMode: (mode: ToolMode) => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
@@ -41,6 +45,7 @@ interface SignalChainStore {
   toggleBypassNode: (nodeId: string) => void
   addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
   removeEdge: (edgeId: string) => void
+  updateEdgeWaypoints: (edgeId: string, waypoints: { x: number; y: number }[]) => void
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
 }
 
@@ -48,6 +53,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
+  toolMode: 'select',
 
   ...buildDefaultGraph(getInitialComplexityLevel()),
 
@@ -60,13 +66,16 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
-    set({ complexityLevel: level, activeTooltipId: null, ...buildDefaultGraph(level) })
+    set({ complexityLevel: level, activeTooltipId: null, toolMode: 'select', ...buildDefaultGraph(level) })
   },
+
+  setToolMode: (mode) => set({ toolMode: mode }),
 
   resetAll: () =>
     set((s) => ({
       activeTooltipId: null,
       complexityLevel: s.complexityLevel,
+      toolMode: 'select',
       ...buildDefaultGraph(s.complexityLevel),
     })),
 
@@ -118,6 +127,11 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeEdge: (edgeId) =>
     set((s) => ({ edges: s.edges.filter((e) => e.id !== edgeId) })),
+
+  updateEdgeWaypoints: (edgeId, waypoints) =>
+    set((s) => ({
+      edges: s.edges.map((e) => e.id === edgeId ? { ...e, waypoints } : e),
+    })),
 
   updateNodePosition: (nodeId, position) =>
     set((s) => ({

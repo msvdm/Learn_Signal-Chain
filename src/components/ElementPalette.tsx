@@ -12,8 +12,6 @@ import type { ComplexityLevel } from '../store/signalStore'
 import { setActiveDragTypeKey } from '../utils/dragState'
 import { useTranslation } from '../i18n/useTranslation'
 
-type ToolMode = 'select' | 'connect'
-
 interface PaletteItem {
   typeKey: string
   icon: ReactNode
@@ -86,13 +84,10 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
 
 const CATEGORY_ORDER = ['source', 'processing', 'structural', 'routing', 'output']
 
-interface ElementPaletteProps {
-  toolMode: ToolMode
-  onToolModeChange: (mode: ToolMode) => void
-}
-
-export function ElementPalette({ toolMode, onToolModeChange }: ElementPaletteProps) {
+export function ElementPalette() {
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const toolMode        = useSignalStore((s) => s.toolMode)
+  const setToolMode     = useSignalStore((s) => s.setToolMode)
   const { t } = useTranslation()
   const visibleKeys = PALETTE_BY_LEVEL[complexityLevel]
   const visibleItems = ALL_ITEMS.filter((item) => visibleKeys.includes(item.typeKey))
@@ -124,7 +119,7 @@ export function ElementPalette({ toolMode, onToolModeChange }: ElementPalettePro
       <div style={{ padding: '10px 10px 6px' }}>
         <button
           className="nodrag nopan"
-          onClick={() => onToolModeChange(isConnect ? 'select' : 'connect')}
+          onClick={() => setToolMode(isConnect ? 'select' : 'connect')}
           title={t.palette.connectTool}
           style={{
             width: '100%',

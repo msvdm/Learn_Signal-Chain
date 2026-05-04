@@ -74,7 +74,7 @@
   /* Node card text scale — edit here to resize all in-card text globally */
   --node-text-3xs: 8px;   /* graph axis labels */
   --node-text-2xs: 10px;  /* channel labels, compact values */
-  --node-text-xs:  11px;  /* knob labels, status text */
+  --node-text-xs:  10px;  /* knob labels, status text */
   --node-text-sm:  12px;  /* slider/meter labels, band names */
   --node-text-md:  22px;  /* node header title */
 }
@@ -176,6 +176,31 @@ body {
   background: var(--lsc-node-bg) !important;
   border-color: var(--lsc-border) !important;
   color: var(--lsc-text) !important;
+}
+
+/* Delete button that appears on handle hover in select mode */
+.lsc-handle-delete {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--lsc-border);
+  background: var(--lsc-node-bg);
+  color: var(--lsc-text);
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  padding: 0;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.lsc-handle-delete:hover {
+  background: var(--signal-clipping);
+  border-color: var(--signal-clipping);
+  color: #fff;
 }
 
 /* Connection rejected feedback — handle flashes red briefly */

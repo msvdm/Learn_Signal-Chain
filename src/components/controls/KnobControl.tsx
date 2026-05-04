@@ -124,10 +124,10 @@ export function KnobControl({
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
-      <span className="text-[var(--node-text-xs)] font-mono leading-none" style={{ color: 'var(--lsc-text)' }}>
+      <span className="font-mono leading-none" style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)' }}>
         {display}
       </span>
-      <span className="text-[var(--node-text-2xs)] uppercase tracking-wider leading-none" style={{ color: 'var(--lsc-text)' }}>
+      <span className="uppercase tracking-wider leading-none" style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--lsc-text)' }}>
         {label}
       </span>
     </div>

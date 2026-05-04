@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Power, X, HelpCircle } from 'lucide-react'
@@ -36,7 +37,12 @@ export function InlineNode({
   const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const removeNode       = useSignalStore((s) => s.removeNode)
+  const removeEdge       = useSignalStore((s) => s.removeEdge)
+  const toolMode         = useSignalStore((s) => s.toolMode)
+  const graphEdges       = useSignalStore((s) => s.edges)
   const { t }            = useTranslation()
+
+  const [hoveredHandle, setHoveredHandle] = useState<string | null>(null)
 
   const isBypassed = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
   const isNoBypass = NO_BYPASS_TYPES.has(typeKey)
@@ -50,6 +56,39 @@ export function InlineNode({
   const healthStyle = getHealthStyle(health)
 
   const showBypass = isBypassed && !isNoBypass
+
+  function edgesOnHandle(portId: string, type: 'source' | 'target') {
+    return type === 'source'
+      ? graphEdges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
+      : graphEdges.filter((e) => e.target === nodeId && e.targetHandle === portId)
+  }
+
+  function HandleDeleteBtn({
+    portId,
+    handleType,
+    topPct,
+    side,
+  }: { portId: string; handleType: 'source' | 'target'; topPct: string; side: 'left' | 'right' }) {
+    if (toolMode !== 'select') return null
+    if (hoveredHandle !== portId) return null
+    const connected = edgesOnHandle(portId, handleType)
+    if (connected.length === 0) return null
+    return (
+      <button
+        className="nodrag nopan lsc-handle-delete"
+        style={{
+          position: 'absolute',
+          top: topPct,
+          [side]: -22,
+          transform: 'translateY(-50%)',
+        }}
+        title="Remove connection"
+        onClick={() => connected.forEach((e) => removeEdge(e.id))}
+      >
+        ×
+      </button>
+    )
+  }
 
   return (
     <div
@@ -69,42 +108,56 @@ export function InlineNode({
       }}
     >
       {/* Input handles */}
-      {inputs.map((port, i) => (
-        <Handle
-          key={port.id}
-          id={port.id}
-          type="target"
-          position={Position.Left}
-          title={port.label}
-          style={{
-            top: inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`,
-            width: 10, height: 10,
-            background: 'var(--lsc-border)',
-            border: '2px solid var(--lsc-node-bg)',
-            borderRadius: '50%',
-            cursor: 'crosshair',
-          }}
-        />
-      ))}
+      {inputs.map((port, i) => {
+        const topPct = inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`
+        return (
+          <span key={port.id}>
+            <Handle
+              id={port.id}
+              type="target"
+              position={Position.Left}
+              title={port.label}
+              style={{
+                top: topPct,
+                width: 10, height: 10,
+                background: 'var(--lsc-border)',
+                border: '2px solid var(--lsc-node-bg)',
+                borderRadius: '50%',
+                cursor: 'crosshair',
+              }}
+              onMouseEnter={() => setHoveredHandle(port.id)}
+              onMouseLeave={() => setHoveredHandle(null)}
+            />
+            <HandleDeleteBtn portId={port.id} handleType="target" topPct={topPct} side="left" />
+          </span>
+        )
+      })}
 
       {/* Output handles */}
-      {outputs.map((port, i) => (
-        <Handle
-          key={port.id}
-          id={port.id}
-          type="source"
-          position={Position.Right}
-          title={port.label}
-          style={{
-            top: outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`,
-            width: 10, height: 10,
-            background: accentColor ?? 'var(--lsc-accent)',
-            border: '2px solid var(--lsc-node-bg)',
-            borderRadius: '50%',
-            cursor: 'crosshair',
-          }}
-        />
-      ))}
+      {outputs.map((port, i) => {
+        const topPct = outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`
+        return (
+          <span key={port.id}>
+            <Handle
+              id={port.id}
+              type="source"
+              position={Position.Right}
+              title={port.label}
+              style={{
+                top: topPct,
+                width: 10, height: 10,
+                background: accentColor ?? 'var(--lsc-accent)',
+                border: '2px solid var(--lsc-node-bg)',
+                borderRadius: '50%',
+                cursor: 'crosshair',
+              }}
+              onMouseEnter={() => setHoveredHandle(port.id)}
+              onMouseLeave={() => setHoveredHandle(null)}
+            />
+            <HandleDeleteBtn portId={port.id} handleType="source" topPct={topPct} side="right" />
+          </span>
+        )
+      })}
 
       {/* Action row */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '3px 4px 0' }}>

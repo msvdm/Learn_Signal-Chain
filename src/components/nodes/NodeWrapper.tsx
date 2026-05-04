@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ReactNode, CSSProperties } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Power, X, HelpCircle } from 'lucide-react'
@@ -36,8 +37,13 @@ export function NodeWrapper({
   const activeTooltipId     = useSignalStore((s) => s.activeTooltipId)
   const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)
   const removeNode          = useSignalStore((s) => s.removeNode)
+  const removeEdge          = useSignalStore((s) => s.removeEdge)
   const complexityLevel     = useSignalStore((s) => s.complexityLevel)
+  const toolMode            = useSignalStore((s) => s.toolMode)
+  const graphEdges          = useSignalStore((s) => s.edges)
   const { t }               = useTranslation()
+
+  const [hoveredHandle, setHoveredHandle] = useState<string | null>(null)
 
   const isBypassed  = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
   // master-bus is non-removable in intermediate/advanced (it's the fixed anchor)
@@ -53,6 +59,41 @@ export function NodeWrapper({
   const borderAccent = accentColor
     ? `3px solid ${isBypassed ? 'var(--signal-hot)' : accentColor}`
     : `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`
+
+  // Edges connected to a given handle on this node
+  function edgesOnHandle(portId: string, type: 'source' | 'target') {
+    return type === 'source'
+      ? graphEdges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
+      : graphEdges.filter((e) => e.target === nodeId && e.targetHandle === portId)
+  }
+
+  // Render a delete X for a hovered handle that has connections
+  function HandleDeleteBtn({
+    portId,
+    handleType,
+    topPct,
+    side,
+  }: { portId: string; handleType: 'source' | 'target'; topPct: string; side: 'left' | 'right' }) {
+    if (toolMode !== 'select') return null
+    if (hoveredHandle !== portId) return null
+    const connected = edgesOnHandle(portId, handleType)
+    if (connected.length === 0) return null
+    return (
+      <button
+        className="nodrag nopan lsc-handle-delete"
+        style={{
+          position: 'absolute',
+          top: topPct,
+          [side]: -22,
+          transform: 'translateY(-50%)',
+        }}
+        title="Remove connection"
+        onClick={() => connected.forEach((e) => removeEdge(e.id))}
+      >
+        ×
+      </button>
+    )
+  }
 
   return (
     <div
@@ -71,42 +112,66 @@ export function NodeWrapper({
       }}
     >
       {/* Input handles — visible colored dots on the left */}
-      {inputs.map((port, i) => (
-        <Handle
-          key={port.id}
-          id={port.id}
-          type="target"
-          position={Position.Left}
-          title={port.label}
-          style={{
-            top: inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`,
-            width: 10, height: 10,
-            background: 'var(--lsc-border)',
-            border: '2px solid var(--lsc-node-bg)',
-            borderRadius: '50%',
-            cursor: 'crosshair',
-          }}
-        />
-      ))}
+      {inputs.map((port, i) => {
+        const topPct = inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`
+        return (
+          <span key={port.id}>
+            <Handle
+              id={port.id}
+              type="target"
+              position={Position.Left}
+              title={port.label}
+              style={{
+                top: topPct,
+                width: 10, height: 10,
+                background: 'var(--lsc-border)',
+                border: '2px solid var(--lsc-node-bg)',
+                borderRadius: '50%',
+                cursor: 'crosshair',
+              }}
+              onMouseEnter={() => setHoveredHandle(port.id)}
+              onMouseLeave={() => setHoveredHandle(null)}
+            />
+            <HandleDeleteBtn
+              portId={port.id}
+              handleType="target"
+              topPct={topPct}
+              side="left"
+            />
+          </span>
+        )
+      })}
 
       {/* Output handles — accent-colored dots on the right */}
-      {outputs.map((port, i) => (
-        <Handle
-          key={port.id}
-          id={port.id}
-          type="source"
-          position={Position.Right}
-          title={port.label}
-          style={{
-            top: outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`,
-            width: 10, height: 10,
-            background: accentColor ?? 'var(--lsc-accent)',
-            border: '2px solid var(--lsc-node-bg)',
-            borderRadius: '50%',
-            cursor: 'crosshair',
-          }}
-        />
-      ))}
+      {outputs.map((port, i) => {
+        const topPct = outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`
+        return (
+          <span key={port.id}>
+            <Handle
+              id={port.id}
+              type="source"
+              position={Position.Right}
+              title={port.label}
+              style={{
+                top: topPct,
+                width: 10, height: 10,
+                background: accentColor ?? 'var(--lsc-accent)',
+                border: '2px solid var(--lsc-node-bg)',
+                borderRadius: '50%',
+                cursor: 'crosshair',
+              }}
+              onMouseEnter={() => setHoveredHandle(port.id)}
+              onMouseLeave={() => setHoveredHandle(null)}
+            />
+            <HandleDeleteBtn
+              portId={port.id}
+              handleType="source"
+              topPct={topPct}
+              side="right"
+            />
+          </span>
+        )
+      })}
 
       {/* Header */}
       <div
