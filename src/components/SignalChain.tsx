@@ -398,12 +398,14 @@ export function SignalChain() {
   graphNodesRef.current   = graphNodes
   const complexityRef     = useRef(complexityLevel)
   complexityRef.current   = complexityLevel
+  const revertTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Cancel drawing when leaving connect mode
+  // Cancel drawing when leaving connect mode; clear auto-revert timer
   useEffect(() => {
     if (toolMode !== 'connect') {
       setDrawing({ active: false })
       setSnapPos(null)
+      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
     }
   }, [toolMode])
 
@@ -427,36 +429,47 @@ export function SignalChain() {
     return () => window.removeEventListener('keydown', onKey)
   }, [setToolMode])
 
-  // Live cursor tracking while drawing
+  // Live cursor tracking + auto mode switching based on handle proximity
   useEffect(() => {
     function onMove(e: MouseEvent) {
-      if (toolModeRef.current !== 'connect') return
       const d = drawingRef.current
-      if (!d.active) return
 
-      const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
-
-      // Snap detection: highlight target handle under cursor
-      const hEl = handleUnder(e.clientX, e.clientY)
-      if (hEl?.classList.contains('target')) {
-        setSnapPos(handleFlowPos(hEl, screenToFlowPosition))
-      } else {
-        setSnapPos(null)
+      if (d.active) {
+        // Wire in progress — track cursor, snap, and routing warning only
+        const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
+        const hEl = handleUnder(e.clientX, e.clientY)
+        if (hEl?.classList.contains('target')) {
+          setSnapPos(handleFlowPos(hEl, screenToFlowPosition))
+        } else {
+          setSnapPos(null)
+        }
+        const endPos = snapPos ?? flowPos
+        const allPts = [d.startPos, ...d.waypoints, endPos]
+        const nodesForValidation = graphNodesRef.current.map((n) => ({
+          id: n.id, position: n.position,
+        }))
+        setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId]))
+        return
       }
 
-      // Routing warning: check if the live wire passes through any node
-      const endPos = snapPos ?? flowPos
-      const allPts = [d.startPos, ...d.waypoints, endPos]
-      const nodesForValidation = graphNodesRef.current.map((n) => ({
-        id: n.id, position: n.position,
-      }))
-      const passes = wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId])
-      setWireWarning(passes)
+      // Auto-switch connect/select based on handle proximity
+      const hEl = handleUnder(e.clientX, e.clientY)
+      if (hEl) {
+        if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
+        if (toolModeRef.current === 'select') setToolMode('connect')
+      } else if (toolModeRef.current === 'connect') {
+        if (!revertTimerRef.current) {
+          revertTimerRef.current = setTimeout(() => {
+            revertTimerRef.current = null
+            if (!drawingRef.current.active) setToolMode('select')
+          }, 200)
+        }
+      }
     }
     document.addEventListener('mousemove', onMove)
     return () => document.removeEventListener('mousemove', onMove)
-  }, [screenToFlowPosition])
+  }, [screenToFlowPosition, setToolMode])
 
   // Wire reshape: track pointer during reshape drag and commit on release
   const reshapingRef = useRef(reshaping)

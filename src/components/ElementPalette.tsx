@@ -3,7 +3,7 @@ import {
   Mic, Guitar, Plug,
   Zap, Activity, Box, ToggleLeft, Radio, Sliders,
   AudioWaveform, ShieldAlert, DoorClosed,
-  Merge, Volume2, Link2, Cpu,
+  Merge, Volume2, Cpu,
   SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
@@ -86,12 +86,9 @@ const CATEGORY_ORDER = ['source', 'processing', 'structural', 'routing', 'output
 
 export function ElementPalette() {
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
-  const toolMode        = useSignalStore((s) => s.toolMode)
-  const setToolMode     = useSignalStore((s) => s.setToolMode)
   const { t } = useTranslation()
   const visibleKeys = PALETTE_BY_LEVEL[complexityLevel]
   const visibleItems = ALL_ITEMS.filter((item) => visibleKeys.includes(item.typeKey))
-  const isConnect = toolMode === 'connect'
 
   function onDragStart(e: React.DragEvent, typeKey: string) {
     setActiveDragTypeKey(typeKey)
@@ -115,33 +112,6 @@ export function ElementPalette() {
         userSelect: 'none',
       }}
     >
-      {/* Connect Tool toggle */}
-      <div style={{ padding: '10px 10px 6px' }}>
-        <button
-          className="nodrag nopan"
-          onClick={() => setToolMode(isConnect ? 'select' : 'connect')}
-          title={t.palette.connectTool}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '6px 10px',
-            borderRadius: 'var(--lsc-radius-md)',
-            border: `1px solid ${isConnect ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-            background: isConnect ? 'var(--lsc-accent-bg)' : 'transparent',
-            color: isConnect ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
-            fontSize: 12,
-            fontWeight: isConnect ? 700 : 500,
-            cursor: 'pointer',
-            transition: 'background 0.1s, border-color 0.1s, color 0.1s',
-          }}
-        >
-          <Link2 size={13} />
-          {t.palette.connectTool}
-        </button>
-      </div>
-
       <div style={{
         padding: '4px 12px 6px',
         fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
