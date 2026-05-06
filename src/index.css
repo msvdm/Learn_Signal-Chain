@@ -74,7 +74,7 @@
   /* Node card text scale — edit here to resize all in-card text globally */
   --node-text-3xs: 8px;   /* graph axis labels */
   --node-text-2xs: 10px;  /* channel labels, compact values */
-  --node-text-xs:  10px;  /* knob labels, status text */
+  --node-text-xs:  14px;  /* knob labels, status text */
   --node-text-sm:  12px;  /* slider/meter labels, band names */
   --node-text-md:  22px;  /* node header title */
 }
