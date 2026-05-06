@@ -30,6 +30,7 @@ import { GraphicEQNode }       from './nodes/GraphicEQNode'
 import { DIBoxNode }           from './nodes/DIBoxNode'
 import { NoiseGateNode }       from './nodes/NoiseGateNode'
 import { LimiterNode }         from './nodes/LimiterNode'
+import { PadNode }             from './nodes/PadNode'
 import { DeesserNode }         from './nodes/DeesserNode'
 import { RelayNode }           from './nodes/RelayNode'
 import { PanNode }             from './nodes/PanNode'
@@ -67,6 +68,7 @@ const nodeTypes = {
   fader:              FaderNode,
   'noise-gate':       NoiseGateNode,
   limiter:            LimiterNode,
+  pad:                PadNode,
   deesser:            DeesserNode,
   'master-bus':       MasterBusNode,
   'mono-bus':         MonoBusNode,

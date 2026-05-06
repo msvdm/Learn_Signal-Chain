@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import {
   Mic, Guitar, Plug,
   Zap, Activity, Box, ToggleLeft, Radio, Sliders,
-  AudioWaveform, ShieldAlert, DoorClosed,
+  AudioWaveform, ShieldAlert, DoorClosed, Minus,
   Merge, Volume2, Cpu,
   SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft,
@@ -29,6 +29,7 @@ const ALL_ITEMS: PaletteItem[] = [
   { typeKey: 'hpf',              icon: <svg width="16" height="11" viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 13 C3 1 9 1 12 1 L22 1" /></svg>, category: 'processing' },
   { typeKey: 'eq',               icon: <Activity size={16} />,         category: 'processing' },
   { typeKey: 'comp',             icon: <Box size={16} />,              category: 'processing' },
+  { typeKey: 'pad',              icon: <Minus size={16} />,            category: 'processing' },
   { typeKey: 'deesser',          icon: <AudioWaveform size={16} />,    category: 'processing' },
   { typeKey: 'noise-gate',       icon: <DoorClosed size={16} />,       category: 'processing' },
   { typeKey: 'limiter',          icon: <ShieldAlert size={16} />,      category: 'processing' },
@@ -63,7 +64,7 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
   intermediate: [
     'mic', 'line-in', 'instrument', 'di-box',
     'active-speaker',
-    'gain', 'fader', 'hpf', 'eq', 'comp',
+    'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
     'noise-gate', 'limiter', 'deesser',
     'switch', 'relay', 'pan', 'stereo-fader', 'balance',
     'mono-bus', 'stereo-bus', 'audio-interface',
@@ -72,7 +73,7 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
   advanced: [
     'mic', 'line-in', 'instrument', 'di-box',
     'active-speaker', 'speaker',
-    'gain', 'fader', 'hpf', 'eq', 'comp',
+    'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
     'noise-gate', 'limiter', 'deesser',
     'switch', 'potentiometer', 'relay', 'pan', 'stereo-fader', 'balance',
     'amp', 'graphic-eq',

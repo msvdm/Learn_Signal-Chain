@@ -8,7 +8,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
-const NO_BYPASS_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker', 'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac'])
+const NO_BYPASS_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker', 'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad'])
 
 interface InlineNodeProps {
   nodeId: string

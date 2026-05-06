@@ -150,9 +150,7 @@ export function VerticalFader({
         <div style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'monospace', fontWeight: 600, color: 'var(--lsc-text)' }}>
           {displayValue}
         </div>
-        {value === 0 && (
-          <div style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--signal-good)', marginTop: 2 }}>unity</div>
-        )}
+        <div style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--signal-good)', marginTop: 2, visibility: value === 0 ? 'visible' : 'hidden' }}>unity</div>
       </div>
     </div>
   )

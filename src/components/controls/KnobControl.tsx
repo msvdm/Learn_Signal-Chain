@@ -83,7 +83,7 @@ export function KnobControl({
   }
 
   return (
-    <div className={`nodrag flex flex-col items-center gap-0.5 select-none ${className}`}>
+    <div className={`nodrag flex flex-col items-center gap-0.5 select-none ${className}`} style={{ width: size }}>
       <svg
         width={size}
         height={size}
@@ -124,7 +124,7 @@ export function KnobControl({
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
-      <span className="font-mono leading-none" style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)' }}>
+      <span className="font-mono leading-none" style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', whiteSpace: 'nowrap' }}>
         {display}
       </span>
       <span className="uppercase tracking-wider leading-none" style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--lsc-text)' }}>

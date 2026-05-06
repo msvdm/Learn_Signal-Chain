@@ -97,7 +97,8 @@ export interface Translations {
     // New nodes — optional so older locale files remain valid during translation
     'di-box'?: { label?: string; groundLift?: string; xlrOut?: string; directOut?: string; description?: string }
     'noise-gate'?: { label?: string; threshold?: string; statusOpen?: string; statusClosed?: string }
-    limiter?: { label?: string; ceiling?: string; limiting?: string }
+    limiter?: { label?: string; ceiling?: string; makeupGain?: string; limiting?: string }
+    pad?: { label?: string; on?: string; off?: string }
     deesser?: { label?: string; threshold?: string; frequency?: string; gainReduction?: string }
     relay?: { label?: string }
     pan?: { label?: string }

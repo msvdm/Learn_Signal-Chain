@@ -172,7 +172,15 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
-    defaultParams: { thresholdDb: -3 },
+    defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
+  },
+  pad: {
+    typeKey: 'pad',
+    label: 'Pad',
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    category: 'processor',
+    defaultParams: { engaged: true },
   },
   deesser: {
     typeKey: 'deesser',

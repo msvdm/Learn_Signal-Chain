@@ -24,7 +24,7 @@ export function ControlSlider({
     <div className={`nodrag nopan space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
         <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>{label}</span>
-        <span className="text-[var(--node-text-sm)] font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>
+        <span className="text-[var(--node-text-sm)] font-mono font-semibold" style={{ color: 'var(--lsc-text)', minWidth: '4em', textAlign: 'right', whiteSpace: 'nowrap' }}>
           {display}
         </span>
       </div>

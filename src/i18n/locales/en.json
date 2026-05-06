@@ -135,7 +135,13 @@
     "limiter": {
       "label": "Limiter",
       "ceiling": "Ceiling",
+      "makeupGain": "Makeup",
       "limiting": "Limiting"
+    },
+    "pad": {
+      "label": "Pad",
+      "on": "−20 dB",
+      "off": "OFF"
     },
     "deesser": {
       "label": "De-esser",
@@ -236,6 +242,7 @@
       "deesser": "De-esser",
       "noise-gate": "Noise Gate",
       "limiter": "Limiter",
+      "pad": "Pad (−20 dB)",
       "amp": "Amplifier",
       "graphic-eq": "Graphic EQ",
       "fader": "Fader",
@@ -375,6 +382,11 @@
       "what": "A limiter is a compressor with an extremely high ratio — effectively infinite. It sets a hard ceiling: no signal can exceed the threshold, no matter how loud the input gets. Below the ceiling, the signal passes through unchanged.",
       "why": "Limiters protect equipment and listeners from sudden loud peaks. A drum hit, a mic bump, a loud vocal phrase — without limiting, any of these can clip the mix bus, damage amplifiers, or cause hearing damage at high volumes. The limiter is the safety net at the end of the chain.",
       "tip": "Unlike a compressor, a limiter is meant to be invisible — you should not hear it working. If you see the 'Limiting' indicator light up often, the signal going into the limiter is too hot. Fix it earlier in the chain rather than relying on the limiter to tame a consistently loud signal."
+    },
+    "pad": {
+      "what": "A pad is a fixed attenuator — a passive circuit that drops the signal level by a set amount, usually 20 dB. It sits inline in the signal path. When the pad is engaged (button shows −20 dB), the signal is reduced by 20 dB. When disengaged, the signal passes through unchanged.",
+      "why": "Microphones in front of loud sources — kick drums, guitar amps, brass instruments — can produce a signal so strong that even the preamp at its lowest gain setting is too loud. The pad solves this by cutting the level before it even reaches the preamp's gain stage, preventing distortion at the input.",
+      "tip": "Engage the pad before you record if your input meter is clipping even with the gain turned all the way down. The 20 dB drop is a lot — if the signal then becomes too quiet, raise the preamp gain to compensate and find the right balance."
     },
     "deesser": {
       "what": "A de-esser is a frequency-selective compressor. It listens for harsh sibilance — the sharp hissing sounds of letters like 'S', 'SH', and 'CH' in vocal recordings — and automatically reduces only those frequencies when they get too loud. You set the frequency and threshold; the de-esser does the rest automatically.",

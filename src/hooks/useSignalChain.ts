@@ -239,7 +239,14 @@ function computeGraphNode(
     }
     case 'limiter': {
       const ceiling = (p.thresholdDb as number) ?? -3
-      const out = Math.min(input, ceiling)
+      const makeupGain = (p.makeupGainDb as number) ?? 0
+      const gainReductionDb = Math.max(0, input - ceiling)
+      const out = Math.min(input, ceiling) + makeupGain
+      return { out, health: getHealth(out), gainReductionDb, domain }
+    }
+    case 'pad': {
+      const engaged = (p.engaged as boolean) !== false
+      const out = engaged ? input - 20 : input
       return { out, health: getHealth(out), domain }
     }
     case 'deesser': {
