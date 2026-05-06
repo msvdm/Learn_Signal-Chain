@@ -65,7 +65,7 @@
       "gain": "Gain"
     },
     "hpf": {
-      "label": "High-Pass Filter",
+      "label": "HPF",
       "cutoff": "Cutoff frequency"
     },
     "eq": {
@@ -178,6 +178,30 @@
       "leftLabel": "L",
       "rightLabel": "R",
       "centerLabel": "C"
+    }
+  },
+  "drawer": {
+    "label": "Tips & Help",
+    "defaultTitle": "Signal Chain Tips",
+    "tip1": {
+      "title": "What is a Signal Chain?",
+      "body": "A signal chain is the path your audio travels — from a microphone or instrument, through processors like EQ and compression, to speakers or recording. Each step can shape or damage the sound, so order matters."
+    },
+    "tip2": {
+      "title": "Stay in the Green Zone",
+      "body": "Aim to keep your signal between −40 and −12 dBu (the green zone). Too quiet and background noise creeps in; too loud and the signal clips, causing permanent distortion that cannot be fixed later."
+    },
+    "tip3": {
+      "title": "Order of Effects Matters",
+      "body": "The order you arrange processors changes how they interact. A High-Pass Filter before EQ removes rumble first, so the EQ works on cleaner material. Wrong order leads to unexpected — often worse — results."
+    },
+    "tip4": {
+      "title": "Clipping is Permanent",
+      "body": "When a signal goes above 0 dBu the meter turns red — the peaks are cut off, creating harsh distortion. Unlike most audio problems, clipping cannot be repaired after the fact. Always leave some headroom."
+    },
+    "tip5": {
+      "title": "Click ? on Any Block",
+      "body": "Every component in the chain has a ? button. Click it and this panel will explain what the component does, why it belongs in the chain, and how to set it correctly."
     }
   },
   "eqCurve": {

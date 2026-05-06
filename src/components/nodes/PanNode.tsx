@@ -3,7 +3,6 @@ import { Handle, Position } from '@xyflow/react'
 import { MoveHorizontal, X, HelpCircle } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { KnobControl } from '../controls/KnobControl'
@@ -103,7 +102,7 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
           <button
             className="nodrag nopan"
             style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
-            onClick={() => setActiveTooltip(activeTooltipId === id ? null : id)}
+            onClick={() => setActiveTooltip(activeTooltipId === id ? null : id, activeTooltipId === id ? null : 'pan')}
           >
             <HelpCircle size={10} />
           </button>
@@ -159,7 +158,6 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
         </div>
       </div>
 
-      {hasTooltip && <TooltipPanel instanceId={id} typeKey="pan" />}
     </div>
   )
 }

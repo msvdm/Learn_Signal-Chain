@@ -4,7 +4,6 @@ import { Handle, Position } from '@xyflow/react'
 import { Power, X, HelpCircle } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { TooltipPanel } from '../Tooltip'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 
 // Sources and passive speaker — no bypass, no remove button
@@ -221,7 +220,7 @@ export function NodeWrapper({
             <button
               className="nodrag nopan transition-colors"
               style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
-              onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
+              onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId, activeTooltipId === nodeId ? null : typeKey)}
             >
               <HelpCircle size={13} />
             </button>
@@ -234,7 +233,6 @@ export function NodeWrapper({
         {children}
       </div>
 
-      {hasTooltip && <TooltipPanel instanceId={nodeId} typeKey={typeKey} />}
     </div>
   )
 }

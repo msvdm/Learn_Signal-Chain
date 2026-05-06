@@ -5,7 +5,6 @@ import { Power, X, HelpCircle } from 'lucide-react'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
@@ -189,7 +188,7 @@ export function InlineNode({
           <button
             className="nodrag nopan"
             style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
-            onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId)}
+            onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId, activeTooltipId === nodeId ? null : typeKey)}
           >
             <HelpCircle size={10} />
           </button>
@@ -238,7 +237,6 @@ export function InlineNode({
         {children}
       </div>
 
-      {hasTooltip && <TooltipPanel instanceId={nodeId} typeKey={typeKey} />}
     </div>
   )
 }

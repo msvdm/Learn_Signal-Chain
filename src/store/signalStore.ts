@@ -28,13 +28,14 @@ interface SignalChainStore {
   language: Lang
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
+  activeTooltipTypeKey: string | null
   toolMode: ToolMode
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
 
   setLanguage: (lang: Lang) => void
-  setActiveTooltip: (id: string | null) => void
+  setActiveTooltip: (id: string | null, typeKey?: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
   resetAll: () => void
@@ -53,6 +54,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
+  activeTooltipTypeKey: null,
   toolMode: 'select',
 
   ...buildDefaultGraph(getInitialComplexityLevel()),
@@ -62,11 +64,11 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     set({ language: lang })
   },
 
-  setActiveTooltip: (id) => set({ activeTooltipId: id }),
+  setActiveTooltip: (id, typeKey = null) => set({ activeTooltipId: id, activeTooltipTypeKey: typeKey }),
 
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
-    set({ complexityLevel: level, activeTooltipId: null, toolMode: 'select', ...buildDefaultGraph(level) })
+    set({ complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null, toolMode: 'select', ...buildDefaultGraph(level) })
   },
 
   setToolMode: (mode) => set({ toolMode: mode }),
@@ -74,6 +76,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   resetAll: () =>
     set((s) => ({
       activeTooltipId: null,
+      activeTooltipTypeKey: null,
       complexityLevel: s.complexityLevel,
       toolMode: 'select',
       ...buildDefaultGraph(s.complexityLevel),

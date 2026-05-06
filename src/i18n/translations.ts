@@ -109,6 +109,15 @@ export interface Translations {
     'stereo-fader'?: { label?: string; fader?: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
+  drawer: {
+    label: string
+    defaultTitle: string
+    tip1: { title: string; body: string }
+    tip2: { title: string; body: string }
+    tip3: { title: string; body: string }
+    tip4: { title: string; body: string }
+    tip5: { title: string; body: string }
+  }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {
     bypass: string

@@ -3,7 +3,6 @@ import { Handle, Position } from '@xyflow/react'
 import { GitBranch, X, HelpCircle } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { TooltipPanel } from '../Tooltip'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
@@ -99,7 +98,7 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
           <button
             className="nodrag nopan"
             style={{ padding: '1px', color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none' }}
-            onClick={() => setActiveTooltip(activeTooltipId === id ? null : id)}
+            onClick={() => setActiveTooltip(activeTooltipId === id ? null : id, activeTooltipId === id ? null : 'relay')}
           >
             <HelpCircle size={10} />
           </button>
@@ -163,7 +162,6 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
         </div>
       </div>
 
-      {hasTooltip && <TooltipPanel instanceId={id} typeKey="relay" />}
     </div>
   )
 }

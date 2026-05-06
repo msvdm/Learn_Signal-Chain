@@ -47,6 +47,22 @@ function graphicEqPinkNoiseLevelChange(gains: number[]): number {
   return 10 * Math.log10(sumPower / EQ_SAMPLES)
 }
 
+// 2nd-order Butterworth HPF: |H(f)|² = r⁴/(1+r⁴), r = f/cutoff
+// Integrate over pink-noise spectrum (log-uniform samples) to get the
+// broadband level reduction caused by rolling off frequencies below cutoff.
+function hpfPinkNoiseLevelChange(cutoffHz: number): number {
+  if (cutoffHz <= 20) return 0
+  let sumPower = 0
+  for (let i = 0; i < EQ_SAMPLES; i++) {
+    const t = i / (EQ_SAMPLES - 1)
+    const freq = Math.pow(10, t * (Math.log10(20000) - Math.log10(20)) + Math.log10(20))
+    const r = freq / cutoffHz
+    const r4 = r * r * r * r
+    sumPower += r4 / (1 + r4)
+  }
+  return 10 * Math.log10(sumPower / EQ_SAMPLES)
+}
+
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
 export type SignalDomain = 'analog' | 'digital'
 
@@ -193,8 +209,12 @@ function computeGraphNode(
       const out = Math.min(input + ((p.gainDb as number) ?? 20), 20)
       return { out, health: getHealth(out), domain }
     }
-    case 'hpf':
-      return { out: input, health: getHealth(input), domain }
+    case 'hpf': {
+      const cutoffHz = (p.cutoffHz as number) ?? 80
+      const levelChange = hpfPinkNoiseLevelChange(cutoffHz)
+      const out = input + levelChange
+      return { out, health: getHealth(out), domain }
+    }
     case 'eq': {
       const bands = (p.bands as EQBand[]) ?? []
       const levelChange = eqPinkNoiseLevelChange(bands)

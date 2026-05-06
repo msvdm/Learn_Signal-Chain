@@ -4,7 +4,7 @@ import { useSignalStore } from './store/signalStore'
 import type { ComplexityLevel } from './store/signalStore'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
-import { SignalLevelProfile } from './components/SignalLevelProfile'
+import { DrawerHelpContent } from './components/Tooltip'
 import { ElementPalette } from './components/ElementPalette'
 import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react'
 import type { Lang } from './i18n/translations'
@@ -16,6 +16,8 @@ function App() {
   const setComplexityLevel = useSignalStore((s) => s.setComplexityLevel)
   const resetAll = useSignalStore((s) => s.resetAll)
   const setLanguage = useSignalStore((s) => s.setLanguage)
+  const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
+  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
   const { t, fmt } = useTranslation()
 
   const [showSettings, setShowSettings] = useState(false)
@@ -55,6 +57,10 @@ function App() {
     if (showSettings) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showSettings])
+
+  useEffect(() => {
+    if (activeTooltipId) setShowSignalProfile(true)
+  }, [activeTooltipId])
 
   return (
     <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)' }}>
@@ -182,33 +188,38 @@ function App() {
         </ReactFlowProvider>
       </main>
 
-      {/* Signal level profile drawer */}
+      {/* Help drawer */}
       <div
         className="flex-shrink-0 transition-all duration-200 ease-out"
         style={{
-          maxHeight: showSignalProfile ? 480 : 36,
+          maxHeight: showSignalProfile ? 300 : 36,
           overflow: 'hidden',
           borderTop: '1px solid var(--lsc-border)',
         }}
       >
         {/* Drawer toggle button */}
         <button
-          onClick={() => setShowSignalProfile((v) => !v)}
+          onClick={() => {
+            const opening = !showSignalProfile
+            setShowSignalProfile(opening)
+            if (!opening) setActiveTooltip(null, null)
+          }}
           className="w-full flex items-center justify-between px-4 py-1.5 transition-colors"
           style={{
             background: 'var(--lsc-header)',
             color: 'var(--lsc-text)',
             cursor: 'pointer',
             border: 'none',
+            flexShrink: 0,
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: 11 }}>Signal level across the chain</span>
+          <span style={{ fontWeight: 600, fontSize: 11 }}>{t.drawer.label}</span>
           {showSignalProfile ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         </button>
 
         {/* Drawer content */}
-        <div style={{ padding: '0 0 8px' }}>
-          <SignalLevelProfile />
+        <div style={{ height: 260, overflow: 'hidden' }}>
+          <DrawerHelpContent />
         </div>
       </div>
     </div>

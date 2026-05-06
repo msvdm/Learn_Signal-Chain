@@ -67,7 +67,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
       nodeId={id}
       typeKey={resolvedTypeKey}
       icon={<Merge size={14} />}
-      label={data.label ?? defaultLabel}
+      label={defaultLabel}
     >
       {/* Dynamic input handles */}
       {channelHandles}
