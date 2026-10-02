@@ -45,6 +45,7 @@ import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { NODE_REGISTRY, getPorts } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
   GRID, MIN_NODE_GAP, PORT_TOP,
@@ -120,6 +121,16 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
   return toFlow({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
 }
 
+/**
+ * What a card's ports depend on: its port layout (Mono/Stereo) and the wires plugged into it
+ * (the audio interface grows an input per wire). When this changes, React Flow must re-read the ports.
+ */
+function portLayoutKey(node: SignalNode, edges: SignalEdge[]): string {
+  const { inputs, outputs } = getPorts(node)
+  const plugged = edges.filter((e) => e.target === node.id).map((e) => e.targetHandle).sort()
+  return `${[...inputs, ...outputs].map((p) => p.id).join(',')}|${plugged.join(',')}`
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SignalChain() {
@@ -150,6 +161,8 @@ export function SignalChain() {
   const [wireWarning, setWireWarning]       = useState(false)
   const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
   const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt; w: number; h: number } | null>(null)
+  // React Flow's measured card sizes, handed back with the nodes (see displayNodes)
+  const [measuredSizes, setMeasuredSizes]   = useState<Record<string, { width: number; height: number; ports: string }>>({})
 
   // Mutable refs so document-level handlers always see current state
   const wrapperRef      = useRef<HTMLDivElement>(null)
@@ -478,16 +491,21 @@ export function SignalChain() {
 
   // Selection + size bookkeeping. Positions stay owned by the store (drag commits on stop).
   function onNodesChange(changes: NodeChange[]) {
+    const sizes: Record<string, { width: number; height: number; ports: string }> = {}
     for (const c of changes) {
       if (c.type === 'select') {
         if (c.selected) setSelectedNode(c.id)
         else if (useSignalStore.getState().selectedNodeId === c.id) setSelectedNode(null)
       }
       if (c.type === 'dimensions' && c.dimensions) {
-        const typeKey = graphNodesRef.current.find((n) => n.id === c.id)?.typeKey
-        if (typeKey) recordMeasuredSize(typeKey, c.dimensions.width, c.dimensions.height)
+        const node = graphNodesRef.current.find((n) => n.id === c.id)
+        if (node) {
+          recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height)
+          sizes[c.id] = { ...c.dimensions, ports: portLayoutKey(node, edgesRef.current) }
+        }
       }
     }
+    if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))
   }
 
   // ── Display models ──────────────────────────────────────────────────────────
@@ -498,17 +516,27 @@ export function SignalChain() {
     return edge ? chainOfEdge(edge, graphEdges) : null
   }, [highlightEdgeId, graphEdges])
 
+  // These objects are rebuilt on every store change. Without `measured`, React Flow treats each
+  // rebuilt node as new: it hides the card until it is measured again on the next frame, and a
+  // click in that gap lands on the pane (a knob drag would pan the canvas instead).
+  // A card whose ports changed is left unmeasured on purpose, so React Flow re-reads its ports.
   const displayNodes: FlowNode[] = useMemo(
     () =>
-      graphNodes.map((node) => ({
-        id:        node.id,
-        type:      node.typeKey,
-        position:  node.position,
-        selected:  node.id === selectedNodeId,
-        className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
-        data:      { color: node.color, label: node.label, typeKey: node.typeKey },
-      })),
-    [graphNodes, selectedNodeId, highlight]
+      graphNodes.map((node) => {
+        const size = measuredSizes[node.id]
+        return {
+          id:        node.id,
+          type:      node.typeKey,
+          position:  node.position,
+          measured:  size && size.ports === portLayoutKey(node, graphEdges)
+            ? { width: size.width, height: size.height }
+            : undefined,
+          selected:  node.id === selectedNodeId,
+          className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
+          data:      { color: node.color, label: node.label, typeKey: node.typeKey },
+        }
+      }),
+    [graphNodes, graphEdges, selectedNodeId, highlight, measuredSizes]
   )
 
   const displayEdges: Edge[] = useMemo(() => {

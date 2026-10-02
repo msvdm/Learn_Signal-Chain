@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Handle, Position } from '@xyflow/react'
+import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
@@ -37,6 +37,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const { t }      = useTranslation()
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
+  const updateNodeInternals     = useUpdateNodeInternals()
 
   const connected = type === 'source'
     ? edges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
@@ -84,6 +85,11 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         style={{ top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        // The ring grows while hovered or while a wire looks for an input. Once its size settles,
+        // have React Flow re-read it so wires end at the ring's edge, not where the bigger ring was.
+        onTransitionEnd={(e) => {
+          if (e.propertyName === 'width' && e.target === e.currentTarget) updateNodeInternals(nodeId)
+        }}
         // Only set when unplugging — otherwise React Flow keeps its own click handling
         {...(canUnplug ? { onClick: unplug } : {})}
       >
