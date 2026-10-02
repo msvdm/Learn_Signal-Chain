@@ -132,43 +132,6 @@ export function NodeWrapper({
         </span>
       )}
 
-      {/* Floating mini-toolbar — shown on hover / selection (CSS) */}
-      <div
-        className="lsc-node-toolbar nodrag nopan"
-        style={{ position: 'absolute', left: 0, bottom: '100%', paddingBottom: 6 }}
-      >
-        <div
-          style={{
-            display: 'flex', gap: 2, padding: 3, borderRadius: 8,
-            background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
-            boxShadow: 'var(--lsc-shadow-popup)',
-          }}
-        >
-          {canBypass && (
-            <button
-              title={t.nodeControls.bypassed}
-              onClick={() => toggleBypassNode(nodeId)}
-              style={{
-                ...toolbarBtn,
-                color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg)',
-                background: isBypassed ? 'var(--signal-hot-bg)' : undefined,
-              }}
-            >
-              <Power size={13} />
-              {t.nodeControls.bypass}
-            </button>
-          )}
-          <button
-            title={t.nodeControls.remove}
-            onClick={() => removeNode(nodeId)}
-            style={{ ...toolbarBtn, color: 'var(--signal-clipping)' }}
-          >
-            <X size={13} />
-            {t.nodeControls.removeShort}
-          </button>
-        </div>
-      </div>
-
       {/* Ports */}
       {inputs.map((port, i) => (
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
@@ -213,23 +176,49 @@ export function NodeWrapper({
           )}
         </span>
         <span style={{ flex: 1 }} />
-        {hasHelp && (
+        {/* Help · On/Off (processing elements only) · Remove */}
+        <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {hasHelp && (
+            <button
+              className="lsc-node-btn"
+              title={t.tooltip.help}
+              onClick={toggleHelp}
+              style={{
+                ...headerBtn,
+                fontSize: 12, fontWeight: 700,
+                borderColor: helpOpen ? 'var(--lsc-accent)' : 'var(--lsc-border)',
+                background: helpOpen ? 'var(--lsc-accent)' : 'transparent',
+                color: helpOpen ? '#fff' : 'var(--lsc-fg-muted)',
+              }}
+            >
+              ?
+            </button>
+          )}
+          {canBypass && (
+            <button
+              className="lsc-node-btn"
+              title={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
+              aria-pressed={!isBypassed}
+              onClick={() => toggleBypassNode(nodeId)}
+              style={{
+                ...headerBtn,
+                borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
+                background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
+                color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+              }}
+            >
+              <Power size={12} strokeWidth={2.5} />
+            </button>
+          )}
           <button
-            className="nodrag nopan"
-            title={t.tooltip.help}
-            onClick={toggleHelp}
-            style={{
-              width: 22, height: 22, flexShrink: 0, borderRadius: 9999,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, padding: 0,
-              border: `1px solid ${helpOpen ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-              background: helpOpen ? 'var(--lsc-accent)' : 'transparent',
-              color: helpOpen ? '#fff' : 'var(--lsc-fg-muted)',
-            }}
+            className="lsc-node-btn lsc-node-btn-remove"
+            title={t.nodeControls.remove}
+            onClick={() => removeNode(nodeId)}
+            style={{ ...headerBtn, borderColor: 'var(--lsc-border)', background: 'transparent', color: 'var(--lsc-fg-muted)' }}
           >
-            ?
+            <X size={12} strokeWidth={2.5} />
           </button>
-        )}
+        </div>
       </div>
 
       {/* Body — dimmed when bypassed */}
@@ -248,9 +237,9 @@ export function NodeWrapper({
   )
 }
 
-const toolbarBtn: CSSProperties = {
-  height: 28, padding: '0 10px', borderRadius: 6,
-  display: 'flex', alignItems: 'center', gap: 5,
-  fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-  border: 'none', background: 'transparent',
+const headerBtn: CSSProperties = {
+  width: 22, height: 22, flexShrink: 0, borderRadius: 9999, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  borderWidth: 1, borderStyle: 'solid',
+  transition: 'background 0.1s, color 0.1s, border-color 0.1s',
 }

@@ -125,14 +125,6 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
   return toFlow({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
 }
 
-/** Signal level as a short badge label: "−18", "+3", "−∞". */
-function formatBadgeDb(db: number): string {
-  if (!isFinite(db)) return '−∞'
-  const r = Math.round(db)
-  if (r === 0) return '0'
-  return r > 0 ? `+${r}` : `−${Math.abs(r)}`
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SignalChain() {
@@ -308,6 +300,9 @@ export function SignalChain() {
             waypoints: [],
             cursorPos: flowPos,
           })
+        } else if (hEl?.classList.contains('target')) {
+          // An input's click unplugs its wire (NodePort) — keep React Flow from starting a drag-connection
+          e.stopPropagation()
         }
         return
       }
@@ -525,12 +520,7 @@ export function SignalChain() {
         ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
         : false
 
-      const data: ChainEdgeData = {
-        waypoints:   edge.waypoints,
-        routingWarning,
-        dbLabel:     formatBadgeDb(db),
-        badgeBorder: style?.border,
-      }
+      const data: ChainEdgeData = { waypoints: edge.waypoints, routingWarning }
 
       return {
         id:           edge.id,

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
+import { X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
@@ -20,7 +21,8 @@ interface NodePortProps {
  * One input or output port on a node card.
  * - The ring colour is the health of the signal on this port (grey when unconnected).
  * - While a wire is being drawn, free inputs that can take it pulse in the accent colour.
- * - Hovering a connected port shows a small × to remove its wires (not while drawing one).
+ * - Hovering a connected input turns it into a × — click it to unplug the wire (not while drawing one).
+ *   Outputs never do: clicking an output always starts a new wire, so one signal can feed several inputs.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
   const { portSignal } = useGraphSignal()
@@ -46,34 +48,27 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&
     nodeAcceptsWire(node, wireSource, edges) && portIsFree(nodeId, portId, edges)
 
-  const top  = PORT_TOP + index * PORT_GAP
-  const side = type === 'source' ? 'right' : 'left'
+  const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
+  const showUnplug = canUnplug && hovered
+
+  const className = ['lsc-port', isValidTarget && 'lsc-port-target', showUnplug && 'lsc-port-remove']
+    .filter(Boolean).join(' ')
 
   return (
-    <>
-      <Handle
-        id={portId}
-        type={type}
-        position={type === 'source' ? Position.Right : Position.Left}
-        title={title}
-        className={`lsc-port${isValidTarget ? ' lsc-port-target' : ''}`}
-        style={{ top, borderColor: isValidTarget ? undefined : ringColor }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      />
-      {wireSource === null && hovered && connected.length > 0 && (
-        <button
-          className="nodrag nopan lsc-handle-delete"
-          style={{ top, [side]: -25, transform: 'translateY(-50%)' }}
-          title={t.nodeControls.remove}
-          onClick={() => connected.forEach((e) => removeEdge(e.id))}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          ×
-        </button>
-      )}
-    </>
+    <Handle
+      id={portId}
+      type={type}
+      position={type === 'source' ? Position.Right : Position.Left}
+      title={showUnplug ? t.nodeControls.unplug : title}
+      className={className}
+      style={{ top: PORT_TOP + index * PORT_GAP, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      // Only set when unplugging — otherwise React Flow keeps its own click handling
+      {...(canUnplug ? { onClick: () => connected.forEach((e) => removeEdge(e.id)) } : {})}
+    >
+      {showUnplug && <X size={12} strokeWidth={3} />}
+    </Handle>
   )
 }
 

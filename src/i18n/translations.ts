@@ -82,12 +82,15 @@ export interface Translations {
       bandHigh: string
       bandLoMid?: string
       gain?: string
-      frequency?: string
       freq?: string
       widthQ?: string
+      /** Tooltip of Width (Q) on a shelf band, where it does nothing */
+      widthShelf?: string
       shelf?: string
-      shelfOn?: string
+      shelfHint?: string
       graphHint?: string
+      /** Extra graph hint when the band width can be changed (Advanced) */
+      graphHintWidth?: string
     }
     graphicEq: { label: string }
     comp: {
@@ -138,11 +141,14 @@ export interface Translations {
   }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {
-    bypass: string
-    bypassed: string
+    /** Tooltip of the On/Off button while the node is on */
+    turnOff: string
+    /** Tooltip of the On/Off button while the node is bypassed */
+    turnOn: string
     remove: string
     bypassedShort: string
-    removeShort: string
+    /** Tooltip of a connected input port (it unplugs the wire on click) */
+    unplug: string
   }
   palette: {
     elements: string

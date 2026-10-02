@@ -36,7 +36,7 @@ The canvas works like a drawing app and **follows the mouse** — there is no mo
    - **Click in empty space** → commits a corner waypoint, locking that segment; routing continues from the waypoint
    - **Click a highlighted input** → completes the connection (a snap ring appears on hover to confirm the landing point)
    - **Right-click or Esc** → cancels the wire in progress
-4. **Delete a connection** — hover a connected port → a small × appears next to it (whenever no wire is being drawn) → click it.
+4. **Delete a connection** — hover a connected **input** port → the port itself turns into a red × (whenever no wire is being drawn) → click it. Outputs never turn into ×: clicking an output always starts a new wire, so one signal can feed several inputs.
 5. **Reshape a wire** (Intermediate / Advanced) — wires with bends show drag handles on their corners and segment midpoints, in either mode.
 6. **Esc** cancels a wire in progress, otherwise closes the help popover.
 7. **Zoom** — mouse wheel / trackpad, or the React Flow `<Controls>` (zoom in / out / fit) at the bottom-left of the canvas.
@@ -79,23 +79,25 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/i18n/locales/en.json`, `bg.json` | All UI text and help-popover educational content (`theory` key). Edit copy here; add every new key to both files. |
 | `src/i18n/translations.ts` | The `Translations` type (add new keys here too) and `fmt()` for `{placeholder}` strings. |
 | `src/App.tsx` | Header (see above) and the `ConfirmDialog` for Reset / level change. |
-| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color + dB badge data, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
+| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
 | `src/components/ElementPalette.tsx` | Left sidebar: search, tabs, draggable tiles. Level-gated visibility via `PALETTE_BY_LEVEL`. |
-| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints plus the dB badge. |
+| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints (no level badge — levels are shown on the cards). |
 | `src/components/Tooltip.tsx` | `HelpPopover` — anchored under the node whose "?" was clicked, Previous / Next in signal order. |
 | `src/components/ConnectingToast.tsx` | Bottom-centre "Connecting from …" status while a wire is drawn. |
 | `src/components/ConfirmDialog.tsx` | In-app `window.confirm` replacement, rendered with `createPortal` to `document.body`. |
 | `src/components/nodes/NodeWrapper.tsx` | The single card shell every node uses (see below). |
-| `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, hover × to remove its wires. `BusInputPorts` for dynamic bus inputs. |
+| `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug). `BusInputPorts` for dynamic bus inputs. |
 | `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
+| `src/components/controls/EQGraph.tsx` | Interactive EQ curve drawn at exact pixel size (never stretched): drag a band dot, double-click = 0 dB, scroll = width (Q). Response math in `controls/eqMath.ts`. |
 
 ### Node card shell
 
 Every node uses `NodeWrapper`:
 - **Width follows content** (no fixed widths; `minWidth: 160`), text wraps to fit.
 - A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (28px) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (24px) apart.
-- A **mini-toolbar** above the card (on hover / selection) holds **Bypass** and **Remove**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no Bypass — the control itself is the state. Every node, including Master Bus, can be removed.
+- The header row is **icon · title · ? (help) · On/Off (bypass) · × (remove)**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no On/Off — the control itself is the state. Every node, including Master Bus, can be removed.
+- Cards whose values change often (e.g. the Parametric EQ) use **fixed widths and fixed-width readouts**, so turning a control never resizes the card.
 - Controls and In/Out meters stay on the cards; there is **no status chip**.
 
 ### Level system

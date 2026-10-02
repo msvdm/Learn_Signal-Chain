@@ -112,12 +112,13 @@
       "bandHigh": "High",
       "bandLoMid": "Lo-Mid",
       "gain": "Gain",
-      "frequency": "Frequency",
       "freq": "Freq",
       "widthQ": "Width (Q)",
+      "widthShelf": "A shelf has no width — turn Shelf off to use it",
       "shelf": "Shelf",
-      "shelfOn": "Shelf ✓",
-      "graphHint": "Drag handles on graph · Bell = peak boost/cut · Shelf = tilt all highs or lows"
+      "shelfHint": "Shelf: raise or lower everything past this frequency evenly, instead of a hump around it",
+      "graphHint": "Drag a coloured dot up to make that range louder, down to make it quieter, or sideways to move it to lower or higher sounds. Double-click a dot to set it back to 0 dB (no change).",
+      "graphHintWidth": "Scroll over a dot to make its band wider or narrower."
     },
     "graphicEq": {
       "label": "Graphic EQ"
@@ -228,11 +229,11 @@
     "band": "Band"
   },
   "nodeControls": {
-    "bypass": "Bypass",
-    "bypassed": "Bypassed — signal passes through unchanged",
+    "turnOff": "On — click to bypass it (the signal then passes through unchanged)",
+    "turnOn": "Bypassed — the signal passes through unchanged. Click to turn it back on",
     "remove": "Remove from chain",
     "bypassedShort": "Bypassed",
-    "removeShort": "Remove"
+    "unplug": "Click to unplug this wire"
   },
   "palette": {
     "elements": "Elements",

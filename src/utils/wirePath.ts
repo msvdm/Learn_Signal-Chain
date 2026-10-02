@@ -51,25 +51,3 @@ export function buildWirePath(points: Pt[], radius = 8): string {
   }
   return d
 }
-
-/**
- * Where the edge dB badge sits: the middle of the longest horizontal run, so the
- * badge floats above the wire instead of beside a vertical drop (or under a card).
- */
-export function wireBadgeAnchor(points: Pt[]): Pt {
-  if (points.length < 2) return points[0] ?? { x: 0, y: 0 }
-  const route = orthogonalRoute(points)
-  let best: Pt | null = null
-  let bestLen = -1
-  for (let i = 1; i < route.length; i++) {
-    const a = route[i - 1]
-    const b = route[i]
-    if (a.y !== b.y) continue
-    const len = Math.abs(b.x - a.x)
-    if (len > bestLen) {
-      bestLen = len
-      best = { x: (a.x + b.x) / 2, y: a.y }
-    }
-  }
-  return best ?? { x: (route[0].x + route[route.length - 1].x) / 2, y: route[0].y }
-}

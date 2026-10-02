@@ -266,29 +266,22 @@ kbd {
   transition: transform 0.15s ease-out, background 0.15s !important;
 }
 
-/* Delete button that appears on a connected port's hover (not while drawing a wire) */
-.lsc-handle-delete {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--lsc-border);
-  background: var(--lsc-node-bg);
-  color: var(--lsc-fg);
-  font-size: 13px;
-  line-height: 1;
+/* A connected input turns into a × on hover (not while drawing a wire) — click it to unplug the wire */
+.react-flow__handle.lsc-port.lsc-port-remove {
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  z-index: 20;
-  padding: 0;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-.lsc-handle-delete:hover {
   background: var(--signal-clipping);
   border-color: var(--signal-clipping);
   color: #fff;
+}
+.react-flow__handle.lsc-port.lsc-port-remove svg {
+  pointer-events: none;
+}
+.lsc-connect-mode .react-flow__handle.lsc-port-remove {
+  cursor: pointer !important;
 }
 
 .react-flow__panel {
@@ -329,22 +322,14 @@ kbd {
 
 /* ── Node card ──────────────────────────────────────────────────────────── */
 
-/* Mini-toolbar above the card — shown on hover or when selected */
-.lsc-node-toolbar {
-  display: none;
+/* Header buttons: help, on/off, remove */
+.lsc-node-btn:hover {
+  border-color: var(--lsc-accent) !important;
 }
-.lsc-node-card:hover .lsc-node-toolbar,
-.lsc-node-card.lsc-selected .lsc-node-toolbar {
-  display: flex;
-}
-
-/* Never while a wire is being drawn — it would cover the input labels */
-.lsc-wiring .lsc-node-toolbar {
-  display: none !important;
-}
-
-.lsc-node-toolbar button:hover {
-  background: var(--lsc-sunken);
+.lsc-node-btn-remove:hover {
+  background: var(--signal-clipping) !important;
+  border-color: var(--signal-clipping) !important;
+  color: #fff !important;
 }
 
 /* Nodes size their icons uniformly regardless of what the node passes in */

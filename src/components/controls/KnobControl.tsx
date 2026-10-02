@@ -11,6 +11,8 @@ interface KnobControlProps {
   size?: number
   color?: string
   className?: string
+  /** false = knob only; the caller shows the value and label itself */
+  showReadout?: boolean
 }
 
 const START_CLOCK = 225
@@ -32,6 +34,7 @@ export function KnobControl({
   size = 52,
   color = 'var(--signal-good)',
   className = '',
+  showReadout = true,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
@@ -130,18 +133,20 @@ export function KnobControl({
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
-      <div
-        style={{
-          display: 'flex', flexDirection: inlineLabel ? 'row' : 'column',
-          alignItems: inlineLabel ? 'baseline' : 'center', gap: inlineLabel ? 6 : 3,
-          whiteSpace: 'nowrap', lineHeight: 1.1,
-        }}
-      >
-        <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}>
-          {display}
-        </span>
-        <span className="lsc-knob-label">{label}</span>
-      </div>
+      {showReadout && (
+        <div
+          style={{
+            display: 'flex', flexDirection: inlineLabel ? 'row' : 'column',
+            alignItems: inlineLabel ? 'baseline' : 'center', gap: inlineLabel ? 6 : 3,
+            whiteSpace: 'nowrap', lineHeight: 1.1,
+          }}
+        >
+          <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}>
+            {display}
+          </span>
+          <span className="lsc-knob-label">{label}</span>
+        </div>
+      )}
     </div>
   )
 }
