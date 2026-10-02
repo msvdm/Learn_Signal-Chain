@@ -20,13 +20,12 @@ interface NodePortProps {
  * One input or output port on a node card.
  * - The ring colour is the health of the signal on this port (grey when unconnected).
  * - While a wire is being drawn, free inputs that can take it pulse in the accent colour.
- * - In Move mode, hovering a connected port shows a small × to remove its wires.
+ * - Hovering a connected port shows a small × to remove its wires (not while drawing one).
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
   const { portSignal } = useGraphSignal()
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wireSource)
-  const toolMode   = useSignalStore((s) => s.toolMode)
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const node       = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const { t }      = useTranslation()
@@ -62,7 +61,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       />
-      {toolMode === 'select' && hovered && connected.length > 0 && (
+      {wireSource === null && hovered && connected.length > 0 && (
         <button
           className="nodrag nopan lsc-handle-delete"
           style={{ top, [side]: -25, transform: 'translateY(-50%)' }}

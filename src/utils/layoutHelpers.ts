@@ -1,11 +1,13 @@
 import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
-import { CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND, MIN_NODE_GAP, getZone } from '../data/zoneConstants'
 
 export type Pt = { x: number; y: number }
 
 export const GRID = 36
+
+// Minimum clearance between any two nodes, in all directions.
+export const MIN_NODE_GAP = 100
 
 // ── Card geometry ──────────────────────────────────────────────────────────────
 // Every node card shares the same header height and port line, so wires between
@@ -25,8 +27,6 @@ const measuredSizeByType = new Map<string, { w: number; h: number }>()
 export function recordMeasuredSize(typeKey: string, w: number, h: number) {
   if (w > 0 && h > 0) measuredSizeByType.set(typeKey, { w, h })
 }
-
-export const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
 
 export const HIT_THRESHOLD = 48
 
@@ -84,22 +84,9 @@ export function resolveOverlap(
   return cur
 }
 
-/** Snap a non-bus node out of the center zone to the nearest zone boundary. */
-export function snapOutOfCenter(pos: Pt, w: number, isAdvancedOrIntermediate: boolean): Pt {
-  if (!isAdvancedOrIntermediate) return pos
-  if (getZone(pos.x) !== 'center') return pos
-  const nodeMidX  = pos.x + w / 2
-  const centerMidX = (CENTER_LEFT_BOUND + CENTER_RIGHT_BOUND) / 2
-  if (nodeMidX <= centerMidX) {
-    return { ...pos, x: Math.floor((CENTER_LEFT_BOUND - w) / GRID) * GRID }
-  } else {
-    return { ...pos, x: Math.ceil(CENTER_RIGHT_BOUND / GRID) * GRID }
-  }
-}
+// ── Push helpers ───────────────────────────────────────────────────────────────
 
-// ── Zone push helpers ──────────────────────────────────────────────────────────
-
-/** Push every non-bus node at or after fromX rightward by amount (grid-snapped). */
+/** Push every node at or after fromX rightward by amount (grid-snapped). */
 export function pushDownstream(
   fromX: number,
   amount: number,
@@ -109,76 +96,10 @@ export function pushDownstream(
 ) {
   const snapped = Math.ceil(amount / GRID) * GRID
   for (const n of nodes) {
-    if (BUS_TYPES.has(n.type ?? '')) continue
     if (n.position.x >= fromX - GRID / 2) {
       const newPos = { x: n.position.x + snapped, y: n.position.y }
       nodeMap.set(n.id, { ...n, position: newPos })
       updatePos(n.id, newPos)
-    }
-  }
-}
-
-/** Push every non-bus node ending at or before fromX leftward by amount (grid-snapped). */
-export function pushUpstream(
-  fromX: number,
-  amount: number,
-  nodes: FlowNode[],
-  nodeMap: Map<string, FlowNode>,
-  updatePos: (id: string, pos: Pt) => void,
-  skipId?: string,
-) {
-  const snapped = Math.ceil(amount / GRID) * GRID
-  for (const n of nodes) {
-    if (n.id === skipId) continue
-    if (BUS_TYPES.has(n.type ?? '')) continue
-    const dims = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-    if (n.position.x + dims.w <= fromX + GRID / 2) {
-      const newPos = { x: n.position.x - snapped, y: n.position.y }
-      nodeMap.set(n.id, { ...n, position: newPos })
-      updatePos(n.id, newPos)
-    }
-  }
-}
-
-/** Push nodes leftward to clear space for a new node landing at newNodeX.
- *  Only considers nodes that start to the LEFT of newNodeX — nodes to the right are unaffected. */
-export function shiftNodesLeft(
-  newNodeX: number,
-  nodes: FlowNode[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  const targets = [...nodes]
-    .filter(n => !BUS_TYPES.has(n.type ?? '') && n.position.x < newNodeX)
-    .sort((a, b) => b.position.x - a.position.x)
-  let clearBefore = newNodeX - MIN_NODE_GAP
-  for (const n of targets) {
-    const nd = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-    if (n.position.x + nd.w > clearBefore) {
-      const newX = Math.floor((clearBefore - nd.w) / GRID) * GRID
-      updatePos(n.id, { x: newX, y: n.position.y })
-      clearBefore = newX - MIN_NODE_GAP
-    }
-  }
-}
-
-/** Push nodes rightward to clear space for a new node at newNodeX with width newNodeW.
- *  Only considers nodes that start to the RIGHT of newNodeX — nodes to the left are unaffected. */
-export function shiftNodesRight(
-  newNodeX: number,
-  newNodeW: number,
-  nodes: FlowNode[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  const targets = [...nodes]
-    .filter(n => !BUS_TYPES.has(n.type ?? '') && n.position.x > newNodeX)
-    .sort((a, b) => a.position.x - b.position.x)
-  let clearAfter = newNodeX + newNodeW + MIN_NODE_GAP
-  for (const n of targets) {
-    if (n.position.x < clearAfter) {
-      const nd = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-      const newX = Math.ceil(clearAfter / GRID) * GRID
-      updatePos(n.id, { x: newX, y: n.position.y })
-      clearAfter = newX + nd.w + MIN_NODE_GAP
     }
   }
 }

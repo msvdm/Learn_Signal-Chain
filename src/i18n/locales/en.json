@@ -23,38 +23,18 @@
     "switchBody": "This clears the canvas so you can start fresh at the new level."
   },
   "toolbar": {
-    "move": "Move",
-    "connect": "Connect",
-    "moveHint": "Move and select elements (V)",
-    "connectHint": "Draw wires between elements (C)",
     "snap": "Snap to grid",
     "snapHint": "Line elements up on the dotted grid",
+    "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "zoomReset": "Reset zoom to 100%"
+    "zoomFit": "Show everything on screen"
   },
   "connecting": {
     "from": "Connecting from {node}.",
     "hint": "Click a highlighted input. Click empty space to add a bend.",
     "cancel": "cancel",
     "input": "{node} input"
-  },
-  "emptyState": {
-    "title": "Build a chain from microphone to speaker",
-    "body": "Follow the outline below. Drag elements from the left, then connect each output to the next input.",
-    "step": "Step {n}",
-    "source": "Source",
-    "sourceHint": "Drag a Microphone here",
-    "preamp": "Preamp / Gain",
-    "preampHint": "Boosts the weak mic signal",
-    "output": "Output",
-    "outputHint": "Drag an Active Speaker here",
-    "fixed": "Fixed",
-    "fixedHint": "The Master Bus stays in the middle of the canvas at this level",
-    "shortcuts": "Shortcuts",
-    "moveSelect": "Move and select",
-    "drawWire": "Draw a wire",
-    "cancel": "Cancel"
   },
   "levels": {
     "beginner": {

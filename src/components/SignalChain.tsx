@@ -2,14 +2,13 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
+  Controls,
   type Edge,
   type Node as FlowNode,
   type NodeChange,
   BackgroundVariant,
   useReactFlow,
   useViewport,
-  useInternalNode,
-  useStore as useFlowStore,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -40,9 +39,8 @@ import { AudioInterfaceNode }  from './nodes/AudioInterfaceNode'
 import { AdcDacNode }          from './nodes/AdcDacNode'
 import { ChainEdge }           from './ChainEdge'
 import type { ChainEdgeData }  from './ChainEdge'
-import { CanvasToolbar, ConnectingToast } from './CanvasToolbar'
+import { ConnectingToast }     from './ConnectingToast'
 import { HelpPopover }         from './Tooltip'
-import { EmptyStateGuide, ShortcutsCard } from './EmptyState'
 
 import { useSignalStore }     from '../store/signalStore'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
@@ -50,21 +48,16 @@ import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
-import { MASTER_BUS_DEFAULT_ID } from '../data/levels'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
-  GRID, BUS_TYPES, PORT_TOP,
-  nodeDims, recordMeasuredSize, resolveOverlap, snapOutOfCenter,
-  pushDownstream, pushUpstream,
-  shiftNodesLeft, shiftNodesRight,
-  enforceGap, findEdgeAtPoint, canInsertMidChain,
+  GRID, MIN_NODE_GAP, PORT_TOP,
+  nodeDims, recordMeasuredSize, resolveOverlap,
+  pushDownstream, enforceGap, findEdgeAtPoint, canInsertMidChain,
 } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/layoutHelpers'
-import { MASTER_BUS_FLOW_POS, CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND, MIN_NODE_GAP, getZone } from '../data/zoneConstants'
 import { buildWirePath } from '../utils/wirePath'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portIsFree } from '../utils/connectionRules'
-import { emptyStateLayout } from '../utils/emptyStateLayout'
 import { useTranslation } from '../i18n/useTranslation'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
@@ -163,8 +156,6 @@ export function SignalChain() {
   const chainEmpty            = useChainEmpty()
   const { screenToFlowPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
   const { x: vpX, y: vpY, zoom: vpZoom } = useViewport()
-  const paneW = useFlowStore((s) => s.width)
-  const paneH = useFlowStore((s) => s.height)
 
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
   const [snapPos, setSnapPos]               = useState<Pt | null>(null)
@@ -182,6 +173,7 @@ export function SignalChain() {
   edgesRef.current      = graphEdges
   const graphNodesRef   = useRef(graphNodes)
   graphNodesRef.current = graphNodes
+  const revertTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { reshaping, setReshaping } = useEdgeReshape(screenToFlowPosition, edgesRef, updateEdgeWaypoints)
 
@@ -223,33 +215,40 @@ export function SignalChain() {
     if (toolMode !== 'connect') cancelWire()
   }, [toolMode, cancelWire])
 
-  // Keyboard shortcuts: V = Move, C = Connect, Esc = cancel wire / back to Move
+  // Esc cancels the wire being drawn, otherwise closes the help popover
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
-      if (e.ctrlKey || e.metaKey || e.altKey) return
-      const key = e.key.toLowerCase()
-      if (key === 'v') setToolMode('select')
-      if (key === 'c') setToolMode('connect')
-      if (e.key === 'Escape') {
-        if (drawingRef.current.active) {
-          cancelWire()
-        } else {
-          setToolMode('select')
-          setActiveTooltip(null, null)
-        }
-      }
+      if (drawingRef.current.active) cancelWire()
+      else setActiveTooltip(null, null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setToolMode, setActiveTooltip, cancelWire])
+  }, [setActiveTooltip, cancelWire])
 
-  // Live cursor tracking while a wire is being drawn
+  // The canvas follows the mouse: hovering a port switches to connect mode, moving
+  // away switches back to select mode after a short delay (never while a wire is drawn).
+  // While a wire is drawn, the cursor is tracked for the live preview instead.
   useEffect(() => {
+    function followMouse(e: MouseEvent) {
+      // A button is held: a node, slider or the canvas is being dragged — don't switch mid-drag
+      if (e.buttons !== 0) return
+      if (handleUnder(e.clientX, e.clientY)) {
+        if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
+        if (toolModeRef.current === 'select') setToolMode('connect')
+      } else if (toolModeRef.current === 'connect' && !revertTimerRef.current) {
+        revertTimerRef.current = setTimeout(() => {
+          revertTimerRef.current = null
+          if (!drawingRef.current.active) setToolMode('select')
+        }, 200)
+      }
+    }
+
     function onMove(e: MouseEvent) {
       const d = drawingRef.current
-      if (!d.active) return
+      if (!d.active) { followMouse(e); return }
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
       const hEl  = handleUnder(e.clientX, e.clientY)
@@ -263,20 +262,22 @@ export function SignalChain() {
       setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId]))
     }
     document.addEventListener('mousemove', onMove)
-    return () => document.removeEventListener('mousemove', onMove)
-  }, [screenToFlowPosition, getInternalNode])
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
+    }
+  }, [screenToFlowPosition, getInternalNode, setToolMode])
 
   // Click interception — capture phase fires before React Flow's own handlers
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (toolModeRef.current !== 'connect') return
       if (e.button !== 0) return
       const targetEl = e.target as Element
-      // Only clicks on the canvas itself — not the palette, header, toolbar or popovers
+      // Only clicks on the canvas itself — not the palette, header or popovers
       if (!wrapperRef.current?.contains(targetEl)) return
       if (targetEl.closest('.lsc-overlay')) return
 
-      // Check if a reshape handle (waypoint drag circle) is under the cursor
+      // A reshape handle (waypoint drag circle) under the cursor — in either mode
       const reshapeEl = document.elementsFromPoint(e.clientX, e.clientY)
         .find((el) => el.classList.contains('lsc-reshape-handle')) as Element | null
       if (reshapeEl) {
@@ -289,6 +290,8 @@ export function SignalChain() {
         setReshaping({ edgeId, waypointIndex, segmentIndex, inserting, livePos: fp })
         return
       }
+
+      if (toolModeRef.current !== 'connect') return
 
       const d       = drawingRef.current
       const hEl     = handleUnder(e.clientX, e.clientY)
@@ -378,42 +381,12 @@ export function SignalChain() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenToFlowPosition, addEdge, updateNodePosition, setReshaping])
 
-  // ── Empty state: guide outline + camera ─────────────────────────────────────
+  // ── Camera ──────────────────────────────────────────────────────────────────
 
-  const masterInternal = useInternalNode(MASTER_BUS_DEFAULT_ID)
-  const masterRect = masterInternal
-    ? {
-        x: masterInternal.internals.positionAbsolute.x,
-        y: masterInternal.internals.positionAbsolute.y,
-        w: masterInternal.measured.width ?? 200,
-        h: masterInternal.measured.height ?? 150,
-      }
-    : null
-  const masterMeasured = Boolean(masterInternal?.measured.width)
-  const emptyLayout = chainEmpty ? emptyStateLayout(masterRect) : null
-
-  // Frame the outline whenever the canvas becomes empty (start, reset, level change)
-  const waitingForMaster = complexityLevel !== 'beginner' && !masterMeasured
+  // A blank canvas (start, Reset, level change, last node removed) shows 100% zoom
   useEffect(() => {
-    if (!chainEmpty || waitingForMaster || paneW === 0 || paneH === 0) return
-    const master = getInternalNode(MASTER_BUS_DEFAULT_ID)
-    const b = emptyStateLayout(master
-      ? {
-          x: master.internals.positionAbsolute.x, y: master.internals.positionAbsolute.y,
-          w: master.measured.width ?? 200, h: master.measured.height ?? 150,
-        }
-      : null).bounds
-    const TOOLBAR = 64   // keep clear of the floating toolbar
-    const PAD = 40
-    const zoom = Math.max(0.15, Math.min(1, (paneW - PAD * 2) / b.w, (paneH - TOOLBAR - PAD * 2) / b.h))
-    setViewport({
-      x: paneW / 2 - (b.x + b.w / 2) * zoom,
-      y: TOOLBAR + (paneH - TOOLBAR) / 2 - (b.y + b.h / 2) * zoom,
-      zoom,
-    })
-  // Re-frame only when emptiness / level / readiness / pane size change — not on every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chainEmpty, complexityLevel, waitingForMaster, paneW > 0 && paneH > 0])
+    if (chainEmpty) setViewport({ x: 0, y: 0, zoom: 1 })
+  }, [chainEmpty, setViewport])
 
   // ── Drag & drop from the palette ────────────────────────────────────────────
 
@@ -423,15 +396,7 @@ export function SignalChain() {
     const typeKey = activeDragTypeKey
     if (!typeKey) return
     const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const { w } = nodeDims(typeKey)
-    let pos = dropOrigin(raw)
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(typeKey) && notBeginner) {
-      pos.x = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, pos.x))
-    } else {
-      pos = snapOutOfCenter(pos, w, notBeginner)
-    }
-    setDropPreview({ typeKey, pos })
+    setDropPreview({ typeKey, pos: dropOrigin(raw) })
   }
 
   function onDragLeave(e: React.DragEvent) {
@@ -477,34 +442,13 @@ export function SignalChain() {
           // Top-align with the source so the wires on both sides stay straight
           const insertY  = src.position.y
 
-          const dropZone = complexityLevel !== 'beginner' ? getZone(snapped.x) : 'right'
-
-          let insertX: number
-          if (dropZone === 'left') {
-            const maxInsertX = Math.floor((tgtLeft - w - MIN_NODE_GAP) / GRID) * GRID
-            insertX = Math.min(maxInsertX, snapped.x)
-          } else if (dropZone === 'center') {
-            const available = tgtLeft - srcRight
-            if (available < w + MIN_NODE_GAP * 2) return
-            insertX = snapped.x
-          } else {
-            const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
-            insertX = Math.max(minInsertX, snapped.x)
-          }
-
-          const newNodeRight = insertX + w
-          const rightGap     = tgtLeft - newNodeRight
-          const nm           = new Map(nmNodes.map((n) => [n.id, n]))
-
-          if (dropZone === 'left') {
-            const leftGap = insertX - srcRight
-            if (leftGap < MIN_NODE_GAP) {
-              pushUpstream(srcRight, MIN_NODE_GAP - leftGap, nmNodes, nm, updateNodePosition, newId)
-            }
-          } else if (dropZone !== 'center') {
-            if (rightGap < MIN_NODE_GAP) {
-              pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
-            }
+          // Right of the source; the target and everything after it move right to make room
+          const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
+          const insertX    = Math.max(minInsertX, snapped.x)
+          const rightGap   = tgtLeft - (insertX + w)
+          if (rightGap < MIN_NODE_GAP) {
+            const nm = new Map(nmNodes.map((n) => [n.id, n]))
+            pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
           }
 
           addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
@@ -519,23 +463,8 @@ export function SignalChain() {
     }
 
     // ── Normal placement (no edge hit) ────────────────────────────────────────
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(typeKey) && notBeginner) {
-      const clampedX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, snapped.x))
-      const finalPos = resolveOverlap({ x: clampedX, y: snapped.y }, w, h, allNodes)
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    } else if (notBeginner) {
-      const finalPos = snapOutOfCenter(snapped, w, true)
-      if (getZone(finalPos.x) === 'left') {
-        shiftNodesLeft(finalPos.x, allNodes, updateNodePosition)
-      } else {
-        shiftNodesRight(finalPos.x, w, allNodes, updateNodePosition)
-      }
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    } else {
-      const finalPos = resolveOverlap(snapped, w, h, allNodes)
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    }
+    const finalPos = resolveOverlap(snapped, w, h, allNodes)
+    addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
   }
 
   // ── Moving nodes ────────────────────────────────────────────────────────────
@@ -543,31 +472,15 @@ export function SignalChain() {
   function onNodeDrag(_e: React.MouseEvent, node: FlowNode) {
     const measured = getInternalNode(node.id)?.measured
     const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
-    let snapped = snap(node.position)
-    if (!BUS_TYPES.has(node.type ?? '')) {
-      snapped = snapOutOfCenter(snapped, w, complexityLevel !== 'beginner')
-    }
-    const resolved = resolveOverlap(snapped, w, h, measuredNodes(), node.id)
+    const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
     setDragNodePreview({ typeKey: node.type ?? '', pos: resolved, w, h })
   }
 
   function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
     setDragNodePreview(null)
-    if (node.type === 'master-bus' && complexityLevel !== 'beginner') {
-      updateNodePosition(node.id, MASTER_BUS_FLOW_POS)
-      return
-    }
-    let snapped = snap(node.position)
     const measured = getInternalNode(node.id)?.measured
     const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(node.type ?? '') && node.type !== 'master-bus' && notBeginner) {
-      // Center-zone buses move vertically only — restore original X
-      snapped.x = graphNodes.find((n) => n.id === node.id)?.position.x ?? snapped.x
-    } else if (!BUS_TYPES.has(node.type ?? '')) {
-      snapped = snapOutOfCenter(snapped, w, notBeginner)
-    }
-    const resolved = resolveOverlap(snapped, w, h, measuredNodes(), node.id)
+    const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
     updateNodePosition(node.id, resolved)
   }
 
@@ -594,10 +507,9 @@ export function SignalChain() {
         type:      node.typeKey,
         position:  node.position,
         selected:  node.id === selectedNodeId,
-        draggable: !(node.typeKey === 'master-bus' && complexityLevel !== 'beginner'),
         data:      { color: node.color, label: node.label, typeKey: node.typeKey },
       })),
-    [graphNodes, complexityLevel, selectedNodeId]
+    [graphNodes, selectedNodeId]
   )
 
   const displayEdges: Edge[] = useMemo(() => {
@@ -650,6 +562,14 @@ export function SignalChain() {
     return src ? (t.palette.items[src.typeKey] ?? src.typeKey) : ''
   })()
 
+  // Zoom control tooltips follow the app language
+  const ariaLabelConfig = useMemo(() => ({
+    'controls.ariaLabel':         t.toolbar.zoom,
+    'controls.zoomIn.ariaLabel':  t.toolbar.zoomIn,
+    'controls.zoomOut.ariaLabel': t.toolbar.zoomOut,
+    'controls.fitView.ariaLabel': t.toolbar.zoomFit,
+  }), [t])
+
   const ghost = dropPreview
     ? { pos: dropPreview.pos, ...nodeDims(dropPreview.typeKey) }
     : dragNodePreview
@@ -675,6 +595,7 @@ export function SignalChain() {
         minZoom={0.15}
         maxZoom={2}
         proOptions={{ hideAttribution: false }}
+        ariaLabelConfig={ariaLabelConfig}
         style={{ background: 'var(--lsc-canvas)' }}
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -696,35 +617,15 @@ export function SignalChain() {
             color="var(--lsc-grid)"
           />
         )}
-        {emptyLayout && <EmptyStateGuide layout={emptyLayout} />}
+        <Controls
+          position="bottom-left"
+          showInteractive={false}
+          fitViewOptions={{ padding: 0.2, maxZoom: 1, duration: 300 }}
+        />
       </ReactFlow>
 
-      {/* Zone dividers — visible in intermediate/advanced modes */}
+      {/* Reshape overlay — waypoint drag handles (intermediate/advanced) */}
       {complexityLevel !== 'beginner' && (
-        <svg
-          style={{
-            position: 'absolute', top: 0, left: 0,
-            width: '100%', height: '100%',
-            pointerEvents: 'none',
-            zIndex: 50,
-            overflow: 'visible',
-          }}
-        >
-          <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
-            <line
-              x1={CENTER_LEFT_BOUND}  y1={-10000} x2={CENTER_LEFT_BOUND}  y2={10000}
-              stroke="var(--lsc-border)" strokeWidth={1 / vpZoom} strokeDasharray={`${6 / vpZoom} ${6 / vpZoom}`}
-            />
-            <line
-              x1={CENTER_RIGHT_BOUND} y1={-10000} x2={CENTER_RIGHT_BOUND} y2={10000}
-              stroke="var(--lsc-border)" strokeWidth={1 / vpZoom} strokeDasharray={`${6 / vpZoom} ${6 / vpZoom}`}
-            />
-          </g>
-        </svg>
-      )}
-
-      {/* Reshape overlay — waypoint drag handles (connect mode, intermediate/advanced) */}
-      {toolMode === 'connect' && complexityLevel !== 'beginner' && (
         <svg
           style={{
             position: 'absolute', top: 0, left: 0,
@@ -857,10 +758,8 @@ export function SignalChain() {
         </svg>
       )}
 
-      <CanvasToolbar />
       <HelpPopover />
       {drawing.active && <ConnectingToast sourceLabel={wireSourceLabel} />}
-      {chainEmpty && !drawing.active && <ShortcutsCard />}
     </div>
   )
 }

@@ -14,3 +14,6 @@ export function useMediaQuery(query: string): boolean {
 
 /** Tablet layout: palette collapses to an icon rail, header drops the tagline. */
 export const TABLET_QUERY = '(max-width: 1024px)'
+
+/** Wide enough for every header button to show its text label (the longest is Bulgarian). */
+export const WIDE_HEADER_QUERY = '(min-width: 1200px)'

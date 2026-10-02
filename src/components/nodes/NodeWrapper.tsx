@@ -1,5 +1,5 @@
 import type { ReactNode, CSSProperties } from 'react'
-import { Power, X, Lock } from 'lucide-react'
+import { Power, X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
@@ -59,16 +59,12 @@ export function NodeWrapper({
   const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const removeNode       = useSignalStore((s) => s.removeNode)
-  const complexityLevel  = useSignalStore((s) => s.complexityLevel)
   const wireSource       = useSignalStore((s) => s.wireSource)
   const edges            = useSignalStore((s) => s.edges)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const { t, fmt }       = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
-  // master-bus is the fixed anchor in intermediate/advanced — it cannot be removed or moved
-  const isFixed    = typeKey === 'master-bus' && complexityLevel !== 'beginner'
-  const canRemove  = !isFixed
   const canBypass  = !NO_BYPASS_TYPES.has(typeKey)
   const hasHelp    = Boolean(t.theory[typeKey])
   const helpOpen   = activeTooltipId === nodeId
@@ -137,45 +133,41 @@ export function NodeWrapper({
       )}
 
       {/* Floating mini-toolbar — shown on hover / selection (CSS) */}
-      {(canBypass || canRemove) && (
+      <div
+        className="lsc-node-toolbar nodrag nopan"
+        style={{ position: 'absolute', left: 0, bottom: '100%', paddingBottom: 6 }}
+      >
         <div
-          className="lsc-node-toolbar nodrag nopan"
-          style={{ position: 'absolute', left: 0, bottom: '100%', paddingBottom: 6 }}
+          style={{
+            display: 'flex', gap: 2, padding: 3, borderRadius: 8,
+            background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
+            boxShadow: 'var(--lsc-shadow-popup)',
+          }}
         >
-          <div
-            style={{
-              display: 'flex', gap: 2, padding: 3, borderRadius: 8,
-              background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
-              boxShadow: 'var(--lsc-shadow-popup)',
-            }}
+          {canBypass && (
+            <button
+              title={t.nodeControls.bypassed}
+              onClick={() => toggleBypassNode(nodeId)}
+              style={{
+                ...toolbarBtn,
+                color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg)',
+                background: isBypassed ? 'var(--signal-hot-bg)' : undefined,
+              }}
+            >
+              <Power size={13} />
+              {t.nodeControls.bypass}
+            </button>
+          )}
+          <button
+            title={t.nodeControls.remove}
+            onClick={() => removeNode(nodeId)}
+            style={{ ...toolbarBtn, color: 'var(--signal-clipping)' }}
           >
-            {canBypass && (
-              <button
-                title={t.nodeControls.bypassed}
-                onClick={() => toggleBypassNode(nodeId)}
-                style={{
-                  ...toolbarBtn,
-                  color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-fg)',
-                  background: isBypassed ? 'var(--signal-hot-bg)' : undefined,
-                }}
-              >
-                <Power size={13} />
-                {t.nodeControls.bypass}
-              </button>
-            )}
-            {canRemove && (
-              <button
-                title={t.nodeControls.remove}
-                onClick={() => removeNode(nodeId)}
-                style={{ ...toolbarBtn, color: 'var(--signal-clipping)' }}
-              >
-                <X size={13} />
-                {t.nodeControls.removeShort}
-              </button>
-            )}
-          </div>
+            <X size={13} />
+            {t.nodeControls.removeShort}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Ports */}
       {inputs.map((port, i) => (
@@ -221,15 +213,6 @@ export function NodeWrapper({
           )}
         </span>
         <span style={{ flex: 1 }} />
-        {isFixed && (
-          <span
-            title={t.emptyState.fixedHint}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--lsc-fg-muted)', flexShrink: 0 }}
-          >
-            <Lock size={11} />
-            {t.emptyState.fixed}
-          </span>
-        )}
         {hasHelp && (
           <button
             className="nodrag nopan"

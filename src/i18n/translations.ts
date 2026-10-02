@@ -27,34 +27,14 @@ export interface Translations {
     switchBody: string
   }
   toolbar: {
-    move: string
-    connect: string
-    moveHint: string
-    connectHint: string
     snap: string
     snapHint: string
+    zoom: string
     zoomIn: string
     zoomOut: string
-    zoomReset: string
+    zoomFit: string
   }
   connecting: { from: string; hint: string; cancel: string; input: string }
-  emptyState: {
-    title: string
-    body: string
-    step: string
-    source: string
-    sourceHint: string
-    preamp: string
-    preampHint: string
-    output: string
-    outputHint: string
-    fixed: string
-    fixedHint: string
-    shortcuts: string
-    moveSelect: string
-    drawWire: string
-    cancel: string
-  }
   levels: {
     beginner:     { title: string; description: string }
     intermediate: { title: string; description: string }

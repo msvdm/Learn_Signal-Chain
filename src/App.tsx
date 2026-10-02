@@ -7,10 +7,10 @@ import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { ElementPalette } from './components/ElementPalette'
 import { ConfirmDialog } from './components/ConfirmDialog'
-import { RotateCcw, Radio, Sun, Moon, Globe, Check } from 'lucide-react'
+import { RotateCcw, Radio, Sun, Moon, Globe, Check, Grid3x3 } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
-import { useMediaQuery, TABLET_QUERY } from './hooks/useMediaQuery'
+import { useMediaQuery, TABLET_QUERY, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
 
 type PendingConfirm = { kind: 'reset' } | { kind: 'level'; level: ComplexityLevel } | null
 
@@ -32,8 +32,11 @@ function App() {
   const resetAll           = useSignalStore((s) => s.resetAll)
   const setLanguage        = useSignalStore((s) => s.setLanguage)
   const setTheme           = useSignalStore((s) => s.setTheme)
-  const { t, fmt }         = useTranslation()
+  const snapToGrid         = useSignalStore((s) => s.snapToGrid)
+  const setSnapToGrid      = useSignalStore((s) => s.setSnapToGrid)
+  const { t, fmt }       = useTranslation()
   const isTablet           = useMediaQuery(TABLET_QUERY)
+  const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
 
   const [showLanguages, setShowLanguages] = useState(false)
   const [pending, setPending]             = useState<PendingConfirm>(null)
@@ -141,8 +144,39 @@ function App() {
           })}
         </nav>
 
-        {/* Right: theme, language, reset */}
+        {/* Right: snap to grid, theme, language, reset */}
         <div className="flex items-center flex-shrink-0" style={{ gap: 6 }}>
+          <button
+            role="switch"
+            aria-checked={snapToGrid}
+            onClick={() => setSnapToGrid(!snapToGrid)}
+            title={t.toolbar.snapHint}
+            aria-label={t.toolbar.snap}
+            className="lsc-btn-outline"
+            style={{ ...headerBtn, gap: 8 }}
+          >
+            <Grid3x3 size={15} />
+            {/* Narrower screens: icon + switch only, so the header still fits */}
+            {isWideHeader && t.toolbar.snap}
+            <span
+              style={{
+                position: 'relative', width: 30, height: 18, borderRadius: 9999, flexShrink: 0,
+                background: snapToGrid ? 'var(--lsc-accent)' : 'var(--lsc-sunken)',
+                border: `1px solid ${snapToGrid ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                transition: 'background 0.15s',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute', top: 2, left: snapToGrid ? 14 : 2,
+                  width: 12, height: 12, borderRadius: 9999,
+                  background: snapToGrid ? '#fff' : 'var(--lsc-fg-muted)',
+                  transition: 'left 0.15s',
+                }}
+              />
+            </span>
+          </button>
+
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={t.app.theme.toggle}

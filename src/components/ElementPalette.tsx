@@ -74,8 +74,7 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
     'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
     'noise-gate', 'limiter', 'deesser',
     'switch', 'relay', 'pan', 'stereo-fader', 'balance',
-    'mono-bus', 'stereo-bus', 'audio-interface',
-    // master-bus is pre-placed and non-removable in intermediate — not shown in palette
+    'master-bus', 'mono-bus', 'stereo-bus', 'audio-interface',
   ],
   advanced: [
     'mic', 'line-in', 'instrument', 'di-box',
@@ -84,9 +83,8 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
     'noise-gate', 'limiter', 'deesser',
     'switch', 'potentiometer', 'relay', 'pan', 'stereo-fader', 'balance',
     'amp', 'graphic-eq',
-    'mono-bus', 'stereo-bus', 'audio-interface',
+    'master-bus', 'mono-bus', 'stereo-bus', 'audio-interface',
     'adc', 'dac',
-    // master-bus is pre-placed and non-removable in advanced — not shown in palette
   ],
 }
 

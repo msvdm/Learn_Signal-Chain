@@ -27,19 +27,25 @@ The app is a **pure client-side React SPA** — no backend, no API calls. All si
 
 ### Interaction model (SmartDraw-style)
 
-The canvas works like a drawing app:
-1. **Left palette** (`ElementPalette`) — drag any node type onto the blank canvas to place it
-2. **Select mode** (default, key `S`) — drag nodes to reposition them
-3. **Connect mode** (key `C` or `L`, or the "Connect Tool" button at the top of the left palette) — uses a **click-once pen-tool interaction, never drag**:
-   - Hover over a node → source handles (right dots, purple) and target handles (left dots, grey) grow and become hittable
-   - **Click once** on a source handle → wire begins; mouse is immediately released
-   - **Move freely** → a dashed orthogonal (right-angle-only) preview routes live to the cursor
+The canvas works like a drawing app and **follows the mouse** — there is no mode toolbar and no mode keys:
+1. **Left palette** (`ElementPalette`) — search, category tabs, 2-column tiles (an icon rail at tablet width ≤ 1024px). Drag any tile onto the canvas; the node lands where it is dropped (cursor on its port line), nudged only to avoid overlapping another node. Dropping a node with an input and an output onto an existing wire inserts it mid-chain and pushes everything downstream to the right.
+2. **Select mode** (`toolMode: 'select'`, the default) — drag nodes, pan the canvas, click a card to select it.
+3. **Connect mode** (`toolMode: 'connect'`) — entered automatically when the cursor is over a port; it switches back to Select ~200ms after the cursor leaves all ports, never while a wire is being drawn and never while a mouse button is held. Wiring uses a **click-once pen-tool interaction, never drag**:
+   - **Click once** on an output port → wire begins; a "Connecting from …" toast appears and valid free inputs pulse
+   - **Move freely** → a dashed orthogonal (right-angle-only, rounded corners) preview routes live to the cursor
    - **Click in empty space** → commits a corner waypoint, locking that segment; routing continues from the waypoint
-   - **Click a target handle** → completes the connection (a snap ring appears on hover to confirm the landing point)
-   - **Right-click or Escape** → cancels the wire in progress; Escape when idle returns to Select mode
-4. **Delete a connection** — right-click any edge → "Delete connection"
+   - **Click a highlighted input** → completes the connection (a snap ring appears on hover to confirm the landing point)
+   - **Right-click or Esc** → cancels the wire in progress
+4. **Delete a connection** — hover a connected port → a small × appears next to it (whenever no wire is being drawn) → click it.
+5. **Reshape a wire** (Intermediate / Advanced) — wires with bends show drag handles on their corners and segment midpoints, in either mode.
+6. **Esc** cancels a wire in progress, otherwise closes the help popover.
+7. **Zoom** — mouse wheel / trackpad, or the React Flow `<Controls>` (zoom in / out / fit) at the bottom-left of the canvas.
 
-The canvas starts blank. There is no preset layout. Levels control which node types appear in the palette, not the graph structure.
+Every level starts from a **blank canvas** at 100% zoom (also after Reset, a level change or removing the last node). There is no preset layout, no fixed Master Bus and no position restrictions. Levels control which node types appear in the palette, not the graph structure.
+
+### Header
+
+Brand · level stepper (Beginner / Intermediate / Advanced, with an in-app `ConfirmDialog` before clearing the canvas) · **Snap to grid** switch (on = snap to `GRID` + dotted background; off = free placement, no dots; text label hidden below 1200px so the header fits) · Light / Dark · language menu · Reset.
 
 ### Data flow (read this first)
 
@@ -57,31 +63,40 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 
 | File | What it owns |
 |---|---|
-| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, active tooltip, language, all graph mutations |
-| `src/hooks/useSignalChain.ts` | `useGraphSignal()` — pure BFS signal math over the graph. No side effects. |
+| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme` and `snapToGrid` (both persisted), `toolMode`, `selectedNodeId`, `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, all graph mutations |
+| `src/hooks/useSignalChain.ts` | `useGraphSignal()` — pure BFS signal math over the graph, shared by all callers (computed once). No side effects. |
 | `src/hooks/useGainStaging.ts` | `getHealthStyle(health)` — maps `SignalHealth` → CSS color, label, background. No logic. |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup). Returns `{ reshaping, setReshaping }`. |
-| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims`, `resolveOverlap`, `snapOutOfCenter`, `pushDownstream`, `pushUpstream`, `shiftNodesLeft`, `shiftNodesRight`, `enforceGap`, `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `BUS_TYPES`, `INLINE_TYPE_KEYS`, `NODE_DEFAULT_W`, `HIT_THRESHOLD`, and the `Pt` type. |
+| `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
+| `src/hooks/useMediaQuery.ts` | `useMediaQuery()`, `TABLET_QUERY` (≤ 1024px: palette icon rail, no tagline), `WIDE_HEADER_QUERY` (≥ 1200px: all header labels fit). |
+| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews), `resolveOverlap`, `pushDownstream`, `enforceGap`, `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `HIT_THRESHOLD` and the `Pt` type. |
+| `src/utils/connectionRules.ts` | `nodeAcceptsWire()` / `portIsFree()` — which inputs may take a wire (one wire per input). |
+| `src/utils/wirePath.ts` | `buildWirePath()` — orthogonal route with rounded corners, shared by the live preview and committed edges. |
+| `src/utils/wireValidation.ts` | `wirePassesThroughNode()` — orange warning when a wire crosses another card. |
+| `src/utils/chainOrder.ts` | `chainOrder()` — nodes in signal-flow order, for the help popover's Previous / Next. |
 | `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params. |
-| `src/data/zoneConstants.ts` | `CENTER_LEFT_BOUND`, `CENTER_RIGHT_BOUND`, `MIN_NODE_GAP`, `MASTER_BUS_FLOW_POS`, `getZone()` — shared between `layoutHelpers.ts` and `SignalChain.tsx`. |
-| `src/data/levels.ts` | `buildDefaultGraph(level)` — always returns empty graph (blank canvas). `BusType` type lives here. |
-| `src/i18n/translations.ts` | All UI text and tooltip educational content (`theory` key). Edit copy here only. |
-| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, drag-drop handlers, `onNodeDrag/Stop`, edge color computation, and all SVG overlays (zone dividers, reshape handles, wire preview, ghost preview). Imports layout math from `layoutHelpers.ts` and reshape state from `useEdgeReshape`. |
-| `src/components/ElementPalette.tsx` | Left sidebar with draggable node type items and the Connect Tool toggle button at the top. Level-gated visibility via `PALETTE_BY_LEVEL`. Accepts `toolMode`/`onToolModeChange` props from `App.tsx`. |
-| `src/components/ToolBar.tsx` | **Unused** — the Connect Tool was moved into `ElementPalette`. File kept but not rendered. |
-| `src/components/nodes/NodeWrapper.tsx` | Card-style shell for complex nodes (208px wide): handles, bypass/remove/help buttons, tooltip. |
-| `src/components/nodes/InlineNode.tsx` | Compact shell for simple nodes (100px wide): health-colored border, bypass/remove/help buttons. |
+| `src/data/levels.ts` | `buildDefaultGraph()` — always returns an empty graph (blank canvas). `BusType` type lives here. |
+| `src/i18n/locales/en.json`, `bg.json` | All UI text and help-popover educational content (`theory` key). Edit copy here; add every new key to both files. |
+| `src/i18n/translations.ts` | The `Translations` type (add new keys here too) and `fmt()` for `{placeholder}` strings. |
+| `src/App.tsx` | Header (see above) and the `ConfirmDialog` for Reset / level change. |
+| `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color + dB badge data, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
+| `src/components/ElementPalette.tsx` | Left sidebar: search, tabs, draggable tiles. Level-gated visibility via `PALETTE_BY_LEVEL`. |
+| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints plus the dB badge. |
+| `src/components/Tooltip.tsx` | `HelpPopover` — anchored under the node whose "?" was clicked, Previous / Next in signal order. |
+| `src/components/ConnectingToast.tsx` | Bottom-centre "Connecting from …" status while a wire is drawn. |
+| `src/components/ConfirmDialog.tsx` | In-app `window.confirm` replacement, rendered with `createPortal` to `document.body`. |
+| `src/components/nodes/NodeWrapper.tsx` | The single card shell every node uses (see below). |
+| `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, hover × to remove its wires. `BusInputPorts` for dynamic bus inputs. |
+| `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
 
-### Node visual groups
+### Node card shell
 
-**Card nodes** (`NodeWrapper`) — complex modules with multiple parameters and signal meters:
-`gain`, `amp`, `eq`, `comp`, `hpf`, `graphic-eq`, `master-bus`, `bus`
-
-**Compact inline nodes** (`InlineNode`) — simple control points, icon-first, no card chrome:
-`mic`, `line-in`, `instrument`, `fader`, `switch`, `potentiometer`, `speaker`
-
-Compact nodes show signal health via border color instead of SignalMeter bars. Fader/switch/potentiometer have no bypass button — the control itself is the state.
+Every node uses `NodeWrapper`:
+- **Width follows content** (no fixed widths; `minWidth: 160`), text wraps to fit.
+- A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (28px) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (24px) apart.
+- A **mini-toolbar** above the card (on hover / selection) holds **Bypass** and **Remove**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no Bypass — the control itself is the state. Every node, including Master Bus, can be removed.
+- Controls and In/Out meters stay on the cards; there is **no status chip**.
 
 ### Level system
 
@@ -91,11 +106,11 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 
 | Level | Visible palette items |
 |---|---|
-| Beginner | mic, line-in, instrument, speaker, gain, fader |
-| Intermediate | + hpf, eq, comp, switch |
-| Advanced | + potentiometer, amp, graphic-eq, master-bus, bus |
+| Beginner | mic, line-in, instrument, di-box, active-speaker, gain, fader |
+| Intermediate | + hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay, pan, stereo-fader, balance, master-bus, mono-bus, stereo-bus, audio-interface |
+| Advanced | + speaker, potentiometer, amp, graphic-eq, adc, dac |
 
-Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }`.
+`PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
 
 ### Signal health zones
 
@@ -123,22 +138,26 @@ The math is intentionally simplified. It teaches the concept correctly without I
 - `nodeTypes` must be defined **outside** the component to avoid re-registration on every render.
 - All interactive elements inside nodes (sliders, buttons) carry `nodrag nopan` CSS classes so the canvas does not intercept their pointer events.
 - Edges are colored from health values computed by `useGraphSignal`, not stored in React Flow state.
-- The edge delete context menu uses `createPortal` to `document.body` — React Flow's CSS `transform` on the viewport breaks `position: fixed` inside its DOM tree.
-- `nodesDraggable` and `elementsSelectable` are toggled by `toolMode`. `nodesConnectable` is always `false` — connections are handled entirely by the custom click system, not React Flow's drag mechanism.
+- **`nodeOrigin` is `[0, 0]`**: a node's `position` is its top-left corner. All layout helpers assume this.
+- Anything that must escape React Flow's transformed viewport (e.g. `ConfirmDialog`) uses `createPortal` to `document.body` — the viewport's CSS `transform` breaks `position: fixed` inside its DOM tree. Canvas overlays that must not start a wire or a waypoint (the help popover) carry the `lsc-overlay` class.
+- `nodesDraggable`, `elementsSelectable` and `panOnDrag` follow `toolMode`. `nodesConnectable` is always `false` — connections are handled entirely by the custom click system (capture-phase `mousedown` on `document`), not React Flow's drag mechanism.
 - **`Node` name collision**: ReactFlow exports `Node`; the DOM also has `Node`. Import ReactFlow's as `type Node as FlowNode` to avoid conflicts.
-- `MasterBusNode` renders N+1 input handles (one per connected edge, plus one empty slot) and is reused for the `bus` node type — it reads `typeKey` from `data` to get the correct label and registry entry.
-- **Handle pointer-events**: React Flow sets `pointer-events: none` on handles by default. The `.lsc-connect-mode` CSS class (added to the canvas wrapper) overrides this to `all`, making handles hittable by `document.elementsFromPoint`. Handle type (source vs target) is detected via `classList.contains('source'/'target')` — there is no `data-handletype` attribute.
-- The wire preview SVG is rendered as an absolutely-positioned sibling of the ReactFlow div. It uses `useViewport()` to apply the same `translate/scale` transform as the flow canvas, so the preview stays aligned during pan and zoom.
+- `MasterBusNode` renders N+1 input handles (one per connected edge, plus one empty slot) and is reused for `stereo-bus` — it reads `typeKey` from `data` to get the correct label and registry entry.
+- **Handle hit-testing**: custom `<Handle>`s default to `isConnectable`, so React Flow gives them the `connectionindicator` class and `pointer-events: all` even in Select mode — that is what lets the mouse-follow switch find them with `document.elementsFromPoint`. `.lsc-connect-mode` (on the canvas wrapper) also forces it. Handle type (source vs target) is detected via `classList.contains('source'/'target')` — there is no `data-handletype` attribute.
+- Display nodes are rebuilt from the store on every change without `measured`, so React Flow briefly hides each card (`visibility: hidden`) until its ResizeObserver re-measures it. In a visible tab this happens before paint; in a background / hidden tab (e.g. an automated browser pane) cards stay hidden and unclickable until a frame renders.
+- The wire preview, reshape-handle and ghost SVGs are absolutely-positioned siblings of the ReactFlow div. They use `useViewport()` to apply the same `translate/scale` transform as the flow canvas, so they stay aligned during pan and zoom.
+- Zoom control labels are translated through ReactFlow's `ariaLabelConfig` prop (`toolbar.zoom*` keys).
 
 ### Adding a new node
 
 1. Add the type definition to `NODE_REGISTRY` in `src/data/nodeRegistry.ts` (ports, category, defaultParams)
 2. Create `src/components/nodes/YourNode.tsx`:
-   - Complex node with multiple params → use `NodeWrapper`
-   - Simple single-purpose node → use `InlineNode`
+   - Node with several params / meters → use `NodeWrapper` directly
+   - Simple single-control node → use `InlineNode` (same shell, centred body)
+   - Bypass makes no sense for it → add its type to `NO_BYPASS_TYPES` in `NodeWrapper.tsx`
 3. Register it in the `nodeTypes` map in `src/components/SignalChain.tsx`
 4. Add a computation case in `computeGraphNode()` in `src/hooks/useSignalChain.ts`
-5. Add educational text in `src/i18n/translations.ts` under the `theory` key
+5. Add its palette name (`palette.items`) and educational text (`theory`) to **both** `src/i18n/locales/en.json` and `bg.json`
 6. Add it to `ALL_ITEMS` in `src/components/ElementPalette.tsx` and include its `typeKey` in the appropriate `PALETTE_BY_LEVEL` entries
 
 ### Adding a new level

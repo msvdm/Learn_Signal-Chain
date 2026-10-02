@@ -266,7 +266,7 @@ kbd {
   transition: transform 0.15s ease-out, background 0.15s !important;
 }
 
-/* Delete button that appears on port hover in Move mode */
+/* Delete button that appears on a connected port's hover (not while drawing a wire) */
 .lsc-handle-delete {
   position: absolute;
   width: 18px;
@@ -293,6 +293,31 @@ kbd {
 
 .react-flow__panel {
   color: var(--lsc-fg);
+}
+
+/* Zoom controls (bottom-left) — themed to match the header */
+.react-flow__controls {
+  --xy-controls-button-background-color:       var(--lsc-header);
+  --xy-controls-button-background-color-hover: var(--lsc-sunken);
+  --xy-controls-button-color:                  var(--lsc-fg-muted);
+  --xy-controls-button-color-hover:            var(--lsc-fg);
+  --xy-controls-button-border-color:           var(--lsc-border);
+  --xy-controls-box-shadow:                    var(--lsc-shadow-popup);
+  border: 1px solid var(--lsc-border);
+  border-radius: var(--lsc-radius-md);
+  overflow: hidden;
+}
+/* Doubled class: React Flow's stylesheet loads after this one */
+.react-flow__controls .react-flow__controls-button {
+  width: 32px;
+  height: 32px;
+}
+.react-flow__controls .react-flow__controls-button svg {
+  max-width: 14px;
+  max-height: 14px;
+}
+.react-flow__controls .react-flow__controls-button:last-child {
+  border-bottom: none;
 }
 
 .react-flow__attribution {

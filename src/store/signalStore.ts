@@ -93,7 +93,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   toolMode: 'select',
   wireSource: null,
 
-  ...buildDefaultGraph(getInitialComplexityLevel()),
+  ...buildDefaultGraph(),
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
@@ -119,7 +119,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     localStorage.setItem('lsc-complexity-level', level)
     set({
       complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
-      selectedNodeId: null, toolMode: 'select', wireSource: null, ...buildDefaultGraph(level),
+      selectedNodeId: null, toolMode: 'select', wireSource: null, ...buildDefaultGraph(),
     })
   },
 
@@ -135,7 +135,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       complexityLevel: s.complexityLevel,
       toolMode: 'select',
       wireSource: null,
-      ...buildDefaultGraph(s.complexityLevel),
+      ...buildDefaultGraph(),
     })),
 
   // ── Graph mutations ───────────────────────────────────────────────────────
@@ -145,9 +145,6 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeNode: (nodeId) =>
     set((s) => {
-      const target = s.nodes.find((n) => n.id === nodeId)
-      if (target?.typeKey === 'master-bus' && s.complexityLevel !== 'beginner') return {}
-
       const inEdges  = s.edges.filter((e) => e.target === nodeId)
       const outEdges = s.edges.filter((e) => e.source === nodeId)
       const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
