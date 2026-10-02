@@ -17,10 +17,6 @@ bun run preview  # Preview the production build locally
 
 No test suite exists yet. Manual browser testing is the current approach.
 
-## Roadmap
-
-Planned features and their completion status are tracked in [TODO.md](TODO.md). Check it before starting any new feature work to understand what has already been implemented and what comes next.
-
 ## Architecture
 
 The app is a **pure client-side React SPA** — no backend, no API calls. All signal processing is arithmetic on numbers in the browser.
