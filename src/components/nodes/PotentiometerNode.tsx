@@ -32,7 +32,6 @@ export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiomete
       icon={<Gauge size={20} />}
       label={data.label ?? t.palette.items['potentiometer']}
       accentColor={data.color}
-      width={200}
     >
       <KnobControl
         value={position}
@@ -43,7 +42,7 @@ export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiomete
         formatValue={formatDb}
         onChange={(v) => updateNodeParams(id, { position: v })}
         color="var(--lsc-accent)"
-        size={40}
+        size={52}
       />
     </InlineNode>
   )

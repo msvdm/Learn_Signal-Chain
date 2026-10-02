@@ -20,9 +20,9 @@ interface GraphLimiterData extends Record<string, unknown> {
 // The abrupt 90° corner at the ceiling is the visual signature of a limiter
 // vs. a compressor (which has a shallower slope, not a flat line).
 
-const GW = 160
+const GW = 196   // SVG canvas width (px — drawn 1:1)
 const GH = 120
-const GP = 12
+const GP = 14    // padding inside SVG
 
 const DB_IN_MIN  = -60
 const DB_IN_MAX  = 0
@@ -77,11 +77,11 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
       style={{
         background: 'var(--lsc-sunken)',
         border: '1px solid var(--lsc-border)',
-        borderRadius: 4,
+        borderRadius: 8,
         overflow: 'hidden',
       }}
     >
-      <svg viewBox={`0 0 ${GW} ${GH}`} width="100%" height={GH} style={{ display: 'block' }}>
+      <svg viewBox={`0 0 ${GW} ${GH}`} width={GW} height={GH} style={{ display: 'block' }}>
         <rect x={0} y={0} width={GW} height={GH} fill="var(--lsc-sunken)" />
 
         {/* Grid */}
@@ -99,24 +99,24 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
         ))}
 
         {/* Axis labels */}
-        <text x={GW - GP + 2} y={outputY(0) + 3} fontSize="7" fill="var(--lsc-text)" opacity="0.5">0</text>
-        <text x={GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="middle">−60</text>
-        <text x={GW - GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="end">0 dB in</text>
+        <text x={GW - GP + 2} y={outputY(0) + 3} fontSize="11" fill="var(--lsc-fg-muted)">0</text>
+        <text x={GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="middle">−60</text>
+        <text x={GW - GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="end">0 dB in</text>
 
         {/* Ceiling vertical marker */}
         <line
           x1={threshX} y1={GP} x2={threshX} y2={GH - GP}
-          stroke="rgba(216,149,72,0.55)" strokeWidth={1.5} strokeDasharray="3 2"
+          stroke="var(--signal-hot)" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="3 2"
         />
 
         {/* Flat ceiling horizontal marker (the brickwall) */}
         <line
           x1={threshX} y1={outputY(ceiling + makeupGain)} x2={GW - GP} y2={outputY(ceiling + makeupGain)}
-          stroke="rgba(216,149,72,0.3)" strokeWidth={1} strokeDasharray="2 3"
+          stroke="var(--signal-hot)" strokeOpacity={0.35} strokeWidth={1} strokeDasharray="2 3"
         />
 
         {/* 1:1 reference (grey dashed) */}
-        <path d={refPts} fill="none" stroke="var(--lsc-text)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
+        <path d={refPts} fill="none" stroke="var(--lsc-fg)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
 
         {/* Brickwall curve */}
         <path d={curvePath} fill="none" stroke="var(--lsc-accent)" strokeWidth={2} strokeLinecap="round" />
@@ -124,8 +124,8 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
         {/* LIMITING badge */}
         <text
           x={GW - GP} y={GP + 8}
-          fontSize="7" fontWeight="700"
-          fill={isLimiting ? 'var(--signal-hot)' : 'var(--lsc-text)'}
+          fontSize="11" fontWeight="700"
+          fill={isLimiting ? 'var(--signal-hot)' : 'var(--lsc-fg)'}
           textAnchor="end"
           opacity={isLimiting ? 1 : 0.4}
           style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}
@@ -137,9 +137,9 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
         {hasSignal && (
           <>
             <line x1={opX} y1={GP} x2={opX} y2={opY - 5}
-              stroke="rgba(91,141,232,0.5)" strokeWidth={1} />
+              stroke="var(--signal-too-quiet)" strokeOpacity={0.5} strokeWidth={1} />
             <circle cx={opX} cy={opY} r={4}
-              fill="white"
+              fill="var(--lsc-node-bg)"
               stroke={isLimiting ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
               strokeWidth="1.8"
             />
@@ -170,9 +170,8 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="limiter"
-      icon={<ShieldAlert size={14} />}
+      icon={<ShieldAlert size={16} />}
       label={data.label ?? t.nodes.limiter?.label ?? 'Limiter'}
-      style={{ width: 220 }}
     >
       <div className="space-y-3">
         <SignalMeter db={inputLevel} health={getHealth(inputLevel)} label={t.meters.input} />
@@ -212,15 +211,14 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
 
         {/* GR meter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', opacity: 0.6, whiteSpace: 'nowrap' }}>
-            GR
+          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
+            {t.nodes.comp.turningDown}
           </span>
           <div
             style={{
-              flex: 1, height: 5,
+              flex: 1, height: 6, minWidth: 40,
               background: 'var(--lsc-sunken)',
-              borderRadius: 3,
-              border: '1px solid var(--lsc-border)',
+              borderRadius: 9999,
               overflow: 'hidden',
             }}
           >
@@ -234,7 +232,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
               }}
             />
           </div>
-          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 28, textAlign: 'right' }}>
+          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)', minWidth: 28, textAlign: 'right' }}>
             {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
           </span>
         </div>

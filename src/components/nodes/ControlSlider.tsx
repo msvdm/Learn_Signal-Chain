@@ -22,9 +22,9 @@ export function ControlSlider({
   const display = formatValue ? formatValue(value) : String(value)
   return (
     <div className={`nodrag nopan space-y-1 ${className}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>{label}</span>
-        <span className="text-[var(--node-text-sm)] font-mono font-semibold" style={{ color: 'var(--lsc-text)', minWidth: '4em', textAlign: 'right', whiteSpace: 'nowrap' }}>
+      <div className="flex items-center justify-between" style={{ gap: 8 }}>
+        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+        <span className="text-[var(--node-text-sm)] font-mono font-bold" style={{ color: 'var(--lsc-fg)', minWidth: '4em', textAlign: 'right', whiteSpace: 'nowrap' }}>
           {display}
         </span>
       </div>
@@ -36,7 +36,7 @@ export function ControlSlider({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
-        style={{ accentColor: 'var(--signal-good)', background: 'var(--lsc-track)' }}
+        style={{ accentColor: 'var(--lsc-accent)', background: 'var(--lsc-track)' }}
       />
     </div>
   )

@@ -122,8 +122,8 @@ export function EQInlineGraph({ bands, hpfHz = 20, onBandChange, height = 80 }: 
                 y={cy + 1}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="white"
-                fontSize="8"
+                fill="#fff"
+                fontSize="9"
                 fontWeight="700"
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >

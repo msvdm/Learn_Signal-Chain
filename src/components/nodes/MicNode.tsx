@@ -48,7 +48,13 @@ export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
       label={data.label ?? t.palette.items[resolvedTypeKey] ?? t.nodes.mic.label}
       accentColor={data.color}
       value={`${levelDb} dBu`}
-      width={200}
-    />
+      align="start"
+    >
+      {resolvedTypeKey === 'mic' && (
+        <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.35, color: 'var(--lsc-fg-muted)' }}>
+          {t.nodes.mic.hint}
+        </span>
+      )}
+    </InlineNode>
   )
 }

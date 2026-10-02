@@ -6,12 +6,12 @@ function nodeToRect(
   width: number,
   height: number,
 ): Rect {
-  // nodeOrigin=[0, 0.5] — position.x is left edge, position.y is vertical centre
+  // nodeOrigin=[0, 0] — position is the top-left corner
   return {
     left:   position.x,
     right:  position.x + width,
-    top:    position.y - height / 2,
-    bottom: position.y + height / 2,
+    top:    position.y,
+    bottom: position.y + height,
   }
 }
 
@@ -70,7 +70,7 @@ export function wirePassesThroughNode(
     const segs = elbowSegments(points[i], points[i + 1], i === 0)
     for (const [a, b] of segs) {
       for (const n of candidates) {
-        const w = n.width ?? 208
+        const w = n.width ?? 160
         const h = n.height ?? 120
         const rect = nodeToRect(n.position, w, h)
         if (segmentIntersectsRect(a, b, rect)) return true

@@ -1,99 +1,220 @@
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
+import { useInternalNode, useReactFlow, useStore, useViewport } from '@xyflow/react'
+import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import { X } from 'lucide-react'
+import type { Translations } from '../i18n/translations'
+import { chainOrder } from '../utils/chainOrder'
 
-export function DrawerHelpContent() {
-  const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
-  const activeTooltipTypeKey = useSignalStore((s) => s.activeTooltipTypeKey)
-  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
-  const { t } = useTranslation()
+const WIDTH  = 380
+const ARROW  = 12
+const MARGIN = 8
+const TOOLBAR_CLEARANCE = 72  // keep the anchored node below the floating toolbar
 
-  if (activeTooltipId && activeTooltipTypeKey) {
-    const entry = t.theory[activeTooltipTypeKey]
-    const nodeLabel = t.nodes[activeTooltipTypeKey as keyof typeof t.nodes]?.label ?? activeTooltipTypeKey
+/** Display name for a node type in the help popover. */
+function helpTitle(t: Translations, typeKey: string): string {
+  const fromNodes = (t.nodes as Record<string, { label?: string } | undefined>)[typeKey]?.label
+  return fromNodes ?? t.palette.items[typeKey] ?? typeKey
+}
 
-    if (entry) {
-      return (
-        <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <h3 style={{ fontSize: 'var(--node-text-md)', fontWeight: 700, color: 'var(--lsc-text)', lineHeight: 1.2 }}>
-              {nodeLabel}
-            </h3>
-            <button
-              onClick={() => setActiveTooltip(null, null)}
-              className="flex-shrink-0 transition-colors nodrag nopan"
-              style={{ color: 'var(--lsc-text)', cursor: 'pointer', background: 'none', border: 'none', padding: 2 }}
-              title="Close"
-            >
-              <X size={14} />
-            </button>
-          </div>
+/**
+ * Help popover anchored under the node whose "?" was clicked.
+ * Previous / Next walk the chain in signal-flow order.
+ */
+export function HelpPopover() {
+  const activeId   = useSignalStore((s) => s.activeTooltipId)
+  const typeKey    = useSignalStore((s) => s.activeTooltipTypeKey)
+  const nodes      = useSignalStore((s) => s.nodes)
+  const edges      = useSignalStore((s) => s.edges)
+  const setActive  = useSignalStore((s) => s.setActiveTooltip)
+  const setSelected = useSignalStore((s) => s.setSelectedNode)
+  const { t, fmt } = useTranslation()
+  const { setViewport, getViewport } = useReactFlow()
+  const { x: vx, y: vy, zoom } = useViewport()
+  const paneW = useStore((s) => s.width)
+  const paneH = useStore((s) => s.height)
+  const anchor = useInternalNode(activeId ?? '')
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 'var(--node-text-sm)', color: 'var(--lsc-text)' }}>
-            <div>
-              <span className="lsc-overline">{t.tooltip.whatIsThis}</span>
-              <p style={{ marginTop: 2, lineHeight: 1.55, fontSize: 'var(--node-text-xs)' }}>{entry.what}</p>
-            </div>
-            <div>
-              <span className="lsc-overline">{t.tooltip.whyIsItHere}</span>
-              <p style={{ marginTop: 2, lineHeight: 1.55, fontSize: 'var(--node-text-xs)' }}>{entry.why}</p>
-            </div>
-            <div
-              style={{
-                borderRadius: 'var(--lsc-radius-md)',
-                background: 'var(--lsc-tip-bg)',
-                border: '1px solid var(--lsc-tip-bd)',
-                padding: '8px 10px',
-              }}
-            >
-              <span style={{ fontSize: 'var(--node-text-sm)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--lsc-tip)' }}>
-                {t.tooltip.proTip}
-              </span>
-              <p style={{ marginTop: 3, lineHeight: 1.55, fontSize: 'var(--node-text-xs)', color: 'var(--lsc-tip-fg)' }}>
-                {entry.tip}
-              </p>
-            </div>
-          </div>
-        </div>
-      )
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+  const hasAnchor = Boolean(anchor)
+  // Re-measure when the content changes (another stage, another language)
+  useLayoutEffect(() => {
+    // Natural height (before any max-height clamp) + the 1px border top and bottom
+    if (scrollRef.current) setHeight(scrollRef.current.scrollHeight + 2)
+  }, [activeId, typeKey, t, hasAnchor])
+
+  // Bring the stage and its popover into view: once per opened stage, so it never
+  // fights the learner's own panning afterwards.
+  useEffect(() => {
+    if (!anchor || height === 0) return
+    const vp    = getViewport()
+    const w     = (anchor.measured.width ?? 160) * vp.zoom
+    const h     = (anchor.measured.height ?? 120) * vp.zoom
+    const left  = anchor.internals.positionAbsolute.x * vp.zoom + vp.x
+    let   top   = anchor.internals.positionAbsolute.y * vp.zoom + vp.y
+
+    let dx = 0
+    if (left < MARGIN || left + w > paneW - MARGIN) dx = paneW / 2 - (left + w / 2)
+
+    let dy = 0
+    if (top < TOOLBAR_CLEARANCE || top > paneH - MARGIN) dy = TOOLBAR_CLEARANCE - top
+    top += dy
+    const fitsBelow = top + h + ARROW + height <= paneH - MARGIN
+    const fitsAbove = top - ARROW - height >= MARGIN
+    if (!fitsBelow && !fitsAbove) {
+      dy -= Math.max(0, Math.min(top + h + ARROW + height - (paneH - MARGIN), top - TOOLBAR_CLEARANCE))
     }
+
+    if (dx !== 0 || dy !== 0) setViewport({ ...vp, x: vp.x + dx, y: vp.y + dy }, { duration: 250 })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, height])
+
+  // Stages that have help text, in the order the signal flows through them
+  const order = useMemo(
+    () => chainOrder(nodes, edges).filter((n) => Boolean(t.theory[n.typeKey])),
+    [nodes, edges, t],
+  )
+
+  const entry = typeKey ? t.theory[typeKey] : undefined
+  if (!activeId || !typeKey || !entry || !anchor) return null
+
+  const idx  = order.findIndex((n) => n.id === activeId)
+  const prev = idx > 0 ? order[idx - 1] : undefined
+  const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : undefined
+
+  // Anchor geometry in canvas (screen) pixels
+  const nodeW    = (anchor.measured.width ?? 160) * zoom
+  const nodeH    = (anchor.measured.height ?? 120) * zoom
+  const nodeLeft = anchor.internals.positionAbsolute.x * zoom + vx
+  const nodeTop  = anchor.internals.positionAbsolute.y * zoom + vy
+  const centerX  = nodeLeft + nodeW / 2
+
+  const width = Math.min(WIDTH, paneW - MARGIN * 2)
+  const left  = Math.max(MARGIN, Math.min(paneW - width - MARGIN, centerX - width / 2))
+  const below = nodeTop + nodeH + ARROW
+  // Flip above the node when there is no room underneath
+  const placeAbove = height > 0 && below + height > paneH - MARGIN && nodeTop - ARROW - height > MARGIN
+  const top = placeAbove ? nodeTop - ARROW - height : below
+  // On short screens the popover scrolls inside instead of running off the canvas
+  const maxHeight = placeAbove ? undefined : Math.max(180, paneH - MARGIN - below)
+  const arrowLeft = Math.max(16, Math.min(width - 28, centerX - left - 6))
+
+  function goTo(id: string, key: string) {
+    setActive(id, key)
+    setSelected(id)
   }
 
-  const tips = [t.drawer.tip1, t.drawer.tip2, t.drawer.tip3, t.drawer.tip4, t.drawer.tip5]
+  function close() {
+    setActive(null, null)
+  }
 
   return (
-    <div style={{ padding: '10px 16px 12px', height: '100%', overflowY: 'auto' }}>
-      <p style={{
-        fontSize: 'var(--node-text-sm)',
-        fontWeight: 700,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'var(--lsc-text)',
-        marginBottom: 8,
-        opacity: 0.5,
-      }}>
-        {t.drawer.defaultTitle}
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-        {tips.map((tip, i) => (
-          <div
-            key={i}
+    <div
+      className="lsc-overlay nodrag nopan nowheel"
+      role="dialog"
+      aria-labelledby="lsc-help-title"
+      style={{
+        position: 'absolute', left, top, width, zIndex: 130,
+        borderRadius: 12, background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
+        boxShadow: 'var(--lsc-shadow-popup)', color: 'var(--lsc-fg)',
+        visibility: height > 0 ? 'visible' : 'hidden',
+      }}
+    >
+      {/* Arrow */}
+      <span
+        style={{
+          position: 'absolute', left: arrowLeft, width: 12, height: 12,
+          background: 'var(--lsc-header)', transform: 'rotate(45deg)',
+          ...(placeAbove
+            ? { bottom: -7, borderRight: '1px solid var(--lsc-border)', borderBottom: '1px solid var(--lsc-border)' }
+            : { top: -7, borderLeft: '1px solid var(--lsc-border)', borderTop: '1px solid var(--lsc-border)' }),
+        }}
+      />
+
+      <div ref={scrollRef} style={{ maxHeight, overflowY: 'auto', borderRadius: 12 }}>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 14px 10px', borderBottom: '1px solid var(--lsc-border-soft)',
+          }}
+        >
+          <h3 id="lsc-help-title" style={{ flex: 1, margin: 0, fontSize: 15, fontWeight: 700 }}>
+            {helpTitle(t, typeKey)}
+          </h3>
+          {idx >= 0 && (
+            <span style={{ fontSize: 12, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
+              {fmt(t.tooltip.stepOf, { n: String(idx + 1), total: String(order.length) })}
+            </span>
+          )}
+          <button
+            onClick={close}
+            title={t.tooltip.close}
+            aria-label={t.tooltip.close}
             style={{
-              background: 'var(--lsc-sunken)',
-              border: '1px solid var(--lsc-border)',
-              borderRadius: 'var(--lsc-radius-md)',
-              padding: '8px 10px',
+              display: 'flex', padding: 2, border: 'none', background: 'transparent',
+              color: 'var(--lsc-fg-muted)', cursor: 'pointer', borderRadius: 4,
             }}
           >
-            <p style={{ fontWeight: 600, fontSize: 'var(--node-text-sm)', color: 'var(--lsc-text)', marginBottom: 3 }}>
-              {tip.title}
-            </p>
-            <p style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', lineHeight: 1.5, opacity: 0.75 }}>
-              {tip.body}
-            </p>
-          </div>
-        ))}
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <section>
+            <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whatIsThis}</h4>
+            <p style={paragraph}>{entry.what}</p>
+          </section>
+          <section>
+            <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whyIsItHere}</h4>
+            <p style={paragraph}>{entry.why}</p>
+          </section>
+          <section
+            style={{
+              borderRadius: 12, background: 'var(--lsc-tip-bg)', border: '1px solid var(--lsc-tip-bd)',
+              padding: '10px 12px',
+            }}
+          >
+            <h4 className="lsc-overline" style={{ margin: 0, color: 'var(--lsc-tip-fg)' }}>{t.tooltip.proTip}</h4>
+            <p style={{ ...paragraph, color: 'var(--lsc-tip-fg)' }}>{entry.tip}</p>
+          </section>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '0 14px 12px' }}>
+          <button
+            onClick={() => prev && goTo(prev.id, prev.typeKey)}
+            disabled={!prev}
+            className={prev ? 'lsc-btn-outline' : undefined}
+            style={{
+              height: 34, padding: '0 12px', borderRadius: 8,
+              border: '1px solid var(--lsc-border)', background: 'transparent',
+              color: 'var(--lsc-fg)', fontSize: 13, fontWeight: 600,
+              cursor: prev ? 'pointer' : 'default', opacity: prev ? 1 : 0.4,
+            }}
+          >
+            {t.tooltip.previous}
+          </button>
+          <button
+            onClick={() => (next ? goTo(next.id, next.typeKey) : close())}
+            style={{
+              height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
+              background: 'var(--lsc-accent)', color: '#fff',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+          >
+            {next ? fmt(t.tooltip.nextNode, { name: helpTitle(t, next.typeKey) }) : t.tooltip.finishTour}
+          </button>
+        </div>
       </div>
     </div>
   )
+}
+
+const paragraph: CSSProperties = {
+  margin: '3px 0 0', fontSize: 13, lineHeight: 1.5, textWrap: 'pretty',
 }

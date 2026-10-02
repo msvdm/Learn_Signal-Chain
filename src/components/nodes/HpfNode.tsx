@@ -6,8 +6,8 @@ import { useTranslation } from '../../i18n/useTranslation'
 
 // ── HPF curve math ────────────────────────────────────────────────────────────
 
-const SVG_W    = 200
-const SVG_H    = 46
+const SVG_W    = 160   // viewBox width; the graph stretches to the card width
+const SVG_H    = 52
 const FREQ_MIN = 20
 const FREQ_MAX = 20000
 const DB_FLOOR = -48  // bottom of graph = fully blocked
@@ -20,8 +20,10 @@ function freqToX(freq: number): number {
   )
 }
 
+const TOP_PAD = 10  // keep the flat pass band clear of the box edge
+
 function dbToY(db: number): number {
-  return ((0 - db) / (0 - DB_FLOOR)) * SVG_H
+  return TOP_PAD + ((0 - db) / (0 - DB_FLOOR)) * (SVG_H - TOP_PAD)
 }
 
 // 2nd-order Butterworth HPF: −12 dB/octave below cutoff, −3 dB at cutoff
@@ -53,98 +55,37 @@ function hzToSlider(hz: number): number {
 
 // ── HPF frequency graph ───────────────────────────────────────────────────────
 
-const FREQ_TICKS = [50, 100, 200, 500, 1000, 5000, 10000]
-const DB_TICKS   = [-12, -24, -36]
-
 function HPFGraph({ cutoffHz, bypassed }: { cutoffHz: number; bypassed: boolean }) {
   const curvePath = buildPath(bypassed ? 1 : cutoffHz)
   const cutX      = freqToX(cutoffHz)
-  const zeroY     = dbToY(0)
+  const stroke    = bypassed ? 'var(--lsc-fg-fainter)' : 'var(--signal-good)'
 
   return (
     <div
-      className="nodrag rounded overflow-hidden"
-      style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
+      className="nodrag"
+      style={{
+        minWidth: SVG_W, borderRadius: 8, overflow: 'hidden',
+        background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
+      }}
     >
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        preserveAspectRatio="none"
-        className="w-full block"
-        style={{ height: SVG_H }}
-      >
-        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="var(--lsc-sunken)" />
-
-        {/* dB grid lines */}
-        {DB_TICKS.map((db) => (
-          <line
-            key={db}
-            x1={0} y1={dbToY(db)} x2={SVG_W} y2={dbToY(db)}
-            stroke="var(--lsc-border-mute)" strokeWidth={0.8}
-          />
-        ))}
-
-        {/* Frequency grid lines */}
-        {FREQ_TICKS.map((f) => (
-          <line
-            key={f}
-            x1={freqToX(f)} y1={0} x2={freqToX(f)} y2={SVG_H}
-            stroke="var(--lsc-border-mute)" strokeWidth={0.8}
-          />
-        ))}
-
-        {/* 0 dB reference */}
-        <line x1={0} y1={zeroY} x2={SVG_W} y2={zeroY}
-          stroke="var(--lsc-fg-fainter)" strokeWidth={1} />
-
-        {/* Blocked region fill (below the curve) */}
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%" height={SVG_H} preserveAspectRatio="none" style={{ display: 'block' }}>
+        {/* Pass band — everything under the curve gets through */}
         <path
           d={`${curvePath} L ${SVG_W},${SVG_H} L 0,${SVG_H} Z`}
-          fill={bypassed ? 'rgba(100,100,100,0.08)' : 'rgba(239,68,68,0.10)'}
+          fill={bypassed ? 'transparent' : 'var(--signal-good-bg)'}
         />
 
         {/* HPF curve */}
-        <path
-          d={curvePath}
-          fill="none"
-          stroke={bypassed ? 'var(--lsc-fg-fainter)' : 'var(--lsc-accent)'}
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+        <path d={curvePath} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
 
         {/* Cutoff marker — only when active */}
         {!bypassed && (
           <line
-            x1={cutX} y1={0} x2={cutX} y2={SVG_H}
-            stroke="var(--lsc-accent)"
+            x1={cutX} y1={4} x2={cutX} y2={SVG_H}
+            stroke="var(--lsc-fg-muted)"
             strokeWidth={1}
             strokeDasharray="3 2"
-            opacity={0.6}
-          />
-        )}
-
-        {/* Frequency axis labels */}
-        {[100, 1000, 10000].map((f) => (
-          <text
-            key={f}
-            x={freqToX(f)}
-            y={SVG_H - 2}
-            textAnchor="middle"
-            fontSize={7}
-            fill="var(--lsc-text-muted)"
-            style={{ userSelect: 'none' }}
-          >
-            {f >= 1000 ? `${f / 1000}k` : f}
-          </text>
-        ))}
-
-        {/* -3 dB dot at cutoff */}
-        {!bypassed && (
-          <circle
-            cx={cutX}
-            cy={dbToY(-3)}
-            r={3}
-            fill="var(--lsc-accent)"
-            opacity={0.9}
+            vectorEffect="non-scaling-stroke"
           />
         )}
       </svg>
@@ -184,7 +125,6 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
       }
       label={data.label ?? t.nodes.hpf.label}
       accentColor={data.color}
-      style={{ width: 140 }}
     >
       <div className="space-y-2">
         <HPFGraph cutoffHz={cutoffHz} bypassed={bypassed} />

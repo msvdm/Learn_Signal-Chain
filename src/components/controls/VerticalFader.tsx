@@ -7,6 +7,7 @@ const DEFAULT_MARKS = [
   { db: -20, label: '-20' },
   { db: -40, label: '-40' },
   { db: -60, label: '-60' },
+  { db: -80, label: '−∞'  },
 ]
 
 // Layout constants (px)
@@ -26,6 +27,8 @@ interface VerticalFaderProps {
   formatValue?: (v: number) => string
   marks?: Array<{ db: number; label: string }>
   height?: number
+  /** Word shown under the readout at 0 dB. */
+  unityLabel?: string
 }
 
 export function VerticalFader({
@@ -36,7 +39,8 @@ export function VerticalFader({
   onChange,
   formatValue,
   marks = DEFAULT_MARKS,
-  height = 144,
+  height = 120,
+  unityLabel = 'unity',
 }: VerticalFaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
@@ -78,12 +82,12 @@ export function VerticalFader({
   }
 
   return (
-    <div className="nodrag nopan" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+    <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
 
       {/* Draggable fader area */}
       <div
         ref={containerRef}
-        style={{ position: 'relative', width: 72, height, touchAction: 'none', cursor: 'ns-resize' }}
+        style={{ position: 'relative', width: 60, height, touchAction: 'none', cursor: 'ns-resize', flexShrink: 0 }}
         onPointerDown={handlePointerDown}
       >
         {/* Track groove */}
@@ -106,17 +110,15 @@ export function VerticalFader({
                 top: `${topPct}%`, left: TICK_LEFT,
                 width: isUnity ? 8 : 5, height: 1,
                 background: isUnity ? 'var(--signal-good)' : 'var(--lsc-border)',
-                transform: 'translateY(-50%)',
                 pointerEvents: 'none',
               }} />
               <span style={{
                 position: 'absolute',
                 top: `${topPct}%`, left: TICK_LEFT + (isUnity ? 10 : 7),
                 transform: 'translateY(-50%)',
-                fontSize: 'var(--node-text-3xs)', fontFamily: 'monospace', lineHeight: 1,
-                color: isUnity ? 'var(--signal-good)' : 'var(--lsc-text)',
-                opacity: isUnity ? 1 : 0.65,
-                pointerEvents: 'none', userSelect: 'none',
+                fontSize: 10, fontFamily: 'var(--lsc-font-mono)', lineHeight: 1,
+                color: isUnity ? 'var(--signal-good)' : 'var(--lsc-fg-muted)',
+                pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
               }}>
                 {label}
               </span>
@@ -129,8 +131,8 @@ export function VerticalFader({
           position: 'absolute',
           left: CAP_LEFT, width: CAP_W, height: CAP_H,
           top: `${100 - pct}%`, marginTop: -(CAP_H / 2),
-          background: 'linear-gradient(180deg, var(--lsc-track-3) 0%, var(--lsc-track-2) 100%)',
-          border: '1px solid var(--lsc-text)',
+          background: 'var(--lsc-node-bg-2)',
+          border: '1px solid var(--lsc-fg-muted)',
           borderRadius: 2,
           boxShadow: 'var(--lsc-shadow-fader)',
           pointerEvents: 'none',
@@ -140,17 +142,19 @@ export function VerticalFader({
             position: 'absolute', left: '50%', top: '50%',
             width: '60%', height: 1,
             transform: 'translate(-50%, -50%)',
-            background: 'var(--lsc-text)',
+            background: 'var(--lsc-fg-muted)',
           }} />
         </div>
       </div>
 
       {/* Value readout */}
-      <div style={{ textAlign: 'center', lineHeight: 1 }}>
-        <div style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'monospace', fontWeight: 600, color: 'var(--lsc-text)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 52 }}>
+        <span style={{ fontSize: 14, fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, color: 'var(--lsc-fg)', whiteSpace: 'nowrap' }}>
           {displayValue}
-        </div>
-        <div style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--signal-good)', marginTop: 2, visibility: value === 0 ? 'visible' : 'hidden' }}>unity</div>
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--signal-good)', visibility: value === 0 ? 'visible' : 'hidden' }}>
+          {unityLabel}
+        </span>
       </div>
     </div>
   )

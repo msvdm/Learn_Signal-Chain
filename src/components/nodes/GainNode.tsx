@@ -24,7 +24,6 @@ export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
       icon={<Zap size={20} />}
       label={data.label ?? t.nodes.preamp.label}
       accentColor={data.color}
-      width={200}
     >
       <KnobControl
         value={gainDb}
@@ -34,7 +33,7 @@ export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
         formatValue={(v) => `+${v} dB`}
         onChange={(v) => updateNodeParams(id, { gainDb: v })}
         color="var(--signal-good)"
-        size={40}
+        size={56}
       />
     </InlineNode>
   )

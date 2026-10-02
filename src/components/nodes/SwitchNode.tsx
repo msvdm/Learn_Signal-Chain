@@ -31,7 +31,7 @@ export function SwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) {
           fontWeight: 700,
           background: isOn ? 'var(--signal-good-bg)' : 'var(--lsc-sunken)',
           border: `1px solid ${isOn ? 'var(--signal-good)' : 'var(--lsc-border)'}`,
-          color: isOn ? 'var(--signal-good)' : 'var(--lsc-text)',
+          color: isOn ? 'var(--signal-good)' : 'var(--lsc-fg)',
           cursor: 'pointer',
         }}
         onClick={() => updateNodeParams(id, { on: !isOn })}

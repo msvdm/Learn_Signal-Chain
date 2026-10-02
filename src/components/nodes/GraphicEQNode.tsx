@@ -30,10 +30,9 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
     <NodeWrapper
       nodeId={id}
       typeKey="graphic-eq"
-      icon={<Sliders size={14} />}
+      icon={<Sliders size={16} />}
       label={data.label ?? t.nodes.graphicEq.label}
       accentColor={data.color}
-      style={{ width: 340 }}
     >
       <div className="space-y-2">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
@@ -42,7 +41,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
           className="nodrag rounded-md p-2"
           style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
         >
-          <div className="flex gap-1 items-end">
+          <div className="flex items-end" style={{ gap: 6 }}>
             {/* dB axis labels */}
             <div className="flex flex-col justify-between pb-5 shrink-0" style={{ height: SLIDER_HEIGHT + 20 }}>
               {['+12', '+6', '0', '−6', '−12'].map((l) => (
@@ -55,7 +54,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
             {/* 10-band sliders */}
             <div className="flex flex-1 justify-around">
               {bandGains.map((gain, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
+                <div key={i} className="flex flex-col items-center gap-1" style={{ minWidth: 28 }}>
                   <div
                     className="relative flex items-center justify-center nodrag nopan"
                     style={{ width: 20, height: SLIDER_HEIGHT }}

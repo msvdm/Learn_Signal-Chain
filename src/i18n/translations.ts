@@ -11,14 +11,54 @@ export interface Translations {
     title: string
     tagline: string
     resetButton: string
-    resetConfirm: string
     settings: string
+    reset: string
+    language: string
+    level: string
+    theme: { toggle: string; light: string; dark: string }
+  }
+  dialog: {
+    cancel: string
+    resetTitle: string
+    resetConfirm: string
+    resetBody: string
+    switchTitle: string
+    switchConfirm: string
+    switchBody: string
+  }
+  toolbar: {
+    move: string
+    connect: string
+    moveHint: string
+    connectHint: string
+    snap: string
+    snapHint: string
+    zoomIn: string
+    zoomOut: string
+    zoomReset: string
+  }
+  connecting: { from: string; hint: string; cancel: string; input: string }
+  emptyState: {
+    title: string
+    body: string
+    step: string
+    source: string
+    sourceHint: string
+    preamp: string
+    preampHint: string
+    output: string
+    outputHint: string
+    fixed: string
+    fixedHint: string
+    shortcuts: string
+    moveSelect: string
+    drawWire: string
+    cancel: string
   }
   levels: {
     beginner:     { title: string; description: string }
     intermediate: { title: string; description: string }
     advanced:     { title: string; description: string }
-    switchConfirm: string
   }
   meters: { input: string; output: string }
   health: { 'too-quiet': string; good: string; hot: string; clipping: string }
@@ -42,10 +82,15 @@ export interface Translations {
     proTip: string
     next: string
     finishTour: string
+    nextNode: string
+    previous: string
+    stepOf: string
+    close: string
+    help: string
   }
   banner: { gainStaging: string }
   nodes: {
-    mic: { label: string; sensitivity: string; micInfo: string }
+    mic: { label: string; sensitivity: string; micInfo: string; hint: string }
     preamp: { label: string; gain: string }
     hpf: { label: string; cutoff: string }
     eq: {
@@ -71,6 +116,7 @@ export interface Translations {
       ratio: string
       makeupGain: string
       gainReduction: string
+      turningDown: string
     }
     fader: { label: string; unity: string }
     master: {
@@ -110,25 +156,21 @@ export interface Translations {
     'stereo-fader'?: { label?: string; fader?: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
-  drawer: {
-    label: string
-    defaultTitle: string
-    tip1: { title: string; body: string }
-    tip2: { title: string; body: string }
-    tip3: { title: string; body: string }
-    tip4: { title: string; body: string }
-    tip5: { title: string; body: string }
-  }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {
     bypass: string
     bypassed: string
     remove: string
+    bypassedShort: string
+    removeShort: string
   }
   palette: {
-    connectTool: string
     elements: string
-    categories: { source: string; processing: string; structural?: string; routing: string; output: string }
+    search: string
+    all: string
+    startHere: string
+    noResults: string
+    categories: { source: string; processing: string; routing: string; output: string }
     items: Record<string, string>
   }
   theory: Record<string, TheoryEntry>

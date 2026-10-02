@@ -21,7 +21,7 @@ export function StereoFaderNode({ id, data }: NodeProps<Node<StereoFaderData>>) 
     <NodeWrapper
       nodeId={id}
       typeKey="stereo-fader"
-      icon={<SlidersHorizontal size={30} />}
+      icon={<SlidersHorizontal size={16} />}
       label={data.label ?? t.nodes['stereo-fader']?.label ?? 'Stereo Fader'}
     >
       <VerticalFader
@@ -29,19 +29,9 @@ export function StereoFaderNode({ id, data }: NodeProps<Node<StereoFaderData>>) 
         min={-80}
         max={10}
         step={1}
-        formatValue={(v) => (v <= -80 ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)}
+        formatValue={(v) => (v <= -80 ? '−∞' : `${v > 0 ? '+' : ''}${v} dB`)}
         onChange={(v) => updateNodeParams(id, { faderDb: v })}
-        height={150}
-        marks={[
-          { db: 10,  label: '+10' },
-          { db: 0,   label:  '0'  },
-          { db: -10, label: '-10' },
-          { db: -20, label: '-20' },
-          { db: -30, label: '-30' },
-          { db: -40, label: '-40' },
-          { db: -60, label: '-60' },
-          { db: -80, label: '−∞'  },
-        ]}
+        unityLabel={t.nodes.fader.unity.toLowerCase()}
       />
     </NodeWrapper>
   )

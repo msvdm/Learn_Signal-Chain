@@ -18,9 +18,9 @@ interface GraphCompData extends Record<string, unknown> {
 // Below threshold: 1:1 diagonal (unity gain). Above: shallower slope = compression.
 // The gap between the 1:1 reference line and the curve = gain reduction.
 
-const GW = 160   // SVG canvas width
+const GW = 196   // SVG canvas width (px — drawn 1:1)
 const GH = 120   // SVG canvas height
-const GP = 12    // padding inside SVG
+const GP = 14    // padding inside SVG
 
 // Input/output range shown on axes (dBFS)
 const DB_IN_MIN = -60
@@ -87,13 +87,13 @@ function DynamicsCurve({ threshold, ratio, makeupGain, inputLevel, gainReduction
       style={{
         background: 'var(--lsc-sunken)',
         border: '1px solid var(--lsc-border)',
-        borderRadius: 4,
+        borderRadius: 8,
         overflow: 'hidden',
       }}
     >
       <svg
         viewBox={`0 0 ${GW} ${GH}`}
-        width="100%"
+        width={GW}
         height={GH}
         style={{ display: 'block' }}
       >
@@ -114,18 +114,18 @@ function DynamicsCurve({ threshold, ratio, makeupGain, inputLevel, gainReduction
         ))}
 
         {/* Axis labels */}
-        <text x={GW - GP + 2} y={outputY(0) + 3} fontSize="7" fill="var(--lsc-text)" opacity="0.5">0</text>
-        <text x={GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="middle">−60</text>
-        <text x={GW - GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="end">0 dB in</text>
+        <text x={GW - GP + 2} y={outputY(0) + 3} fontSize="11" fill="var(--lsc-fg-muted)">0</text>
+        <text x={GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="middle">−60</text>
+        <text x={GW - GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="end">0 dB in</text>
 
         {/* Threshold line */}
         <line
           x1={threshX} y1={GP} x2={threshX} y2={GH - GP}
-          stroke="rgba(216,149,72,0.55)" strokeWidth={1.5} strokeDasharray="3 2"
+          stroke="var(--signal-hot)" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="3 2"
         />
 
         {/* 1:1 reference (grey dashed) */}
-        <path d={refPts} fill="none" stroke="var(--lsc-text)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
+        <path d={refPts} fill="none" stroke="var(--lsc-fg)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
 
         {/* Compression curve */}
         <path d={curvePath} fill="none" stroke="var(--lsc-accent)" strokeWidth={2} strokeLinecap="round" />
@@ -134,8 +134,8 @@ function DynamicsCurve({ threshold, ratio, makeupGain, inputLevel, gainReduction
         {hasSignal && (
           <>
             <line x1={opX} y1={GP} x2={opX} y2={outputY(opOutDb) - 5}
-              stroke="rgba(91,141,232,0.5)" strokeWidth={1} />
-            <circle cx={opX} cy={opY} r={4} fill="white" stroke="var(--lsc-accent)" strokeWidth="1.8" />
+              stroke="var(--signal-too-quiet)" strokeOpacity={0.5} strokeWidth={1} />
+            <circle cx={opX} cy={opY} r={4} fill="var(--lsc-node-bg)" stroke="var(--lsc-accent)" strokeWidth="1.8" />
           </>
         )}
       </svg>
@@ -164,10 +164,9 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="comp"
-      icon={<Box size={14} />}
+      icon={<Box size={16} />}
       label={data.label ?? t.nodes.comp.label}
       accentColor={data.color}
-      style={{ width: 220 }}
     >
       <div className="space-y-3">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
@@ -219,15 +218,14 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
 
         {/* GR meter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', opacity: 0.6, whiteSpace: 'nowrap' }}>
-            GR
+          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
+            {t.nodes.comp.turningDown}
           </span>
           <div
             style={{
-              flex: 1, height: 5,
+              flex: 1, height: 6, minWidth: 40,
               background: 'var(--lsc-sunken)',
-              borderRadius: 3,
-              border: '1px solid var(--lsc-border)',
+              borderRadius: 9999,
               overflow: 'hidden',
             }}
           >
@@ -241,7 +239,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
               }}
             />
           </div>
-          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-text)', minWidth: 28, textAlign: 'right' }}>
+          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)', minWidth: 28, textAlign: 'right' }}>
             {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
           </span>
         </div>

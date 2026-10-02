@@ -35,6 +35,7 @@ export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
         transition={isClipping ? { duration: 0.5, repeat: Infinity } : {}}
       >
         <motion.path
+          initial={false}
           animate={{
             d: `M 0 12 Q 7.5 ${12 - amplitude * 0.5} 15 12 Q 22.5 ${12 + amplitude * 0.5} 30 12 Q 37.5 ${12 - amplitude * 0.5} 45 12 Q 52.5 ${12 + amplitude * 0.5} 60 12`,
           }}

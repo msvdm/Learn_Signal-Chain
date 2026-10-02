@@ -58,11 +58,11 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
             fontSize: 'var(--node-text-2xs)',
             fontFamily: 'var(--lsc-font-mono)',
             textAlign: 'center',
-            color: 'var(--lsc-text)',
+            color: 'var(--lsc-fg)',
             lineHeight: 1.4,
           }}
         >
-          <span style={{ opacity: 0.6 }}>{inputLevel.toFixed(1)} {inputUnit}</span>
+          <span style={{ color: 'var(--lsc-fg-muted)' }}>{inputLevel.toFixed(1)} {inputUnit}</span>
           {isFinite(result?.out ?? -Infinity) && (
             <>
               {' → '}
@@ -77,6 +77,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       {/* Warning banner */}
       {hasWarning && (
         <div
+          className="lsc-wrap-text"
           style={{
             fontSize: 'var(--node-text-2xs)', fontWeight: 700,
             color: 'var(--signal-clipping)',

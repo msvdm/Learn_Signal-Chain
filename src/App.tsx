@@ -1,182 +1,217 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, Fragment } from 'react'
+import type { CSSProperties } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { useSignalStore } from './store/signalStore'
 import type { ComplexityLevel } from './store/signalStore'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
-import { DrawerHelpContent } from './components/Tooltip'
 import { ElementPalette } from './components/ElementPalette'
-import { RotateCcw, Radio, Settings, ChevronUp, ChevronDown } from 'lucide-react'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { RotateCcw, Radio, Sun, Moon, Globe, Check } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
+import { useMediaQuery, TABLET_QUERY } from './hooks/useMediaQuery'
+
+type PendingConfirm = { kind: 'reset' } | { kind: 'level'; level: ComplexityLevel } | null
+
+const LEVEL_IDS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
+
+const headerBtn: CSSProperties = {
+  height: 34, padding: '0 10px', borderRadius: 8,
+  border: '1px solid var(--lsc-border)', background: 'transparent',
+  color: 'var(--lsc-fg)', fontSize: 13, fontWeight: 500,
+  display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
 
 function App() {
-  const language = useSignalStore((s) => s.language)
-  const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  const language           = useSignalStore((s) => s.language)
+  const theme              = useSignalStore((s) => s.theme)
+  const complexityLevel    = useSignalStore((s) => s.complexityLevel)
   const setComplexityLevel = useSignalStore((s) => s.setComplexityLevel)
-  const resetAll = useSignalStore((s) => s.resetAll)
-  const setLanguage = useSignalStore((s) => s.setLanguage)
-  const activeTooltipId = useSignalStore((s) => s.activeTooltipId)
-  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
-  const { t, fmt } = useTranslation()
+  const resetAll           = useSignalStore((s) => s.resetAll)
+  const setLanguage        = useSignalStore((s) => s.setLanguage)
+  const setTheme           = useSignalStore((s) => s.setTheme)
+  const { t, fmt }         = useTranslation()
+  const isTablet           = useMediaQuery(TABLET_QUERY)
 
-  const [showSettings, setShowSettings] = useState(false)
-  const [showSignalProfile, setShowSignalProfile] = useState(false)
-  const settingsRef = useRef<HTMLDivElement>(null)
+  const [showLanguages, setShowLanguages] = useState(false)
+  const [pending, setPending]             = useState<PendingConfirm>(null)
+  const languageRef = useRef<HTMLDivElement>(null)
 
-  const LEVELS: { id: ComplexityLevel; label: string }[] = [
-    { id: 'beginner',     label: t.levels.beginner.title },
-    { id: 'intermediate', label: t.levels.intermediate.title },
-    { id: 'advanced',     label: t.levels.advanced.title },
-  ]
-
-  const handleReset = () => {
-    const ok = window.confirm(t.app.resetConfirm)
-    if (ok) resetAll()
-  }
-
-  const handleLevelChange = (level: ComplexityLevel) => {
-    if (level === complexityLevel) return
-    const ok = window.confirm(fmt(t.levels.switchConfirm, { title: t.levels[level].title }))
-    if (ok) {
-      setComplexityLevel(level)
-    }
-  }
-
-  const handleLanguage = (lang: Lang) => {
-    setLanguage(lang)
-    setShowSettings(false)
-  }
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setShowSettings(false)
+      if (languageRef.current && !languageRef.current.contains(e.target as Node)) {
+        setShowLanguages(false)
       }
     }
-    if (showSettings) document.addEventListener('mousedown', handleClickOutside)
+    if (showLanguages) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showSettings])
+  }, [showLanguages])
 
-  useEffect(() => {
-    if (activeTooltipId) setShowSignalProfile(true)
-  }, [activeTooltipId])
+  function handleLevelChange(level: ComplexityLevel) {
+    if (level === complexityLevel) return
+    setPending({ kind: 'level', level })
+  }
+
+  function handleLanguage(lang: Lang) {
+    setLanguage(lang)
+    setShowLanguages(false)
+  }
+
+  function confirmPending() {
+    if (pending?.kind === 'reset') resetAll()
+    if (pending?.kind === 'level') setComplexityLevel(pending.level)
+    setPending(null)
+  }
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)' }}>
+    <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)', color: 'var(--lsc-fg)' }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-4 flex-shrink-0 gap-4"
-        style={{ height: 48, background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)' }}
+        className="flex items-center justify-between flex-shrink-0"
+        style={{
+          height: 56, padding: '0 16px', gap: 16,
+          background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)',
+        }}
       >
-        {/* Left: Logo */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        {/* Left: brand */}
+        <div className="flex items-center flex-shrink-0" style={{ gap: 10 }}>
           <div
-            className="rounded-lg flex items-center justify-center"
-            style={{ padding: 6, background: 'var(--signal-good-bg)', color: 'var(--signal-good)' }}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--signal-good-bg)', color: 'var(--signal-good)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
-            <Radio size={16} />
+            <Radio size={17} />
           </div>
           <div>
-            <h1 className="text-sm font-bold leading-none" style={{ color: 'var(--lsc-text)' }}>
+            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.1 }}>
               {t.app.title}
             </h1>
-            <p className="text-[10px] mt-0.5 leading-none" style={{ color: 'var(--lsc-text)' }}>
-              {t.app.tagline}
-            </p>
+            {!isTablet && (
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--lsc-fg-muted)' }}>
+                {t.app.tagline}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Center: Level buttons */}
-        <div className="flex items-center gap-1">
-          {LEVELS.map(({ id, label }) => {
+        {/* Centre: level stepper */}
+        <nav aria-label={t.app.level} className="flex items-center" style={{ gap: 6 }}>
+          {LEVEL_IDS.map((id, i) => {
             const active = complexityLevel === id
             return (
-              <button
-                key={id}
-                onClick={() => handleLevelChange(id)}
-                className="rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
-                style={{
-                  border: `1px solid ${active ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-                  background: active ? 'var(--lsc-accent-bg)' : 'transparent',
-                  color: active ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
-                  cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
+              <Fragment key={id}>
+                {i > 0 && <span style={{ width: 20, height: 1, background: 'var(--lsc-border)' }} />}
+                <button
+                  onClick={() => handleLevelChange(id)}
+                  aria-current={active ? 'step' : undefined}
+                  title={t.levels[id].description}
+                  className={active ? undefined : 'lsc-btn-outline'}
+                  style={{
+                    height: 36, padding: '0 12px', borderRadius: 8,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 13, fontWeight: 600, cursor: active ? 'default' : 'pointer',
+                    border: `1px solid ${active ? 'var(--lsc-accent)' : 'transparent'}`,
+                    background: active ? 'var(--lsc-accent-bg)' : 'transparent',
+                    color: active ? 'var(--lsc-fg)' : 'var(--lsc-fg-muted)',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 20, height: 20, borderRadius: 9999, fontSize: 11,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: active ? 'none' : '1px solid var(--lsc-border)',
+                      background: active ? 'var(--lsc-accent)' : 'transparent',
+                      color: active ? '#fff' : 'inherit',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  {t.levels[id].title}
+                </button>
+              </Fragment>
             )
           })}
-        </div>
+        </nav>
 
-        {/* Right: Reset + Settings */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Right: theme, language, reset */}
+        <div className="flex items-center flex-shrink-0" style={{ gap: 6 }}>
           <button
-            onClick={handleReset}
-            className="rounded-lg flex items-center justify-center transition-colors"
-            style={{
-              padding: 6,
-              border: '1px solid var(--lsc-border)',
-              background: 'transparent',
-              color: 'var(--lsc-text)',
-              cursor: 'pointer',
-            }}
-            title={t.app.resetButton}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={t.app.theme.toggle}
+            className="lsc-btn-outline"
+            style={headerBtn}
           >
-            <RotateCcw size={14} />
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === 'dark' ? t.app.theme.light : t.app.theme.dark}
           </button>
 
-          <div className="relative" ref={settingsRef}>
+          <div className="relative" ref={languageRef}>
             <button
-              onClick={() => setShowSettings((v) => !v)}
-              className="rounded-lg flex items-center justify-center transition-colors"
+              onClick={() => setShowLanguages((v) => !v)}
+              title={t.app.language}
+              aria-haspopup="menu"
+              aria-expanded={showLanguages}
+              className="lsc-btn-outline"
               style={{
-                padding: 6,
-                border: `1px solid ${showSettings ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-                background: showSettings ? 'var(--lsc-accent-bg)' : 'transparent',
-                color: showSettings ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
-                cursor: 'pointer',
+                ...headerBtn,
+                borderColor: showLanguages ? 'var(--lsc-accent)' : 'var(--lsc-border)',
+                background: showLanguages ? 'var(--lsc-accent-bg)' : 'transparent',
               }}
-              title={t.app.settings}
             >
-              <Settings size={14} />
+              <Globe size={15} />
+              {language.toUpperCase()}
             </button>
 
-            {showSettings && (
+            {showLanguages && (
               <div
-                className="absolute right-0 top-full mt-2 w-44 rounded-xl border py-1 z-50"
+                role="menu"
+                className="absolute right-0 top-full z-50"
                 style={{
-                  background: 'var(--lsc-header)',
-                  borderColor: 'var(--lsc-border)',
+                  marginTop: 6, width: 176, padding: 4, borderRadius: 10,
+                  background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
                   boxShadow: 'var(--lsc-shadow-popup)',
                 }}
               >
-                <p
-                  className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--lsc-text)' }}
-                >
-                  {t.app.settings}
-                </p>
                 {Object.entries(LOCALES).map(([code, locale]) => (
                   <button
                     key={code}
+                    role="menuitemradio"
+                    aria-checked={language === code}
                     onClick={() => handleLanguage(code as Lang)}
-                    className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between"
+                    className="lsc-btn-outline"
                     style={{
-                      color: 'var(--lsc-text)',
-                      background: language === code ? 'rgba(0,0,0,0.04)' : 'transparent',
-                      fontWeight: language === code ? 600 : 400,
+                      width: '100%', height: 34, padding: '0 10px', borderRadius: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      border: '1px solid transparent', background: 'transparent',
+                      color: 'var(--lsc-fg)', fontSize: 13,
+                      fontWeight: language === code ? 600 : 400, cursor: 'pointer',
                     }}
                   >
                     {locale.nativeName}
-                    {language === code && (
-                      <span className="text-[10px]" style={{ color: 'var(--lsc-text)' }}>✓</span>
-                    )}
+                    {language === code && <Check size={14} />}
                   </button>
                 ))}
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => setPending({ kind: 'reset' })}
+            title={t.app.resetButton}
+            className="lsc-btn-outline"
+            style={{ ...headerBtn, padding: '0 12px' }}
+          >
+            <RotateCcw size={15} />
+            {t.app.reset}
+          </button>
         </div>
       </header>
 
@@ -188,40 +223,26 @@ function App() {
         </ReactFlowProvider>
       </main>
 
-      {/* Help drawer */}
-      <div
-        className="flex-shrink-0 transition-all duration-200 ease-out"
-        style={{
-          maxHeight: showSignalProfile ? 300 : 36,
-          overflow: 'hidden',
-          borderTop: '1px solid var(--lsc-border)',
-        }}
-      >
-        {/* Drawer toggle button */}
-        <button
-          onClick={() => {
-            const opening = !showSignalProfile
-            setShowSignalProfile(opening)
-            if (!opening) setActiveTooltip(null, null)
-          }}
-          className="w-full flex items-center justify-between px-4 py-1.5 transition-colors"
-          style={{
-            background: 'var(--lsc-header)',
-            color: 'var(--lsc-text)',
-            cursor: 'pointer',
-            border: 'none',
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ fontWeight: 600, fontSize: 11 }}>{t.drawer.label}</span>
-          {showSignalProfile ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-        </button>
-
-        {/* Drawer content */}
-        <div style={{ height: 260, overflow: 'hidden' }}>
-          <DrawerHelpContent />
-        </div>
-      </div>
+      {pending?.kind === 'reset' && (
+        <ConfirmDialog
+          title={t.dialog.resetTitle}
+          body={t.dialog.resetBody}
+          confirmLabel={t.dialog.resetConfirm}
+          cancelLabel={t.dialog.cancel}
+          onConfirm={confirmPending}
+          onCancel={() => setPending(null)}
+        />
+      )}
+      {pending?.kind === 'level' && (
+        <ConfirmDialog
+          title={fmt(t.dialog.switchTitle, { title: t.levels[pending.level].title })}
+          body={t.dialog.switchBody}
+          confirmLabel={t.dialog.switchConfirm}
+          cancelLabel={t.dialog.cancel}
+          onConfirm={confirmPending}
+          onCancel={() => setPending(null)}
+        />
+      )}
     </div>
   )
 }

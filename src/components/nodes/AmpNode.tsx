@@ -27,7 +27,7 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="amp"
-      icon={<Radio size={14} />}
+      icon={<Radio size={16} />}
       label={data.label ?? t.palette.items['amp']}
       accentColor={data.color}
     >

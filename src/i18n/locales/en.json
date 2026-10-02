@@ -3,8 +3,58 @@
     "title": "Learn Signal Chain",
     "tagline": "From microphone to speaker",
     "resetButton": "Reset to defaults",
-    "resetConfirm": "Reset all controls to default values?",
-    "settings": "Settings"
+    "settings": "Settings",
+    "reset": "Reset",
+    "language": "Language",
+    "level": "Difficulty level",
+    "theme": {
+      "toggle": "Switch between light and dark colours",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "resetTitle": "Start over?",
+    "resetConfirm": "Reset",
+    "resetBody": "This clears the canvas. All elements and wires will be removed.",
+    "switchTitle": "Switch to {title}?",
+    "switchConfirm": "Switch level",
+    "switchBody": "This clears the canvas so you can start fresh at the new level."
+  },
+  "toolbar": {
+    "move": "Move",
+    "connect": "Connect",
+    "moveHint": "Move and select elements (V)",
+    "connectHint": "Draw wires between elements (C)",
+    "snap": "Snap to grid",
+    "snapHint": "Line elements up on the dotted grid",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom to 100%"
+  },
+  "connecting": {
+    "from": "Connecting from {node}.",
+    "hint": "Click a highlighted input. Click empty space to add a bend.",
+    "cancel": "cancel",
+    "input": "{node} input"
+  },
+  "emptyState": {
+    "title": "Build a chain from microphone to speaker",
+    "body": "Follow the outline below. Drag elements from the left, then connect each output to the next input.",
+    "step": "Step {n}",
+    "source": "Source",
+    "sourceHint": "Drag a Microphone here",
+    "preamp": "Preamp / Gain",
+    "preampHint": "Boosts the weak mic signal",
+    "output": "Output",
+    "outputHint": "Drag an Active Speaker here",
+    "fixed": "Fixed",
+    "fixedHint": "The Master Bus stays in the middle of the canvas at this level",
+    "shortcuts": "Shortcuts",
+    "moveSelect": "Move and select",
+    "drawWire": "Draw a wire",
+    "cancel": "Cancel"
   },
   "levels": {
     "beginner": {
@@ -18,8 +68,7 @@
     "advanced": {
       "title": "Advanced",
       "description": "Full chain with all processing stages."
-    },
-    "switchConfirm": "Switch to {title}? This will reset all controls to defaults."
+    }
   },
   "meters": {
     "input": "Input",
@@ -49,7 +98,12 @@
     "whyIsItHere": "Why is it here?",
     "proTip": "Pro tip",
     "next": "Next",
-    "finishTour": "Finish Tour"
+    "finishTour": "Finish Tour",
+    "nextNode": "Next: {name}",
+    "previous": "Previous",
+    "stepOf": "Step {n} of {total}",
+    "close": "Close help",
+    "help": "What does this do?"
   },
   "banner": {
     "gainStaging": "Gain Staging"
@@ -58,7 +112,8 @@
     "mic": {
       "label": "Microphone",
       "sensitivity": "Sensitivity",
-      "micInfo": "Dynamic mic output: approx. -60 dBu"
+      "micInfo": "Dynamic mic output: approx. -60 dBu",
+      "hint": "Normal for a mic. The preamp fixes it."
     },
     "preamp": {
       "label": "Preamp / Gain",
@@ -92,7 +147,8 @@
       "threshold": "Threshold",
       "ratio": "Ratio",
       "makeupGain": "Makeup gain",
-      "gainReduction": "Gain reduction"
+      "gainReduction": "Gain reduction",
+      "turningDown": "Turning down"
     },
     "fader": {
       "label": "Fader",
@@ -186,30 +242,6 @@
       "centerLabel": "C"
     }
   },
-  "drawer": {
-    "label": "Tips & Help",
-    "defaultTitle": "Signal Chain Tips",
-    "tip1": {
-      "title": "What is a Signal Chain?",
-      "body": "A signal chain is the path your audio travels — from a microphone or instrument, through processors like EQ and compression, to speakers or recording. Each step can shape or damage the sound, so order matters."
-    },
-    "tip2": {
-      "title": "Stay in the Green Zone",
-      "body": "Aim to keep your signal between −40 and −12 dBu (the green zone). Too quiet and background noise creeps in; too loud and the signal clips, causing permanent distortion that cannot be fixed later."
-    },
-    "tip3": {
-      "title": "Order of Effects Matters",
-      "body": "The order you arrange processors changes how they interact. A High-Pass Filter before EQ removes rumble first, so the EQ works on cleaner material. Wrong order leads to unexpected — often worse — results."
-    },
-    "tip4": {
-      "title": "Clipping is Permanent",
-      "body": "When a signal goes above 0 dBu the meter turns red — the peaks are cut off, creating harsh distortion. Unlike most audio problems, clipping cannot be repaired after the fact. Always leave some headroom."
-    },
-    "tip5": {
-      "title": "Click ? on Any Block",
-      "body": "Every component in the chain has a ? button. Click it and this panel will explain what the component does, why it belongs in the chain, and how to set it correctly."
-    }
-  },
   "eqCurve": {
     "title": "EQ Curve",
     "subtitle": "Drag the colored handles to shape the frequency response",
@@ -218,15 +250,19 @@
   "nodeControls": {
     "bypass": "Bypass",
     "bypassed": "Bypassed — signal passes through unchanged",
-    "remove": "Remove from chain"
+    "remove": "Remove from chain",
+    "bypassedShort": "Bypassed",
+    "removeShort": "Remove"
   },
   "palette": {
-    "connectTool": "Connect Tool",
     "elements": "Elements",
+    "search": "Search elements",
+    "all": "All",
+    "startHere": "Start here",
+    "noResults": "No elements match",
     "categories": {
       "source": "Sources",
       "processing": "Processing",
-      "structural": "Structural Elements",
       "routing": "Routing",
       "output": "Output"
     },

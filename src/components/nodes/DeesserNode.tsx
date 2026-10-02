@@ -34,9 +34,8 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="deesser"
-      icon={<AudioWaveform size={14} />}
+      icon={<AudioWaveform size={16} />}
       label={data.label ?? t.nodes.deesser?.label ?? 'De-esser'}
-      style={{ width: 208 }}
     >
       <div className="space-y-3">
         <div className="flex justify-around">
@@ -66,12 +65,12 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
         {/* Gain reduction meter */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>
+            <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
               {t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'}
             </span>
             <span
               className="text-[var(--node-text-xs)] font-mono"
-              style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-text)', fontWeight: isActive ? 700 : 400 }}
+              style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-fg)', fontWeight: isActive ? 700 : 400 }}
             >
               {isActive ? `−${gr.toFixed(1)} dB` : '—'}
             </span>
@@ -79,9 +78,9 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
           {/* Simple GR bar */}
           <div
             style={{
-              height: 4,
+              height: 6,
               background: 'var(--lsc-sunken)',
-              borderRadius: 2,
+              borderRadius: 9999,
               border: '1px solid var(--lsc-border-soft)',
               overflow: 'hidden',
             }}

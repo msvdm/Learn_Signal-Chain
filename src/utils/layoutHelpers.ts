@@ -7,29 +7,23 @@ export type Pt = { x: number; y: number }
 
 export const GRID = 36
 
-export const INLINE_TYPE_KEYS = new Set([
-  'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
-  'gain', 'adc', 'dac',
-])
+// ── Card geometry ──────────────────────────────────────────────────────────────
+// Every node card shares the same header height and port line, so wires between
+// cards stay straight no matter how tall each card is.
+export const HEADER_H = 56
+export const PORT_TOP = 28   // first port centre, measured from the card top
+export const PORT_GAP = 24   // spacing between stacked ports on the same side
 
 /**
- * Default rendered widths per node type.
- * Used as fallback when React Flow has not yet measured a node (always the case
- * for a node about to be dropped). For existing nodes, measured.width takes precedence.
- * EQ uses 600 (advanced 4-band layout) as the conservative upper bound.
+ * Size of a node that React Flow has not measured yet (a node about to be dropped).
+ * Nodes size themselves to their content, so there is no per-type table: once any
+ * node of a type has been measured its real size is remembered and used instead.
  */
-export const NODE_DEFAULT_W: Record<string, number> = {
-  'mic': 100, 'line-in': 100, 'instrument': 100,
-  'fader': 100, 'switch': 100, 'potentiometer': 100, 'speaker': 100,
-  'gain': 100, 'adc': 100, 'dac': 100,
-  'relay': 130, 'pan': 130,
-  'hpf': 140,
-  'eq': 600,
-  'graphic-eq': 340,
-  'di-box': 208, 'noise-gate': 220, 'limiter': 208, 'deesser': 208,
-  'amp': 208, 'comp': 220, 'master-bus': 208,
-  'mono-bus': 208, 'stereo-bus': 208, 'stereo-fader': 208, 'balance': 208,
-  'audio-interface': 208, 'active-speaker': 208,
+const FALLBACK_SIZE = { w: 160, h: 120 }
+const measuredSizeByType = new Map<string, { w: number; h: number }>()
+
+export function recordMeasuredSize(typeKey: string, w: number, h: number) {
+  if (w > 0 && h > 0) measuredSizeByType.set(typeKey, { w, h })
 }
 
 export const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
@@ -39,16 +33,16 @@ export const HIT_THRESHOLD = 48
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
 export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
-  const inline = INLINE_TYPE_KEYS.has(typeKey)
+  const known = measuredSizeByType.get(typeKey) ?? FALLBACK_SIZE
   return {
-    w: measuredW ?? NODE_DEFAULT_W[typeKey] ?? (inline ? 100 : 208),
-    h: measuredH ?? (inline ? 72 : 120),
+    w: measuredW ?? known.w,
+    h: measuredH ?? known.h,
   }
 }
 
-// nodeOrigin=[0,0.5]: position is the left edge, vertical center
+// nodeOrigin=[0,0]: position is the top-left corner
 function nodeRect(pos: Pt, w: number, h: number) {
-  return { left: pos.x, right: pos.x + w, top: pos.y - h / 2, bottom: pos.y + h / 2 }
+  return { left: pos.x, right: pos.x + w, top: pos.y, bottom: pos.y + h }
 }
 
 // PAD = MIN_NODE_GAP / 2 so clearance between any two rects ≥ MIN_NODE_GAP in both axes.
@@ -212,7 +206,7 @@ export function enforceGap(
 /**
  * Returns the edge that "owns" the given flow-coordinate drop point.
  * Each edge owns the horizontal band between the centre of its source and target.
- * Vertical tolerance is ±HIT_THRESHOLD around both node centres.
+ * Vertical tolerance is ±HIT_THRESHOLD around both nodes' port lines.
  */
 export function findEdgeAtPoint(
   point: Pt,
@@ -229,8 +223,8 @@ export function findEdgeAtPoint(
     const srcCX = src.position.x + srcDims.w / 2
     const tgtCX = tgt.position.x + tgtDims.w / 2
     if (point.x < srcCX || point.x > tgtCX) continue
-    const minY = Math.min(src.position.y, tgt.position.y) - HIT_THRESHOLD
-    const maxY = Math.max(src.position.y, tgt.position.y) + HIT_THRESHOLD
+    const minY = Math.min(src.position.y, tgt.position.y) + PORT_TOP - HIT_THRESHOLD
+    const maxY = Math.max(src.position.y, tgt.position.y) + PORT_TOP + HIT_THRESHOLD
     if (point.y < minY || point.y > maxY) continue
     return edge
   }

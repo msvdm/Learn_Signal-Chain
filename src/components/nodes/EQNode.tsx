@@ -132,10 +132,10 @@ function IntermediateView({ bands, updateBand }: { bands: EQBand[]; updateBand: 
               color={BAND_COLORS[2]} size={38} />
             <div className="nodrag nopan flex-1 flex flex-col gap-1 pt-1">
               <div>
-                <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-text)' }}>
+                <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg)' }}>
                   {t.nodes.eq.frequency ?? 'Frequency'}{' '}
                 </span>
-                <span className="font-mono font-bold" style={{ fontSize: 'var(--node-text-base, 13px)', color: 'var(--lsc-text)' }}>
+                <span className="font-mono font-bold" style={{ fontSize: 'var(--node-text-base, 13px)', color: 'var(--lsc-fg)' }}>
                   {midBig}
                 </span>
                 <br />
@@ -204,7 +204,7 @@ function AdvancedBandCell({ band, storeIndex, updateBand }: {
           {/* Freq label + value */}
           <div className="nodrag nopan flex items-center justify-between" style={{ fontSize: 'var(--node-text-xs)' }}>
             <span style={{ color: 'var(--lsc-fg-dim)' }}>{t.nodes.eq.freq ?? 'Freq'}</span>
-            <span className="font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>{freqDisplay} Hz</span>
+            <span className="font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>{freqDisplay} Hz</span>
           </div>
           <input type="range" className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
             min={freqMin} max={freqMax} step={1} value={freqHz}
@@ -216,7 +216,7 @@ function AdvancedBandCell({ band, storeIndex, updateBand }: {
             <>
               <div className="nodrag nopan flex items-center justify-between" style={{ fontSize: 'var(--node-text-xs)' }}>
                 <span style={{ color: 'var(--lsc-fg-dim)' }}>{t.nodes.eq.widthQ ?? 'Width (Q)'}</span>
-                <span className="font-mono font-semibold" style={{ color: 'var(--lsc-text)' }}>{(band.Q ?? 1.4).toFixed(1)}</span>
+                <span className="font-mono font-semibold" style={{ color: 'var(--lsc-fg)' }}>{(band.Q ?? 1.4).toFixed(1)}</span>
               </div>
               <input type="range" className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
                 min={0.3} max={10} step={0.1} value={band.Q ?? 1.4}
@@ -270,12 +270,12 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="eq"
-      icon={<Activity size={14} />}
+      icon={<Activity size={16} />}
       label={data.label ?? t.nodes.eq.label}
       accentColor={data.color}
-      style={isAdvanced ? { width: 600 } : isIntermediate ? { width: 400 } : undefined}
     >
-      <div className="space-y-3">
+      {/* The band editors need room — the card grows to fit them */}
+      <div className="space-y-3" style={{ width: isAdvanced ? 576 : isIntermediate ? 376 : 196 }}>
         {wideLayout ? (
           <div className="flex gap-3">
             <div className="flex-1"><SignalMeter db={input} health={getHealth(input)} label={t.meters.input} /></div>

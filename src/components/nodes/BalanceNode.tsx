@@ -35,7 +35,7 @@ export function BalanceNode({ id, data }: NodeProps<Node<BalanceData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="balance"
-      icon={<MoveHorizontal size={14} />}
+      icon={<MoveHorizontal size={16} />}
       label={data.label ?? t.nodes.balance?.label ?? 'Balance'}
     >
       <div className="space-y-3">
@@ -58,10 +58,10 @@ export function BalanceNode({ id, data }: NodeProps<Node<BalanceData>>) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {([['L', outL], ['R', outR]] as [string, number][]).map(([ch, sig]) => (
             <div key={ch} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--node-text-xs)', fontWeight: 700, color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-text)' }}>
+              <span style={{ fontSize: 'var(--node-text-xs)', fontWeight: 700, color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-fg)' }}>
                 {ch}
               </span>
-              <span style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-text)' }}>
+              <span style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: isFinite(sig) ? getHealthStyle(getHealth(sig)).color : 'var(--lsc-fg)' }}>
                 {isFinite(sig) ? `${sig.toFixed(1)}` : '−∞'}
               </span>
             </div>

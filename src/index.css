@@ -1,34 +1,128 @@
 @import "tailwindcss";
 
 /* =======================================================================
-   Learn Signal Chain — Light Whiteboard Theme
-   Warm paper background, ink-black text, soft dotted grid.
-   Signal-health colours retuned for contrast on white.
+   Learn Signal Chain — "Studio Canvas" theme
+   Two themes, chosen by data-theme on <html> (set from the store).
+   Signal-health colours are tuned for contrast on each background.
    ======================================================================= */
 
+/* ── Theme-independent tokens ───────────────────────────────────────────── */
 :root {
-  /* Core surfaces */
-  --lsc-canvas:        #ffffff;
-  --lsc-header:        #f9f9f9;
-  --lsc-node-bg:       #f2f5f7;
-  --lsc-sunken:        #edfbff;
-  --lsc-node-bg-2:     #ffffff;
-  --lsc-track:         #e6e2d8;
-  --lsc-grid:          #3b3b8a;  
+  /* Radii */
+  --lsc-radius-xs:   2px;
+  --lsc-radius-sm:   6px;
+  --lsc-radius-md:   8px;
+  --lsc-radius-lg:   12px;
+  --lsc-radius-pill: 9999px;
 
-  /* Borders */
-  --lsc-border:        #e6e2d8;
-  --lsc-border-soft:   #eeeae0;
-  --lsc-border-mute:   #f4f1e8;
+  /* Type */
+  --lsc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --lsc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Node card text scale — edit here to resize all in-card text globally.
+     Minimum is 11px: the app is projected in class. */
+  --node-text-3xs: 11px;  /* graph axis labels */
+  --node-text-2xs: 11px;  /* channel labels, compact values */
+  --node-text-xs:  13px;  /* knob values, status text */
+  --node-text-sm:  12px;  /* slider/meter labels, band names */
+  --node-text-md:  14px;  /* node header title */
+
+  /* EQ band palette */
+  --lsc-eq-low:   #9a7fd4;
+  --lsc-eq-mid:   #d89548;
+  --lsc-eq-high:  #4fa876;
+}
+
+/* ── Dark theme ─────────────────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --lsc-canvas:      #111214;
+  --lsc-header:      #16181d;
+  --lsc-node-bg:     #1e2128;
+  --lsc-sunken:      #0d0f13;
+  --lsc-node-bg-2:   #1a1d24;
+  --lsc-grid:        #2a2f3a;
+
+  /* Lines */
+  --lsc-track:       #2e3341;
+  --lsc-track-2:     #262a34;
+  --lsc-track-3:     #3a4050;
+  --lsc-border:      #2e3341;
+  --lsc-border-soft: #262a34;
+  --lsc-border-mute: #20232b;
 
   /* Text */
-  --lsc-text: #000000;
+  --lsc-fg:          #e8eaef;
+  --lsc-fg-muted:    #a3aaba;
+  --lsc-fg-dim:      #7c8496;
+  --lsc-fg-fainter:  #555c6c;
 
   /* Signal health */
-  --signal-too-quiet:        #bacff8;
+  --signal-too-quiet:        #60a5fa;
+  --signal-good:             #4ade80;
+  --signal-hot:              #facc15;
+  --signal-clipping:         #f87171;
+  --signal-too-quiet-bg:     rgba(96,165,250,0.10);
+  --signal-too-quiet-border: rgba(96,165,250,0.25);
+  --signal-good-bg:          rgba(74,222,128,0.10);
+  --signal-good-border:      rgba(74,222,128,0.25);
+  --signal-hot-bg:           rgba(250,204,21,0.10);
+  --signal-hot-border:       rgba(250,204,21,0.28);
+  --signal-clipping-bg:      rgba(248,113,113,0.10);
+  --signal-clipping-border:  rgba(248,113,113,0.28);
+
+  /* Accent */
+  --lsc-accent:      #6366f1;
+  --lsc-accent-soft: #a5b4fc;
+  --lsc-accent-bg:   rgba(99,102,241,0.14);
+
+  /* Pro tip */
+  --lsc-tip:    #facc15;
+  --lsc-tip-fg: #fcd34d;
+  --lsc-tip-bg: rgba(250,204,21,0.07);
+  --lsc-tip-bd: rgba(250,204,21,0.22);
+
+  /* Shadows */
+  --lsc-shadow-node:    0 2px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.4);
+  --lsc-shadow-popup:   0 4px 24px rgba(0,0,0,0.5);
+  --lsc-shadow-tooltip: 0 4px 24px rgba(0,0,0,0.5);
+  --lsc-shadow-fader:   0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --lsc-canvas:      #fbfaf7;
+  --lsc-header:      #ffffff;
+  --lsc-node-bg:     #ffffff;
+  --lsc-sunken:      #f5f3ee;
+  --lsc-node-bg-2:   #faf8f3;
+  --lsc-grid:        #dcd6c8;
+
+  /* Lines */
+  --lsc-track:       #e6e2d8;
+  --lsc-track-2:     #eeeae0;
+  --lsc-track-3:     #d6d0c3;
+  --lsc-border:      #e6e2d8;
+  --lsc-border-soft: #eeeae0;
+  --lsc-border-mute: #f4f1e8;
+
+  /* Text */
+  --lsc-fg:          #3a3532;
+  --lsc-fg-muted:    #5c544f;
+  --lsc-fg-dim:      #8a8278;
+  --lsc-fg-fainter:  #b5ac9f;
+
+  /* Signal health */
+  --signal-too-quiet:        #5b8de8;
   --signal-good:             #4fa876;
-  --signal-hot:              #efd545;
-  --signal-clipping:         #fc0000;
+  --signal-hot:              #d89548;
+  --signal-clipping:         #d86b6b;
   --signal-too-quiet-bg:     rgba(91,141,232,0.08);
   --signal-too-quiet-border: rgba(91,141,232,0.22);
   --signal-good-bg:          rgba(79,168,118,0.08);
@@ -39,44 +133,21 @@
   --signal-clipping-border:  rgba(216,107,107,0.24);
 
   /* Accent */
-  --lsc-accent:        #192361;
-  --lsc-accent-soft:   #1b214a;
-  --lsc-accent-bg:     rgba(154,127,212,0.08);
+  --lsc-accent:      #9a7fd4;
+  --lsc-accent-soft: #b8a3de;
+  --lsc-accent-bg:   rgba(154,127,212,0.08);
 
-  /* EQ band palette */
-  --lsc-eq-low:   #9a7fd4;
-  --lsc-eq-mid:   #d89548;
-  --lsc-eq-high:  #4fa876;
-
-  /* Tooltip pro tip */
-  --lsc-tip:      #d89548;
-  --lsc-tip-fg:   #8a5e28;
-  --lsc-tip-bg:   rgba(216,149,72,0.08);
-  --lsc-tip-bd:   rgba(216,149,72,0.22);
+  /* Pro tip */
+  --lsc-tip:    #d89548;
+  --lsc-tip-fg: #8a5e28;
+  --lsc-tip-bg: rgba(216,149,72,0.08);
+  --lsc-tip-bd: rgba(216,149,72,0.22);
 
   /* Shadows */
   --lsc-shadow-node:    0 1px 2px rgba(60,50,40,0.04), 0 1px 3px rgba(60,50,40,0.04);
   --lsc-shadow-popup:   0 2px 12px rgba(60,50,40,0.06);
   --lsc-shadow-tooltip: 0 2px 12px rgba(60,50,40,0.05);
   --lsc-shadow-fader:   0 1px 2px rgba(60,50,40,0.08);
-
-  /* Radii */
-  --lsc-radius-xs:   2px;
-  --lsc-radius-sm:   4px;
-  --lsc-radius-md:   8px;
-  --lsc-radius-lg:   12px;
-  --lsc-radius-pill: 9999px;
-
-  /* Type */
-  --lsc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --lsc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-
-  /* Node card text scale — edit here to resize all in-card text globally */
-  --node-text-3xs: 8px;   /* graph axis labels */
-  --node-text-2xs: 10px;  /* channel labels, compact values */
-  --node-text-xs:  14px;  /* knob labels, status text */
-  --node-text-sm:  12px;  /* slider/meter labels, band names */
-  --node-text-md:  22px;  /* node header title */
 }
 
 * {
@@ -87,7 +158,7 @@ body {
   margin: 0;
   font-family: var(--lsc-font-sans);
   background: var(--lsc-canvas);
-  color: var(--lsc-text);
+  color: var(--lsc-fg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -99,6 +170,24 @@ body {
   flex-direction: column;
 }
 
+kbd {
+  font-family: var(--lsc-font-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+/* Text that should wrap to its container instead of widening it.
+   Nodes size themselves to their controls; descriptive text follows. */
+.lsc-wrap-text {
+  width: 0;
+  min-width: 100%;
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+
 /* Animated dashed signal flow line */
 @keyframes signal-flow {
   to { stroke-dashoffset: -24; }
@@ -107,6 +196,12 @@ body {
 .signal-line-animated {
   stroke-dasharray: 8 4;
   animation: signal-flow 0.6s linear infinite;
+}
+
+/* Valid target port while drawing a wire */
+@keyframes lsc-ping {
+  0%, 100% { box-shadow: 0 0 0 3px var(--lsc-accent-bg); }
+  50%      { box-shadow: 0 0 0 8px var(--lsc-accent-bg); }
 }
 
 /* Clipping pulse */
@@ -119,75 +214,68 @@ body {
   animation: clip-pulse 0.5s ease-in-out infinite;
 }
 
-/* Unlock button glow */
-@keyframes lsc-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(79,168,118,0); }
-  50%       { box-shadow: 0 0 14px 1px rgba(79,168,118,0.35); }
+@media (prefers-reduced-motion: reduce) {
+  .signal-line-animated { animation: none; }
+  .lsc-port-target      { animation: none !important; }
 }
 
-/* React Flow overrides */
+/* ── React Flow overrides ───────────────────────────────────────────────── */
+
 .react-flow__edge-path {
   stroke-width: 3;
 }
 
-.react-flow__handle {
-  width: 10px !important;
-  height: 10px !important;
-  border-radius: 50% !important;
-  border: 2px solid var(--lsc-border) !important;
-  background: var(--lsc-node-bg) !important;
-  transition: width 0.1s, height 0.1s, opacity 0.1s;
+/* Ports — 14px ring centred on the card edge. The ring colour (set inline)
+   is the health of the signal on that port. */
+.react-flow__handle.lsc-port {
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 9999px;
+  border: 3px solid var(--lsc-border);
+  background: var(--lsc-node-bg);
+  cursor: crosshair;
+  transition: width 0.1s, height 0.1s, background 0.1s;
 }
 
-.react-flow__handle-left {
-  left: -6px !important;
+/* Valid target while a wire is being drawn */
+.react-flow__handle.lsc-port.lsc-port-target {
+  width: 16px;
+  height: 16px;
+  background: var(--lsc-accent);
+  border-color: var(--lsc-node-bg);
+  animation: lsc-ping 1.5s ease-in-out infinite;
 }
 
-.react-flow__handle-right {
-  right: -6px !important;
-}
-
-/* Connect mode — handles become larger, clickable, and clearly visible */
+/* Connect mode — ports become hittable by document.elementsFromPoint */
 .lsc-connect-mode .react-flow__handle {
-  width: 14px !important;
-  height: 14px !important;
-  opacity: 1 !important;
+  pointer-events: all !important;  /* React Flow defaults to none */
   cursor: crosshair !important;
-  pointer-events: all !important;  /* React Flow defaults to none; we need them hittable */
-}
-
-.lsc-connect-mode .react-flow__handle-right {
-  right: -8px !important;
-  background: var(--lsc-accent) !important;
-  border-color: var(--lsc-node-bg) !important;
-}
-
-.lsc-connect-mode .react-flow__handle-left {
-  left: -8px !important;
-  background: var(--lsc-border) !important;
-  border-color: var(--lsc-node-bg) !important;
 }
 
 .lsc-connect-mode .react-flow__pane {
   cursor: crosshair !important;
 }
 
-.react-flow__controls button {
-  background: var(--lsc-node-bg) !important;
-  border-color: var(--lsc-border) !important;
-  color: var(--lsc-text) !important;
+/* Connection rejected feedback — port flashes red briefly */
+.react-flow__handle.lsc-handle-rejected {
+  background: var(--signal-clipping) !important;
+  border-color: var(--signal-clipping) !important;
+  transform: translate(-50%, -50%) scale(1.5) !important;
+  transition: transform 0.15s ease-out, background 0.15s !important;
 }
 
-/* Delete button that appears on handle hover in select mode */
+/* Delete button that appears on port hover in Move mode */
 .lsc-handle-delete {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 1px solid var(--lsc-border);
   background: var(--lsc-node-bg);
-  color: var(--lsc-text);
-  font-size: 14px;
+  color: var(--lsc-fg);
+  font-size: 13px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -203,65 +291,96 @@ body {
   color: #fff;
 }
 
-/* Connection rejected feedback — handle flashes red briefly */
-.lsc-handle-rejected {
-  background: var(--signal-clipping) !important;
-  border-color: var(--signal-clipping) !important;
-  transform: scale(1.7) !important;
-  transition: transform 0.15s ease-out, background 0.15s !important;
-}
-
-.react-flow__controls button:hover {
-  background: var(--lsc-sunken) !important;
-}
-
 .react-flow__panel {
-  color: var(--lsc-text);
+  color: var(--lsc-fg);
 }
 
-/* Semantic type classes */
+.react-flow__attribution {
+  background: transparent !important;
+}
+.react-flow__attribution a {
+  color: var(--lsc-fg-dim) !important;
+}
+
+/* ── Node card ──────────────────────────────────────────────────────────── */
+
+/* Mini-toolbar above the card — shown on hover or when selected */
+.lsc-node-toolbar {
+  display: none;
+}
+.lsc-node-card:hover .lsc-node-toolbar,
+.lsc-node-card.lsc-selected .lsc-node-toolbar {
+  display: flex;
+}
+
+/* Never while a wire is being drawn — it would cover the input labels */
+.lsc-wiring .lsc-node-toolbar {
+  display: none !important;
+}
+
+.lsc-node-toolbar button:hover {
+  background: var(--lsc-sunken);
+}
+
+/* Nodes size their icons uniformly regardless of what the node passes in */
+.lsc-node-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* React Flow sets cursor:grab on node wrappers — controls get pointers */
+.react-flow__node { cursor: default; }
+.react-flow__node button,
+.react-flow__node input[type="range"] { cursor: pointer; }
+
+/* ── Semantic type classes ──────────────────────────────────────────────── */
+
 .lsc-overline {
   font-family: var(--lsc-font-sans);
-  font-size: var(--node-text-sm);
-  font-weight: 600;
-  color: var(--lsc-text);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lsc-fg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .lsc-value {
   font-family: var(--lsc-font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--lsc-text);
+  color: var(--lsc-fg);
 }
 
 .lsc-value-sm {
   font-family: var(--lsc-font-mono);
-  font-size: 9px;
-  color: var(--lsc-text);
+  font-size: 11px;
+  color: var(--lsc-fg);
   line-height: 1;
 }
 
 .lsc-knob-label {
   font-family: var(--lsc-font-sans);
-  font-size: 8px;
-  font-weight: 400;
-  color: var(--lsc-text);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lsc-fg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1;
 }
 
-/* Cursor mode cascade — cursor class on wrapper controls the React Flow pane */
-.cursor-grab .react-flow__pane      { cursor: grab; }
-.cursor-crosshair .react-flow__pane { cursor: crosshair; }
-.cursor-default .react-flow__pane   { cursor: default; }
+/* Generic hover for outline buttons in chrome (header, toolbar, dialogs) */
+.lsc-btn-outline:hover {
+  border-color: var(--lsc-accent) !important;
+  background: var(--lsc-accent-bg) !important;
+}
 
-/* React Flow sets cursor:grab on node wrappers — override since nodes are non-draggable */
-.react-flow__node { cursor: default; }
-.react-flow__node button,
-.react-flow__node input[type="range"] { cursor: pointer; }
+.lsc-palette-tile:hover {
+  border-color: var(--lsc-accent) !important;
+}
+
+.lsc-search-input::placeholder {
+  color: var(--lsc-fg-muted);
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { height: 10px; width: 10px; }
