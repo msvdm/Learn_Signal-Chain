@@ -21,7 +21,6 @@ import { AmpNode }             from './nodes/AmpNode'
 import { SpeakerNode }         from './nodes/SpeakerNode'
 import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
 import { SwitchNode }          from './nodes/SwitchNode'
-import { PotentiometerNode }   from './nodes/PotentiometerNode'
 import { CompressorNode }      from './nodes/CompressorNode'
 import { HpfNode }             from './nodes/HpfNode'
 import { EQNode }              from './nodes/EQNode'
@@ -68,7 +67,6 @@ const nodeTypes = {
   instrument:         MicNode,
   'di-box':           DIBoxNode,
   gain:               GainNode,
-  preamp:             GainNode,
   amp:                AmpNode,
   fader:              FaderNode,
   'noise-gate':       NoiseGateNode,
@@ -83,7 +81,6 @@ const nodeTypes = {
   eq:                 EQNode,
   comp:               CompressorNode,
   switch:             SwitchNode,
-  potentiometer:      PotentiometerNode,
   relay:              RelayNode,
   pan:                PanNode,
   'graphic-eq':       GraphicEQNode,

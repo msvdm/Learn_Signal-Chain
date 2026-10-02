@@ -95,7 +95,7 @@
       "micInfo": "Dynamic mic output: approx. -60 dBu"
     },
     "preamp": {
-      "label": "Preamp / Gain",
+      "label": "Preamp",
       "gain": "Gain"
     },
     "hpf": {
@@ -266,7 +266,7 @@
       "line-in": "Line Input",
       "instrument": "Instrument",
       "di-box": "DI Box",
-      "gain": "Preamp / Gain",
+      "gain": "Gain",
       "hpf": "High-Pass Filter",
       "eq": "Parametric EQ",
       "comp": "Compressor",
@@ -278,7 +278,6 @@
       "graphic-eq": "Graphic EQ",
       "fader": "Fader",
       "switch": "Switch / Mute",
-      "potentiometer": "Potentiometer",
       "relay": "Relay",
       "pan": "Pan / Balance",
       "adc": "ADC",
@@ -308,12 +307,12 @@
       "tip": "Going direct (DI) from an instrument bypasses the amp entirely. This is common in recording and live sound. A DI box can also be used to convert the high-impedance signal to a low-impedance balanced mic-level signal, which travels well over long cables."
     },
     "gain": {
-      "what": "The preamp/gain stage boosts the input signal up to a usable working level. For a microphone, this can be +40 to +60 dB of gain. For a line-level source, you may only need +10 to +20 dB.",
-      "why": "Without enough gain here, all downstream processors work with a weak signal and introduce more noise. Too much gain causes clipping before anything else in the chain can help. Getting this stage right is the foundation of gain staging.",
-      "tip": "Aim for the output to land in the green zone (−40 to −12 dBu). This is called gain staging, and it starts right here."
+      "what": "A gain stage turns a signal up or down by a set amount: right of 0 dB makes it louder, left of 0 dB quieter, and all the way left switches it off. Placed right after a microphone, this same card becomes a Preamp.",
+      "why": "Every device in a chain expects a certain level. A gain stage fixes a signal that arrives too weak or too strong — a quiet line source, say, or a hot one before an effect that would clip.",
+      "tip": "Start at 0 dB (no change) and move it only until the meter after it sits in the green (−40 to −12 dBu). Turning up raises the noise along with the signal; turning down too far leaves the next stage too little to work with."
     },
     "preamp": {
-      "what": "The preamplifier (preamp) boosts the weak microphone-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB.",
+      "what": "The preamplifier (preamp) boosts the weak microphone-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB. It is what the Gain card becomes when you place it right after a microphone.",
       "why": "Without enough gain here, all downstream processors — EQ, compressor, fader — work with a weak signal and introduce more noise. Too much gain causes distortion before anything else can help.",
       "tip": "Aim for the output to land in the green zone (-40 to -12 dBu). This is called gain staging, and it starts right here at the preamp."
     },
@@ -356,11 +355,6 @@
       "what": "A switch (or mute button) is the simplest control in a signal chain. When it is on, the signal passes through unchanged. When it is off, the signal is completely cut — silence.",
       "why": "Muting is used to silence a channel between takes, to prevent feedback when a microphone is not in use, or to isolate a track during a mix.",
       "tip": "In live sound, muting microphones when not in use prevents bleed, handling noise, and feedback. It is a habit every sound engineer develops quickly."
-    },
-    "potentiometer": {
-      "what": "A potentiometer (pot) is a variable resistor used as a volume or level control. It uses an audio taper curve, which matches how human hearing perceives loudness — most of the usable range is in the upper half of the knob rotation.",
-      "why": "Audio equipment uses pots for volume controls, send levels, trim controls, and effects returns. The audio taper ensures that the control feels linear even though loudness is logarithmic.",
-      "tip": "The 12 o'clock position (50%) is not unity gain on an audio taper pot — unity is typically at 75% of the rotation. This node models that correctly: full CCW = silence, 75% = 0 dB, full CW = +10 dB."
     },
     "aux-bus": {
       "what": "An aux bus collects several signals and adds them together. Its one input takes as many wires as you like. In Mono everything leaves on one wire. Switch it to Stereo to keep left and right apart: the mix then leaves on two wires, L and R. In Stereo, a Fader wired to L or R becomes its Main Fader, just like on the Master Bus.",

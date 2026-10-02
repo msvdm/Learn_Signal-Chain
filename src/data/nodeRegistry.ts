@@ -99,12 +99,14 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   gain: {
     typeKey: 'gain',
-    label: 'Preamp / Gain',
+    label: 'Gain',
     inputs: [{ id: 'in', label: 'Input', side: 'left' }],
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
     stereo: 'follow',
-    defaultParams: { gainDb: 40 },
+    // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
+    // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
+    defaultParams: { preampDb: 40, gainDb: 0 },
   },
   hpf: {
     typeKey: 'hpf',
@@ -157,16 +159,6 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     category: 'processor',
     stereo: 'follow',
     defaultParams: { on: true },
-  },
-  potentiometer: {
-    typeKey: 'potentiometer',
-    label: 'Potentiometer',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
-    category: 'processor',
-    stereo: 'follow',
-    // position: 0–100 knob position. 0 = fully CCW (−∞), 75 = unity (0 dB), 100 = fully CW (+10 dB)
-    defaultParams: { position: 75 },
   },
   amp: {
     typeKey: 'amp',
@@ -311,8 +303,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     inputs: MATRIX_INPUTS.map((n) => ({ id: `in-${n}`, label: `In ${n}`, side: 'left' as const })),
     outputs: MATRIX_OUTPUTS.map((n) => ({ id: `out-${n}`, label: `Out ${n}`, side: 'right' as const })),
     category: 'merge',
-    // x{input}{output}: how much of each input goes to each output, on the potentiometer
-    // scale (0 = off, 75 = full level, 100 = +10 dB). Every knob starts at full level.
+    // x{input}{output}: how much of each input goes to each output, on an audio-taper knob
+    // (0 = off, 75 = full level, 100 = +10 dB). Every knob starts at full level.
     defaultParams: Object.fromEntries(
       MATRIX_INPUTS.flatMap((i) => MATRIX_OUTPUTS.map((o) => [matrixParam(i, o), 75])),
     ),
@@ -412,20 +404,25 @@ export function getPorts(
 }
 
 /**
- * The bus whose Mix output feeds this Fader — straight in, or through effects on the way
- * (a limiter on the master, say). Null when it is not a Main Fader.
+ * Walks back from a card through one-input effects (EQ, comp, pad …) and returns the first
+ * match. Stops at another card of the same type — that one would take the role itself.
  */
-export function mixBusOf(faderId: string, graph: GraphView): string | null {
+function findUpstream(
+  nodeId: string,
+  graph: GraphView,
+  match: (wire: SignalEdge, source: SignalNode | undefined) => string | null,
+): string | null {
+  const own  = graph.nodes.find((n) => n.id === nodeId)?.typeKey
   const seen = new Set<string>()
-  let cur = faderId
+  let cur = nodeId
   for (;;) {
     const wire = graph.edges.find((e) => e.target === cur)
     if (!wire) return null
-    if (wire.sourceHandle === MIX_PORT) return wire.source
     const src = graph.nodes.find((n) => n.id === wire.source)
+    const found = match(wire, src)
+    if (found) return found
     const def = src && NODE_REGISTRY[src.typeKey]
-    // Walk back through one-input effects only; another fader would be the Main Fader itself
-    if (!src || !def || seen.has(src.id) || src.typeKey === 'fader' ||
+    if (!src || !def || seen.has(src.id) || src.typeKey === own ||
         def.stereo !== 'follow' || def.inputs.length !== 1) return null
     seen.add(src.id)
     cur = src.id
@@ -433,14 +430,31 @@ export function mixBusOf(faderId: string, graph: GraphView): string | null {
 }
 
 /**
+ * The bus whose Mix output feeds this Fader — straight in, or through effects on the way
+ * (a limiter on the master, say). Null when it is not a Main Fader.
+ */
+export function mixBusOf(faderId: string, graph: GraphView): string | null {
+  return findUpstream(faderId, graph, (wire) => (wire.sourceHandle === MIX_PORT ? wire.source : null))
+}
+
+/**
+ * The microphone this Gain is the Preamp of — straight after it, or with effects such as
+ * a Pad in between. Null when it is a plain gain stage.
+ */
+export function preampMicOf(gainId: string, graph: GraphView): string | null {
+  return findUpstream(gainId, graph, (_wire, src) => (src?.typeKey === 'mic' ? src.id : null))
+}
+
+/**
  * Which help text a node opens: the Pan node fed a stereo wire is a Balance knob,
- * a Fader on a bus's Mix output is the Main Fader.
+ * a Fader on a bus's Mix output is the Main Fader, a Gain after a microphone is a Preamp.
  */
 export function helpKeyOf(
   node: Pick<SignalNode, 'typeKey'>,
-  stage?: { stereoIn?: boolean; mainFader?: boolean },
+  stage?: { stereoIn?: boolean; mainFader?: boolean; preamp?: boolean },
 ): string {
   if (node.typeKey === 'pan' && stage?.stereoIn) return 'balance'
   if (node.typeKey === 'fader' && stage?.mainFader) return 'main-fader'
+  if (node.typeKey === 'gain' && stage?.preamp) return 'preamp'
   return node.typeKey
 }

@@ -4,7 +4,7 @@ import type { Translations } from '../i18n/translations'
 import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
 import {
   NODE_REGISTRY, MULTI_WIRE_TYPES, MATRIX_INPUTS, MATRIX_OUTPUTS,
-  getPorts, portSide, isNodeStereo, mixBusOf, matrixParam,
+  getPorts, portSide, isNodeStereo, mixBusOf, preampMicOf, matrixParam,
 } from '../data/nodeRegistry'
 import { bellGain, shelfGain } from '../components/controls/eqMath'
 
@@ -80,6 +80,7 @@ export interface StageResult {
   stereoIn?: boolean                // a stereo wire comes in (two input meter bars)
   stereoOut?: boolean               // the node sends out Left and Right (two output meter bars)
   mainFader?: boolean               // a Fader on a bus's Mix output: controls the whole mix
+  preamp?: boolean                  // a Gain after a microphone: lifts it up to line level
   warning?: string                  // domain violation or blocked signal
   portOutputs?: Record<string, number> // per-port overrides for multi-output nodes
 }
@@ -102,18 +103,21 @@ export function getHealth(db: number): SignalHealth {
   return 'clipping'
 }
 
-// Audio-taper mapping for potentiometer position (0–100).
+// Audio-taper knob position (0–100), used by the Matrix knobs.
 // 0 = fully CCW → −∞,  75 = unity (0 dB),  100 = fully CW (+10 dB).
 // Below unity: log taper (−60 dB/octave feel). Above unity: linear boost to +10 dB.
-export function potPositionToDb(position: number): number {
+export function taperToDb(position: number): number {
   if (position <= 0) return -Infinity
   const t = position / 100
   if (t <= 0.75) {
-    const normalized = t / 0.75                          // 0 → 1 as pot goes CCW → unity
+    const normalized = t / 0.75                          // 0 → 1 as the knob goes CCW → unity
     return 60 * Math.log10(Math.max(normalized, 0.0001)) // −∞ → 0 dB
   }
   return ((t - 0.75) / 0.25) * 10                       // 0 → +10 dB above unity
 }
+
+/** A Gain (not a Preamp) turned all the way down is switched off. */
+export const GAIN_OFF_DB = -60
 
 // Balance knob (the Pan node in stereo mode): 0 = full left, 50 = centre, 100 = full right.
 // Unlike pan, the centre is unity on both sides; turning one way only fades the other side.
@@ -217,6 +221,7 @@ function computeGraphNode(
   inputDomain: SignalDomain,
   domainMismatch: boolean,
   portInputs: Record<string, number> = {},
+  opts: { preamp?: boolean } = {},
 ): StageResult | CompressorResult | DeesserResult {
   const input = inputSignals[0] ?? -Infinity
   const p = node.params
@@ -248,10 +253,14 @@ function computeGraphNode(
       const out = input
       return { out, health: getHealth(out), domain: 'analog' }
     }
-    case 'gain':
-    case 'preamp': {
-      const gain = (p.gainDb as number) ?? (p.preampGainDb as number) ?? 40
-      const out = Math.min(input + gain, 20)
+    case 'gain': {
+      // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
+      if (opts.preamp) {
+        const out = Math.min(input + ((p.preampDb as number) ?? 40), 20)
+        return { out, health: getHealth(out), domain }
+      }
+      const gainDb = (p.gainDb as number) ?? 0
+      const out = gainDb <= GAIN_OFF_DB ? -Infinity : Math.min(input + gainDb, 20)
       return { out, health: getHealth(out), domain }
     }
     case 'amp': {
@@ -310,11 +319,6 @@ function computeGraphNode(
       const out = input + ((p.faderDb as number) ?? (p.masterFaderDb as number) ?? 0)
       return { out, health: getHealth(out), domain }
     }
-    case 'potentiometer': {
-      const db  = potPositionToDb((p.position as number) ?? 75)
-      const out = isFinite(db) ? input + db : -Infinity
-      return { out, health: getHealth(out), domain }
-    }
     case 'switch': {
       const out = (p.on as boolean) !== false ? input : -Infinity
       return { out, health: getHealth(out), domain }
@@ -350,7 +354,7 @@ function computeGraphNode(
       const portOutputs: Record<string, number> = {}
       for (const o of MATRIX_OUTPUTS) {
         portOutputs[`out-${o}`] = sumSignalsToDb(MATRIX_INPUTS.map((i) => {
-          const knobDb = potPositionToDb((p[matrixParam(i, o)] as number) ?? 75)
+          const knobDb = taperToDb((p[matrixParam(i, o)] as number) ?? 75)
           const inDb   = portInputs[`in-${i}`] ?? -Infinity
           return isFinite(knobDb) ? inDb + knobDb : -Infinity
         }))
@@ -487,6 +491,8 @@ function computeGraphSignal(
       // Stereo: a bus (or Line In) set to Stereo, or a follow node fed a stereo wire.
       // Mono: everything else — one channel; a stereo wire arriving here is folded into one.
       const isSource = def?.category === 'source'
+      // The first Gain after a microphone works as its Preamp
+      const preamp   = node.typeKey === 'gain' && preampMicOf(node.id, { nodes, edges }) !== null
       const stereo   = node.typeKey !== 'pan' && (isNodeStereo(node) || (follows && followKind === 'stereo'))
 
       /**
@@ -542,7 +548,7 @@ function computeGraphSignal(
           const pass = signals[0] ?? -Infinity
           return { out: pass, health: getHealth(pass), domain: inputDomain }
         }
-        return computeGraphNode(node, signals, inputDomain, domainMismatch, portInputs)
+        return computeGraphNode(node, signals, inputDomain, domainMismatch, portInputs, { preamp })
       }
 
       /** Value of output port `portId` (e.g. 'out', 'direct') from one side's result. */
@@ -625,6 +631,7 @@ function computeGraphSignal(
       }
 
       if (node.typeKey === 'fader' && mixBusOf(node.id, { nodes, edges }) !== null) result.mainFader = true
+      if (preamp) result.preamp = true
       result.stereoIn  = follows ? followKind === 'stereo' : anyStereo
       result.stereoOut = stereo || node.typeKey === 'pan'
       stages[node.id]  = result
@@ -644,9 +651,9 @@ function computeGraphSignal(
     for (const node of nodes) {
       const stage = stages[node.id]
       if (!stage) continue
-      if ((node.typeKey === 'gain' || node.typeKey === 'preamp') && stage.health === 'too-quiet')
+      if (stage.preamp && stage.health === 'too-quiet')
         warns.push(t.warnings.preampTooQuiet)
-      if ((node.typeKey === 'gain' || node.typeKey === 'preamp') && stage.health === 'clipping')
+      if (stage.preamp && stage.health === 'clipping')
         warns.push(t.warnings.preampClipping)
       if (node.typeKey === 'eq' && stage.health === 'clipping')
         warns.push(t.warnings.eqClipping)

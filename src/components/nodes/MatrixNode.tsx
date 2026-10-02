@@ -10,7 +10,7 @@ import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useTranslation } from '../../i18n/useTranslation'
 import { MATRIX_INPUTS, MATRIX_OUTPUTS, matrixParam } from '../../data/nodeRegistry'
 import { nodeName, sideLetter } from '../../utils/nodeName'
-import { formatPotDb } from '../../utils/readout'
+import { formatTaperDb } from '../../utils/readout'
 
 interface GraphMatrixData extends Record<string, unknown> {
   color?: string
@@ -80,7 +80,7 @@ export function MatrixNode({ id, data }: NodeProps<Node<GraphMatrixData>>) {
                   max={100}
                   step={0.5}
                   label=""
-                  formatValue={formatPotDb}
+                  formatValue={formatTaperDb}
                   onChange={(v) => updateNodeParams(id, { [matrixParam(i, o)]: v })}
                   color="var(--lsc-accent)"
                   size={36}

@@ -12,7 +12,7 @@ import { NodePort } from './NodePort'
 // Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
 const NO_BYPASS_TYPES = new Set([
   'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
-  'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
+  'fader', 'switch', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
   'master-bus', 'matrix', 'audio-interface',
 ])
 

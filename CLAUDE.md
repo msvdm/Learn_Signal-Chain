@@ -128,7 +128,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 |---|---|
 | Beginner | mic, line-in, instrument, di-box, active-speaker, gain, fader |
 | Intermediate | + hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay, pan (Pan / Balance), master-bus, aux-bus, audio-interface |
-| Advanced | + speaker, potentiometer, amp, graphic-eq, adc, dac, matrix |
+| Advanced | + speaker, amp, graphic-eq, adc, dac, matrix |
 
 `PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
 
@@ -143,14 +143,15 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 
 ### Signal math (simplified for education)
 
-- **Gain / Amp**: `output = clamp(input + gainDb, −∞, +20)`
+- **Gain**: the first Gain after a Mic (effects such as a Pad may sit in between, `preampMicOf()`) is its **Preamp**: `clamp(input + preampDb, +20)`, 0…+60 dB. Anywhere else it is a plain gain stage: `clamp(input + gainDb, +20)`, −∞…+20 dB (fully left = off). Each mode keeps its own param; the card title, knob and help follow the wiring (`stage.preamp`).
+- **Amp**: `output = clamp(input + gainDb, −∞, +20)`
 - **HPF**: passthrough placeholder (no frequency weighting at this level)
 - **EQ**: `output = input + sum(bandGains)` — additive only
 - **Compressor**: `gainReduction = max(0, (input − threshold) × (1 − 1/ratio))`, then `output = input − gainReduction + makeupGain`
-- **Fader / Potentiometer**: `output = input + faderDb` / audio-taper curve, unity at 75% position
+- **Fader**: `output = input + faderDb`
 - **Switch**: `output = on ? input : −∞`
 - **Master Bus / Aux Bus**: `output = 20 × log10(Σ 10^(inputN/20))` (voltage sum of all wires — two identical signals give +6 dB), per side in stereo
-- **Matrix** (4 inputs × 2 outputs): `out_k = Σ (input_i + knob_ik)` (voltage sum), knobs on the potentiometer scale (0 = off, 75 = 0 dB); inputs are folded to one channel
+- **Matrix** (4 inputs × 2 outputs): `out_k = Σ (input_i + knob_ik)` (voltage sum), knobs on an audio-taper scale (`taperToDb`: 0 = off, 75 = 0 dB); inputs are folded to one channel
 - **Pan**: equal-power, `L = in + 20·log10(cos(p·π/2))`, `R = in + 20·log10(sin(p·π/2))`. **Balance**: fades only the opposite side, linearly, centre = unity
 
 The math is intentionally simplified. It teaches the concept correctly without IIR filter biquad complexity.

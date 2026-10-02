@@ -5,7 +5,7 @@ import {
   Zap, Activity, Box, ToggleLeft, Radio, Sliders,
   AudioWaveform, ShieldAlert, DoorClosed, Minus,
   Merge, Volume2, Cpu, Search,
-  SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
+  SlidersHorizontal, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft, Grid3x3,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
@@ -46,7 +46,6 @@ const ALL_ITEMS: PaletteItem[] = [
   // Routing — level controls, switches, panning, conversion, buses
   { typeKey: 'fader',            icon: <SlidersHorizontal size={ICON} />, category: 'routing' },
   { typeKey: 'switch',           icon: <ToggleLeft size={ICON} />,        category: 'routing' },
-  { typeKey: 'potentiometer',    icon: <Gauge size={ICON} />,             category: 'routing' },
   { typeKey: 'relay',            icon: <GitBranch size={ICON} />,         category: 'routing' },
   { typeKey: 'pan',              icon: <MoveHorizontal size={ICON} />,    category: 'routing' },
   { typeKey: 'adc',              icon: <ArrowRight size={ICON} />,        category: 'routing' },
@@ -79,7 +78,7 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
     'active-speaker', 'speaker',
     'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
     'noise-gate', 'limiter', 'deesser',
-    'switch', 'potentiometer', 'relay', 'pan',
+    'switch', 'relay', 'pan',
     'amp', 'graphic-eq',
     'master-bus', 'aux-bus', 'matrix', 'audio-interface',
     'adc', 'dac',
