@@ -59,8 +59,6 @@ export function KnobControl({
 
   const startY = useRef<number | null>(null)
   const startValue = useRef(value)
-  const valueRef = useRef(value)
-  valueRef.current = value
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -85,7 +83,7 @@ export function KnobControl({
     e.stopPropagation()
     e.preventDefault()
     startY.current = e.clientY
-    startValue.current = valueRef.current
+    startValue.current = value
   }
 
   const valueSize = size >= 52 ? 15 : 13
