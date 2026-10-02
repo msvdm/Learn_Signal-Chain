@@ -13,7 +13,7 @@ const MIN_EXIT = 40
  * - Two points produce the simplest possible elbow; additional waypoints add
  *   extra corner segments as the user places them.
  */
-function orthogonalRoute(points: Pt[]): Pt[] {
+export function orthogonalRoute(points: Pt[]): Pt[] {
   const route: Pt[] = [points[0]]
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i]

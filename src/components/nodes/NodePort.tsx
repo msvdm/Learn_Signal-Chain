@@ -14,7 +14,7 @@ interface NodePortProps {
   nodeId: string
   portId: string
   type: 'source' | 'target'
-  /** Position in the stack of ports on this side (0 = top, on the header's port line). */
+  /** Position in the stack of ports on this side (0 = top, just below the header). */
   index: number
   title?: string
 }
@@ -94,13 +94,14 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         // Only set when unplugging — otherwise React Flow keeps its own click handling
         {...(canUnplug ? { onClick: unplug } : {})}
       >
-        {showUnplug && <X size={12} strokeWidth={3} />}
+        {showUnplug && <X size={22} strokeWidth={3} />}
       </Handle>
       {side && (
         <span
           aria-hidden
           style={{
-            position: 'absolute', top: top - 17, right: -14,
+            // Right of the ring, just above the wire leaving it
+            position: 'absolute', top: top - 17, right: -24,
             fontSize: 10, fontWeight: 800, lineHeight: 1,
             color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}

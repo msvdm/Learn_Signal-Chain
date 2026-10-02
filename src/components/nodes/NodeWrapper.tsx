@@ -16,6 +16,9 @@ const NO_BYPASS_TYPES = new Set([
   'master-bus', 'matrix', 'audio-interface',
 ])
 
+// Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
+const BODY_PAD_X = 20
+
 interface NodeWrapperProps {
   nodeId: string
   typeKey: string
@@ -246,7 +249,7 @@ export function NodeWrapper({
 
       {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
       {canStereo && node && (
-        <div style={{ padding: '10px 12px 0' }}>
+        <div style={{ padding: `10px ${BODY_PAD_X}px 0` }}>
           <StereoToggle
             stereo={isNodeStereo(node)}
             onChange={(on) => setNodeStereo(nodeId, on)}
@@ -259,7 +262,7 @@ export function NodeWrapper({
       {/* Body — dimmed when bypassed */}
       <div
         style={{
-          padding: '10px 12px 12px',
+          padding: `10px ${BODY_PAD_X}px 12px`,
           display: 'flex', flexDirection: 'column', gap: 8,
           alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
           opacity: isBypassed ? 0.5 : 1,

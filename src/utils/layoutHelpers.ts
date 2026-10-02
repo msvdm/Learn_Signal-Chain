@@ -2,6 +2,7 @@ import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { upstreamOf } from './chainColors'
+import { orthogonalRoute } from './wirePath'
 
 export type Pt = { x: number; y: number }
 
@@ -14,8 +15,10 @@ export const MIN_NODE_GAP = 100
 // Every node card shares the same header height and port line, so wires between
 // cards stay straight no matter how tall each card is.
 export const HEADER_H = 56
-export const PORT_TOP = 28   // first port centre, measured from the card top
-export const PORT_GAP = 24   // spacing between stacked ports on the same side
+// First port centre, measured from the card top: just below the header's divider, clear of its
+// buttons. The ring is 28px (40px while it shows the unplug ×), so it never touches the line.
+export const PORT_TOP = HEADER_H + 24
+export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
 
 /**
  * Size of a node that React Flow has not measured yet (a node about to be dropped).
@@ -87,57 +90,33 @@ export function resolveOverlap(
 
 // ── Push helpers ───────────────────────────────────────────────────────────────
 
-/** Push every node at or after fromX rightward by amount (grid-snapped). */
-export function pushDownstream(
-  fromX: number,
-  amount: number,
-  nodes: FlowNode[],
-  nodeMap: Map<string, FlowNode>,
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  const snapped = Math.ceil(amount / GRID) * GRID
-  for (const n of nodes) {
-    if (n.position.x >= fromX - GRID / 2) {
-      const newPos = { x: n.position.x + snapped, y: n.position.y }
-      nodeMap.set(n.id, { ...n, position: newPos })
-      updatePos(n.id, newPos)
-    }
-  }
+function cardRect(n: FlowNode, dx = 0) {
+  const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
+  return nodeRect({ x: n.position.x + dx, y: n.position.y }, d.w, d.h)
 }
 
 /**
- * Ensure a new src→tgt wire has room: tgt starts at least MIN_NODE_GAP right of src.
- * If not, tgt and the chain it feeds move right together, plus any card they would land on.
- * src and the cards feeding it never move — taking them along would leave the gap as it was.
- * `edges` are the wires before this one.
+ * New positions that give src's wires to tgtIds room: each target starts at least MIN_NODE_GAP
+ * right of src. Targets that are closer move right together with the chain they feed, plus any
+ * card they would land on. src and the cards feeding it never move — taking them along would
+ * leave the gap as it was.
  */
-export function enforceGap(
-  srcId: string,
-  tgtId: string,
-  nodes: FlowNode[],
-  edges: SignalEdge[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
+function gapMoves(srcId: string, tgtIds: string[], nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+  const moves   = new Map<string, Pt>()
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
   const src = nodeMap.get(srcId)
-  const tgt = nodeMap.get(tgtId)
-  if (!src || !tgt) return
-  const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
-  const gap = tgt.position.x - (src.position.x + srcDims.w)
-  if (gap >= MIN_NODE_GAP) return
+  if (!src) return moves
+  const srcRight = cardRect(src).right
+  const fixed    = upstreamOf(srcId, edges).nodeIds
 
-  const fixed = upstreamOf(srcId, edges).nodeIds
-  // The wire loops back into its own chain — there is no left-to-right order to restore
-  if (fixed.has(tgtId)) return
-  const shift = Math.ceil((MIN_NODE_GAP - gap) / GRID) * GRID
-
-  function rectOf(n: FlowNode, dx = 0) {
-    const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-    return nodeRect({ x: n.position.x + dx, y: n.position.y }, d.w, d.h)
-  }
+  // A wire that loops back into its own chain has no left-to-right order to restore
+  const gapTo    = (id: string) => nodeMap.get(id)!.position.x - srcRight
+  const tooClose = tgtIds.filter((id) => nodeMap.has(id) && !fixed.has(id) && gapTo(id) < MIN_NODE_GAP)
+  if (tooClose.length === 0) return moves
+  const shift = Math.ceil(Math.max(...tooClose.map((id) => MIN_NODE_GAP - gapTo(id))) / GRID) * GRID
 
   const moving = new Set<string>()
-  let next = [tgtId]
+  let next = tooClose
   while (next.length > 0) {
     // These cards move, and so does everything they feed
     while (next.length > 0) {
@@ -147,16 +126,85 @@ export function enforceGap(
       for (const e of edges) if (e.source === id) next.push(e.target)
     }
     // Then any card a moved card would now land on
-    const moved = [...moving].map((id) => rectOf(nodeMap.get(id)!, shift))
+    const moved = [...moving].map((id) => cardRect(nodeMap.get(id)!, shift))
     next = nodes
-      .filter((n) => !moving.has(n.id) && !fixed.has(n.id) && moved.some((r) => rectsOverlap(r, rectOf(n))))
+      .filter((n) => !moving.has(n.id) && !fixed.has(n.id) && moved.some((r) => rectsOverlap(r, cardRect(n))))
       .map((n) => n.id)
   }
 
   for (const id of moving) {
     const n = nodeMap.get(id)!
-    updatePos(id, { x: n.position.x + shift, y: n.position.y })
+    moves.set(id, { x: n.position.x + shift, y: n.position.y })
   }
+  return moves
+}
+
+/**
+ * Ensure a new src→tgt wire has room: tgt starts at least MIN_NODE_GAP right of src (see gapMoves).
+ * `edges` are the wires before this one.
+ */
+export function enforceGap(
+  srcId: string,
+  tgtId: string,
+  nodes: FlowNode[],
+  edges: SignalEdge[],
+  updatePos: (id: string, pos: Pt) => void,
+) {
+  for (const [id, pos] of gapMoves(srcId, [tgtId], nodes, edges)) updatePos(id, pos)
+}
+
+/**
+ * New positions that make room for a card just dropped onto a wire (`nodes` hold it with its
+ * real size, `edges` its new wires). The chain after it slides right (gapMoves); then, if a tall
+ * card would cover cards below it or the wires running there, everything from the highest of
+ * those cards down moves down as one block, so the rows underneath keep their shape and their
+ * wires stay straight. The chain feeding the new card never moves.
+ */
+export function makeRoomForInsert(newId: string, nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+  const targets = edges.filter((e) => e.source === newId).map((e) => e.target)
+  const moves   = gapMoves(newId, targets, nodes, edges)
+  const placed  = nodes.map((n) => {
+    const pos = moves.get(n.id)
+    return pos ? { ...n, position: pos } : n
+  })
+  const byId = new Map(placed.map((n) => [n.id, n]))
+  const card = byId.get(newId)
+  if (!card) return moves
+  const r     = cardRect(card)
+  const fixed = upstreamOf(newId, edges).nodeIds
+  // Cards in its own row (top within its header) can't be moved out of its way downward
+  const isBelow = (n: FlowNode) => !fixed.has(n.id) && n.position.y >= r.top + HEADER_H
+
+  // A wire's first and last runs sit on its cards' port lines: one under the new card moves with its card
+  const PAD = MIN_NODE_GAP / 2
+  const runUnderCard = (a: Pt, b: Pt) =>
+    a.y === b.y && a.y > r.top - PAD && a.y < r.bottom + PAD &&
+    Math.max(a.x, b.x) > r.left && Math.min(a.x, b.x) < r.right
+
+  const inTheWay = placed.filter((n) => isBelow(n) && rectsOverlap(r, cardRect(n)))
+  for (const e of edges) {
+    if (e.source === newId || e.target === newId) continue
+    const src = byId.get(e.source)
+    const tgt = byId.get(e.target)
+    if (!src || !tgt) continue
+    const route = orthogonalRoute([
+      { x: cardRect(src).right, y: src.position.y + PORT_TOP },
+      ...(e.waypoints ?? []),
+      { x: tgt.position.x, y: tgt.position.y + PORT_TOP },
+    ])
+    if (isBelow(src) && runUnderCard(route[0], route[1])) inTheWay.push(src)
+    if (isBelow(tgt) && runUnderCard(route[route.length - 2], route[route.length - 1])) inTheWay.push(tgt)
+  }
+  if (inTheWay.length === 0) return moves
+
+  const top   = Math.min(...inTheWay.map((n) => n.position.y))
+  const shift = Math.ceil((r.bottom + MIN_NODE_GAP - top) / GRID) * GRID
+  if (shift <= 0) return moves
+  for (const n of placed) {
+    if (n.id === newId || fixed.has(n.id) || n.position.y < top) continue
+    moves.set(n.id, { x: n.position.x, y: n.position.y + shift })
+  }
+  return moves
 }
 
 // ── Edge insertion helpers ─────────────────────────────────────────────────────

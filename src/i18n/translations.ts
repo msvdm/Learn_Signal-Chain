@@ -175,6 +175,27 @@ export interface Translations {
     items: Record<string, string>
   }
   theory: Record<string, TheoryEntry>
+  /**
+   * Names that change with the level, by node type: a card that is simpler on a lower level is
+   * named for it (Intermediate's three-knob "Equalizer"). Replaces its palette name and card label.
+   */
+  levelNames?: Partial<Record<'beginner' | 'intermediate' | 'advanced', Record<string, string>>>
+}
+
+/** `t` with the names of this level applied (see `levelNames`). */
+export function withLevelNames(t: Translations, level: string): Translations {
+  const names = t.levelNames?.[level as keyof NonNullable<Translations['levelNames']>]
+  if (!names) return t
+  const nodes: Record<string, unknown> = { ...t.nodes }
+  for (const [key, name] of Object.entries(names)) {
+    const entry = nodes[key]
+    if (entry && typeof entry === 'object') nodes[key] = { ...entry, label: name }
+  }
+  return {
+    ...t,
+    nodes:   nodes as Translations['nodes'],
+    palette: { ...t.palette, items: { ...t.palette.items, ...names } },
+  }
 }
 
 export function fmt(str: string, params: Record<string, string>): string {

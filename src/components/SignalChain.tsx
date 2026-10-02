@@ -45,13 +45,13 @@ import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
-import { NODE_REGISTRY, getPorts } from '../data/nodeRegistry'
+import { NODE_REGISTRY, getPorts, initialParams } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
   GRID, MIN_NODE_GAP, PORT_TOP,
   nodeDims, recordMeasuredSize, resolveOverlap,
-  pushDownstream, enforceGap, findEdgeAtPoint, canInsertMidChain,
+  enforceGap, makeRoomForInsert, findEdgeAtPoint, canInsertMidChain,
 } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/layoutHelpers'
 import { buildWirePath } from '../utils/wirePath'
@@ -175,12 +175,22 @@ export function SignalChain() {
   const revertTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Set when a press on a port was used for wiring — the click that follows it is swallowed
   const swallowClickRef = useRef(false)
+  // A card just dropped onto a wire: the cards around it make room once its real size is known
+  const pendingInsertRef = useRef<string | null>(null)
 
   const { reshaping, setReshaping } = useEdgeReshape(screenToFlowPosition, edgesRef, updateEdgeWaypoints)
 
   /** React Flow nodes with their real rendered size (cards size themselves to content). */
   function measuredNodes(): FlowNode[] {
     return getNodes().map((n) => ({ ...n, measured: getInternalNode(n.id)?.measured ?? n.measured }))
+  }
+
+  /** Store nodes (always current) with React Flow's measured card sizes, for the layout helpers. */
+  function layoutNodes(nodes: SignalNode[] = graphNodesRef.current): FlowNode[] {
+    return nodes.map((n) => ({
+      id: n.id, type: n.typeKey, position: n.position, data: {},
+      measured: getInternalNode(n.id)?.measured,
+    }))
   }
 
   function snap(p: Pt): Pt {
@@ -417,13 +427,30 @@ export function SignalChain() {
     const typeKey = activeDragTypeKey
     if (!typeKey) return
     const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    setDropPreview({ typeKey, pos: dropOrigin(raw) })
+    // Over a wire, the preview shows where the card will really go
+    setDropPreview({ typeKey, pos: insertSlot(raw, typeKey)?.pos ?? dropOrigin(raw) })
   }
 
   function onDragLeave(e: React.DragEvent) {
     const rt = e.relatedTarget as Node | null
     if (rt && (e.currentTarget as Element).contains(rt)) return
     setDropPreview(null)
+  }
+
+  /**
+   * Where a card dropped at `raw` goes if it lands on a wire (null if it doesn't): right of the
+   * wire's source and top-aligned with it, so the wires on both sides stay straight.
+   */
+  function insertSlot(raw: Pt, typeKey: string): { edge: SignalEdge; pos: Pt } | null {
+    if (!canInsertMidChain(typeKey)) return null
+    const nodes = layoutNodes()
+    // Edges from Zustand: always in sync, unlike getEdges() which can lag
+    const edge  = findEdgeAtPoint(raw, graphEdges, nodes)
+    const src   = edge && nodes.find((n) => n.id === edge.source)
+    if (!edge || !src) return null
+    const srcRight = src.position.x + nodeDims(src.type ?? '', src.measured?.width, src.measured?.height).w
+    const minX     = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
+    return { edge, pos: { x: Math.max(minX, dropOrigin(raw).x), y: src.position.y } }
   }
 
   function onDrop(e: React.DragEvent) {
@@ -433,63 +460,41 @@ export function SignalChain() {
     if (!typeKey) return
     const def = NODE_REGISTRY[typeKey]
     if (!def) return
-    const raw     = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const snapped = dropOrigin(raw)
-    const { w, h } = nodeDims(typeKey)
-    const newId = `${typeKey}-${Date.now()}`
-    const allNodes = measuredNodes()
+    const raw    = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const newId  = `${typeKey}-${Date.now()}`
+    const params = initialParams(typeKey, complexityLevel)
 
     // ── Smart edge insertion ───────────────────────────────────────────────────
-    // Use graphEdges from Zustand (always in sync, unlike getEdges() which can lag)
-    if (canInsertMidChain(typeKey)) {
-      const nodePositions = new Map(
-        graphNodes.map(n => [n.id, {
-          id:       n.id,
-          type:     n.typeKey,
-          position: n.position,
-          measured: allNodes.find(r => r.id === n.id)?.measured,
-        }])
-      )
-      const nmNodes = [...nodePositions.values()] as unknown as FlowNode[]
-      const hitEdge = findEdgeAtPoint(raw, graphEdges, nmNodes)
-
-      if (hitEdge) {
-        const src = nodePositions.get(hitEdge.source)
-        const tgt = nodePositions.get(hitEdge.target)
-        if (src && tgt) {
-          const srcDims  = nodeDims(src.type, src.measured?.width, src.measured?.height)
-          const srcRight = src.position.x + srcDims.w
-          const tgtLeft  = tgt.position.x
-          // Top-align with the source so the wires on both sides stay straight
-          const insertY  = src.position.y
-
-          // Right of the source; the target and everything after it move right to make room
-          const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
-          const insertX    = Math.max(minInsertX, snapped.x)
-          const rightGap   = tgtLeft - (insertX + w)
-          if (rightGap < MIN_NODE_GAP) {
-            const nm = new Map(nmNodes.map((n) => [n.id, n]))
-            pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
-          }
-
-          addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
-          const ts = Date.now()
-          const ports = getPorts({ typeKey, params: def.defaultParams })
-          // One step: a Fader dropped on a bus's L / R wire becomes the Main Fader, and a card
-          // dropped on a Mix wire sits between the bus and its Main Fader without unplugging it
-          replaceEdge(hitEdge.id, [
-            { id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: ports.inputs[0].id  },
-            { id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: ports.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle },
-          ])
-          setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
-          return
-        }
-      }
+    const slot = insertSlot(raw, typeKey)
+    if (slot) {
+      const { edge } = slot
+      addNode({ id: newId, typeKey, position: slot.pos, params, bypassed: false })
+      const ts = Date.now()
+      const ports = getPorts({ typeKey, params })
+      // One step: a Fader dropped on a bus's L / R wire becomes the Main Fader, and a card
+      // dropped on a Mix wire sits between the bus and its Main Fader without unplugging it
+      replaceEdge(edge.id, [
+        { id: `e-${edge.source}-${newId}-${ts}`,     source: edge.source, sourceHandle: edge.sourceHandle, target: newId,       targetHandle: ports.inputs[0].id },
+        { id: `e-${newId}-${edge.target}-${ts + 1}`, source: newId,       sourceHandle: ports.outputs[0].id, target: edge.target, targetHandle: edge.targetHandle },
+      ])
+      // The cards around it move once React Flow has measured it (onNodesChange): a type not
+      // dropped before has no known size yet. The card stays hidden until then, so no overlap shows.
+      pendingInsertRef.current = newId
+      return
     }
 
     // ── Normal placement (no edge hit) ────────────────────────────────────────
-    const finalPos = resolveOverlap(snapped, w, h, allNodes)
-    addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
+    const { w, h } = nodeDims(typeKey)
+    const finalPos = resolveOverlap(dropOrigin(raw), w, h, measuredNodes())
+    addNode({ id: newId, typeKey, position: finalPos, params, bypassed: false })
+  }
+
+  /** A card dropped onto a wire has its real size now: the cards around it move out of its way. */
+  function makeRoomForInserted(nodeId: string, size: { width: number; height: number }) {
+    const { nodes, edges } = useSignalStore.getState()
+    const placed = layoutNodes(nodes).map((n) => (n.id === nodeId ? { ...n, measured: size } : n))
+    for (const [id, pos] of makeRoomForInsert(nodeId, placed, edges)) updateNodePosition(id, pos)
+    setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
   }
 
   // ── Moving nodes ────────────────────────────────────────────────────────────
@@ -522,6 +527,10 @@ export function SignalChain() {
         if (node) {
           recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height)
           sizes[c.id] = { ...c.dimensions, ports: portLayoutKey(node, graphNodesRef.current, edgesRef.current) }
+        }
+        if (c.id === pendingInsertRef.current) {
+          pendingInsertRef.current = null
+          makeRoomForInserted(c.id, c.dimensions)
         }
       }
     }

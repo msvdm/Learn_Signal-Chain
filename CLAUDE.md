@@ -24,7 +24,7 @@ The app is a **pure client-side React SPA** — no backend, no API calls. All si
 ### Interaction model (SmartDraw-style)
 
 The canvas works like a drawing app and **follows the mouse** — there is no mode toolbar and no mode keys:
-1. **Left palette** (`ElementPalette`) — search, category tabs, 2-column tiles (an icon rail at tablet width ≤ 1024px). Drag any tile onto the canvas; the node lands where it is dropped (cursor on its port line), nudged only to avoid overlapping another node. Dropping a node with an input and an output onto an existing wire inserts it mid-chain and pushes everything downstream to the right.
+1. **Left palette** (`ElementPalette`) — search, category tabs, 2-column tiles (an icon rail at tablet width ≤ 1024px). Drag any tile onto the canvas; the node lands where it is dropped (cursor on its port line), nudged only to avoid overlapping another node. Dropping a node with an input and an output onto an existing wire inserts it mid-chain (the drop preview snaps to that slot): once the new card is measured, the rest of that chain slides right — other chains stay put — and if the card is tall, everything under it (cards, and wires running there) moves down as one block.
 2. **Select mode** (`toolMode: 'select'`, the default) — drag nodes, pan the canvas, click a card to select it.
 3. **Connect mode** (`toolMode: 'connect'`) — entered automatically when the cursor is over a port; it switches back to Select ~200ms after the cursor leaves all ports, never while a wire is being drawn and never while a mouse button is held. Wiring uses a **click-once pen-tool interaction, never drag**:
    - **Click once** on an output port → wire begins; a "Connecting from …" toast appears and valid free inputs pulse
@@ -67,7 +67,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
 | `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
 | `src/hooks/useMediaQuery.ts` | `useMediaQuery()`, `TABLET_QUERY` (≤ 1024px: palette icon rail, no tagline), `WIDE_HEADER_QUERY` (≥ 1200px: all header labels fit). |
-| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews), `resolveOverlap`, `pushDownstream`, `enforceGap`, `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `HIT_THRESHOLD` and the `Pt` type. |
+| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews), `resolveOverlap`, `enforceGap` (room for a new wire), `makeRoomForInsert` (room for a card dropped onto a wire), `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `HIT_THRESHOLD` and the `Pt` type. |
 | `src/utils/connectionRules.ts` | `nodeAcceptsWire()` / `portAcceptsWire()` — which inputs may take a wire (one wire per input; Master / Aux bus inputs take any number). |
 | `src/utils/chainColors.ts` | Chain colours (one per source, picked on `addNode`), `upstreamOf` / `chainOfEdge` / `chainColorsOf` / `chainSourcesOfEdge` for the card stripe, unplug list and highlight. |
 | `src/utils/wirePath.ts` | `buildWirePath()` — orthogonal route with rounded corners, shared by the live preview and committed edges. |
@@ -78,7 +78,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params, mono / stereo support. `getPorts(node, { nodes, edges })` gives a node's ports (a stereo Aux splits into L / R; a bus with a Main Fader shows one `mix` output; a Main Fader shows L / R — read from the wires, so pass the graph); `mixBusOf()` finds a Main Fader's bus; also `isNodeStereo` (the node's own Mono / Stereo setting), `portSide`, `helpKeyOf(node, stage)`, `MULTI_WIRE_TYPES`, `MATRIX_INPUTS` / `MATRIX_OUTPUTS` / `matrixParam`. |
 | `src/data/levels.ts` | `buildDefaultGraph()` — always returns an empty graph (blank canvas). `BusType` type lives here. |
 | `src/i18n/locales/en.json`, `bg.json` | All UI text and help-popover educational content (`theory` key). Edit copy here; add every new key to both files. |
-| `src/i18n/translations.ts` | The `Translations` type (add new keys here too) and `fmt()` for `{placeholder}` strings. |
+| `src/i18n/translations.ts` | The `Translations` type (add new keys here too), `fmt()` for `{placeholder}` strings and `withLevelNames()` (names that change with the level). |
 | `src/App.tsx` | Header (see above) and the `ConfirmDialog` for Reset / level change. |
 | `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
 | `src/components/ElementPalette.tsx` | Left sidebar: search, tabs, draggable tiles. Level-gated visibility via `PALETTE_BY_LEVEL`. |
@@ -98,7 +98,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 
 Every node uses `NodeWrapper`:
 - **Width follows content** (no fixed widths; `minWidth: 160`), text wraps to fit.
-- A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (28px) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (24px) apart.
+- A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (80px — just below the header's divider, clear of the header buttons) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (36px) apart. Port rings are 28px (40px while showing the unplug ×) so they are easy to see and hit.
 - The header row is **icon · title · ? (help) · On/Off (bypass) · × (remove)**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no On/Off — the control itself is the state. Every node, including Master Bus, can be removed.
 - **A card never changes size while values change** (no flicker). Wrap every changing reading in `StableText` (`components/controls/StableText.tsx`), which reserves the width of the widest value it can show: `LEVEL_SAMPLE` for signal levels, `widestFormat()` for a control's readout (both in `utils/readout.ts`). `KnobControl`, `VerticalFader`, `ControlSlider` and `SignalMeter` already do this. Text that only sometimes shows keeps its space (`visibility: hidden`) instead of being removed. The "Bypassed" tag sits on the header's bottom line, outside the layout. Wide cards (Parametric EQ) use a fixed body width.
 - Controls and In/Out meters stay on the cards; there is **no status chip**.
@@ -130,7 +130,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 | Intermediate | + hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay, pan (Pan / Balance), master-bus, aux-bus, audio-interface |
 | Advanced | + speaker, amp, graphic-eq, adc, dac, matrix |
 
-`PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
+`PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. A level can also change a card's layout, name and starting params: the EQ (`EQNode`) is the **Equalizer** in Intermediate — three knobs (Low / Mid / High, no curve), Low and High fixed as shelves (`initialParams()` in `nodeRegistry.ts`) — and the **Parametric Equalizer** in Advanced, with a draggable curve and a Bell / Shelf switch on Low and High. Level-dependent names live in the locales' `levelNames`; `useTranslation` applies them to `palette.items` and `nodes.<type>.label`. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
 
 ### Signal health zones
 

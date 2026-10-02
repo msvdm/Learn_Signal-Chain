@@ -19,11 +19,11 @@ import {
 const DEFAULT_BANDS = NODE_REGISTRY.eq.defaultParams.bands as EQBand[]
 
 /**
- * Body width and graph height per layout. Fixed sizes: dragging a band or changing a
- * value never resizes the card. Each band cell is wide enough for its longest values.
+ * Body width and graph height of the Advanced card. Fixed sizes: dragging a band or changing
+ * a value never resizes the card. Each band cell is wide enough for its longest values.
  */
-const BODY_W  = { intermediate: 480, advanced: 640 }
-const GRAPH_H = { intermediate: 150, advanced: 170 }
+const BODY_W  = 640
+const GRAPH_H = 170
 
 interface GraphEQData extends Record<string, unknown> {
   color?: string
@@ -51,11 +51,11 @@ function bandSpecs(advanced: boolean, t: Translations): BandSpec[] {
       { index: 3, name: eq.bandHigh,               freqRange: [2000, 16000], shelfType: 'high-shelf' },
     ]
   }
-  // Intermediate: Low and High stay at their frequency, only Mid sweeps
+  // Intermediate: one knob per band, each at its fixed frequency (Lo-Mid stays at 0 dB)
   return [
-    { index: 0, name: eq.bandLow,  shelfType: 'low-shelf' },
-    { index: 2, name: eq.bandMid,  freqRange: [200, 5000] },
-    { index: 3, name: eq.bandHigh, shelfType: 'high-shelf' },
+    { index: 0, name: eq.bandLow },
+    { index: 2, name: eq.bandMid },
+    { index: 3, name: eq.bandHigh },
   ]
 }
 
@@ -146,10 +146,9 @@ function ShelfToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
-function BandCell({ spec, band, showWidth, onChange }: {
+function BandCell({ spec, band, onChange }: {
   spec: BandSpec
   band: EQBand
-  showWidth: boolean
   onChange: (patch: Partial<EQBand>) => void
 }) {
   const { t }     = useTranslation()
@@ -210,14 +209,12 @@ function BandCell({ spec, band, showWidth, onChange }: {
       )}
 
       {/* Width — kept in place (greyed out) on a shelf so the card does not change height */}
-      {showWidth && (
-        <BandSlider
-          label={t.nodes.eq.widthQ ?? 'Width (Q)'} display={shelf ? '—' : q.toFixed(1)}
-          value={q} min={Q_MIN} max={Q_MAX} step={0.1}
-          color={color} disabled={shelf} title={shelf ? t.nodes.eq.widthShelf : undefined}
-          onChange={(v) => onChange({ Q: v })}
-        />
-      )}
+      <BandSlider
+        label={t.nodes.eq.widthQ ?? 'Width (Q)'} display={shelf ? '—' : q.toFixed(1)}
+        value={q} min={Q_MIN} max={Q_MAX} step={0.1}
+        color={color} disabled={shelf} title={shelf ? t.nodes.eq.widthShelf : undefined}
+        onChange={(v) => onChange({ Q: v })}
+      />
     </div>
   )
 }
@@ -239,15 +236,15 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     updateNodeParams(id, { bands: bands.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) })
   }
 
-  // The EQ is not in the Beginner palette; anything below Advanced uses the 3-band layout
+  // The EQ is not in the Beginner palette; anything below Advanced gets the three-knob card
   const advanced = complexityLevel === 'advanced'
-  const layout   = advanced ? 'advanced' : 'intermediate'
   const specs    = bandSpecs(advanced, t)
-  const bodyW    = BODY_W[layout]
 
   const graphBands: GraphBand[] = specs.map((s) => ({
     band: bands[s.index], name: s.name, color: BAND_COLORS[s.index], freqRange: s.freqRange,
   }))
+  const meterIn  = <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
+  const meterOut = <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
 
   return (
     <NodeWrapper
@@ -257,36 +254,54 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
       label={data.label ?? t.nodes.eq.label}
       accentColor={data.color}
     >
-      <div style={{ width: bodyW, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}><SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} /></div>
-          <div style={{ flex: 1 }}><SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} /></div>
-        </div>
+      {advanced ? (
+        <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>{meterIn}</div>
+            <div style={{ flex: 1 }}>{meterOut}</div>
+          </div>
 
-        <EQGraph
-          bands={graphBands}
-          onBandChange={(i, patch) => updateBand(specs[i].index, patch)}
-          width={bodyW}
-          height={GRAPH_H[layout]}
-          adjustableWidth={advanced}
-        />
-        <p style={{ margin: 0, fontSize: 11, lineHeight: 1.45, color: 'var(--lsc-fg-dim)' }}>
-          {t.nodes.eq.graphHint}
-          {advanced && t.nodes.eq.graphHintWidth && ` ${t.nodes.eq.graphHintWidth}`}
-        </p>
+          <EQGraph
+            bands={graphBands}
+            onBandChange={(i, patch) => updateBand(specs[i].index, patch)}
+            width={BODY_W}
+            height={GRAPH_H}
+            adjustableWidth
+          />
+          <p style={{ margin: 0, fontSize: 11, lineHeight: 1.45, color: 'var(--lsc-fg-dim)' }}>
+            {t.nodes.eq.graphHint}
+            {t.nodes.eq.graphHintWidth && ` ${t.nodes.eq.graphHintWidth}`}
+          </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.length}, minmax(0, 1fr))`, gap: 8 }}>
-          {specs.map((s) => (
-            <BandCell
-              key={s.index}
-              spec={s}
-              band={bands[s.index]}
-              showWidth={advanced}
-              onChange={(patch) => updateBand(s.index, patch)}
-            />
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.length}, minmax(0, 1fr))`, gap: 8 }}>
+            {specs.map((s) => (
+              <BandCell
+                key={s.index}
+                spec={s}
+                band={bands[s.index]}
+                onChange={(patch) => updateBand(s.index, patch)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        // A simple mixing desk's EQ: no curve, just turn a range up or down
+        <div className="space-y-3">
+          {meterIn}
+          <div style={{ display: 'flex', justifyContent: 'space-around', gap: 8, paddingTop: 2 }}>
+            {specs.map((s) => (
+              <KnobControl
+                key={s.index}
+                value={bands[s.index].gainDb} min={DB_MIN} max={DB_MAX} step={0.5}
+                label={s.name} formatValue={formatGain}
+                onChange={(v) => updateBand(s.index, { gainDb: v })}
+                color={BAND_COLORS[s.index]} size={44}
+              />
+            ))}
+          </div>
+          {meterOut}
+        </div>
+      )}
     </NodeWrapper>
   )
 }

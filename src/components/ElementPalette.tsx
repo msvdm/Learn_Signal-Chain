@@ -154,7 +154,8 @@ export function ElementPalette() {
   const q = query.trim().toLowerCase()
   const matching = visibleItems.filter((item) =>
     (tab === 'all' || item.category === tab) &&
-    (q === '' || nameOf(item.typeKey).toLowerCase().includes(q)),
+    // The type key too, so "eq" finds the Equalizer in any language
+    (q === '' || nameOf(item.typeKey).toLowerCase().includes(q) || item.typeKey.includes(q)),
   )
 
   const tabs: { id: Tab; label: string }[] = [

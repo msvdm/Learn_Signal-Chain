@@ -200,8 +200,8 @@ kbd {
 
 /* Valid target port while drawing a wire */
 @keyframes lsc-ping {
-  0%, 100% { box-shadow: 0 0 0 3px var(--lsc-accent-bg); }
-  50%      { box-shadow: 0 0 0 8px var(--lsc-accent-bg); }
+  0%, 100% { box-shadow: 0 0 0 4px var(--lsc-accent-bg); }
+  50%      { box-shadow: 0 0 0 10px var(--lsc-accent-bg); }
 }
 
 /* Clipping pulse */
@@ -225,18 +225,18 @@ kbd {
   stroke-width: 3;
 }
 
-/* Ports — 14px ring centred on the card edge. The ring colour (set inline)
+/* Ports — 28px ring centred on the card edge (big enough to see and click easily). The ring colour (set inline)
    is the health of the signal on that port. Ports are rendered before the card
    header, so without the z-index the header would cover their inner half and
    swallow the hover (×) and unplug click there. */
 .react-flow__handle.lsc-port {
   z-index: 1;
-  width: 14px;
-  height: 14px;
+  width: 28px;
+  height: 28px;
   min-width: 0;
   min-height: 0;
   border-radius: 9999px;
-  border: 3px solid var(--lsc-border);
+  border: 6px solid var(--lsc-border);
   background: var(--lsc-node-bg);
   cursor: crosshair;
   transition: width 0.1s, height 0.1s, background 0.1s;
@@ -244,8 +244,8 @@ kbd {
 
 /* Valid target while a wire is being drawn */
 .react-flow__handle.lsc-port.lsc-port-target {
-  width: 16px;
-  height: 16px;
+  width: 32px;
+  height: 32px;
   background: var(--lsc-accent);
   border-color: var(--lsc-node-bg);
   animation: lsc-ping 1.5s ease-in-out infinite;
@@ -271,8 +271,8 @@ kbd {
 
 /* A connected input turns into a × on hover (not while drawing a wire) — click it to unplug the wire */
 .react-flow__handle.lsc-port.lsc-port-remove {
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;

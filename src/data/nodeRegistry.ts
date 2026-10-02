@@ -339,6 +339,23 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
 }
 
+/**
+ * Params of a node dropped on the canvas at this level. The Equalizer below Advanced works like a
+ * simple mixing desk's: Low and High are shelves and cannot be switched. Advanced starts with bells
+ * and lets you choose.
+ */
+export function initialParams(
+  typeKey: string,
+  level: 'beginner' | 'intermediate' | 'advanced',
+): Record<string, NodeParamValue> {
+  const params = { ...NODE_REGISTRY[typeKey]?.defaultParams }
+  if (typeKey === 'eq' && level !== 'advanced') {
+    params.bands = (params.bands as EQBand[]).map((b, i): EQBand =>
+      i === 0 ? { ...b, type: 'low-shelf' } : i === 3 ? { ...b, type: 'high-shelf' } : b)
+  }
+  return params
+}
+
 // ── Mono / stereo ports ────────────────────────────────────────────────────────
 
 /** Bus types whose inputs accept any number of wires (they are added together). */

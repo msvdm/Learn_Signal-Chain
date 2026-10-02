@@ -103,7 +103,7 @@
       "cutoff": "Cutoff frequency"
     },
     "eq": {
-      "label": "Parametric EQ",
+      "label": "Parametric Equalizer",
       "curvePreview": "EQ curve preview",
       "openCurve": "Open EQ Curve",
       "bandLow": "Low",
@@ -268,7 +268,7 @@
       "di-box": "DI Box",
       "gain": "Gain",
       "hpf": "High-Pass Filter",
-      "eq": "Parametric EQ",
+      "eq": "Parametric Equalizer",
       "comp": "Compressor",
       "deesser": "De-esser",
       "noise-gate": "Noise Gate",
@@ -322,9 +322,9 @@
       "tip": "For most vocals start at 80–120 Hz. For acoustic guitar, try 100–150 Hz. Never use HPF on a kick drum or bass — you'll cut the fundamental frequency you actually want. The curve display shows exactly which frequencies you're removing."
     },
     "eq": {
-      "what": "The Parametric EQ shapes the tonal character of the signal by boosting or cutting specific frequency ranges. Each band targets a frequency area: Low (body), Mid (presence), High (air and clarity). Bell mode shapes a peak or dip; Shelf mode boosts or cuts everything above/below a corner frequency.",
+      "what": "The equalizer (EQ) shapes the tonal character of the signal by boosting or cutting frequency ranges. Each band targets a frequency area: Low (body), Mid (presence), High (air and clarity). A Bell band makes a peak or dip around its frequency; a Shelf band boosts or cuts everything below or above it, evenly.",
       "why": "Every sound source has frequencies that help or hurt its purpose. A vocal may need less boxiness around 400 Hz, more presence at 3 kHz, and more air at 10 kHz. The EQ lets you sculpt that precisely.",
-      "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate mode you can switch Low and High bands to Shelf for a smoother, more musical result. Feed it a stereo wire and both sides get the same settings."
+      "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate the Equalizer has three knobs like a simple mixing desk: Low and High are shelves, Mid is a bell. \"Parametric\" means you set each band's frequency and width yourself — that is what the Parametric Equalizer in Advanced adds, with a curve you can drag and a Bell / Shelf choice for Low and High. Feed it a stereo wire and both sides get the same settings."
     },
     "graphic-eq": {
       "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 10 bands, one per octave from 31 Hz to 16 kHz). Each band has its own fader — push it up to boost that octave, pull it down to cut.",
@@ -441,5 +441,8 @@
       "why": "Speakers and amplifiers are analog devices — they respond to voltage, not numbers. The DAC converts the digital mix back into real electrical signal so you can hear it through speakers. Without a DAC, digital audio stays in the computer.",
       "tip": "Place the DAC before any analog gear that follows — amplifiers, passive speakers, analog signal processors. The domain indicator on the node turns green (analog) after the DAC, confirming that everything downstream is back in the correct electrical domain."
     }
+  },
+  "levelNames": {
+    "intermediate": { "eq": "Equalizer" }
   }
 }
