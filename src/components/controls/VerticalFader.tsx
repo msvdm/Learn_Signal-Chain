@@ -1,6 +1,7 @@
 import { Fragment, useRef, useEffect } from 'react'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
+import { useLatestRef } from '../../hooks/useLatestRef'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
@@ -46,8 +47,7 @@ export function VerticalFader({
 }: VerticalFaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
-  const valueRef     = useRef(value)
-  valueRef.current   = value
+  const valueRef     = useLatestRef(value)
 
   const pct          = ((value - min) / (max - min)) * 100
   const format       = formatValue ?? ((v: number) => `${v >= 0 ? '+' : ''}${v} dB`)

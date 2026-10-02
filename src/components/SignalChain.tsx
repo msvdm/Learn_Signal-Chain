@@ -43,6 +43,7 @@ import { useSignalStore }     from '../store/signalStore'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
+import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { NODE_REGISTRY, getPorts } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
@@ -166,14 +167,10 @@ export function SignalChain() {
 
   // Mutable refs so document-level handlers always see current state
   const wrapperRef      = useRef<HTMLDivElement>(null)
-  const drawingRef      = useRef(drawing)
-  drawingRef.current    = drawing
-  const toolModeRef     = useRef(toolMode)
-  toolModeRef.current   = toolMode
-  const edgesRef        = useRef(graphEdges)
-  edgesRef.current      = graphEdges
-  const graphNodesRef   = useRef(graphNodes)
-  graphNodesRef.current = graphNodes
+  const drawingRef      = useLatestRef(drawing)
+  const toolModeRef     = useLatestRef(toolMode)
+  const edgesRef        = useLatestRef(graphEdges)
+  const graphNodesRef   = useLatestRef(graphNodes)
   const revertTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { reshaping, setReshaping } = useEdgeReshape(screenToFlowPosition, edgesRef, updateEdgeWaypoints)
@@ -211,10 +208,10 @@ export function SignalChain() {
       : null)
   }, [wireSourceNodeId, wireSourceHandleId, setWireSource])
 
-  // Cancel drawing when leaving connect mode
-  useEffect(() => {
-    if (toolMode !== 'connect') cancelWire()
-  }, [toolMode, cancelWire])
+  // Cancel drawing when leaving connect mode (e.g. Reset or a level change mid-wire)
+  useEffect(() => useSignalStore.subscribe((s, prev) => {
+    if (prev.toolMode === 'connect' && s.toolMode !== 'connect') cancelWire()
+  }), [cancelWire])
 
   // Esc cancels the wire being drawn, otherwise closes the help popover
   useEffect(() => {
@@ -227,7 +224,7 @@ export function SignalChain() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setActiveTooltip, cancelWire])
+  }, [setActiveTooltip, cancelWire, drawingRef])
 
   // The canvas follows the mouse: hovering a port switches to connect mode, moving
   // away switches back to select mode after a short delay (never while a wire is drawn).
@@ -267,7 +264,7 @@ export function SignalChain() {
       document.removeEventListener('mousemove', onMove)
       if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
     }
-  }, [screenToFlowPosition, getInternalNode, setToolMode])
+  }, [screenToFlowPosition, getInternalNode, setToolMode, drawingRef, toolModeRef, graphNodesRef])
 
   // Click interception — capture phase fires before React Flow's own handlers
   useEffect(() => {

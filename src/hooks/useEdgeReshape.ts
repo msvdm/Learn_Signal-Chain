@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import type { MutableRefObject } from 'react'
 import type { SignalEdge } from '../store/signalStore'
 import type { Pt } from '../utils/layoutHelpers'
+import { useLatestRef } from './useLatestRef'
 
 export type Reshaping = {
   edgeId: string
@@ -17,8 +18,7 @@ export function useEdgeReshape(
   updateEdgeWaypoints: (id: string, waypoints: Pt[]) => void,
 ) {
   const [reshaping, setReshaping] = useState<Reshaping | null>(null)
-  const reshapingRef = useRef(reshaping)
-  reshapingRef.current = reshaping
+  const reshapingRef = useLatestRef(reshaping)
 
   useEffect(() => {
     function onReshapeMove(e: MouseEvent) {
@@ -52,7 +52,7 @@ export function useEdgeReshape(
       document.removeEventListener('mousemove', onReshapeMove)
       document.removeEventListener('mouseup', onReshapeUp, true)
     }
-  }, [screenToFlowPosition, updateEdgeWaypoints])
+  }, [screenToFlowPosition, edgesRef, updateEdgeWaypoints, reshapingRef])
 
   return { reshaping, setReshaping }
 }

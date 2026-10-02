@@ -64,6 +64,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R in stereo, plus `inPeak` (louder input side). |
 | `src/hooks/useGainStaging.ts` | `getHealthStyle(health)` — maps `SignalHealth` → CSS color, label, background. No logic. |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup). Returns `{ reshaping, setReshaping }`. |
+| `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
 | `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
 | `src/hooks/useMediaQuery.ts` | `useMediaQuery()`, `TABLET_QUERY` (≤ 1024px: palette icon rail, no tagline), `WIDE_HEADER_QUERY` (≥ 1200px: all header labels fit). |
 | `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews), `resolveOverlap`, `pushDownstream`, `enforceGap`, `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `HIT_THRESHOLD` and the `Pt` type. |
