@@ -226,8 +226,11 @@ kbd {
 }
 
 /* Ports — 14px ring centred on the card edge. The ring colour (set inline)
-   is the health of the signal on that port. */
+   is the health of the signal on that port. Ports are rendered before the card
+   header, so without the z-index the header would cover their inner half and
+   swallow the hover (×) and unplug click there. */
 .react-flow__handle.lsc-port {
+  z-index: 1;
   width: 14px;
   height: 14px;
   min-width: 0;
