@@ -6,6 +6,7 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 const FREQ_LABELS = ['31', '63', '125', '250', '500', '1k', '2k', '4k', '8k', '16k']
 const SLIDER_HEIGHT = 80
@@ -16,13 +17,13 @@ interface GraphGraphicEQData extends Record<string, unknown> {
 }
 
 export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const params = node?.params ?? {}
-  const input  = inputDb[id] ?? -Infinity
+  const levels = useStereoLevels(id)
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
 
   const bandGains = Array.from({ length: 10 }, (_, i) => (params[`b${i}`] as number) ?? 0)
@@ -36,7 +37,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
       accentColor={data.color}
     >
       <div className="space-y-2">
-        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
 
         <div
           className="nodrag rounded-md p-2"
@@ -101,7 +102,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
           </div>
         </div>
 
-        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

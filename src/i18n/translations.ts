@@ -130,13 +130,11 @@ export interface Translations {
     pad?: { label?: string; on?: string; off?: string }
     deesser?: { label?: string; threshold?: string; frequency?: string; gainReduction?: string }
     relay?: { label?: string }
-    pan?: { label?: string }
+    pan?: { label?: string; balanceLabel?: string }
     'audio-interface'?: { label?: string; noChannels?: string; digitalIn?: string; analogIn?: string }
     adc?: { label?: string }
     dac?: { label?: string }
-    'mono-bus'?: { label?: string; channels?: string; noChannels?: string }
-    'stereo-bus'?: { label?: string }
-    'stereo-fader'?: { label?: string; fader?: string }
+    'aux-bus'?: { label?: string; channels?: string; noChannels?: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
   eqCurve: { title: string; subtitle: string; band: string }
@@ -149,6 +147,23 @@ export interface Translations {
     bypassedShort: string
     /** Tooltip of a connected input port (it unplugs the wire on click) */
     unplug: string
+  }
+  stereo: {
+    mono: string
+    stereo: string
+    /** Tooltip of the Mono | Stereo switch */
+    toggleHint: string
+    /** Bus hint: a mono bus is fed left + right wires */
+    foldedStereo: string
+    /** Bus hint: a stereo bus is fed a mono wire */
+    monoOnStereo: string
+  }
+  unplugMenu: {
+    title: string
+    via: string
+    unplugOne: string
+    unplugAll: string
+    hint: string
   }
   palette: {
     elements: string

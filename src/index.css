@@ -288,6 +288,16 @@ kbd {
   color: var(--lsc-fg);
 }
 
+/* Chain highlight from the unplug list — everything outside the chain fades */
+.react-flow__node.lsc-dimmed {
+  opacity: 0.25;
+  transition: opacity 0.15s;
+}
+
+.lsc-unplug-row:hover {
+  background: var(--lsc-sunken);
+}
+
 /* Zoom controls (bottom-left) — themed to match the header */
 .react-flow__controls {
   --xy-controls-button-background-color:       var(--lsc-header);

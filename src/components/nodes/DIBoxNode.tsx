@@ -2,11 +2,12 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Plug } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 interface GraphDIBoxData extends Record<string, unknown> {
   color?: string
@@ -14,13 +15,13 @@ interface GraphDIBoxData extends Record<string, unknown> {
 }
 
 export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const result       = stages[id]
-  const inputLevel   = inputDb[id] ?? -Infinity
+  const levels       = useStereoLevels(id)
   const groundLift   = (node?.params.groundLift as boolean) ?? false
 
   return (
@@ -55,8 +56,9 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
 
         {/* Signal flow */}
         <SignalMeter
-          db={inputLevel}
-          health={result ? (result.out === inputLevel ? result.health : 'too-quiet') : 'too-quiet'}
+          db={levels.in}
+          dbR={levels.inR}
+          health={getHealth(levels.inPeak)}
           label={t.meters.input}
         />
 

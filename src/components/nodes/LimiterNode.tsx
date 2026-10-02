@@ -8,6 +8,7 @@ import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 interface GraphLimiterData extends Record<string, unknown> {
   color?: string
@@ -154,7 +155,7 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -162,7 +163,8 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
   const params        = node?.params ?? {}
   const ceiling       = (params.thresholdDb as number) ?? -3
   const makeupGain    = (params.makeupGainDb as number) ?? 0
-  const inputLevel    = inputDb[id] ?? -Infinity
+  const levels        = useStereoLevels(id)
+  const inputLevel    = levels.inPeak
   const result        = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const, gainReductionDb: 0 }
   const limResult     = result as CompressorResult
   const gainReduction = limResult.gainReductionDb ?? 0
@@ -175,7 +177,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
       label={data.label ?? t.nodes.limiter?.label ?? 'Limiter'}
     >
       <div className="space-y-3">
-        <SignalMeter db={inputLevel} health={getHealth(inputLevel)} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
 
         <LimiterCurve
           ceiling={ceiling}
@@ -238,7 +240,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
           </StableText>
         </div>
 
-        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

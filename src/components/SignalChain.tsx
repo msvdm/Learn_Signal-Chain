@@ -16,9 +16,6 @@ import { MicNode }             from './nodes/MicNode'
 import { GainNode }            from './nodes/GainNode'
 import { FaderNode }           from './nodes/FaderNode'
 import { MasterBusNode }       from './nodes/MasterBusNode'
-import { MonoBusNode }         from './nodes/MonoBusNode'
-import { StereoFaderNode }     from './nodes/StereoFaderNode'
-import { BalanceNode }         from './nodes/BalanceNode'
 import { AmpNode }             from './nodes/AmpNode'
 import { SpeakerNode }         from './nodes/SpeakerNode'
 import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
@@ -47,7 +44,7 @@ import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
-import { NODE_REGISTRY }      from '../data/nodeRegistry'
+import { NODE_REGISTRY, getPorts } from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
   GRID, MIN_NODE_GAP, PORT_TOP,
@@ -57,6 +54,7 @@ import {
 import type { Pt } from '../utils/layoutHelpers'
 import { buildWirePath } from '../utils/wirePath'
 import { wirePassesThroughNode } from '../utils/wireValidation'
+import { chainOfEdge } from '../utils/chainColors'
 import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
 import { useTranslation } from '../i18n/useTranslation'
 
@@ -75,10 +73,7 @@ const nodeTypes = {
   pad:                PadNode,
   deesser:            DeesserNode,
   'master-bus':       MasterBusNode,
-  'mono-bus':         MonoBusNode,
-  'stereo-bus':       MasterBusNode,
-  'stereo-fader':     StereoFaderNode,
-  balance:            BalanceNode,
+  'aux-bus':          MasterBusNode,
   'audio-interface':  AudioInterfaceNode,
   hpf:                HpfNode,
   eq:                 EQNode,
@@ -141,6 +136,7 @@ export function SignalChain() {
   const addNode               = useSignalStore((s) => s.addNode)
   const addEdge               = useSignalStore((s) => s.addEdge)
   const removeEdge            = useSignalStore((s) => s.removeEdge)
+  const highlightEdgeId       = useSignalStore((s) => s.highlightEdgeId)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
   const { stages, portSignal } = useGraphSignal()
@@ -449,8 +445,9 @@ export function SignalChain() {
           addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
           removeEdge(hitEdge.id)
           const ts = Date.now()
-          addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: def.inputs[0].id  })
-          addEdge({ id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: def.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle })
+          const ports = getPorts({ typeKey, params: def.defaultParams })
+          addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: ports.inputs[0].id  })
+          addEdge({ id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: ports.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle })
           setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
           return
         }
@@ -495,6 +492,12 @@ export function SignalChain() {
 
   // ── Display models ──────────────────────────────────────────────────────────
 
+  // While a wire is pointed at in the unplug list, its chain stays lit and the rest dims
+  const highlight = useMemo(() => {
+    const edge = highlightEdgeId ? graphEdges.find((e) => e.id === highlightEdgeId) : undefined
+    return edge ? chainOfEdge(edge, graphEdges) : null
+  }, [highlightEdgeId, graphEdges])
+
   const displayNodes: FlowNode[] = useMemo(
     () =>
       graphNodes.map((node) => ({
@@ -502,9 +505,10 @@ export function SignalChain() {
         type:      node.typeKey,
         position:  node.position,
         selected:  node.id === selectedNodeId,
+        className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
         data:      { color: node.color, label: node.label, typeKey: node.typeKey },
       })),
-    [graphNodes, selectedNodeId]
+    [graphNodes, selectedNodeId, highlight]
   )
 
   const displayEdges: Edge[] = useMemo(() => {
@@ -530,11 +534,15 @@ export function SignalChain() {
         targetHandle: edge.targetHandle,
         type:         'chain',
         animated:     false,
-        style:        { stroke: style?.color ?? 'var(--lsc-border)', strokeWidth: 3 },
+        style:        {
+          stroke: style?.color ?? 'var(--lsc-border)', strokeWidth: 3,
+          opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
+          transition: 'opacity 0.15s',
+        },
         data,
       }
     })
-  }, [graphEdges, stages, portSignal, graphNodes])
+  }, [graphEdges, stages, portSignal, graphNodes, highlight])
 
   // Build live wire preview path
   const wirePath = (() => {

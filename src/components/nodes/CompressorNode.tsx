@@ -8,6 +8,7 @@ import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 interface GraphCompData extends Record<string, unknown> {
   color?: string
@@ -147,13 +148,14 @@ function DynamicsCurve({ threshold, ratio, makeupGain, inputLevel, gainReduction
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const params      = node?.params ?? {}
-  const input       = inputDb[id] ?? -Infinity
+  const levels      = useStereoLevels(id)
+  const input       = levels.inPeak
   const result      = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const, gainReductionDb: 0 }
   const compResult  = result as CompressorResult
   const threshold   = (params.thresholdDb as number) ?? -20
@@ -170,7 +172,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
       accentColor={data.color}
     >
       <div className="space-y-3">
-        <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
 
         <DynamicsCurve
           threshold={threshold}
@@ -245,7 +247,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
           </StableText>
         </div>
 
-        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

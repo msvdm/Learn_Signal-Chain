@@ -7,6 +7,8 @@ import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
+import { portSide } from '../../data/nodeRegistry'
+import { UnplugMenu } from '../UnplugMenu'
 
 interface NodePortProps {
   nodeId: string
@@ -22,7 +24,9 @@ interface NodePortProps {
  * - The ring colour is the health of the signal on this port (grey when unconnected).
  * - While a wire is being drawn, free inputs that can take it pulse in the accent colour.
  * - Hovering a connected input turns it into a × — click it to unplug the wire (not while drawing one).
+ *   A bus input holding several wires opens a list instead, so you pick which wire to unplug.
  *   Outputs never do: clicking an output always starts a new wire, so one signal can feed several inputs.
+ * - Stereo ports carry a small L / R letter beside the dot.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
   const { portSignal } = useGraphSignal()
@@ -31,7 +35,8 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const node       = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const { t }      = useTranslation()
-  const [hovered, setHovered] = useState(false)
+  const [hovered, setHovered]   = useState(false)
+  const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
 
   const connected = type === 'source'
     ? edges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
@@ -39,36 +44,66 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
 
   let ringColor = 'var(--lsc-border)'
   if (connected.length > 0) {
+    // An input holding several wires shows the health of their sum
     const db = type === 'source'
-      ? portSignal.get(`${nodeId}:${portId}`)
-      : portSignal.get(`${connected[0].source}:${connected[0].sourceHandle}`)
-    ringColor = getHealthStyle(getHealth(db ?? -Infinity)).color
+      ? (portSignal.get(`${nodeId}:${portId}`) ?? -Infinity)
+      : 20 * Math.log10(connected.reduce((sum, e) => {
+          const wireDb = portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity
+          return sum + (isFinite(wireDb) ? Math.pow(10, wireDb / 20) : 0)
+        }, 0))
+    ringColor = getHealthStyle(getHealth(db)).color
   }
 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&
     nodeAcceptsWire(node, wireSource, edges) && portAcceptsWire(node, portId, edges, wireSource)
 
   const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
-  const showUnplug = canUnplug && hovered
+  const showUnplug = canUnplug && (hovered || menuAt !== null)
+  const side       = portSide(portId)
+  const top        = PORT_TOP + index * PORT_GAP
+
+  function unplug(e: React.MouseEvent) {
+    if (connected.length > 1) {
+      setMenuAt((e.currentTarget as HTMLElement).getBoundingClientRect())
+    } else {
+      connected.forEach((edge) => removeEdge(edge.id))
+    }
+  }
 
   const className = ['lsc-port', isValidTarget && 'lsc-port-target', showUnplug && 'lsc-port-remove']
     .filter(Boolean).join(' ')
 
   return (
-    <Handle
-      id={portId}
-      type={type}
-      position={type === 'source' ? Position.Right : Position.Left}
-      title={showUnplug ? t.nodeControls.unplug : title}
-      className={className}
-      style={{ top: PORT_TOP + index * PORT_GAP, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      // Only set when unplugging — otherwise React Flow keeps its own click handling
-      {...(canUnplug ? { onClick: () => connected.forEach((e) => removeEdge(e.id)) } : {})}
-    >
-      {showUnplug && <X size={12} strokeWidth={3} />}
-    </Handle>
+    <>
+      <Handle
+        id={portId}
+        type={type}
+        position={type === 'source' ? Position.Right : Position.Left}
+        title={showUnplug ? (connected.length > 1 ? t.unplugMenu.title : t.nodeControls.unplug) : title}
+        className={className}
+        style={{ top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        // Only set when unplugging — otherwise React Flow keeps its own click handling
+        {...(canUnplug ? { onClick: unplug } : {})}
+      >
+        {showUnplug && <X size={12} strokeWidth={3} />}
+      </Handle>
+      {side && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute', top: top - 17,
+            [type === 'source' ? 'right' : 'left']: -14,
+            fontSize: 10, fontWeight: 800, lineHeight: 1,
+            color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
+          }}
+        >
+          {side.toUpperCase()}
+        </span>
+      )}
+      {menuAt && <UnplugMenu wires={connected} anchor={menuAt} onClose={() => setMenuAt(null)} />}
+    </>
   )
 }
 

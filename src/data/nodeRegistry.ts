@@ -383,3 +383,8 @@ export function getPorts(node: Pick<SignalNode, 'typeKey' | 'params'>): {
     isStereo: true,
   }
 }
+
+/** Which help text a node opens: the Pan node in stereo mode is a Balance knob. */
+export function helpKeyOf(node: Pick<SignalNode, 'typeKey' | 'params'>): string {
+  return node.typeKey === 'pan' && isNodeStereo(node) ? 'balance' : node.typeKey
+}

@@ -3,11 +3,12 @@ import { AudioWaveform } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { DeesserResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 interface GraphDeesserData extends Record<string, unknown> {
   color?: string
@@ -15,14 +16,14 @@ interface GraphDeesserData extends Record<string, unknown> {
 }
 
 export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const threshold  = (node?.params.thresholdDb as number) ?? -20
   const frequency  = (node?.params.frequencyHz as number) ?? 6000
-  const inputLevel = inputDb[id] ?? -Infinity
+  const levels     = useStereoLevels(id)
   const result     = stages[id] as DeesserResult | undefined
   const gr         = result?.gainReductionDb ?? 0
   const isActive   = gr > 0.1
@@ -101,12 +102,14 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
         </div>
 
         <SignalMeter
-          db={inputLevel}
-          health={stages[id]?.health ?? 'too-quiet'}
+          db={levels.in}
+          dbR={levels.inR}
+          health={getHealth(levels.inPeak)}
           label={t.meters.input}
         />
         <SignalMeter
-          db={result?.out ?? -Infinity}
+          db={levels.out}
+          dbR={levels.outR}
           health={result?.health ?? 'too-quiet'}
           label={t.meters.output}
         />
