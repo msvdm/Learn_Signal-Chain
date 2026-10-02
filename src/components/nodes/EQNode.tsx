@@ -10,6 +10,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import type { EQBand, NodeParamValue } from '../../data/nodeRegistry'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import type { Translations } from '../../i18n/translations'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 import {
   BAND_COLORS, DB_MIN, DB_MAX, Q_MIN, Q_MAX,
   isShelf, formatFreq, formatGain,
@@ -224,13 +225,13 @@ function BandCell({ spec, band, showWidth, onChange }: {
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const complexityLevel  = useSignalStore((s) => s.complexityLevel)
   const { t }            = useTranslation()
 
-  const input  = inputDb[id] ?? -Infinity
+  const levels = useStereoLevels(id)
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
   const bands  = getBands(node?.params ?? {})
 
@@ -258,8 +259,8 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     >
       <div style={{ width: bodyW, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}><SignalMeter db={input} health={getHealth(input)} label={t.meters.input} /></div>
-          <div style={{ flex: 1 }}><SignalMeter db={result.out} health={result.health} label={t.meters.output} /></div>
+          <div style={{ flex: 1 }}><SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} /></div>
+          <div style={{ flex: 1 }}><SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} /></div>
         </div>
 
         <EQGraph

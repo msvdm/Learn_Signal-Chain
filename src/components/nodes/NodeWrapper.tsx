@@ -2,8 +2,9 @@ import type { ReactNode, CSSProperties } from 'react'
 import { Power, X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { NODE_REGISTRY } from '../../data/nodeRegistry'
-import { nodeAcceptsWire, portIsFree } from '../../utils/connectionRules'
+import { NODE_REGISTRY, getPorts, helpKeyOf } from '../../data/nodeRegistry'
+import { nodeAcceptsWire } from '../../utils/connectionRules'
+import { chainColorsOf } from '../../utils/chainColors'
 import { HEADER_H, PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 import { NodePort } from './NodePort'
 
@@ -13,9 +14,6 @@ const NO_BYPASS_TYPES = new Set([
   'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
   'master-bus', 'audio-interface',
 ])
-
-// Inputs are created at runtime (one per connected channel + one free slot)
-const DYNAMIC_INPUT_TYPES = new Set(['master-bus', 'mono-bus', 'stereo-bus', 'audio-interface'])
 
 interface NodeWrapperProps {
   nodeId: string
@@ -59,6 +57,9 @@ export function NodeWrapper({
   const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const removeNode       = useSignalStore((s) => s.removeNode)
+  const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
+  // Joined into a string so the card only re-renders when its chains change
+  const chainColors      = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
   const wireSource       = useSignalStore((s) => s.wireSource)
   const edges            = useSignalStore((s) => s.edges)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
@@ -66,22 +67,23 @@ export function NodeWrapper({
 
   const isBypassed = node?.bypassed ?? false
   const canBypass  = !NO_BYPASS_TYPES.has(typeKey)
-  const hasHelp    = Boolean(t.theory[typeKey])
+  const helpKey    = node ? helpKeyOf(node) : typeKey
+  const hasHelp    = Boolean(t.theory[helpKey])
   const helpOpen   = activeTooltipId === nodeId
   const selected   = selectedNodeId === nodeId || helpOpen
 
-  const def     = NODE_REGISTRY[typeKey]
-  const inputs  = customInputs ? [] : (def?.inputs ?? [])
-  const outputs = def?.outputs ?? []
+  const ports      = getPorts(node ?? { typeKey, params: {} })
+  const canStereo  = NODE_REGISTRY[typeKey]?.stereo === 'optional'
+  const stripe     = chainColors ? chainColors.split(' ') : []
+  const inputs  = customInputs ? [] : ports.inputs
+  const outputs = ports.outputs
 
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
   const minHeight = PORT_TOP + (portRows - 1) * PORT_GAP + 24
 
   // While a wire is being drawn, label this card if it can take the wire
-  const hasFreeInput = DYNAMIC_INPUT_TYPES.has(typeKey) ||
-    inputs.some((p) => portIsFree(nodeId, p.id, edges))
-  const isWireTarget = wireSource !== null && node !== undefined && hasFreeInput &&
+  const isWireTarget = wireSource !== null && node !== undefined &&
     nodeAcceptsWire(node, wireSource, edges)
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
@@ -90,7 +92,7 @@ export function NodeWrapper({
     if (helpOpen) {
       setActiveTooltip(null, null)
     } else {
-      setActiveTooltip(nodeId, typeKey)
+      setActiveTooltip(nodeId, helpKey)
       setSelectedNode(nodeId)
     }
   }
@@ -130,6 +132,20 @@ export function NodeWrapper({
         >
           {fmt(t.connecting.input, { node: label })}
         </span>
+      )}
+
+      {/* Chain colour stripe — one segment per source feeding this card */}
+      {stripe.length > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: 0, left: 10, right: 10, height: 3,
+            display: 'flex', borderRadius: '0 0 3px 3px', overflow: 'hidden',
+            pointerEvents: 'none',
+          }}
+        >
+          {stripe.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
+        </div>
       )}
 
       {/* Ports */}
@@ -225,6 +241,18 @@ export function NodeWrapper({
         </div>
       </div>
 
+      {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
+      {canStereo && node && (
+        <div style={{ padding: '10px 12px 0' }}>
+          <StereoToggle
+            stereo={ports.isStereo}
+            onChange={(on) => setNodeStereo(nodeId, on)}
+            labels={[t.stereo.mono, t.stereo.stereo]}
+            hint={t.stereo.toggleHint}
+          />
+        </div>
+      )}
+
       {/* Body — dimmed when bypassed */}
       <div
         style={{
@@ -237,6 +265,49 @@ export function NodeWrapper({
       >
         {children}
       </div>
+    </div>
+  )
+}
+
+/** Two-part switch: Mono | Stereo. */
+function StereoToggle({ stereo, onChange, labels, hint }: {
+  stereo: boolean
+  onChange: (stereo: boolean) => void
+  labels: [string, string]
+  hint: string
+}) {
+  return (
+    <div
+      className="nodrag nopan"
+      role="radiogroup"
+      title={hint}
+      style={{
+        display: 'flex', padding: 2, gap: 2,
+        borderRadius: 9999, background: 'var(--lsc-sunken)',
+        border: '1px solid var(--lsc-border-soft)',
+      }}
+    >
+      {labels.map((text, i) => {
+        const active = (i === 1) === stereo
+        return (
+          <button
+            key={text}
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(i === 1)}
+            style={{
+              flex: 1, padding: '2px 10px', borderRadius: 9999, border: 'none',
+              fontSize: 11, fontWeight: 700, lineHeight: 1.5, letterSpacing: '0.02em',
+              background: active ? 'var(--lsc-accent)' : 'transparent',
+              color: active ? '#fff' : 'var(--lsc-fg-muted)',
+              cursor: active ? 'default' : 'pointer',
+              transition: 'background 0.1s, color 0.1s',
+            }}
+          >
+            {text}
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -2,7 +2,9 @@ import { create } from 'zustand'
 import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import { buildDefaultGraph } from '../data/levels'
-import type { NodeParamValue } from '../data/nodeRegistry'
+import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
+import { NODE_REGISTRY, MULTI_WIRE_TYPES, getPorts, portSide, basePortId } from '../data/nodeRegistry'
+import { pickChainColor } from '../utils/chainColors'
 import type { ToolMode } from '../types'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
@@ -55,6 +57,8 @@ interface SignalChainStore {
   selectedNodeId: string | null
   toolMode: ToolMode
   wireSource: WireSource | null
+  /** Wire whose chain is highlighted (hovered in the unplug list); everything else is dimmed. */
+  highlightEdgeId: string | null
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -67,12 +71,14 @@ interface SignalChainStore {
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
   setWireSource: (source: WireSource | null) => void
+  setHighlightEdge: (edgeId: string | null) => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
   removeNode: (nodeId: string) => void
   updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
   toggleBypassNode: (nodeId: string) => void
+  setNodeStereo: (nodeId: string, on: boolean) => void
   addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
   removeEdge: (edgeId: string) => void
   updateEdgeWaypoints: (edgeId: string, waypoints: { x: number; y: number }[]) => void
@@ -92,6 +98,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   selectedNodeId: null,
   toolMode: 'select',
   wireSource: null,
+  highlightEdgeId: null,
 
   ...buildDefaultGraph(),
 
@@ -127,6 +134,8 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setWireSource: (source) => set({ wireSource: source }),
 
+  setHighlightEdge: (edgeId) => set({ highlightEdgeId: edgeId }),
+
   resetAll: () =>
     set((s) => ({
       activeTooltipId: null,
@@ -141,7 +150,12 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   // ── Graph mutations ───────────────────────────────────────────────────────
 
   addNode: (node) =>
-    set((s) => ({ nodes: [...s.nodes, node] })),
+    set((s) => {
+      // Each source starts a chain — tag it with its own colour
+      const isSource = NODE_REGISTRY[node.typeKey]?.category === 'source'
+      const tagged   = isSource && !node.color ? { ...node, color: pickChainColor(s.nodes) } : node
+      return { nodes: [...s.nodes, tagged] }
+    }),
 
   removeNode: (nodeId) =>
     set((s) => {
@@ -184,11 +198,61 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       ),
     })),
 
+  setNodeStereo: (nodeId, on) =>
+    set((s) => {
+      const node = s.nodes.find((n) => n.id === nodeId)
+      if (!node || NODE_REGISTRY[node.typeKey]?.stereo !== 'optional') return {}
+      if ((node.params.stereo === true) === on) return {}
+
+      const updated  = { ...node, params: { ...node.params, stereo: on } }
+      const after    = getPorts(updated)
+      const inputIds = new Set(after.inputs.map((p) => p.id))
+      const outIds   = new Set(after.outputs.map((p) => p.id))
+      const multi    = MULTI_WIRE_TYPES.has(node.typeKey)
+
+      // Move each wire to the matching port of the new layout, or drop it.
+      // Mono → Stereo: 'in' → 'in-l'. Stereo → Mono: 'in-l' → 'in', 'in-r' is dropped —
+      // except on a bus, whose single mono input keeps both sides (they are added together).
+      function remap(portId: string, valid: Set<string>, isInput: boolean): string | null {
+        if (valid.has(portId)) return portId
+        if (on) return valid.has(`${portId}-l`) ? `${portId}-l` : null
+        const side = portSide(portId)
+        const base = basePortId(portId)
+        if (!side || !valid.has(base)) return null
+        return side === 'l' || (isInput && multi) ? base : null
+      }
+
+      const edges: SignalEdge[] = []
+      for (const e of s.edges) {
+        let next = e
+        if (e.target === nodeId) {
+          const h = remap(e.targetHandle, inputIds, true)
+          if (!h) continue
+          next = { ...next, targetHandle: h }
+        }
+        if (e.source === nodeId) {
+          const h = remap(e.sourceHandle, outIds, false)
+          if (!h) continue
+          next = { ...next, sourceHandle: h }
+        }
+        // Two wires can collapse onto the same pair of ports — keep one
+        const dup = edges.some((x) =>
+          x.source === next.source && x.sourceHandle === next.sourceHandle &&
+          x.target === next.target && x.targetHandle === next.targetHandle)
+        if (!dup) edges.push(next)
+      }
+
+      return { nodes: s.nodes.map((n) => (n.id === nodeId ? updated : n)), edges }
+    }),
+
   addEdge: (edge) =>
     set((s) => ({ edges: [...s.edges, edge] })),
 
   removeEdge: (edgeId) =>
-    set((s) => ({ edges: s.edges.filter((e) => e.id !== edgeId) })),
+    set((s) => ({
+      edges: s.edges.filter((e) => e.id !== edgeId),
+      ...(s.highlightEdgeId === edgeId ? { highlightEdgeId: null } : {}),
+    })),
 
   updateEdgeWaypoints: (edgeId, waypoints) =>
     set((s) => ({

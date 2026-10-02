@@ -2,78 +2,95 @@ import { useMemo } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
 import { Merge } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
-import { BusInputPorts } from './NodePort'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import { getHealthStyle, dbToPercent } from '../../hooks/useGainStaging'
+import { ChannelRow, SignalMeter } from '../SignalMeter'
+import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { isNodeStereo } from '../../data/nodeRegistry'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 
-interface MasterBusData extends Record<string, unknown> {
+interface BusData extends Record<string, unknown> {
   color?: string
   label?: string
   typeKey?: string
 }
 
-function ChannelRow({ ch, db }: { ch: string; db: number }) {
-  const color = isFinite(db) ? getHealthStyle(getHealth(db)).color : 'var(--lsc-border)'
+/** Plain-language note on a bus card (stereo folded to mono, mono spread to stereo). */
+function BusHint({ text }: { text: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-      <span style={{ fontWeight: 700, width: 10 }}>{ch}</span>
-      <div style={{ flex: 1, height: 6, borderRadius: 9999, background: 'var(--lsc-sunken)', overflow: 'hidden' }}>
-        <div
-          style={{
-            width: `${isFinite(db) ? dbToPercent(db) : 0}%`, height: '100%', borderRadius: 9999,
-            background: color, transition: 'width 0.15s ease-out',
-          }}
-        />
-      </div>
-      <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)' }}>
-        {isFinite(db) ? db.toFixed(1) : '−∞'}
-      </StableText>
+    <div
+      className="lsc-wrap-text"
+      style={{
+        fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg)',
+        padding: '6px 8px', borderRadius: 'var(--lsc-radius-sm)',
+        border: '1px solid var(--lsc-accent)',
+        background: 'var(--lsc-accent-bg)',
+      }}
+    >
+      {text}
     </div>
   )
 }
 
-export function MasterBusNode({ id, data }: NodeProps<Node<MasterBusData>>) {
-  const { stages }    = useGraphSignal()
+/**
+ * Master Bus (always stereo) and Aux Bus (mono or stereo).
+ * Inputs come from the registry: Master / stereo Aux = L In + R In, mono Aux = one In.
+ * Each input accepts any number of wires; they are added together.
+ */
+export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
+  const { stages, busNotes } = useGraphSignal()
   const allEdges      = useSignalStore((s) => s.edges)
+  const node          = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
   const { t, fmt }    = useTranslation()
 
-  const result          = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const resolvedTypeKey = (data.typeKey as string) ?? 'master-bus'
-  const defaultLabel    =
-    resolvedTypeKey === 'stereo-bus'
-      ? (t.nodes['stereo-bus']?.label ?? 'Stereo Bus / Aux')
-      : (t.nodes.master.label ?? 'Master Bus')
+  const typeKey = (data.typeKey as string) ?? 'master-bus'
+  const isAux   = typeKey === 'aux-bus'
+  const stereo  = node ? isNodeStereo(node) : !isAux
+  const result  = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const note    = busNotes[id]
+  const domain  = (result as { domain?: string }).domain ?? 'analog'
+  const unit    = domain === 'digital' ? 'dBFS' : 'dBu'
   const domainWarning = (result as { warning?: string }).warning === 'domainMixedBus'
 
-  // L/R output levels — always present since the bus always has out-l and out-r ports
-  const outL = result.outL ?? result.out
-  const outR = result.outR ?? result.out
+  const defaultLabel = isAux
+    ? (t.nodes['aux-bus']?.label ?? 'Aux Bus')
+    : (t.nodes.master.label ?? 'Master Bus')
+
+  const n = incomingEdges.length
 
   return (
-    // NodeWrapper renders the two output ports (out-l / out-r) from NODE_REGISTRY.
     <NodeWrapper
       nodeId={id}
-      typeKey={resolvedTypeKey}
+      typeKey={typeKey}
       icon={<Merge size={16} />}
       label={data.label ?? defaultLabel}
-      customInputs={<BusInputPorts nodeId={id} connectedHandles={incomingEdges.map((e) => e.targetHandle)} />}
-      customInputCount={incomingEdges.length + 1}
+      style={{ minWidth: 200 }}
     >
-      <ChannelRow ch="L" db={outL} />
-      <ChannelRow ch="R" db={outR} />
+      {stereo ? (
+        <>
+          <ChannelRow ch="L" db={result.outL ?? result.out} />
+          <ChannelRow ch="R" db={result.outR ?? result.out} />
+        </>
+      ) : (
+        <>
+          <SignalMeter db={result.out} health={result.health} showValue={false} />
+          <div style={{ fontSize: 12, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)', textAlign: 'right' }}>
+            <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(result.out) ? result.out.toFixed(1) : '−∞'}</StableText> {unit}
+          </div>
+        </>
+      )}
 
       <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)' }}>
-        {incomingEdges.length > 0
-          ? fmt(t.nodes['mono-bus']?.channels ?? '{n} channel{s} mixed', { n: String(incomingEdges.length), s: incomingEdges.length > 1 ? 's' : '' })
-          : (t.nodes['mono-bus']?.noChannels ?? 'No channels connected')}
+        {n > 0
+          ? fmt(t.nodes['aux-bus']?.channels ?? '{n} wire{s} in', { n: String(n), s: n > 1 ? 's' : '' })
+          : (t.nodes['aux-bus']?.noChannels ?? 'Nothing connected yet')}
       </span>
 
-      {/* Domain mismatch warning */}
+      {note?.foldedStereo && <BusHint text={t.stereo.foldedStereo} />}
+      {note?.monoOnStereo && <BusHint text={t.stereo.monoOnStereo} />}
+
       {domainWarning && (
         <div
           className="lsc-wrap-text"

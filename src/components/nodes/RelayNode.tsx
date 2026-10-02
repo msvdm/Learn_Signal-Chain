@@ -7,6 +7,7 @@ import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
+import { basePortId } from '../../data/nodeRegistry'
 
 interface GraphRelayData extends Record<string, unknown> {
   color?: string
@@ -23,11 +24,15 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
   const selected = (node?.params.selectedInput as string) ?? 'a'
   const result   = stages[id]
 
-  // Find the signal level coming into each input handle
-  const incomingA = allEdges.find((e) => e.target === id && e.targetHandle === 'in-a')
-  const incomingB = allEdges.find((e) => e.target === id && e.targetHandle === 'in-b')
-  const sigA = incomingA ? (portSignal.get(`${incomingA.source}:${incomingA.sourceHandle}`) ?? -Infinity) : -Infinity
-  const sigB = incomingB ? (portSignal.get(`${incomingB.source}:${incomingB.sourceHandle}`) ?? -Infinity) : -Infinity
+  // Signal level coming into each input (the louder side when the relay is stereo)
+  const levelOn = (port: string) => {
+    const dbs = allEdges
+      .filter((e) => e.target === id && basePortId(e.targetHandle) === port)
+      .map((e) => portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity)
+    return dbs.length > 0 ? Math.max(...dbs) : -Infinity
+  }
+  const sigA = levelOn('in-a')
+  const sigB = levelOn('in-b')
 
   return (
     <NodeWrapper

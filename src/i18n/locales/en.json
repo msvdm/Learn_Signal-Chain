@@ -190,7 +190,8 @@
       "label": "Relay"
     },
     "pan": {
-      "label": "Pan"
+      "label": "Pan",
+      "balanceLabel": "Balance"
     },
     "audio-interface": {
       "label": "Audio Interface",
@@ -204,17 +205,10 @@
     "dac": {
       "label": "DAC"
     },
-    "mono-bus": {
-      "label": "Mono Bus / Aux",
-      "channels": "{n} channel{s} mixed",
-      "noChannels": "No channels connected"
-    },
-    "stereo-bus": {
-      "label": "Stereo Bus / Aux"
-    },
-    "stereo-fader": {
-      "label": "Stereo Fader",
-      "fader": "Fader"
+    "aux-bus": {
+      "label": "Aux Bus",
+      "channels": "{n} wire{s} in",
+      "noChannels": "Nothing connected yet"
     },
     "balance": {
       "label": "Balance",
@@ -234,6 +228,20 @@
     "remove": "Remove from chain",
     "bypassedShort": "Bypassed",
     "unplug": "Click to unplug this wire"
+  },
+  "stereo": {
+    "mono": "Mono",
+    "stereo": "Stereo",
+    "toggleHint": "Mono = one channel. Stereo = two channels, Left (L) and Right (R), each with its own input, output and meter.",
+    "foldedStereo": "Left and right are added together into one channel here — about 6 dB louder when both sides carry the same sound.",
+    "monoOnStereo": "A mono signal lands on both sides at full level. Put a Pan knob before this bus to place it left or right."
+  },
+  "unplugMenu": {
+    "title": "Wires on this input",
+    "via": "via {node}",
+    "unplugOne": "Unplug this wire",
+    "unplugAll": "Unplug all",
+    "hint": "Point at a wire to light up its chain"
   },
   "palette": {
     "elements": "Elements",
@@ -266,14 +274,11 @@
       "switch": "Switch / Mute",
       "potentiometer": "Potentiometer",
       "relay": "Relay",
-      "pan": "Pan Knob",
+      "pan": "Pan / Balance",
       "adc": "ADC",
       "dac": "DAC",
       "master-bus": "Master Bus",
-      "mono-bus": "Mono Bus / Aux",
-      "stereo-bus": "Stereo Bus / Aux",
-      "stereo-fader": "Stereo Fader",
-      "balance": "Balance",
+      "aux-bus": "Aux Bus",
       "audio-interface": "Audio Interface",
       "active-speaker": "Active Speaker",
       "speaker": "Speaker (passive)"
@@ -313,7 +318,7 @@
     "eq": {
       "what": "The Parametric EQ shapes the tonal character of the signal by boosting or cutting specific frequency ranges. Each band targets a frequency area: Low (body), Mid (presence), High (air and clarity). Bell mode shapes a peak or dip; Shelf mode boosts or cuts everything above/below a corner frequency.",
       "why": "Every sound source has frequencies that help or hurt its purpose. A vocal may need less boxiness around 400 Hz, more presence at 3 kHz, and more air at 10 kHz. The EQ lets you sculpt that precisely.",
-      "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate mode you can switch Low and High bands to Shelf for a smoother, more musical result."
+      "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate mode you can switch Low and High bands to Shelf for a smoother, more musical result. Switch it to Stereo to treat both sides of a stereo signal with the same settings."
     },
     "graphic-eq": {
       "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 10 bands, one per octave from 31 Hz to 16 kHz). Each band has its own fader — push it up to boost that octave, pull it down to cut.",
@@ -323,12 +328,12 @@
     "comp": {
       "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter.",
       "why": "Live performances and recordings have wide dynamic ranges. Without compression, loud notes clip and quiet notes get lost. Compression makes the signal more consistent and controlled.",
-      "tip": "Watch the gain reduction meter. 2-6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself."
+      "tip": "Watch the gain reduction meter. 2-6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. In Stereo, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
     },
     "fader": {
       "what": "The channel fader controls the volume of this signal as it enters the mix. Unity gain (0 dB) means the signal passes through unchanged. Moving it down attenuates the signal.",
       "why": "Every instrument in a mix needs to sit at the right level relative to everything else. The fader is how you set that balance. It is the primary mixing control.",
-      "tip": "In a mix, most faders end up below unity. The art of mixing is in the relative balance between all channels, not in making each one as loud as possible."
+      "tip": "In a mix, most faders end up below unity. The art of mixing is in the relative balance between all channels, not in making each one as loud as possible. Switch the fader to Stereo to move both sides of a stereo signal together with one control."
     },
     "amp": {
       "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound.",
@@ -345,28 +350,18 @@
       "why": "Audio equipment uses pots for volume controls, send levels, trim controls, and effects returns. The audio taper ensures that the control feels linear even though loudness is logarithmic.",
       "tip": "The 12 o'clock position (50%) is not unity gain on an audio taper pot — unity is typically at 75% of the rotation. This node models that correctly: full CCW = silence, 75% = 0 dB, full CW = +10 dB."
     },
-    "mono-bus": {
-      "what": "A mono bus collects signals from multiple channels and combines them into a single mono output.",
-      "why": "Use it to merge several microphones or instruments before sending them to the master bus. Grouping related channels (e.g., all backing vocals) lets you control their combined level with one fader.",
-      "tip": "Watch the output meter — if it clips after combining many channels, lower the gain on the individual channels feeding into it. Each source adds to the total, so the more you combine the louder it gets."
-    },
-    "stereo-bus": {
-      "what": "A stereo bus collects signals from multiple channels and combines them into a stereo (Left/Right) output, preserving any left-right positioning set by pan knobs upstream.",
-      "why": "Use it to collect a group of sources — like all your drum tracks — and control their combined stereo level before sending everything to the master bus.",
-      "tip": "Connect pan nodes before the stereo bus so each source sits correctly in the stereo field. The left and right meters show you the final balance of the group."
-    },
-    "stereo-fader": {
-      "what": "A stereo fader has separate Left and Right inputs and outputs. It applies the same level adjustment to both channels simultaneously, so the stereo image stays intact.",
-      "why": "Use it to ride the level of a stereo source — a keyboard, a stereo effects return, or the output of a stereo bus — without collapsing it to mono.",
-      "tip": "Connect the L Out and R Out of a pan knob or stereo bus into the L In and R In here. Moving the fader down attenuates both channels equally, preserving the left-right balance."
+    "aux-bus": {
+      "what": "An aux bus collects several signals and adds them together into one output. In Mono it has one input and one output. Switch it to Stereo to get separate Left and Right inputs and outputs.",
+      "why": "Use it to group sources that belong together — all backing vocals, all drums — so one control sets their combined level, or to send a separate mix to a monitor or an effect.",
+      "tip": "Try this: wire the L and R outputs of a stereo Line Input into a Mono aux bus. The two sides are added together and the level jumps by about 6 dB. That is why a stereo mix can suddenly get louder (or clip) when it is folded down to mono."
     },
     "balance": {
       "what": "A balance control adjusts the relative loudness between the Left and Right channels of a stereo signal. At centre, both channels pass through equally. Turning left fades out the right channel; turning right fades out the left channel.",
       "why": "Useful when a stereo source sounds off-centre — for example, a recording where the guitarist is too far left — nudge the balance to compensate without re-mixing the source.",
-      "tip": "Balance is different from pan: pan positions a mono signal, balance shifts an already-stereo signal. Keep it near centre unless you specifically need to compensate for an off-centre stereo source."
+      "tip": "Balance is the Pan node in Stereo mode. At centre both sides pass at full level — no −3 dB like a pan knob. Turning it left only fades the right side; the left side never gets louder. Keep it near centre unless a stereo source really sounds off-centre."
     },
     "master-bus": {
-      "what": "The master bus is the final summing point where all channels are combined before the signal leaves the system. Every fader move, every processing decision, ultimately ends up here.",
+      "what": "The master bus is the final mixing point where every channel is added together before the sound leaves the system. It has two inputs, L and R, and two outputs. A wire from a stereo output keeps its side; a wire from a mono output feeds both sides at full level — put a Pan knob in front to place it.",
       "why": "The master bus controls the overall output level. It is also the place for final mix bus processing — subtle compression or limiting to control peaks and add cohesion.",
       "tip": "Leave headroom on the master bus — ideally keep peaks below −6 dBu. This gives a mastering engineer (or limiter) room to work. A master bus that is already at 0 dBu has nowhere to go."
     },
@@ -416,9 +411,9 @@
       "tip": "The active output is highlighted in green; the inactive one is grey. Try connecting Output A to a reverb bus and Output B to a dry speaker to instantly switch between wet and dry monitoring."
     },
     "pan": {
-      "what": "A pan knob distributes a mono signal between the left and right channels of a stereo mix. Turned fully left, the signal goes only to the left speaker. Fully right, only to the right. In the centre, it is split equally between both — but at −3 dB each, so the total loudness stays the same (equal-power law).",
-      "why": "In a stereo mix, every instrument has a position in the left-right field. Panning creates the sense of space and separation that makes a mix feel wide and clear. Without panning, everything piles up in the centre and the mix sounds crowded.",
-      "tip": "Connect the L output and R output of the pan knob to the left and right inputs of the Master Bus separately. The stereo bus will then show different levels for L and R, reflecting where you have placed the sound in the stereo field."
+      "what": "In Mono mode this is a Pan knob: it takes one signal and spreads it between Left and Right. Fully left, only the left side gets it; fully right, only the right side. At centre each side gets it 3 dB quieter, so the overall loudness stays the same. Switch the card to Stereo and it becomes a Balance knob.",
+      "why": "A mono signal — one microphone, one guitar — has no left or right of its own. Wired straight into a stereo bus it lands on both sides at full level: stuck in the middle and 3 dB louder than a centred pan. The Pan knob is how you place it anywhere between the speakers.",
+      "tip": "Compare: Line Input → Pan at centre → the Master shows 3 dB less on each side than the same Line Input wired straight into the Master. Then flip the switch to Stereo (Balance) and feed it a stereo source: a balance knob does not spread one signal, it only turns down one side of a signal that already has two."
     },
     "audio-interface": {
       "what": "An audio interface is the device that connects your studio to your computer. It receives the final analog signal from your mixer or monitor controller, converts it to digital, and sends it to your recording software. In this signal chain, it is the last stop — nothing comes after it.",

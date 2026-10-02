@@ -2,6 +2,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { InlineNode } from './InlineNode'
 import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
@@ -15,13 +16,13 @@ interface GraphAdcDacData extends Record<string, unknown> {
 }
 
 export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
+  const levels              = useStereoLevels(id)
   const { t }               = useTranslation()
 
   const typeKey    = (data.typeKey as string) ?? 'adc'
   const isAdc      = typeKey === 'adc'
   const result     = stages[id]
-  const inputLevel = inputDb[id] ?? -Infinity
   const domain     = (result as { domain?: string })?.domain ?? 'analog'
   const warning    = (result as { warning?: string })?.warning
 
@@ -66,13 +67,22 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
           whiteSpace: 'nowrap',
         }}
       >
-        <span style={{ color: 'var(--lsc-fg-muted)' }}>
-          <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(inputLevel)}</StableText> {inputUnit}
-        </span>
-        {' → '}
-        <span style={{ color: hasWarning ? 'var(--signal-clipping)' : 'var(--signal-good)' }}>
-          <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(result?.out ?? -Infinity)}</StableText> {outputUnit}
-        </span>
+        {/* One line per side when stereo: "L  -10.0 dBu → 8.0 dBFS" */}
+        {(levels.stereo
+          ? [['L ', levels.in, levels.out], ['R ', levels.inR ?? -Infinity, levels.outR ?? -Infinity]] as const
+          : [['', levels.in, result?.out ?? -Infinity]] as const
+        ).map(([side, inDb, outDb]) => (
+          <div key={side}>
+            {side && <span style={{ fontWeight: 700, color: 'var(--lsc-fg-muted)' }}>{side}</span>}
+            <span style={{ color: 'var(--lsc-fg-muted)' }}>
+              <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(inDb)}</StableText> {inputUnit}
+            </span>
+            {' → '}
+            <span style={{ color: hasWarning ? 'var(--signal-clipping)' : 'var(--signal-good)' }}>
+              <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(outDb)}</StableText> {outputUnit}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Warning banner */}

@@ -6,6 +6,7 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
 
 interface GraphNoiseGateData extends Record<string, unknown> {
   color?: string
@@ -139,13 +140,14 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>) {
-  const { stages, inputDb } = useGraphSignal()
+  const { stages }          = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const threshold  = (node?.params.thresholdDb as number) ?? -40
-  const inputLevel = inputDb[id] ?? -Infinity
+  const levels     = useStereoLevels(id)
+  const inputLevel = levels.inPeak
   const result     = stages[id]
   const isOpen     = isFinite(inputLevel) && inputLevel >= threshold
 
@@ -157,7 +159,7 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
       label={data.label ?? t.nodes['noise-gate']?.label ?? 'Noise Gate'}
     >
       <div className="space-y-3">
-        <SignalMeter db={inputLevel} health={getHealth(inputLevel)} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
 
         <GateCurve threshold={threshold} inputLevel={inputLevel} isOpen={isOpen} />
 
@@ -175,7 +177,7 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
           />
         </div>
 
-        <SignalMeter db={result?.out ?? -Infinity} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )
