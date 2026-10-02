@@ -4,18 +4,11 @@ import { InlineNode } from './InlineNode'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { potPositionToDb } from '../../hooks/useSignalChain'
+import { formatPotDb } from '../../utils/readout'
 
 interface GraphPotentiometerData extends Record<string, unknown> {
   color?: string
   label?: string
-}
-
-function formatDb(position: number): string {
-  const db = potPositionToDb(position)
-  if (!isFinite(db)) return '−∞'
-  if (Math.abs(db) < 0.05) return '0 dB'
-  return `${db >= 0 ? '+' : ''}${db.toFixed(1)} dB`
 }
 
 export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiometerData>>) {
@@ -39,7 +32,7 @@ export function PotentiometerNode({ id, data }: NodeProps<Node<GraphPotentiomete
         max={100}
         step={0.5}
         label="Level"
-        formatValue={formatDb}
+        formatValue={formatPotDb}
         onChange={(v) => updateNodeParams(id, { position: v })}
         color="var(--lsc-accent)"
         size={52}

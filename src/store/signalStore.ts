@@ -3,8 +3,9 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import { buildDefaultGraph } from '../data/levels'
 import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MULTI_WIRE_TYPES, getPorts, portSide, basePortId } from '../data/nodeRegistry'
+import { NODE_REGISTRY, MIX_PORT, getPorts } from '../data/nodeRegistry'
 import { pickChainColor } from '../utils/chainColors'
+import { attachMainFaders, reconcileMainFaders } from '../utils/mainFader'
 import type { ToolMode } from '../types'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
@@ -81,6 +82,8 @@ interface SignalChainStore {
   setNodeStereo: (nodeId: string, on: boolean) => void
   addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
   removeEdge: (edgeId: string) => void
+  /** Swap one wire for others in one step (a card dropped onto a wire). */
+  replaceEdge: (edgeId: string, replacements: import('../data/nodeRegistry').SignalEdge[]) => void
   updateEdgeWaypoints: (edgeId: string, waypoints: { x: number; y: number }[]) => void
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
 }
@@ -159,9 +162,12 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeNode: (nodeId) =>
     set((s) => {
+      const nodes    = s.nodes.filter((n) => n.id !== nodeId)
       const inEdges  = s.edges.filter((e) => e.target === nodeId)
       const outEdges = s.edges.filter((e) => e.source === nodeId)
       const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+      // Removing a Main Fader (or what fed it) hands the L / R wires back to the bus
+      const settle = (edges: SignalEdge[]) => reconcileMainFaders(s, { nodes, edges })
 
       // Drop help / selection that pointed at the removed node
       const cleared = {
@@ -178,10 +184,10 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
           target: outEdges[0].target,
           targetHandle: outEdges[0].targetHandle,
         }
-        return { ...cleared, nodes: s.nodes.filter((n) => n.id !== nodeId), edges: [...filteredEdges, bridge] }
+        return { ...cleared, nodes, edges: settle([...filteredEdges, bridge]) }
       }
 
-      return { ...cleared, nodes: s.nodes.filter((n) => n.id !== nodeId), edges: filteredEdges }
+      return { ...cleared, nodes, edges: settle(filteredEdges) }
     }),
 
   updateNodeParams: (nodeId, patch) =>
@@ -204,53 +210,53 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       if (!node || NODE_REGISTRY[node.typeKey]?.stereo !== 'optional') return {}
       if ((node.params.stereo === true) === on) return {}
 
-      const updated  = { ...node, params: { ...node.params, stereo: on } }
-      const after    = getPorts(updated)
-      const inputIds = new Set(after.inputs.map((p) => p.id))
-      const outIds   = new Set(after.outputs.map((p) => p.id))
-      const multi    = MULTI_WIRE_TYPES.has(node.typeKey)
+      const updated = { ...node, params: { ...node.params, stereo: on } }
+      const outIds  = new Set(getPorts(updated).outputs.map((p) => p.id))
 
-      // Move each wire to the matching port of the new layout, or drop it.
-      // Mono → Stereo: 'in' → 'in-l'. Stereo → Mono: 'in-l' → 'in', 'in-r' is dropped —
-      // except on a bus, whose single mono input keeps both sides (they are added together).
-      function remap(portId: string, valid: Set<string>, isInput: boolean): string | null {
-        if (valid.has(portId)) return portId
-        if (on) return valid.has(`${portId}-l`) ? `${portId}-l` : null
-        const side = portSide(portId)
-        const base = basePortId(portId)
-        if (!side || !valid.has(base)) return null
-        return side === 'l' || (isInput && multi) ? base : null
+      // Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l';
+      // Stereo → Mono moves 'out-l', 'out-r' and a Main Fader's 'mix' back to 'out'.
+      function remap(portId: string): string | null {
+        if (outIds.has(portId)) return portId
+        if (on) return outIds.has(`${portId}-l`) ? `${portId}-l` : null
+        const base = portId === MIX_PORT ? 'out' : portId.replace(/-[lr]$/, '')
+        return outIds.has(base) ? base : null
       }
 
       const edges: SignalEdge[] = []
       for (const e of s.edges) {
         let next = e
-        if (e.target === nodeId) {
-          const h = remap(e.targetHandle, inputIds, true)
-          if (!h) continue
-          next = { ...next, targetHandle: h }
-        }
         if (e.source === nodeId) {
-          const h = remap(e.sourceHandle, outIds, false)
+          const h = remap(e.sourceHandle)
           if (!h) continue
           next = { ...next, sourceHandle: h }
         }
-        // Two wires can collapse onto the same pair of ports — keep one
+        // Left and right wires to the same input collapse into one — keep one
         const dup = edges.some((x) =>
           x.source === next.source && x.sourceHandle === next.sourceHandle &&
           x.target === next.target && x.targetHandle === next.targetHandle)
         if (!dup) edges.push(next)
       }
 
-      return { nodes: s.nodes.map((n) => (n.id === nodeId ? updated : n)), edges }
+      // A fader on the new L output becomes the Main Fader; one that lost its Mix wire is plain again
+      const nodes = s.nodes.map((n) => (n.id === nodeId ? updated : n))
+      return { nodes, edges: attachMainFaders(nodes, edges) }
     }),
 
+  // A Fader wired to a stereo bus's L or R becomes its Main Fader (see utils/mainFader.ts)
   addEdge: (edge) =>
-    set((s) => ({ edges: [...s.edges, edge] })),
+    set((s) => ({ edges: attachMainFaders(s.nodes, [...s.edges, edge]) })),
 
+  // Unplugging a Main Fader hands the bus's L / R wires back to the bus
   removeEdge: (edgeId) =>
     set((s) => ({
-      edges: s.edges.filter((e) => e.id !== edgeId),
+      edges: reconcileMainFaders(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) }),
+      ...(s.highlightEdgeId === edgeId ? { highlightEdgeId: null } : {}),
+    })),
+
+  // One step, so a card dropped onto a Mix wire does not unplug the Main Fader on the way
+  replaceEdge: (edgeId, replacements) =>
+    set((s) => ({
+      edges: reconcileMainFaders(s, { nodes: s.nodes, edges: [...s.edges.filter((e) => e.id !== edgeId), ...replacements] }),
       ...(s.highlightEdgeId === edgeId ? { highlightEdgeId: null } : {}),
     })),
 

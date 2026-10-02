@@ -6,6 +6,8 @@ import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import type { Translations } from '../i18n/translations'
 import { chainOrder } from '../utils/chainOrder'
+import { helpKeyOf } from '../data/nodeRegistry'
+import { useGraphSignal } from '../hooks/useSignalChain'
 
 const WIDTH  = 380
 const ARROW  = 12
@@ -30,6 +32,7 @@ export function HelpPopover() {
   const setActive  = useSignalStore((s) => s.setActiveTooltip)
   const setSelected = useSignalStore((s) => s.setSelectedNode)
   const { t, fmt } = useTranslation()
+  const { stages } = useGraphSignal()
   const { setViewport, getViewport } = useReactFlow()
   const { x: vx, y: vy, zoom } = useViewport()
   const paneW = useStore((s) => s.width)
@@ -72,9 +75,12 @@ export function HelpPopover() {
   }, [activeId, height])
 
   // Stages that have help text, in the order the signal flows through them
+  // (a Pan fed a stereo wire opens the Balance text)
   const order = useMemo(
-    () => chainOrder(nodes, edges).filter((n) => Boolean(t.theory[n.typeKey])),
-    [nodes, edges, t],
+    () => chainOrder(nodes, edges)
+      .map((n) => ({ id: n.id, helpKey: helpKeyOf(n, stages[n.id]) }))
+      .filter((n) => Boolean(t.theory[n.helpKey])),
+    [nodes, edges, stages, t],
   )
 
   const entry = typeKey ? t.theory[typeKey] : undefined
@@ -186,7 +192,7 @@ export function HelpPopover() {
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '0 14px 12px' }}>
           <button
-            onClick={() => prev && goTo(prev.id, prev.typeKey)}
+            onClick={() => prev && goTo(prev.id, prev.helpKey)}
             disabled={!prev}
             className={prev ? 'lsc-btn-outline' : undefined}
             style={{
@@ -199,7 +205,7 @@ export function HelpPopover() {
             {t.tooltip.previous}
           </button>
           <button
-            onClick={() => (next ? goTo(next.id, next.typeKey) : close())}
+            onClick={() => (next ? goTo(next.id, next.helpKey) : close())}
             style={{
               height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
               background: 'var(--lsc-accent)', color: '#fff',
@@ -207,7 +213,7 @@ export function HelpPopover() {
               maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
-            {next ? fmt(t.tooltip.nextNode, { name: helpTitle(t, next.typeKey) }) : t.tooltip.finishTour}
+            {next ? fmt(t.tooltip.nextNode, { name: helpTitle(t, next.helpKey) }) : t.tooltip.finishTour}
           </button>
         </div>
       </div>

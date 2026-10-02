@@ -6,7 +6,7 @@ import {
   AudioWaveform, ShieldAlert, DoorClosed, Minus,
   Merge, Volume2, Cpu, Search,
   SlidersHorizontal, Gauge, GitBranch, MoveHorizontal,
-  ArrowRight, ArrowLeft,
+  ArrowRight, ArrowLeft, Grid3x3,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { ComplexityLevel } from '../store/signalStore'
@@ -53,6 +53,7 @@ const ALL_ITEMS: PaletteItem[] = [
   { typeKey: 'dac',              icon: <ArrowLeft size={ICON} />,         category: 'routing' },
   { typeKey: 'master-bus',       icon: <Merge size={ICON} />,             category: 'routing' },
   { typeKey: 'aux-bus',          icon: <Merge size={ICON} />,             category: 'routing' },
+  { typeKey: 'matrix',           icon: <Grid3x3 size={ICON} />,           category: 'routing' },
   { typeKey: 'audio-interface',  icon: <Cpu size={ICON} />,               category: 'routing' },
   // Output
   { typeKey: 'active-speaker',   icon: <Volume2 size={ICON} />,           category: 'output' },
@@ -80,7 +81,7 @@ const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
     'noise-gate', 'limiter', 'deesser',
     'switch', 'potentiometer', 'relay', 'pan',
     'amp', 'graphic-eq',
-    'master-bus', 'aux-bus', 'audio-interface',
+    'master-bus', 'aux-bus', 'matrix', 'audio-interface',
     'adc', 'dac',
   ],
 }

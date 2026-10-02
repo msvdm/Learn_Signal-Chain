@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
-import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { helpKeyOf } from '../data/nodeRegistry'
+import type { SignalEdge } from '../data/nodeRegistry'
 import { useTranslation } from '../i18n/useTranslation'
-import type { Translations } from '../i18n/translations'
+import { useGraphSignal } from '../hooks/useSignalChain'
 import { chainSourcesOfEdge } from '../utils/chainColors'
+import { nodeName, sideLetter } from '../utils/nodeName'
 
 interface UnplugMenuProps {
   /** Wires plugged into the port */
@@ -14,14 +14,6 @@ interface UnplugMenuProps {
   /** Screen rectangle of the port the list opens next to */
   anchor: DOMRect
   onClose: () => void
-}
-
-function nodeName(t: Translations, node: SignalNode | undefined): string {
-  if (!node) return '?'
-  if (node.label) return node.label
-  const key = helpKeyOf(node)
-  const fromNodes = (t.nodes as Record<string, { label?: string } | undefined>)[key]?.label
-  return t.palette.items[key] ?? fromNodes ?? key
 }
 
 /**
@@ -36,6 +28,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
   const removeEdge      = useSignalStore((s) => s.removeEdge)
   const setHighlight    = useSignalStore((s) => s.setHighlightEdge)
   const { t, fmt }      = useTranslation()
+  const { stages, wires: signals } = useGraphSignal()
   const ref             = useRef<HTMLDivElement>(null)
 
   // The parent passes a new onClose each render — keep the latest without re-subscribing
@@ -90,9 +83,12 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
         const from    = nodes.find((n) => n.id === wire.source)
         const sources = chainSourcesOfEdge(wire, nodes, edges)
         const start   = sources[0]
-        const name    = nodeName(t, start ?? from)
-        const via     = start && from && start.id !== from.id ? fmt(t.unplugMenu.via, { node: nodeName(t, from) }) : null
-        const side    = wire.sourceHandle.endsWith('-l') ? 'L' : wire.sourceHandle.endsWith('-r') ? 'R' : null
+        const named   = start ?? from
+        const name    = nodeName(t, named, named && stages[named.id])
+        const via     = start && from && start.id !== from.id
+          ? fmt(t.unplugMenu.via, { node: nodeName(t, from, stages[from.id]) })
+          : null
+        const side    = sideLetter(signals.get(`${wire.source}:${wire.sourceHandle}`)?.kind)
         return (
           <div
             key={wire.id}

@@ -1,3 +1,13 @@
+import { potPositionToDb } from '../hooks/useSignalChain'
+
+/** Readout of a potentiometer-scale knob (0 = off, 75 = 0 dB, 100 = +10 dB). */
+export function formatPotDb(position: number): string {
+  const db = potPositionToDb(position)
+  if (!isFinite(db)) return '−∞'
+  if (Math.abs(db) < 0.05) return '0 dB'
+  return `${db >= 0 ? '+' : ''}${db.toFixed(1)} dB`
+}
+
 /** Widest possible signal level reading, e.g. "−140.0" (mono font: every digit is the same width). */
 export const LEVEL_SAMPLE = '−000.0'
 

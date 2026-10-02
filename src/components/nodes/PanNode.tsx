@@ -4,7 +4,6 @@ import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import { isNodeStereo } from '../../data/nodeRegistry'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 
@@ -22,20 +21,22 @@ function positionLabel(pos: number): string {
 }
 
 /**
- * Mono mode: Pan knob — one input spread over L / R (equal-power, −3 dB each side at centre).
- * Stereo mode: Balance knob — L / R in → L / R out, turning only fades the opposite side.
+ * Always sends out a stereo wire.
+ * Mono wire in: Pan knob — spreads it over L / R (equal-power, −3 dB each side at centre).
+ * Stereo wire in: Balance knob — turning only fades the opposite side.
  */
 export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
-  const { portSignal, stages } = useGraphSignal()
+  const { stages } = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const balance     = node ? isNodeStereo(node) : false
+  const stage       = stages[id]
+  const balance     = stage?.stereoIn ?? false
   const panPosition = (node?.params.panPosition as number) ?? 50
-  const outL = portSignal.get(`${id}:out-l`) ?? -Infinity
-  const outR = portSignal.get(`${id}:out-r`) ?? -Infinity
-  const out  = stages[id]?.out ?? -Infinity
+  const outL = stage?.outL ?? -Infinity
+  const outR = stage?.outR ?? -Infinity
+  const out  = stage?.out ?? -Infinity
 
   const label = balance
     ? (t.nodes.pan?.balanceLabel ?? 'Balance')

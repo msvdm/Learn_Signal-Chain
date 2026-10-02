@@ -70,7 +70,7 @@ export interface Translations {
   }
   banner: { gainStaging: string }
   nodes: {
-    mic: { label: string; sensitivity: string; micInfo: string; hint: string }
+    mic: { label: string; sensitivity: string; micInfo: string }
     preamp: { label: string; gain: string }
     hpf: { label: string; cutoff: string }
     eq: {
@@ -135,6 +135,10 @@ export interface Translations {
     adc?: { label?: string }
     dac?: { label?: string }
     'aux-bus'?: { label?: string; channels?: string; noChannels?: string }
+    /** A Fader wired straight after a stereo bus */
+    'main-fader': { label: string }
+    /** {n} = input / output number */
+    matrix: { label: string; input: string; output: string; empty: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
   eqCurve: { title: string; subtitle: string; band: string }
@@ -153,10 +157,6 @@ export interface Translations {
     stereo: string
     /** Tooltip of the Mono | Stereo switch */
     toggleHint: string
-    /** Bus hint: a mono bus is fed left + right wires */
-    foldedStereo: string
-    /** Bus hint: a stereo bus is fed a mono wire */
-    monoOnStereo: string
   }
   unplugMenu: {
     title: string

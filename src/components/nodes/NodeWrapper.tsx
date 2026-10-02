@@ -2,7 +2,8 @@ import type { ReactNode, CSSProperties } from 'react'
 import { Power, X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { NODE_REGISTRY, getPorts, helpKeyOf } from '../../data/nodeRegistry'
+import { NODE_REGISTRY, getPorts, helpKeyOf, isNodeStereo } from '../../data/nodeRegistry'
+import { useGraphSignal } from '../../hooks/useSignalChain'
 import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { chainColorsOf } from '../../utils/chainColors'
 import { HEADER_H, PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
@@ -12,7 +13,7 @@ import { NodePort } from './NodePort'
 const NO_BYPASS_TYPES = new Set([
   'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
   'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
-  'master-bus', 'audio-interface',
+  'master-bus', 'matrix', 'audio-interface',
 ])
 
 interface NodeWrapperProps {
@@ -62,17 +63,19 @@ export function NodeWrapper({
   const chainColors      = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
   const wireSource       = useSignalStore((s) => s.wireSource)
   const edges            = useSignalStore((s) => s.edges)
+  const nodes            = useSignalStore((s) => s.nodes)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
+  const { stages }       = useGraphSignal()
   const { t, fmt }       = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
   const canBypass  = !NO_BYPASS_TYPES.has(typeKey)
-  const helpKey    = node ? helpKeyOf(node) : typeKey
+  const helpKey    = node ? helpKeyOf(node, stages[nodeId]) : typeKey
   const hasHelp    = Boolean(t.theory[helpKey])
   const helpOpen   = activeTooltipId === nodeId
   const selected   = selectedNodeId === nodeId || helpOpen
 
-  const ports      = getPorts(node ?? { typeKey, params: {} })
+  const ports      = getPorts(node ?? { typeKey, params: {} }, { nodes, edges })
   const canStereo  = NODE_REGISTRY[typeKey]?.stereo === 'optional'
   const stripe     = chainColors ? chainColors.split(' ') : []
   const inputs  = customInputs ? [] : ports.inputs
@@ -245,7 +248,7 @@ export function NodeWrapper({
       {canStereo && node && (
         <div style={{ padding: '10px 12px 0' }}>
           <StereoToggle
-            stereo={ports.isStereo}
+            stereo={isNodeStereo(node)}
             onChange={(on) => setNodeStereo(nodeId, on)}
             labels={[t.stereo.mono, t.stereo.stereo]}
             hint={t.stereo.toggleHint}

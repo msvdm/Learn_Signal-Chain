@@ -6,7 +6,6 @@ import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { isNodeStereo } from '../../data/nodeRegistry'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 
@@ -16,40 +15,21 @@ interface BusData extends Record<string, unknown> {
   typeKey?: string
 }
 
-/** Plain-language note on a bus card (stereo folded to mono, mono spread to stereo). */
-function BusHint({ text }: { text: string }) {
-  return (
-    <div
-      className="lsc-wrap-text"
-      style={{
-        fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg)',
-        padding: '6px 8px', borderRadius: 'var(--lsc-radius-sm)',
-        border: '1px solid var(--lsc-accent)',
-        background: 'var(--lsc-accent-bg)',
-      }}
-    >
-      {text}
-    </div>
-  )
-}
-
 /**
  * Master Bus (always stereo) and Aux Bus (mono or stereo).
- * Inputs come from the registry: Master / stereo Aux = L In + R In, mono Aux = one In.
- * Each input accepts any number of wires; they are added together.
+ * One input that accepts any number of wires; they are added together.
+ * Master / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
  */
 export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
-  const { stages, busNotes } = useGraphSignal()
+  const { stages } = useGraphSignal()
   const allEdges      = useSignalStore((s) => s.edges)
-  const node          = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
   const { t, fmt }    = useTranslation()
 
   const typeKey = (data.typeKey as string) ?? 'master-bus'
   const isAux   = typeKey === 'aux-bus'
-  const stereo  = node ? isNodeStereo(node) : !isAux
   const result  = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const note    = busNotes[id]
+  const stereo  = stages[id]?.stereoOut ?? !isAux
   const domain  = (result as { domain?: string }).domain ?? 'analog'
   const unit    = domain === 'digital' ? 'dBFS' : 'dBu'
   const domainWarning = (result as { warning?: string }).warning === 'domainMixedBus'
@@ -87,9 +67,6 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
           ? fmt(t.nodes['aux-bus']?.channels ?? '{n} wire{s} in', { n: String(n), s: n > 1 ? 's' : '' })
           : (t.nodes['aux-bus']?.noChannels ?? 'Nothing connected yet')}
       </span>
-
-      {note?.foldedStereo && <BusHint text={t.stereo.foldedStereo} />}
-      {note?.monoOnStereo && <BusHint text={t.stereo.monoOnStereo} />}
 
       {domainWarning && (
         <div

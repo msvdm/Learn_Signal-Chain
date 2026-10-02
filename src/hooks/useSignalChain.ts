@@ -2,7 +2,10 @@ import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import type { Translations } from '../i18n/translations'
 import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
-import { MULTI_WIRE_TYPES, getPorts, portSide, basePortId } from '../data/nodeRegistry'
+import {
+  NODE_REGISTRY, MULTI_WIRE_TYPES, MATRIX_INPUTS, MATRIX_OUTPUTS,
+  getPorts, portSide, isNodeStereo, mixBusOf, matrixParam,
+} from '../data/nodeRegistry'
 import { bellGain, shelfGain } from '../components/controls/eqMath'
 
 // ── Pink-noise-weighted EQ level change ───────────────────────────────────────
@@ -74,6 +77,9 @@ export interface StageResult {
   outR?: number                     // stereo nodes, pan: right channel out
   inL?: number                      // stereo nodes: left channel in
   inR?: number                      // stereo nodes: right channel in
+  stereoIn?: boolean                // a stereo wire comes in (two input meter bars)
+  stereoOut?: boolean               // the node sends out Left and Right (two output meter bars)
+  mainFader?: boolean               // a Fader on a bus's Mix output: controls the whole mix
   warning?: string                  // domain violation or blocked signal
   portOutputs?: Record<string, number> // per-port overrides for multi-output nodes
 }
@@ -119,6 +125,35 @@ function balanceOutputs(position: number, inL: number, inR: number): { outL: num
     outL: isFinite(inL) && leftGainLin  > 0 ? inL + 20 * Math.log10(leftGainLin)  : -Infinity,
     outR: isFinite(inR) && rightGainLin > 0 ? inR + 20 * Math.log10(rightGainLin) : -Infinity,
   }
+}
+
+// ── What a wire carries ───────────────────────────────────────────────────────
+
+/**
+ * - mono:   one channel. On a stereo bus it lands on both sides at full level.
+ * - stereo: Left and Right together on one wire.
+ * - left / right: one side of a stereo mix (a bus's L / R output). It keeps its side
+ *   through effects and lands only on that side of a stereo bus.
+ */
+export type WireKind = 'mono' | 'stereo' | 'left' | 'right'
+
+/** mono: l = r = its level · left: r = −∞ · right: l = −∞ · stereo: both sides. */
+export interface WireSignal {
+  kind: WireKind
+  l: number
+  r: number
+}
+
+const SILENT_WIRE: WireSignal = { kind: 'mono', l: -Infinity, r: -Infinity }
+
+/** A one-channel wire (mono, left or right) at level `db`. */
+function oneChannelWire(kind: Exclude<WireKind, 'stereo'>, db: number): WireSignal {
+  return { kind, l: kind === 'right' ? -Infinity : db, r: kind === 'left' ? -Infinity : db }
+}
+
+/** The wire as one channel: a stereo wire's two sides are added (about +6 dB when they match). */
+function foldToMono(w: WireSignal): number {
+  return w.kind === 'mono' ? w.l : sumSignalsToDb([w.l, w.r])
 }
 
 // Dynamics that run "linked" in stereo: the louder side decides, both sides get the same change
@@ -188,7 +223,7 @@ function computeGraphNode(
   const domain = inputDomain // most nodes pass domain through unchanged
 
   // Domain mismatch in bus nodes — cannot sum analog and digital signals
-  if (domainMismatch && (MULTI_WIRE_TYPES.has(node.typeKey) || node.typeKey === 'audio-interface')) {
+  if (domainMismatch && (MULTI_WIRE_TYPES.has(node.typeKey) || node.typeKey === 'audio-interface' || node.typeKey === 'matrix')) {
     return { out: -Infinity, health: 'too-quiet', domain, warning: 'domainMixedBus' }
   }
 
@@ -295,17 +330,12 @@ function computeGraphNode(
       const ratio = pos / 100
       const leftGain  = Math.cos(ratio * Math.PI / 2)
       const rightGain = Math.sin(ratio * Math.PI / 2)
-      const outL = isFinite(input) ? input + 20 * Math.log10(Math.max(leftGain,  1e-10)) : -Infinity
-      const outR = isFinite(input) ? input + 20 * Math.log10(Math.max(rightGain, 1e-10)) : -Infinity
+      // A side turned fully off is silent (−∞), not a tiny number
+      const sideDb = (g: number) => (isFinite(input) && g > 1e-6 ? input + 20 * Math.log10(g) : -Infinity)
+      const outL = sideDb(leftGain)
+      const outR = sideDb(rightGain)
       const out  = isFinite(input) ? Math.max(outL, outR) : -Infinity
-      return {
-        out,
-        health: getHealth(out),
-        domain,
-        outL,
-        outR,
-        portOutputs: { 'out-l': outL, 'out-r': outR },
-      }
+      return { out, health: getHealth(out), domain, outL, outR }
     }
     case 'master-bus':
     case 'aux-bus':
@@ -314,6 +344,19 @@ function computeGraphNode(
       const fader = (p.faderDb as number) ?? 0
       const out = isFinite(summed) ? summed + fader : -Infinity
       return { out, health: getHealth(out), domain }
+    }
+    case 'matrix': {
+      // Each output adds up every input, each turned up or down by its own knob
+      const portOutputs: Record<string, number> = {}
+      for (const o of MATRIX_OUTPUTS) {
+        portOutputs[`out-${o}`] = sumSignalsToDb(MATRIX_INPUTS.map((i) => {
+          const knobDb = potPositionToDb((p[matrixParam(i, o)] as number) ?? 75)
+          const inDb   = portInputs[`in-${i}`] ?? -Infinity
+          return isFinite(knobDb) ? inDb + knobDb : -Infinity
+        }))
+      }
+      const out = Math.max(...Object.values(portOutputs))
+      return { out, health: getHealth(out), domain, portOutputs }
     }
     case 'graphic-eq': {
       const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
@@ -352,20 +395,14 @@ function computeGraphNode(
   }
 }
 
-/** What a bus is being fed — drives the plain-language hints on bus cards. */
-export interface BusNote {
-  /** A mono bus receives left/right wires — the two sides are added into one channel. */
-  foldedStereo: boolean
-  /** A stereo bus receives a mono wire — it lands on both sides at full level. */
-  monoOnStereo: boolean
-}
-
 export interface GraphSignalResult {
   stages: Record<string, StageResult | CompressorResult | DeesserResult>
   /** Level arriving at each node (the left side for stereo nodes; see stage.inL / inR). */
   inputDb: Record<string, number>
+  /** What each output carries, keyed `${nodeId}:${portId}`. */
+  wires: Map<string, WireSignal>
+  /** Loudness of each output (the louder side of a stereo wire), keyed like `wires`. */
   portSignal: Map<string, number>
-  busNotes: Record<string, BusNote>
   overallHealth: SignalHealth
   warnings: string[]
 }
@@ -409,17 +446,21 @@ function computeGraphSignal(
 ): GraphSignalResult {
   {
     const sorted = topoSort(nodes, edges)
+    const wires = new Map<string, WireSignal>()
     const portSignal = new Map<string, number>()
     const stages: Record<string, StageResult | CompressorResult | DeesserResult> = {}
     const inputDb: Record<string, number> = {}
-    const busNotes: Record<string, BusNote> = {}
     // Track which node typeKeys exist anywhere upstream of each node
     const upstreamTypes = new Map<string, Set<string>>()
     for (const n of nodes) upstreamTypes.set(n.id, new Set())
 
     for (const node of sorted) {
       const incoming = edges.filter((e) => e.target === node.id)
-      const wireDb   = (e: SignalEdge) => portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity
+      const wireOf   = (e: SignalEdge) => wires.get(`${e.source}:${e.sourceHandle}`) ?? SILENT_WIRE
+      const send     = (portId: string, w: WireSignal) => {
+        wires.set(`${node.id}:${portId}`, w)
+        portSignal.set(`${node.id}:${portId}`, Math.max(w.l, w.r))
+      }
 
       // Accumulate upstream types from all source nodes
       const myUpstream = new Set<string>()
@@ -431,34 +472,40 @@ function computeGraphSignal(
       }
       upstreamTypes.set(node.id, myUpstream)
 
-      const ports  = getPorts(node)
-      const stereo = ports.isStereo
-      // Input port names without the -l / -r side ('in-l' → 'in'), in port order
-      const inputBases = [...new Set(ports.inputs.map((p) => basePortId(p.id)))]
+      const ports    = getPorts(node, { nodes, edges })
+      const def      = NODE_REGISTRY[node.typeKey]
+      const follows  = def?.stereo === 'follow'
+      const selected = (node.params.selectedInput as string) ?? 'a'
+
+      // A "follow" node copies what its wire carries — the Relay follows its selected input
+      const driving    = node.typeKey === 'relay'
+        ? incoming.find((e) => e.targetHandle === `in-${selected}`)
+        : incoming[0]
+      const followKind = driving ? wireOf(driving).kind : 'mono'
+      const anyStereo  = incoming.some((e) => wireOf(e).kind === 'stereo')
+
+      // Stereo: a bus (or Line In) set to Stereo, or a follow node fed a stereo wire.
+      // Mono: everything else — one channel; a stereo wire arriving here is folded into one.
+      const isSource = def?.category === 'source'
+      const stereo   = node.typeKey !== 'pan' && (isNodeStereo(node) || (follows && followKind === 'stereo'))
 
       /**
-       * Signals arriving at one side of this node, keyed by input port name.
-       * - Mono node (side = null): every wire counts, grouped by the port it lands on.
-       * - Stereo node: a wire from a stereo output (…-l / …-r) feeds only the side it lands on;
-       *   a wire from a mono output feeds both sides.
+       * Signals arriving at this node, keyed by input port.
+       * side = 'l' / 'r': that side of every wire (a mono wire counts on both sides,
+       * a left wire only on the left). side = null: every wire folded into one channel.
        * Several wires on one port are added together.
        */
-      const gather = (side: 'l' | 'r' | null) => {
+      const inputsFor = (side: 'l' | 'r' | null) => {
         const grouped: Record<string, number[]> = {}
         for (const e of incoming) {
-          let port = e.targetHandle
-          if (side) {
-            const fromStereo = portSide(e.sourceHandle) !== null
-            if (fromStereo && portSide(e.targetHandle) !== side) continue
-            port = basePortId(e.targetHandle)
-          }
-          if (!grouped[port]) grouped[port] = []
-          grouped[port].push(wireDb(e))
+          const w = wireOf(e)
+          if (!grouped[e.targetHandle]) grouped[e.targetHandle] = []
+          grouped[e.targetHandle].push(side ? w[side] : foldToMono(w))
         }
         const portInputs: Record<string, number> = {}
         for (const [port, dbs] of Object.entries(grouped)) portInputs[port] = sumSignalsToDb(dbs)
-        const signals = inputBases.length > 0
-          ? inputBases.map((b) => portInputs[b] ?? -Infinity)
+        const signals = ports.inputs.length > 0
+          ? ports.inputs.map((p) => portInputs[p.id] ?? -Infinity)
           : Object.values(portInputs)
         return { portInputs, signals }
       }
@@ -475,9 +522,7 @@ function computeGraphSignal(
 
       // Relay: output domain follows the selected input, not all inputs
       if (node.typeKey === 'relay') {
-        const selected = (node.params.selectedInput as string) ?? 'a'
-        const selEdge = incoming.find((e) => basePortId(e.targetHandle) === `in-${selected}` || e.targetHandle === `in-${selected}`)
-        inputDomain = selEdge ? (stages[selEdge.source]?.domain ?? 'analog') : 'analog'
+        inputDomain = driving ? (stages[driving.source]?.domain ?? 'analog') : 'analog'
         domainMismatch = false
       }
 
@@ -485,14 +530,14 @@ function computeGraphSignal(
       if (node.typeKey === 'speaker' && !myUpstream.has('amp') && incoming.length > 0) {
         const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet', domain: inputDomain }
         stages[node.id] = noAmpResult
-        inputDb[node.id] = gather(null).signals[0] ?? -Infinity
-        for (const port of ports.outputs) portSignal.set(`${node.id}:${port.id}`, -Infinity)
+        inputDb[node.id] = inputsFor(null).signals[0] ?? -Infinity
+        for (const port of ports.outputs) send(port.id, SILENT_WIRE)
         continue
       }
 
       // One side (or the only channel) of this node
       const runSide = (side: 'l' | 'r' | null): StageResult | CompressorResult | DeesserResult => {
-        const { portInputs, signals } = gather(side)
+        const { portInputs, signals } = inputsFor(side)
         if (node.bypassed && incoming.length > 0) {
           const pass = signals[0] ?? -Infinity
           return { out: pass, health: getHealth(pass), domain: inputDomain }
@@ -503,23 +548,53 @@ function computeGraphSignal(
       /** Value of output port `portId` (e.g. 'out', 'direct') from one side's result. */
       const portValue = (r: StageResult, portId: string) => r.portOutputs?.[portId] ?? r.out
 
+      /** Stereo outputs: a bus's L / R outputs each carry one side; any other output carries both. */
+      const sendStereo = (left: StageResult, right: StageResult) => {
+        for (const port of ports.outputs) {
+          const side = portSide(port.id)
+          const l = portValue(left, port.id)
+          const r = portValue(right, port.id)
+          send(port.id, side === 'l' ? oneChannelWire('left', l)
+            : side === 'r' ? oneChannelWire('right', r)
+            : { kind: 'stereo', l, r })
+        }
+      }
+
       let result: StageResult | CompressorResult | DeesserResult
 
-      if (node.typeKey === 'pan' && stereo) {
-        // Balance: L in → L out, R in → R out, one side faded by the knob
-        const inL = gather('l').signals[0] ?? -Infinity
-        const inR = gather('r').signals[0] ?? -Infinity
-        const { outL, outR } = node.bypassed
-          ? { outL: inL, outR: inR }
-          : balanceOutputs((node.params.panPosition as number) ?? 50, inL, inR)
+      if (node.typeKey === 'pan') {
+        // Mono wire in → Pan knob spreads it over L / R. Stereo wire in → Balance knob.
+        let outL: number
+        let outR: number
+        let inL: number | undefined
+        let inR: number | undefined
+        if (followKind === 'stereo') {
+          inL = inputsFor('l').signals[0] ?? -Infinity
+          inR = inputsFor('r').signals[0] ?? -Infinity
+          ;({ outL, outR } = node.bypassed
+            ? { outL: inL, outR: inR }
+            : balanceOutputs((node.params.panPosition as number) ?? 50, inL, inR))
+        } else {
+          const panned = runSide(null)
+          outL = panned.outL ?? panned.out
+          outR = panned.outR ?? panned.out
+        }
         const out = Math.max(outL, outR)
         result = { out, health: getHealth(out), domain: inputDomain, outL, outR, inL, inR }
-        portSignal.set(`${node.id}:out-l`, outL)
-        portSignal.set(`${node.id}:out-r`, outR)
+        send('out', { kind: 'stereo', l: outL, r: outR })
+      } else if (isSource) {
+        // Line In set to Stereo sends the same level on both sides
+        result = runSide(null)
+        if (stereo) {
+          result = { ...result, outL: result.out, outR: result.out }
+          for (const port of ports.outputs) send(port.id, { kind: 'stereo', l: result.out, r: result.out })
+        } else {
+          for (const port of ports.outputs) send(port.id, oneChannelWire('mono', portValue(result, port.id)))
+        }
       } else if (stereo && LINKED_DYNAMICS.has(node.typeKey) && !node.bypassed) {
         // The louder side drives the detector; the same gain change goes to both sides
-        const inL = gather('l').signals[0] ?? -Infinity
-        const inR = gather('r').signals[0] ?? -Infinity
+        const inL = inputsFor('l').signals[0] ?? -Infinity
+        const inR = inputsFor('r').signals[0] ?? -Infinity
         const detector = Math.max(inL, inR)
         const linked   = computeGraphNode(node, [detector], inputDomain, domainMismatch)
         const gain     = isFinite(detector) ? linked.out - detector : -Infinity
@@ -527,10 +602,9 @@ function computeGraphSignal(
         const outR = isFinite(inR) ? inR + gain : -Infinity
         const out  = Math.max(outL, outR)
         result = { ...linked, out, health: getHealth(out), outL, outR, inL, inR, portOutputs: undefined }
-        portSignal.set(`${node.id}:out-l`, outL)
-        portSignal.set(`${node.id}:out-r`, outR)
+        sendStereo({ ...result, out: outL }, { ...result, out: outR })
       } else if (stereo) {
-        // Run the node once per side; each output port gets its side's value
+        // Run the node once per side
         const left  = runSide('l')
         const right = runSide('r')
         const out   = Math.max(left.out, right.out)
@@ -538,43 +612,28 @@ function computeGraphSignal(
           ...left,
           out, health: getHealth(out),
           outL: left.out, outR: right.out,
-          inL: gather('l').signals[0] ?? -Infinity,
-          inR: gather('r').signals[0] ?? -Infinity,
+          inL: inputsFor('l').signals[0] ?? -Infinity,
+          inR: inputsFor('r').signals[0] ?? -Infinity,
           portOutputs: undefined,
         }
-        for (const port of ports.outputs) {
-          const side = portSide(port.id) === 'r' ? right : left
-          portSignal.set(`${node.id}:${port.id}`, portValue(side, basePortId(port.id)))
-        }
+        sendStereo(left, right)
       } else {
+        // One channel. A follow node keeps the side it was given (a left wire in → a left wire out).
         result = runSide(null)
-        for (const port of ports.outputs) portSignal.set(`${node.id}:${port.id}`, portValue(result, port.id))
+        const kind = follows && followKind !== 'stereo' ? followKind : 'mono'
+        for (const port of ports.outputs) send(port.id, oneChannelWire(kind, portValue(result, port.id)))
       }
 
-      stages[node.id] = result
-      inputDb[node.id] = stereo ? (result.inL ?? -Infinity) : (gather(null).signals[0] ?? -Infinity)
+      if (node.typeKey === 'fader' && mixBusOf(node.id, { nodes, edges }) !== null) result.mainFader = true
+      result.stereoIn  = follows ? followKind === 'stereo' : anyStereo
+      result.stereoOut = stereo || node.typeKey === 'pan'
+      stages[node.id]  = result
+      inputDb[node.id] = stereo ? (result.inL ?? -Infinity) : (inputsFor(null).signals[0] ?? -Infinity)
 
-      // Teaching hints for buses: stereo folded into a mono bus, or mono spread onto a stereo bus
-      if (MULTI_WIRE_TYPES.has(node.typeKey)) {
-        const fromStereo = incoming.some((e) => portSide(e.sourceHandle) !== null)
-        const fromMono   = incoming.some((e) => portSide(e.sourceHandle) === null)
-        busNotes[node.id] = {
-          foldedStereo: !stereo && fromStereo,
-          monoOnStereo: stereo && fromMono,
-        }
-      }
-
-      // Audio interface: show L / R from the stereo wires plugged into it (mono wires count on both)
+      // Audio interface: show L / R — each wire adds its left side to L and its right side to R
       if (node.typeKey === 'audio-interface' && !result.warning) {
-        const lInputs: number[] = []
-        const rInputs: number[] = []
-        for (const edge of incoming) {
-          const side = portSide(edge.sourceHandle)
-          if (side !== 'r') lInputs.push(wireDb(edge))
-          if (side !== 'l') rInputs.push(wireDb(edge))
-        }
-        result.outL = sumSignalsToDb(lInputs)
-        result.outR = sumSignalsToDb(rInputs)
+        result.outL = sumSignalsToDb(incoming.map((e) => wireOf(e).l))
+        result.outR = sumSignalsToDb(incoming.map((e) => wireOf(e).r))
       }
     }
 
@@ -602,6 +661,6 @@ function computeGraphSignal(
         warns.push(t.warnings.masterTooQuiet)
     }
 
-    return { stages, inputDb, portSignal, busNotes, overallHealth, warnings: warns }
+    return { stages, inputDb, wires, portSignal, overallHealth, warnings: warns }
   }
 }

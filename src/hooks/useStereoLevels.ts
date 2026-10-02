@@ -1,32 +1,24 @@
 import { useGraphSignal } from './useSignalChain'
-import { useSignalStore } from '../store/signalStore'
-import { isNodeStereo } from '../data/nodeRegistry'
 
 /**
  * Input / output levels for a node's meters.
  * Mono: `in` / `out` are the levels, `inR` / `outR` are undefined (one bar each).
- * Stereo: `in` / `out` are the left side, `inR` / `outR` the right side (two bars each).
+ * Stereo (a stereo wire comes in / goes out): `in` / `out` are the left side,
+ * `inR` / `outR` the right side (two bars each).
  * `inPeak` is the louder input side — what a linked stereo compressor or gate reacts to.
  */
 export function useStereoLevels(id: string) {
   const { stages, inputDb } = useGraphSignal()
-  const stereo = useSignalStore((s) => {
-    const node = s.nodes.find((n) => n.id === id)
-    return node ? isNodeStereo(node) : false
-  })
-  const stage = stages[id]
+  const stage    = stages[id]
+  const stereoIn = stage?.stereoIn ?? false
+  const stereo   = stage?.stereoOut ?? false
 
-  if (!stereo) {
-    const input = inputDb[id] ?? -Infinity
-    return {
-      stereo, in: input, inR: undefined, inPeak: input,
-      out: stage?.out ?? -Infinity, outR: undefined,
-    }
-  }
-  const inL = stage?.inL ?? -Infinity
-  const inR = stage?.inR ?? -Infinity
+  const inL = stereoIn ? (stage?.inL ?? -Infinity) : (inputDb[id] ?? -Infinity)
+  const inR = stereoIn ? (stage?.inR ?? -Infinity) : undefined
   return {
-    stereo, in: inL, inR, inPeak: Math.max(inL, inR),
-    out: stage?.outL ?? -Infinity, outR: stage?.outR ?? -Infinity,
+    stereo,
+    in: inL, inR, inPeak: Math.max(inL, inR ?? -Infinity),
+    out:  stereo ? (stage?.outL ?? -Infinity) : (stage?.out ?? -Infinity),
+    outR: stereo ? (stage?.outR ?? -Infinity) : undefined,
   }
 }

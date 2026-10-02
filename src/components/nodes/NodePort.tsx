@@ -7,7 +7,7 @@ import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
-import { portSide } from '../../data/nodeRegistry'
+import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
 
 interface NodePortProps {
@@ -26,10 +26,11 @@ interface NodePortProps {
  * - Hovering a connected input turns it into a × — click it to unplug the wire (not while drawing one).
  *   A bus input holding several wires opens a list instead, so you pick which wire to unplug.
  *   Outputs never do: clicking an output always starts a new wire, so one signal can feed several inputs.
- * - Stereo ports carry a small L / R letter beside the dot.
+ * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
+ *   shows a small L / R letter beside the dot.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
-  const { portSignal } = useGraphSignal()
+  const { portSignal, wires } = useGraphSignal()
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wireSource)
   const removeEdge = useSignalStore((s) => s.removeEdge)
@@ -60,7 +61,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
 
   const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
   const showUnplug = canUnplug && (hovered || menuAt !== null)
-  const side       = portSide(portId)
+  const side       = type === 'source' ? sideLetter(wires.get(`${nodeId}:${portId}`)?.kind) : null
   const top        = PORT_TOP + index * PORT_GAP
 
   function unplug(e: React.MouseEvent) {
@@ -99,13 +100,12 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         <span
           aria-hidden
           style={{
-            position: 'absolute', top: top - 17,
-            [type === 'source' ? 'right' : 'left']: -14,
+            position: 'absolute', top: top - 17, right: -14,
             fontSize: 10, fontWeight: 800, lineHeight: 1,
             color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}
         >
-          {side.toUpperCase()}
+          {side}
         </span>
       )}
       {menuAt && <UnplugMenu wires={connected} anchor={menuAt} onClose={() => setMenuAt(null)} />}

@@ -16,6 +16,7 @@ import { MicNode }             from './nodes/MicNode'
 import { GainNode }            from './nodes/GainNode'
 import { FaderNode }           from './nodes/FaderNode'
 import { MasterBusNode }       from './nodes/MasterBusNode'
+import { MatrixNode }          from './nodes/MatrixNode'
 import { AmpNode }             from './nodes/AmpNode'
 import { SpeakerNode }         from './nodes/SpeakerNode'
 import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
@@ -76,6 +77,7 @@ const nodeTypes = {
   deesser:            DeesserNode,
   'master-bus':       MasterBusNode,
   'aux-bus':          MasterBusNode,
+  matrix:             MatrixNode,
   'audio-interface':  AudioInterfaceNode,
   hpf:                HpfNode,
   eq:                 EQNode,
@@ -123,11 +125,12 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
 }
 
 /**
- * What a card's ports depend on: its port layout (Mono/Stereo) and the wires plugged into it
- * (the audio interface grows an input per wire). When this changes, React Flow must re-read the ports.
+ * What a card's ports depend on: its port layout (a stereo Aux's L / R, a bus or fader taken
+ * over by a Main Fader) and the wires plugged into it (the audio interface grows an input per wire).
+ * When this changes, React Flow must re-read the ports.
  */
-function portLayoutKey(node: SignalNode, edges: SignalEdge[]): string {
-  const { inputs, outputs } = getPorts(node)
+function portLayoutKey(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): string {
+  const { inputs, outputs } = getPorts(node, { nodes, edges })
   const plugged = edges.filter((e) => e.target === node.id).map((e) => e.targetHandle).sort()
   return `${[...inputs, ...outputs].map((p) => p.id).join(',')}|${plugged.join(',')}`
 }
@@ -148,10 +151,11 @@ export function SignalChain() {
   const addNode               = useSignalStore((s) => s.addNode)
   const addEdge               = useSignalStore((s) => s.addEdge)
   const removeEdge            = useSignalStore((s) => s.removeEdge)
+  const replaceEdge           = useSignalStore((s) => s.replaceEdge)
   const highlightEdgeId       = useSignalStore((s) => s.highlightEdgeId)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
-  const { stages, portSignal } = useGraphSignal()
+  const { stages, portSignal, wires } = useGraphSignal()
   const { t }                 = useTranslation()
   const chainEmpty            = useChainEmpty()
   const { screenToFlowPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
@@ -472,11 +476,14 @@ export function SignalChain() {
           }
 
           addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
-          removeEdge(hitEdge.id)
           const ts = Date.now()
           const ports = getPorts({ typeKey, params: def.defaultParams })
-          addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: ports.inputs[0].id  })
-          addEdge({ id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: ports.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle })
+          // One step: a Fader dropped on a bus's L / R wire becomes the Main Fader, and a card
+          // dropped on a Mix wire sits between the bus and its Main Fader without unplugging it
+          replaceEdge(hitEdge.id, [
+            { id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: ports.inputs[0].id  },
+            { id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: ports.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle },
+          ])
           setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
           return
         }
@@ -517,7 +524,7 @@ export function SignalChain() {
         const node = graphNodesRef.current.find((n) => n.id === c.id)
         if (node) {
           recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height)
-          sizes[c.id] = { ...c.dimensions, ports: portLayoutKey(node, edgesRef.current) }
+          sizes[c.id] = { ...c.dimensions, ports: portLayoutKey(node, graphNodesRef.current, edgesRef.current) }
         }
       }
     }
@@ -544,7 +551,7 @@ export function SignalChain() {
           id:        node.id,
           type:      node.typeKey,
           position:  node.position,
-          measured:  size && size.ports === portLayoutKey(node, graphEdges)
+          measured:  size && size.ports === portLayoutKey(node, graphNodes, graphEdges)
             ? { width: size.width, height: size.height }
             : undefined,
           selected:  node.id === selectedNodeId,
@@ -560,7 +567,8 @@ export function SignalChain() {
 
     return graphEdges.map((edge) => {
       const sourceStage = stages[edge.source]
-      const db          = portSignal.get(`${edge.source}:${edge.sourceHandle}`) ?? sourceStage?.out ?? -Infinity
+      const key         = `${edge.source}:${edge.sourceHandle}`
+      const db          = portSignal.get(key) ?? sourceStage?.out ?? -Infinity
       const health      = sourceStage ? getHealth(db) : null
       const style       = health ? getHealthStyle(health) : null
 
@@ -568,7 +576,7 @@ export function SignalChain() {
         ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
         : false
 
-      const data: ChainEdgeData = { waypoints: edge.waypoints, routingWarning }
+      const data: ChainEdgeData = { waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo' }
 
       return {
         id:           edge.id,
@@ -586,7 +594,7 @@ export function SignalChain() {
         data,
       }
     })
-  }, [graphEdges, stages, portSignal, graphNodes, highlight])
+  }, [graphEdges, stages, portSignal, wires, graphNodes, highlight])
 
   // Build live wire preview path
   const wirePath = (() => {
@@ -597,6 +605,9 @@ export function SignalChain() {
 
   const sw   = 2.5 / vpZoom
   const dash = `${6 / vpZoom} ${4 / vpZoom}`
+  // A wire drawn from a stereo output previews as a twin line, like the wire it will become
+  const previewStereo = drawing.active &&
+    wires.get(`${drawing.sourceNodeId}:${drawing.sourceHandleId}`)?.kind === 'stereo'
 
   const wireSourceLabel = (() => {
     if (!drawing.active) return ''
@@ -747,10 +758,20 @@ export function SignalChain() {
               d={wirePath}
               fill="none"
               stroke={wireWarning ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
-              strokeWidth={sw}
+              strokeWidth={previewStereo ? sw * 2.2 : sw}
               strokeDasharray={dash}
               strokeLinecap="round"
             />
+            {previewStereo && (
+              <path
+                d={wirePath}
+                fill="none"
+                stroke="var(--lsc-canvas)"
+                strokeWidth={sw * 0.8}
+                strokeDasharray={dash}
+                strokeLinecap="round"
+              />
+            )}
             {snapPos && (
               <circle
                 cx={snapPos.x} cy={snapPos.y}

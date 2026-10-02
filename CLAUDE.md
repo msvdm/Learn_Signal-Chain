@@ -59,9 +59,9 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 
 | File | What it owns |
 |---|---|
-| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme` and `snapToGrid` (both persisted), `toolMode`, `selectedNodeId`, `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, `highlightEdgeId` (chain lit up from the unplug list), all graph mutations incl. `setNodeStereo` |
+| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme` and `snapToGrid` (both persisted), `toolMode`, `selectedNodeId`, `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, `highlightEdgeId` (chain lit up from the unplug list), all graph mutations incl. `setNodeStereo` and `replaceEdge` (a card dropped onto a wire, in one step) |
 | `src/hooks/useSignalChain.ts` | `useGraphSignal()` — pure BFS signal math over the graph, shared by all callers (computed once). No side effects. |
-| `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R in stereo, plus `inPeak` (louder input side). |
+| `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R when a stereo wire comes in / goes out (`stage.stereoIn` / `stereoOut`), plus `inPeak` (louder input side). |
 | `src/hooks/useGainStaging.ts` | `getHealthStyle(health)` — maps `SignalHealth` → CSS color, label, background. No logic. |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup). Returns `{ reshaping, setReshaping }`. |
 | `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
@@ -72,21 +72,23 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/utils/chainColors.ts` | Chain colours (one per source, picked on `addNode`), `upstreamOf` / `chainOfEdge` / `chainColorsOf` / `chainSourcesOfEdge` for the card stripe, unplug list and highlight. |
 | `src/utils/wirePath.ts` | `buildWirePath()` — orthogonal route with rounded corners, shared by the live preview and committed edges. |
 | `src/utils/wireValidation.ts` | `wirePassesThroughNode()` — orange warning when a wire crosses another card. |
+| `src/utils/mainFader.ts` | Main Fader wiring rules: `attachMainFaders()` (a Fader on a stereo bus's L / R takes them over), `reconcileMainFaders()` (hand L / R back when the Main Fader is unplugged or deleted). Used by every store graph mutation. |
+| `src/utils/nodeName.ts` | `nodeName()` — a node's display name (unplug list, matrix rows); `sideLetter()` — 'L' / 'R' for a wire carrying one side. |
 | `src/utils/chainOrder.ts` | `chainOrder()` — nodes in signal-flow order, for the help popover's Previous / Next. |
-| `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params, mono / stereo support. `getPorts(node)` gives a node's ports for its current mode; also `isNodeStereo`, `portSide`, `basePortId`, `helpKeyOf`, `MULTI_WIRE_TYPES`. |
+| `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params, mono / stereo support. `getPorts(node, { nodes, edges })` gives a node's ports (a stereo Aux splits into L / R; a bus with a Main Fader shows one `mix` output; a Main Fader shows L / R — read from the wires, so pass the graph); `mixBusOf()` finds a Main Fader's bus; also `isNodeStereo` (the node's own Mono / Stereo setting), `portSide`, `helpKeyOf(node, stage)`, `MULTI_WIRE_TYPES`, `MATRIX_INPUTS` / `MATRIX_OUTPUTS` / `matrixParam`. |
 | `src/data/levels.ts` | `buildDefaultGraph()` — always returns an empty graph (blank canvas). `BusType` type lives here. |
 | `src/i18n/locales/en.json`, `bg.json` | All UI text and help-popover educational content (`theory` key). Edit copy here; add every new key to both files. |
 | `src/i18n/translations.ts` | The `Translations` type (add new keys here too) and `fmt()` for `{placeholder}` strings. |
 | `src/App.tsx` | Header (see above) and the `ConfirmDialog` for Reset / level change. |
 | `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
 | `src/components/ElementPalette.tsx` | Left sidebar: search, tabs, draggable tiles. Level-gated visibility via `PALETTE_BY_LEVEL`. |
-| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints (no level badge — levels are shown on the cards). |
+| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints (no level badge — levels are shown on the cards). A stereo wire is drawn as a twin line (a canvas-coloured stroke down the middle). |
 | `src/components/Tooltip.tsx` | `HelpPopover` — anchored under the node whose "?" was clicked, Previous / Next in signal order. |
 | `src/components/ConnectingToast.tsx` | Bottom-centre "Connecting from …" status while a wire is drawn. |
 | `src/components/UnplugMenu.tsx` | List of the wires on a bus input that holds several: hover = light up that chain, × = unplug one wire. Portal to `document.body`. |
 | `src/components/ConfirmDialog.tsx` | In-app `window.confirm` replacement, rendered with `createPortal` to `document.body`. |
 | `src/components/nodes/NodeWrapper.tsx` | The single card shell every node uses (see below). |
-| `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug; 2+ wires open `UnplugMenu`), L / R letter on stereo ports. `BusInputPorts` for the audio interface's dynamic inputs. |
+| `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug; 2+ wires open `UnplugMenu`), L / R letter on an output whose wire carries one side. `BusInputPorts` for the audio interface's dynamic inputs. |
 | `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
 | `src/components/controls/StableText.tsx` | `StableText` — a reading that keeps the width of its widest value. Helpers `LEVEL_SAMPLE` / `widestFormat()` live in `src/utils/readout.ts`. |
@@ -100,18 +102,21 @@ Every node uses `NodeWrapper`:
 - The header row is **icon · title · ? (help) · On/Off (bypass) · × (remove)**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no On/Off — the control itself is the state. Every node, including Master Bus, can be removed.
 - **A card never changes size while values change** (no flicker). Wrap every changing reading in `StableText` (`components/controls/StableText.tsx`), which reserves the width of the widest value it can show: `LEVEL_SAMPLE` for signal levels, `widestFormat()` for a control's readout (both in `utils/readout.ts`). `KnobControl`, `VerticalFader`, `ControlSlider` and `SignalMeter` already do this. Text that only sometimes shows keeps its space (`visibility: hidden`) instead of being removed. The "Bypassed" tag sits on the header's bottom line, outside the layout. Wide cards (Parametric EQ) use a fixed body width.
 - Controls and In/Out meters stay on the cards; there is **no status chip**.
-- Types with `stereo: 'optional'` get a **Mono | Stereo** switch under the header (not dimmed by bypass). Meters take `dbR` to show L / R bars.
+- Only types with `stereo: 'optional'` (Line In, Aux Bus) get a **Mono | Stereo** switch under the header (not dimmed by bypass). Meters take `dbR` to show L / R bars.
 - A thin **chain-colour stripe** on the card's top edge shows which sources (chains) pass through it.
 
 ### Mono / Stereo
 
-Instead of separate mono and stereo node types, elements carry a switch (`params.stereo`, registry field `stereo: 'never' | 'optional' | 'always'`):
-- **Mono only**: mic, instrument, gain, hpf, pad, speakers, audio-interface. **Always stereo**: master-bus. Everything else is switchable; new nodes start in Mono.
-- **Ports**: in stereo every mono port splits into an L / R pair (`in` → `in-l` + `in-r`, `direct` → `direct-l` + `direct-r`, `in-a` → `in-a-l` + `in-a-r`) unless the type lists `stereoInputs` / `stereoOutputs`. `setNodeStereo` moves wires: mono → stereo puts them on the L port; stereo → mono moves L back and drops R (bus inputs keep both, they are added).
-- **Pan node** = Pan knob in Mono (1 in → L/R out, equal-power, −3 dB each side at centre) and Balance knob in Stereo (L/R in → L/R out, centre = unity). Help text follows (`helpKeyOf`).
-- **Aux bus** (mono or stereo) and **Master bus** (stereo) have fixed inputs that accept **any number of wires**, added together. A bus input with 2+ wires opens `UnplugMenu`.
-- **How a wire feeds a stereo input**: a wire from a stereo output (`…-l` / `…-r`) feeds only the side it lands on; a wire from a mono output feeds **both** sides at full level — that is why a Pan knob is needed. Bus cards explain it (`busNotes`: `foldedStereo` = L+R into a mono bus, about +6 dB; `monoOnStereo` = mono wire on a stereo bus).
-- **Maths**: `useGraphSignal` runs `computeGraphNode` once per side and writes `${port}-l` / `${port}-r`; stages get `outL/outR/inL/inR`. Comp, limiter, de-esser and gate run **linked** in stereo: the louder side sets the gain change, both sides get it.
+**One wire carries a whole stereo signal.** Cards have one input and one output; only a bus splits its mix into separate **L and R outputs** (one per speaker). Registry field `stereo: 'never' | 'follow' | 'optional' | 'always'`:
+- **follow** (every processor, incl. gain, hpf, pad, relay, di-box, adc / dac, pan): no switch — passes on what it gets. A stereo wire in → a stereo wire out; the Relay follows its selected input.
+- **optional** (switch, `params.stereo`): **Line In** (Stereo = the same level on both sides of one wire) and **Aux Bus** (Stereo = `out-l` / `out-r` outputs from `stereoOutputs`). `setNodeStereo` only moves the Aux outputs: `out` ↔ `out-l` (+ `out-r` back to `out`). Inputs never change.
+- **always**: Master Bus — one input (any number of wires), outputs `out-l` / `out-r`.
+- **never** (one channel): mic, instrument, speakers, audio interface, matrix. A stereo wire arriving here is folded (L + R, about +6 dB when both sides match).
+- **What a wire carries** (`WireSignal` in `useSignalChain.ts`: `kind` + `l` / `r`): `mono`, `stereo`, or `left` / `right` — one side of a mix, from a bus's L / R output. A side wire **keeps its side through effects** (Aux L → Comp → Master lands on the left only). A stereo bus adds every wire's `l` to Left and `r` to Right: a mono wire lands on both sides at full level (that is why Pan is needed), a side wire on its side.
+- **Pan**: always sends a stereo wire. Mono / side wire in = Pan knob (equal-power, −3 dB each side at centre); stereo wire in = Balance knob (centre = unity). Label and help follow (`helpKeyOf(node, stage)`).
+- **Maths**: `useGraphSignal` writes `wires` (what each output carries) and `portSignal` (its louder side, for colours). Stereo nodes run `computeGraphNode` once per side; stages get `outL/outR/inL/inR` and `stereoIn` / `stereoOut`. Comp, limiter, de-esser and gate run **linked** in stereo: the louder side sets the gain change, both sides get it.
+- A stereo wire is drawn as a **twin line** (also the live preview from a stereo output); an output carrying one side shows an **L / R letter**.
+- **Main Fader** (`utils/mainFader.ts`): wiring a Fader to a stereo bus's L or R output turns that wire into the **Mix** wire (`mix` port, the whole stereo mix), the Fader gets **L / R outputs** and every wire on the bus's L / R moves onto it (dropping a Fader onto a bus's L / R wire does the same). Effects may sit between the Mix output and the fader. Unplugging or deleting the Main Fader hands L / R back to the bus (other Mix wires fall back to L); deleting the bus leaves a plain fader. Extra wires from the Mix output are the **pre-fader** point (PFL is built by the user from switches, wires and buses). Port layout is read from the wires, never stored.
 
 ### Level system
 
@@ -123,7 +128,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 |---|---|
 | Beginner | mic, line-in, instrument, di-box, active-speaker, gain, fader |
 | Intermediate | + hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay, pan (Pan / Balance), master-bus, aux-bus, audio-interface |
-| Advanced | + speaker, potentiometer, amp, graphic-eq, adc, dac |
+| Advanced | + speaker, potentiometer, amp, graphic-eq, adc, dac, matrix |
 
 `PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
 
@@ -145,6 +150,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 - **Fader / Potentiometer**: `output = input + faderDb` / audio-taper curve, unity at 75% position
 - **Switch**: `output = on ? input : −∞`
 - **Master Bus / Aux Bus**: `output = 20 × log10(Σ 10^(inputN/20))` (voltage sum of all wires — two identical signals give +6 dB), per side in stereo
+- **Matrix** (4 inputs × 2 outputs): `out_k = Σ (input_i + knob_ik)` (voltage sum), knobs on the potentiometer scale (0 = off, 75 = 0 dB); inputs are folded to one channel
 - **Pan**: equal-power, `L = in + 20·log10(cos(p·π/2))`, `R = in + 20·log10(sin(p·π/2))`. **Balance**: fades only the opposite side, linearly, centre = unity
 
 The math is intentionally simplified. It teaches the concept correctly without IIR filter biquad complexity.
@@ -159,16 +165,16 @@ The math is intentionally simplified. It teaches the concept correctly without I
 - `nodesDraggable`, `elementsSelectable` and `panOnDrag` follow `toolMode`. `nodesConnectable` is always `false` — connections are handled entirely by the custom click system (capture-phase `mousedown` on `document`), not React Flow's drag mechanism.
 - Wiring acts on `mousedown`, so the `click` that follows a wiring press on a port is swallowed (capture-phase `click` listener, `swallowClickRef`). Otherwise it lands on the input that was just plugged in — by then a connected input, whose click unplugs it — and the new wire vanishes. A plain unplug click (no wire being drawn) is never swallowed.
 - **`Node` name collision**: ReactFlow exports `Node`; the DOM also has `Node`. Import ReactFlow's as `type Node as FlowNode` to avoid conflicts.
-- `MasterBusNode` serves `master-bus` and `aux-bus` (reads `typeKey` from `data`). Its inputs come from the registry (`in-l` / `in-r`, or `in` for a mono Aux) and accept many wires. Only `AudioInterfaceNode` still renders N+1 dynamic inputs (`BusInputPorts`).
+- `MasterBusNode` serves `master-bus` and `aux-bus` (reads `typeKey` from `data`). Its one input (`in`) comes from the registry and accepts many wires. Only `AudioInterfaceNode` still renders N+1 dynamic inputs (`BusInputPorts`).
 - While `highlightEdgeId` is set, `SignalChain` gives nodes outside that wire's chain the `lsc-dimmed` class and fades their edges.
 - **Handle hit-testing**: custom `<Handle>`s default to `isConnectable`, so React Flow gives them the `connectionindicator` class and `pointer-events: all` even in Select mode — that is what lets the mouse-follow switch find them with `document.elementsFromPoint`. `.lsc-connect-mode` (on the canvas wrapper) also forces it. Handle type (source vs target) is detected via `classList.contains('source'/'target')` — there is no `data-handletype` attribute.
-- **Display nodes carry `measured`.** They are rebuilt from the store on every change; a node without `measured` is new to React Flow, which hides it (`visibility: hidden`) until re-measured on the next frame — a click in that gap lands on the pane (a knob drag used to pan the canvas). `SignalChain` keeps React Flow's sizes from `onNodesChange` (`dimensions`) and hands them back, except for a card whose ports changed (`portLayoutKey`: Mono/Stereo layout + plugged wires), which is left unmeasured on purpose so its ports are re-read. A port's ring changes size on hover / while wiring; `NodePort` re-reads it on `transitionend` so wires end at the ring's edge.
+- **Display nodes carry `measured`.** They are rebuilt from the store on every change; a node without `measured` is new to React Flow, which hides it (`visibility: hidden`) until re-measured on the next frame — a click in that gap lands on the pane (a knob drag used to pan the canvas). `SignalChain` keeps React Flow's sizes from `onNodesChange` (`dimensions`) and hands them back, except for a card whose ports changed (`portLayoutKey`: port layout — a stereo Aux's L / R outputs — + plugged wires), which is left unmeasured on purpose so its ports are re-read. A port's ring changes size on hover / while wiring; `NodePort` re-reads it on `transitionend` so wires end at the ring's edge.
 - The wire preview, reshape-handle and ghost SVGs are absolutely-positioned siblings of the ReactFlow div. They use `useViewport()` to apply the same `translate/scale` transform as the flow canvas, so they stay aligned during pan and zoom.
 - Zoom control labels are translated through ReactFlow's `ariaLabelConfig` prop (`toolbar.zoom*` keys).
 
 ### Adding a new node
 
-1. Add the type definition to `NODE_REGISTRY` in `src/data/nodeRegistry.ts` (ports, category, defaultParams). If it can be stereo, add `stereo: 'optional'` and `stereo: false` to its defaultParams, and read meters through `useStereoLevels`
+1. Add the type definition to `NODE_REGISTRY` in `src/data/nodeRegistry.ts` (ports, category, defaultParams). A processor gets `stereo: 'follow'` (it passes on stereo by itself) and reads its meters through `useStereoLevels`
 2. Create `src/components/nodes/YourNode.tsx`:
    - Node with several params / meters → use `NodeWrapper` directly
    - Simple single-control node → use `InlineNode` (same shell, centred body)

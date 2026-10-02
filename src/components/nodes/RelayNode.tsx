@@ -7,7 +7,6 @@ import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
-import { basePortId } from '../../data/nodeRegistry'
 
 interface GraphRelayData extends Record<string, unknown> {
   color?: string
@@ -24,10 +23,10 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
   const selected = (node?.params.selectedInput as string) ?? 'a'
   const result   = stages[id]
 
-  // Signal level coming into each input (the louder side when the relay is stereo)
+  // Signal level coming into each input (the louder side of a stereo wire)
   const levelOn = (port: string) => {
     const dbs = allEdges
-      .filter((e) => e.target === id && basePortId(e.targetHandle) === port)
+      .filter((e) => e.target === id && e.targetHandle === port)
       .map((e) => portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity)
     return dbs.length > 0 ? Math.max(...dbs) : -Infinity
   }
