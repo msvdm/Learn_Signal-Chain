@@ -144,6 +144,7 @@ export function NodeWrapper({
       {/* Header — fixed height keeps the port line aligned across cards */}
       <div
         style={{
+          position: 'relative',
           minHeight: HEADER_H,
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '0 10px 0 12px',
@@ -161,20 +162,23 @@ export function NodeWrapper({
           }}
         >
           {label}
-          {isBypassed && (
-            <span
-              style={{
-                display: 'block', marginTop: 3, width: 'max-content',
-                fontSize: 11, fontWeight: 700, lineHeight: 1.4,
-                padding: '0 6px', borderRadius: 9999,
-                background: 'var(--signal-hot-bg)', color: 'var(--signal-hot)',
-                border: '1px solid var(--signal-hot-border)',
-              }}
-            >
-              {t.nodeControls.bypassedShort}
-            </span>
-          )}
         </span>
+        {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
+        {isBypassed && (
+          <span
+            style={{
+              position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
+              fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
+              padding: '0 6px', borderRadius: 9999,
+              background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
+              color: 'var(--signal-hot)',
+              border: '1px solid var(--signal-hot-border)',
+              pointerEvents: 'none',
+            }}
+          >
+            {t.nodeControls.bypassedShort}
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         {/* Help · On/Off (processing elements only) · Remove */}
         <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>

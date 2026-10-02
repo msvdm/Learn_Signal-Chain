@@ -1,4 +1,6 @@
 import { useRef, useEffect } from 'react'
+import { StableText } from './StableText'
+import { widestFormat } from '../../utils/readout'
 
 interface KnobControlProps {
   value: number
@@ -52,7 +54,8 @@ export function KnobControl({
 
   const indicatorTip = polarPoint(cx, cy, trackR - 8, currentClock)
 
-  const display = formatValue ? formatValue(value) : String(value)
+  const format  = formatValue ?? ((v: number) => String(v))
+  const display = format(value)
 
   const startY = useRef<number | null>(null)
   const startValue = useRef(value)
@@ -141,9 +144,13 @@ export function KnobControl({
             whiteSpace: 'nowrap', lineHeight: 1.1,
           }}
         >
-          <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}>
+          <StableText
+            reserve={[widestFormat(min, max, step, format)]}
+            align="center"
+            style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}
+          >
             {display}
-          </span>
+          </StableText>
           <span className="lsc-knob-label">{label}</span>
         </div>
       )}

@@ -3,6 +3,10 @@ import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { InlineNode } from './InlineNode'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
+
+const levelText = (db: number) => (isFinite(db) ? db.toFixed(1) : '−∞')
 
 interface GraphAdcDacData extends Record<string, unknown> {
   typeKey?: string
@@ -51,28 +55,25 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
         {inputUnit} → {outputUnit}
       </div>
 
-      {/* Input → output level display */}
-      {isFinite(inputLevel) && (
-        <div
-          style={{
-            fontSize: 'var(--node-text-2xs)',
-            fontFamily: 'var(--lsc-font-mono)',
-            textAlign: 'center',
-            color: 'var(--lsc-fg)',
-            lineHeight: 1.4,
-          }}
-        >
-          <span style={{ color: 'var(--lsc-fg-muted)' }}>{inputLevel.toFixed(1)} {inputUnit}</span>
-          {isFinite(result?.out ?? -Infinity) && (
-            <>
-              {' → '}
-              <span style={{ color: hasWarning ? 'var(--signal-clipping)' : 'var(--signal-good)' }}>
-                {result!.out.toFixed(1)} {outputUnit}
-              </span>
-            </>
-          )}
-        </div>
-      )}
+      {/* Input → output level display — always shown, numbers keep their widest width */}
+      <div
+        style={{
+          fontSize: 'var(--node-text-2xs)',
+          fontFamily: 'var(--lsc-font-mono)',
+          textAlign: 'center',
+          color: 'var(--lsc-fg)',
+          lineHeight: 1.4,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ color: 'var(--lsc-fg-muted)' }}>
+          <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(inputLevel)}</StableText> {inputUnit}
+        </span>
+        {' → '}
+        <span style={{ color: hasWarning ? 'var(--signal-clipping)' : 'var(--signal-good)' }}>
+          <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(result?.out ?? -Infinity)}</StableText> {outputUnit}
+        </span>
+      </div>
 
       {/* Warning banner */}
       {hasWarning && (
@@ -103,7 +104,9 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
           fontWeight: 600,
         }}
       >
-        {domain === 'digital' ? '● Digital out' : '● Analog out'}
+        <StableText reserve={['● Digital out', '● Analog out']} align="center">
+          {domain === 'digital' ? '● Digital out' : '● Analog out'}
+        </StableText>
       </div>
     </InlineNode>
   )

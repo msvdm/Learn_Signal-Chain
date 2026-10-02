@@ -7,6 +7,8 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 
 interface MonoBusData extends Record<string, unknown> {
   color?: string
@@ -43,7 +45,7 @@ export function MonoBusNode({ id, data }: NodeProps<Node<MonoBusData>>) {
         <SignalMeter db={result.out} health={result.health} label={unit} showValue={false} />
 
         <div style={{ fontSize: 'var(--node-text-2xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)', textAlign: 'right' }}>
-          {isFinite(result.out) ? `${result.out.toFixed(1)}` : '−∞'} {unit}
+          <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(result.out) ? `${result.out.toFixed(1)}` : '−∞'}</StableText> {unit}
         </div>
       </div>
     </NodeWrapper>

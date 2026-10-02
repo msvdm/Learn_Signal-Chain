@@ -1,4 +1,6 @@
 import { Fragment, useRef, useEffect } from 'react'
+import { StableText } from './StableText'
+import { widestFormat } from '../../utils/readout'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
@@ -48,9 +50,8 @@ export function VerticalFader({
   valueRef.current   = value
 
   const pct          = ((value - min) / (max - min)) * 100
-  const displayValue = formatValue
-    ? formatValue(value)
-    : `${value >= 0 ? '+' : ''}${value} dB`
+  const format       = formatValue ?? ((v: number) => `${v >= 0 ? '+' : ''}${v} dB`)
+  const displayValue = format(value)
 
   function computeFromPointer(clientY: number): number {
     if (!containerRef.current) return valueRef.current
@@ -149,9 +150,13 @@ export function VerticalFader({
 
       {/* Value readout */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 52 }}>
-        <span style={{ fontSize: 14, fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, color: 'var(--lsc-fg)', whiteSpace: 'nowrap' }}>
+        <StableText
+          reserve={[widestFormat(min, max, step, format)]}
+          align="center"
+          style={{ fontSize: 14, fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, color: 'var(--lsc-fg)' }}
+        >
           {displayValue}
-        </span>
+        </StableText>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--signal-good)', visibility: value === 0 ? 'visible' : 'hidden' }}>
           {unityLabel}
         </span>

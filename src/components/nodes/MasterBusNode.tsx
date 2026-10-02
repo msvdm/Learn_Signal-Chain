@@ -7,6 +7,8 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { getHealthStyle, dbToPercent } from '../../hooks/useGainStaging'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 
 interface MasterBusData extends Record<string, unknown> {
   color?: string
@@ -27,9 +29,9 @@ function ChannelRow({ ch, db }: { ch: string; db: number }) {
           }}
         />
       </div>
-      <span style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)', minWidth: 34, textAlign: 'right' }}>
+      <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)' }}>
         {isFinite(db) ? db.toFixed(1) : '−∞'}
-      </span>
+      </StableText>
     </div>
   )
 }

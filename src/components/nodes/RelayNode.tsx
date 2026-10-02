@@ -3,6 +3,8 @@ import { GitBranch } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 
@@ -66,12 +68,12 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
               <span style={{ fontSize: 'var(--node-text-sm)', fontWeight: 700, color: active ? 'var(--signal-good)' : 'var(--lsc-fg-dim)' }}>
                 In {ch.toUpperCase()}
               </span>
-              <span style={{
+              <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{
                 fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)',
                 color: active ? getHealthStyle(result?.health ?? 'too-quiet').color : 'var(--lsc-fg-dim)',
               }}>
                 {isFinite(sig) ? sig.toFixed(1) : '−∞'}
-              </span>
+              </StableText>
             </div>
           )
         })}

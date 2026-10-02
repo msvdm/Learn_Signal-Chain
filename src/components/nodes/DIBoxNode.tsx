@@ -5,6 +5,8 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 
 interface GraphDIBoxData extends Record<string, unknown> {
   color?: string
@@ -47,7 +49,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
               cursor: 'pointer',
             }}
           >
-            {groundLift ? 'ON' : 'OFF'}
+            <StableText reserve={['ON', 'OFF']} align="center">{groundLift ? 'ON' : 'OFF'}</StableText>
           </button>
         </div>
 
@@ -64,21 +66,21 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-accent)', fontWeight: 700 }}>
               {t.nodes['di-box']?.xlrOut ?? 'XLR Out'}
             </span>
-            <span className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
+            <StableText reserve={[`${LEVEL_SAMPLE} dBFS`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
               {isFinite(result?.out ?? -Infinity)
                 ? `${(result!.out).toFixed(1)} ${(result as { domain?: string })?.domain === 'digital' ? 'dBFS' : 'dBu'}`
                 : '−∞'}
-            </span>
+            </StableText>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-fg-muted)', fontWeight: 600 }}>
               {t.nodes['di-box']?.directOut ?? 'Direct Out'}
             </span>
-            <span className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
+            <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
               {isFinite(result?.out ?? -Infinity)
                 ? `${(result!.out).toFixed(1)} dBu`
                 : '−∞'}
-            </span>
+            </StableText>
           </div>
         </div>
 

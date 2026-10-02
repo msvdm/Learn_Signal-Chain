@@ -5,6 +5,7 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
 
 const FREQ_LABELS = ['31', '63', '125', '250', '500', '1k', '2k', '4k', '8k', '16k']
 const SLIDER_HEIGHT = 80
@@ -85,11 +86,15 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
                   <span className="text-[var(--node-text-2xs)] font-mono leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
                     {FREQ_LABELS[i]}
                   </span>
-                  {gain !== 0 && (
-                    <span className="text-[var(--node-text-3xs)] font-mono leading-none" style={{ color: 'var(--lsc-accent)' }}>
-                      {gain > 0 ? `+${gain}` : gain}
-                    </span>
-                  )}
+                  {/* Shown only when the band is moved, but its space is always kept */}
+                  <StableText
+                    reserve={['−10.5']}
+                    align="center"
+                    className="font-mono leading-none"
+                    style={{ fontSize: 'var(--node-text-3xs)', color: 'var(--lsc-accent)', visibility: gain === 0 ? 'hidden' : 'visible' }}
+                  >
+                    {gain > 0 ? `+${gain}` : gain < 0 ? `−${-gain}` : '0'}
+                  </StableText>
                 </div>
               ))}
             </div>

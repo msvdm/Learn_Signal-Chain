@@ -89,6 +89,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug). `BusInputPorts` for dynamic bus inputs. |
 | `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
+| `src/components/controls/StableText.tsx` | `StableText` — a reading that keeps the width of its widest value. Helpers `LEVEL_SAMPLE` / `widestFormat()` live in `src/utils/readout.ts`. |
 | `src/components/controls/EQGraph.tsx` | Interactive EQ curve drawn at exact pixel size (never stretched): drag a band dot, double-click = 0 dB, scroll = width (Q). Response math in `controls/eqMath.ts`. |
 
 ### Node card shell
@@ -97,7 +98,7 @@ Every node uses `NodeWrapper`:
 - **Width follows content** (no fixed widths; `minWidth: 160`), text wraps to fit.
 - A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (28px) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (24px) apart.
 - The header row is **icon · title · ? (help) · On/Off (bypass) · × (remove)**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no On/Off — the control itself is the state. Every node, including Master Bus, can be removed.
-- Cards whose values change often (e.g. the Parametric EQ) use **fixed widths and fixed-width readouts**, so turning a control never resizes the card.
+- **A card never changes size while values change** (no flicker). Wrap every changing reading in `StableText` (`components/controls/StableText.tsx`), which reserves the width of the widest value it can show: `LEVEL_SAMPLE` for signal levels, `widestFormat()` for a control's readout (both in `utils/readout.ts`). `KnobControl`, `VerticalFader`, `ControlSlider` and `SignalMeter` already do this. Text that only sometimes shows keeps its space (`visibility: hidden`) instead of being removed. The "Bypassed" tag sits on the header's bottom line, outside the layout. Wide cards (Parametric EQ) use a fixed body width.
 - Controls and In/Out meters stay on the cards; there is **no status chip**.
 
 ### Level system

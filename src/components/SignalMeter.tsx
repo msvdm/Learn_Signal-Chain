@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { getHealthStyle, dbToPercent, formatDb } from '../hooks/useGainStaging'
 import { useTranslation } from '../i18n/useTranslation'
 import type { SignalHealth } from '../hooks/useSignalChain'
+import { StableText } from './controls/StableText'
 
 interface SignalMeterProps {
   db: number
@@ -39,12 +40,19 @@ export function SignalMeter({ db, health, label, showValue = true }: SignalMeter
       </div>
       {showValue && (
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
-          <span style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color: style.color, whiteSpace: 'nowrap' }}>
+          <StableText
+            reserve={['+00.0 dBu']}
+            style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color: style.color }}
+          >
             {formatDb(db)}
-          </span>
-          <span style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color: style.color, whiteSpace: 'nowrap' }}>
+          </StableText>
+          <StableText
+            reserve={Object.values(t.health)}
+            align="end"
+            style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color: style.color }}
+          >
             {t.health[health]}
-          </span>
+          </StableText>
         </div>
       )}
     </div>

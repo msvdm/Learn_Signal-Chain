@@ -3,6 +3,8 @@ import { MoveHorizontal } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { KnobControl } from '../controls/KnobControl'
@@ -59,9 +61,9 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
           return (
             <div key={ch} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 'var(--node-text-sm)', fontWeight: 700, color }}>{ch}</span>
-              <span style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', color }}>
+              <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', color }}>
                 {isFinite(sig) ? `${sig.toFixed(1)}` : '−∞'}
-              </span>
+              </StableText>
             </div>
           )
         })}

@@ -7,6 +7,7 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
 
 interface GraphCompData extends Record<string, unknown> {
   color?: string
@@ -239,9 +240,9 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
               }}
             />
           </div>
-          <span style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)', minWidth: 28, textAlign: 'right' }}>
+          <StableText reserve={['−00.0']} align="end" style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)' }}>
             {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
-          </span>
+          </StableText>
         </div>
 
         <SignalMeter db={result.out} health={result.health} label={t.meters.output} />

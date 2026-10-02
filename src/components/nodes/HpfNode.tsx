@@ -1,6 +1,7 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
+import { widestFormat } from '../../utils/readout'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -136,6 +137,7 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
           step={0.5}
           label={t.nodes.hpf.cutoff}
           formatValue={() => formatHz(cutoffHz)}
+          reserve={[widestFormat(0, 100, 0.5, (v) => formatHz(sliderToHz(v)))]}
           onChange={(v) => updateNodeParams(id, { cutoffHz: sliderToHz(v) })}
         />
       </div>

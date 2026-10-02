@@ -7,6 +7,7 @@ import { useGraphSignal } from '../../hooks/useSignalChain'
 import type { DeesserResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
 
 interface GraphDeesserData extends Record<string, unknown> {
   color?: string
@@ -68,12 +69,14 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
             <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
               {t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'}
             </span>
-            <span
+            <StableText
+              reserve={['−00.0 dB']}
+              align="end"
               className="text-[var(--node-text-xs)] font-mono"
-              style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-fg)', fontWeight: isActive ? 700 : 400 }}
+              style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-fg)', fontWeight: 700 }}
             >
               {isActive ? `−${gr.toFixed(1)} dB` : '—'}
-            </span>
+            </StableText>
           </div>
           {/* Simple GR bar */}
           <div
