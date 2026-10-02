@@ -5,7 +5,7 @@ import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
-import { nodeAcceptsWire, portIsFree } from '../../utils/connectionRules'
+import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 
 interface NodePortProps {
@@ -46,7 +46,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   }
 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&
-    nodeAcceptsWire(node, wireSource, edges) && portIsFree(nodeId, portId, edges)
+    nodeAcceptsWire(node, wireSource, edges) && portAcceptsWire(node, portId, edges, wireSource)
 
   const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
   const showUnplug = canUnplug && hovered

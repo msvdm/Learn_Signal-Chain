@@ -2,8 +2,8 @@ import type { ReactNode, CSSProperties } from 'react'
 import { Power, X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { NODE_REGISTRY } from '../../data/nodeRegistry'
-import { nodeAcceptsWire, portIsFree } from '../../utils/connectionRules'
+import { getPorts } from '../../data/nodeRegistry'
+import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { HEADER_H, PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 import { NodePort } from './NodePort'
 
@@ -13,9 +13,6 @@ const NO_BYPASS_TYPES = new Set([
   'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
   'master-bus', 'audio-interface',
 ])
-
-// Inputs are created at runtime (one per connected channel + one free slot)
-const DYNAMIC_INPUT_TYPES = new Set(['master-bus', 'mono-bus', 'stereo-bus', 'audio-interface'])
 
 interface NodeWrapperProps {
   nodeId: string
@@ -70,18 +67,16 @@ export function NodeWrapper({
   const helpOpen   = activeTooltipId === nodeId
   const selected   = selectedNodeId === nodeId || helpOpen
 
-  const def     = NODE_REGISTRY[typeKey]
-  const inputs  = customInputs ? [] : (def?.inputs ?? [])
-  const outputs = def?.outputs ?? []
+  const ports   = getPorts(node ?? { typeKey, params: {} })
+  const inputs  = customInputs ? [] : ports.inputs
+  const outputs = ports.outputs
 
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
   const minHeight = PORT_TOP + (portRows - 1) * PORT_GAP + 24
 
   // While a wire is being drawn, label this card if it can take the wire
-  const hasFreeInput = DYNAMIC_INPUT_TYPES.has(typeKey) ||
-    inputs.some((p) => portIsFree(nodeId, p.id, edges))
-  const isWireTarget = wireSource !== null && node !== undefined && hasFreeInput &&
+  const isWireTarget = wireSource !== null && node !== undefined &&
     nodeAcceptsWire(node, wireSource, edges)
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'

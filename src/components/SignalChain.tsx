@@ -57,7 +57,7 @@ import {
 import type { Pt } from '../utils/layoutHelpers'
 import { buildWirePath } from '../utils/wirePath'
 import { wirePassesThroughNode } from '../utils/wireValidation'
-import { nodeAcceptsWire, portIsFree } from '../utils/connectionRules'
+import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
 import { useTranslation } from '../i18n/useTranslation'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
@@ -318,7 +318,7 @@ export function SignalChain() {
 
         const allowed = targetNode !== undefined &&
           nodeAcceptsWire(targetNode, source, edgesRef.current) &&
-          portIsFree(targetNodeId, targetHandleId, edgesRef.current)
+          portAcceptsWire(targetNode, targetHandleId, edgesRef.current, source)
 
         if (!allowed) {
           if (targetNodeId !== d.sourceNodeId) {
