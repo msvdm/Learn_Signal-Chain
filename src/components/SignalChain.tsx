@@ -351,7 +351,7 @@ export function SignalChain() {
           targetHandle: targetHandleId,
           waypoints:    d.waypoints.length > 0 ? d.waypoints : undefined,
         })
-        enforceGap(d.sourceNodeId, targetNodeId, measuredNodes(), updateNodePosition)
+        enforceGap(d.sourceNodeId, targetNodeId, measuredNodes(), edgesRef.current, updateNodePosition)
         cancelWire()
         return
       }

@@ -1,6 +1,7 @@
 import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
+import { upstreamOf } from './chainColors'
 
 export type Pt = { x: number; y: number }
 
@@ -104,11 +105,17 @@ export function pushDownstream(
   }
 }
 
-/** Ensure src→tgt pair has at least MIN_NODE_GAP, pushing tgt (and everything downstream) right. */
+/**
+ * Ensure a new src→tgt wire has room: tgt starts at least MIN_NODE_GAP right of src.
+ * If not, tgt and the chain it feeds move right together, plus any card they would land on.
+ * src and the cards feeding it never move — taking them along would leave the gap as it was.
+ * `edges` are the wires before this one.
+ */
 export function enforceGap(
   srcId: string,
   tgtId: string,
   nodes: FlowNode[],
+  edges: SignalEdge[],
   updatePos: (id: string, pos: Pt) => void,
 ) {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
@@ -117,8 +124,38 @@ export function enforceGap(
   if (!src || !tgt) return
   const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
   const gap = tgt.position.x - (src.position.x + srcDims.w)
-  if (gap < MIN_NODE_GAP) {
-    pushDownstream(tgt.position.x, MIN_NODE_GAP - gap, nodes, nodeMap, updatePos)
+  if (gap >= MIN_NODE_GAP) return
+
+  const fixed = upstreamOf(srcId, edges).nodeIds
+  // The wire loops back into its own chain — there is no left-to-right order to restore
+  if (fixed.has(tgtId)) return
+  const shift = Math.ceil((MIN_NODE_GAP - gap) / GRID) * GRID
+
+  function rectOf(n: FlowNode, dx = 0) {
+    const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
+    return nodeRect({ x: n.position.x + dx, y: n.position.y }, d.w, d.h)
+  }
+
+  const moving = new Set<string>()
+  let next = [tgtId]
+  while (next.length > 0) {
+    // These cards move, and so does everything they feed
+    while (next.length > 0) {
+      const id = next.pop()!
+      if (moving.has(id) || fixed.has(id) || !nodeMap.has(id)) continue
+      moving.add(id)
+      for (const e of edges) if (e.source === id) next.push(e.target)
+    }
+    // Then any card a moved card would now land on
+    const moved = [...moving].map((id) => rectOf(nodeMap.get(id)!, shift))
+    next = nodes
+      .filter((n) => !moving.has(n.id) && !fixed.has(n.id) && moved.some((r) => rectsOverlap(r, rectOf(n))))
+      .map((n) => n.id)
+  }
+
+  for (const id of moving) {
+    const n = nodeMap.get(id)!
+    updatePos(id, { x: n.position.x + shift, y: n.position.y })
   }
 }
 
