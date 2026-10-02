@@ -172,6 +172,8 @@ export function SignalChain() {
   const edgesRef        = useLatestRef(graphEdges)
   const graphNodesRef   = useLatestRef(graphNodes)
   const revertTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Set when a press on a port was used for wiring — the click that follows it is swallowed
+  const swallowClickRef = useRef(false)
 
   const { reshaping, setReshaping } = useEdgeReshape(screenToFlowPosition, edgesRef, updateEdgeWaypoints)
 
@@ -250,14 +252,17 @@ export function SignalChain() {
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
       const hEl  = handleUnder(e.clientX, e.clientY)
-      const snapTo = hEl?.classList.contains('target') ? handleFlowPos(hEl, screenToFlowPosition) : null
+      const onTarget = hEl?.classList.contains('target') ? hEl : null
+      const snapTo = onTarget ? handleFlowPos(onTarget, screenToFlowPosition) : null
       setSnapPos(snapTo)
       const allPts = [d.startPos, ...d.waypoints, snapTo ?? flowPos]
       const nodesForValidation = graphNodesRef.current.map((n) => {
         const m = getInternalNode(n.id)?.measured
         return { id: n.id, position: n.position, width: m?.width, height: m?.height }
       })
-      setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId]))
+      // The wire ends on its target's edge — only other cards in the way count as crossing
+      const exclude = onTarget ? [d.sourceNodeId, onTarget.dataset.nodeid!] : [d.sourceNodeId]
+      setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, exclude))
     }
     document.addEventListener('mousemove', onMove)
     return () => {
@@ -270,6 +275,7 @@ export function SignalChain() {
   useEffect(() => {
     function onDown(e: MouseEvent) {
       if (e.button !== 0) return
+      swallowClickRef.current = false
       const targetEl = e.target as Element
       // Only clicks on the canvas itself — not the palette, header or popovers
       if (!wrapperRef.current?.contains(targetEl)) return
@@ -298,6 +304,7 @@ export function SignalChain() {
       if (!d.active) {
         if (hEl?.classList.contains('source')) {
           e.stopPropagation()
+          swallowClickRef.current = true
           setDrawing({
             active: true,
             sourceNodeId:   hEl.dataset.nodeid!,
@@ -315,6 +322,8 @@ export function SignalChain() {
 
       // Wire is being drawn — intercept ALL left-clicks on the canvas
       e.stopPropagation()
+      // A press on a port also eats its click: on the input just plugged, that click would unplug it again
+      if (hEl) swallowClickRef.current = true
 
       if (hEl?.classList.contains('target')) {
         const targetNodeId   = hEl.dataset.nodeid!
@@ -365,6 +374,14 @@ export function SignalChain() {
       )
     }
 
+    // The click that ends a wiring press must not reach the cards: it would land on the
+    // input that was just plugged in, and NodePort's click unplugs it again.
+    function onClick(e: MouseEvent) {
+      if (!swallowClickRef.current) return
+      swallowClickRef.current = false
+      e.stopPropagation()
+    }
+
     function onContext(e: MouseEvent) {
       if (toolModeRef.current !== 'connect') return
       if (!drawingRef.current.active) return
@@ -373,9 +390,11 @@ export function SignalChain() {
     }
 
     document.addEventListener('mousedown', onDown, true)
+    document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContext, true)
     return () => {
       document.removeEventListener('mousedown', onDown, true)
+      document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContext, true)
     }
   // measuredNodes reads React Flow's live state each call
