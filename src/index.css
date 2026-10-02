@@ -369,20 +369,6 @@ kbd {
   letter-spacing: 0.06em;
 }
 
-.lsc-value {
-  font-family: var(--lsc-font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--lsc-fg);
-}
-
-.lsc-value-sm {
-  font-family: var(--lsc-font-mono);
-  font-size: 11px;
-  color: var(--lsc-fg);
-  line-height: 1;
-}
-
 .lsc-knob-label {
   font-family: var(--lsc-font-sans);
   font-size: 11px;

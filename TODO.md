@@ -35,9 +35,9 @@ What is in it:
 - [x] Review the diff and commit — branch `studio-canvas`, commit e3bb697.
 - [x] Update `CLAUDE.md` — done after Stage 2 (interaction model, header, card shell, level
       table, key files, React Flow notes).
-- [ ] Optional cleanup — not imported / not used anywhere:
-      `src/components/SignalLevelProfile.tsx`, `src/data/theory.ts` (help text now lives in the
-      locale JSON files), CSS classes `.lsc-value` / `.lsc-value-sm` in `index.css`.
+- [x] Optional cleanup — deleted `src/components/SignalLevelProfile.tsx`, `src/data/theory.ts`
+      (help text lives in the locale JSON files) and the unused `.lsc-value` / `.lsc-value-sm`
+      CSS classes.
 
 ---
 
