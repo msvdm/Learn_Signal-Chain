@@ -38,7 +38,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
     <NodeWrapper
       nodeId={id}
       typeKey="active-speaker"
-      icon={<Volume2 size={14} />}
+      icon={<Volume2 size={16} />}
       label={data.label ?? t.nodes.activeSpeaker.label}
       accentColor={data.color}
     >
@@ -66,6 +66,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
           transition={isClipping ? { duration: 0.5, repeat: Infinity } : {}}
         >
           <motion.path
+            initial={false}
             animate={{ d: buildWavePath(amplitude) }}
             fill="none"
             stroke={healthStyle.color}

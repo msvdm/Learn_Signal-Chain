@@ -11,14 +11,34 @@ export interface Translations {
     title: string
     tagline: string
     resetButton: string
-    resetConfirm: string
     settings: string
+    reset: string
+    language: string
+    level: string
+    theme: { toggle: string; light: string; dark: string }
   }
+  dialog: {
+    cancel: string
+    resetTitle: string
+    resetConfirm: string
+    resetBody: string
+    switchTitle: string
+    switchConfirm: string
+    switchBody: string
+  }
+  toolbar: {
+    snap: string
+    snapHint: string
+    zoom: string
+    zoomIn: string
+    zoomOut: string
+    zoomFit: string
+  }
+  connecting: { from: string; hint: string; cancel: string; input: string }
   levels: {
     beginner:     { title: string; description: string }
     intermediate: { title: string; description: string }
     advanced:     { title: string; description: string }
-    switchConfirm: string
   }
   meters: { input: string; output: string }
   health: { 'too-quiet': string; good: string; hot: string; clipping: string }
@@ -42,10 +62,15 @@ export interface Translations {
     proTip: string
     next: string
     finishTour: string
+    nextNode: string
+    previous: string
+    stepOf: string
+    close: string
+    help: string
   }
   banner: { gainStaging: string }
   nodes: {
-    mic: { label: string; sensitivity: string; micInfo: string }
+    mic: { label: string; sensitivity: string; micInfo: string; hint: string }
     preamp: { label: string; gain: string }
     hpf: { label: string; cutoff: string }
     eq: {
@@ -57,12 +82,15 @@ export interface Translations {
       bandHigh: string
       bandLoMid?: string
       gain?: string
-      frequency?: string
       freq?: string
       widthQ?: string
+      /** Tooltip of Width (Q) on a shelf band, where it does nothing */
+      widthShelf?: string
       shelf?: string
-      shelfOn?: string
+      shelfHint?: string
       graphHint?: string
+      /** Extra graph hint when the band width can be changed (Advanced) */
+      graphHintWidth?: string
     }
     graphicEq: { label: string }
     comp: {
@@ -71,6 +99,7 @@ export interface Translations {
       ratio: string
       makeupGain: string
       gainReduction: string
+      turningDown: string
     }
     fader: { label: string; unity: string }
     master: {
@@ -110,25 +139,24 @@ export interface Translations {
     'stereo-fader'?: { label?: string; fader?: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
-  drawer: {
-    label: string
-    defaultTitle: string
-    tip1: { title: string; body: string }
-    tip2: { title: string; body: string }
-    tip3: { title: string; body: string }
-    tip4: { title: string; body: string }
-    tip5: { title: string; body: string }
-  }
   eqCurve: { title: string; subtitle: string; band: string }
   nodeControls: {
-    bypass: string
-    bypassed: string
+    /** Tooltip of the On/Off button while the node is on */
+    turnOff: string
+    /** Tooltip of the On/Off button while the node is bypassed */
+    turnOn: string
     remove: string
+    bypassedShort: string
+    /** Tooltip of a connected input port (it unplugs the wire on click) */
+    unplug: string
   }
   palette: {
-    connectTool: string
     elements: string
-    categories: { source: string; processing: string; structural?: string; routing: string; output: string }
+    search: string
+    all: string
+    startHere: string
+    noResults: string
+    categories: { source: string; processing: string; routing: string; output: string }
     items: Record<string, string>
   }
   theory: Record<string, TheoryEntry>

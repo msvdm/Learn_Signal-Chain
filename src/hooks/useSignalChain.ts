@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
+import type { Translations } from '../i18n/translations'
 import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { bellGain, shelfGain } from '../components/controls/eqMath'
@@ -369,12 +369,44 @@ export interface GraphSignalResult {
   warnings: string[]
 }
 
+// Every node card, port and edge reads the graph result. The store replaces the
+// nodes/edges arrays on every change, so one shared single-entry cache keyed on
+// those references lets all callers reuse a single computation per change.
+let lastGraph: {
+  nodes: SignalNode[]
+  edges: SignalEdge[]
+  warningsText: Translations['warnings']
+  result: GraphSignalResult
+} | null = null
+
+function cachedGraphSignal(
+  nodes: SignalNode[],
+  edges: SignalEdge[],
+  t: Translations,
+  fmt: (str: string, params: Record<string, string>) => string,
+): GraphSignalResult {
+  if (lastGraph && lastGraph.nodes === nodes && lastGraph.edges === edges && lastGraph.warningsText === t.warnings) {
+    return lastGraph.result
+  }
+  const result = computeGraphSignal(nodes, edges, t, fmt)
+  lastGraph = { nodes, edges, warningsText: t.warnings, result }
+  return result
+}
+
 export function useGraphSignal(): GraphSignalResult {
   const nodes = useSignalStore((s) => s.nodes)
   const edges = useSignalStore((s) => s.edges)
   const { t, fmt } = useTranslation()
+  return cachedGraphSignal(nodes, edges, t, fmt)
+}
 
-  return useMemo(() => {
+function computeGraphSignal(
+  nodes: SignalNode[],
+  edges: SignalEdge[],
+  t: Translations,
+  fmt: (str: string, params: Record<string, string>) => string,
+): GraphSignalResult {
+  {
     const sorted = topoSort(nodes, edges)
     const portSignal = new Map<string, number>()
     const stages: Record<string, StageResult | CompressorResult | DeesserResult> = {}
@@ -537,6 +569,5 @@ export function useGraphSignal(): GraphSignalResult {
     }
 
     return { stages, inputDb, portSignal, overallHealth, warnings: warns }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges])
+  }
 }

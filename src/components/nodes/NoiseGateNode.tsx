@@ -18,9 +18,9 @@ interface GraphNoiseGateData extends Record<string, unknown> {
 // At and above threshold: output = input (1:1, gate open).
 // The hard right-angle at the threshold is the visual signature of a gate.
 
-const GW = 160
+const GW = 196   // SVG canvas width (px — drawn 1:1)
 const GH = 120
-const GP = 12
+const GP = 14    // padding inside SVG
 
 const DB_MIN = -60
 const DB_MAX = 0
@@ -70,11 +70,11 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
       style={{
         background: 'var(--lsc-sunken)',
         border: '1px solid var(--lsc-border)',
-        borderRadius: 4,
+        borderRadius: 8,
         overflow: 'hidden',
       }}
     >
-      <svg viewBox={`0 0 ${GW} ${GH}`} width="100%" height={GH} style={{ display: 'block' }}>
+      <svg viewBox={`0 0 ${GW} ${GH}`} width={GW} height={GH} style={{ display: 'block' }}>
         <rect x={0} y={0} width={GW} height={GH} fill="var(--lsc-sunken)" />
 
         {/* Grid */}
@@ -92,18 +92,18 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
         ))}
 
         {/* Axis labels */}
-        <text x={GW - GP + 2} y={toY(0) + 3} fontSize="7" fill="var(--lsc-text)" opacity="0.5">0</text>
-        <text x={GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="middle">−60</text>
-        <text x={GW - GP} y={GH - 2} fontSize="7" fill="var(--lsc-text)" opacity="0.5" textAnchor="end">0 dB in</text>
+        <text x={GW - GP + 2} y={toY(0) + 3} fontSize="11" fill="var(--lsc-fg-muted)">0</text>
+        <text x={GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="middle">−60</text>
+        <text x={GW - GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="end">0 dB in</text>
 
         {/* Threshold line */}
         <line
           x1={threshX} y1={GP} x2={threshX} y2={GH - GP}
-          stroke="rgba(216,149,72,0.55)" strokeWidth={1.5} strokeDasharray="3 2"
+          stroke="var(--signal-hot)" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="3 2"
         />
 
         {/* 1:1 reference (grey dashed) */}
-        <path d={refPath} fill="none" stroke="var(--lsc-text)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
+        <path d={refPath} fill="none" stroke="var(--lsc-fg)" strokeWidth={1} strokeDasharray="3 3" opacity="0.3" />
 
         {/* Gate curve — floor below threshold, 1:1 above */}
         <path d={curvePath} fill="none" stroke="var(--lsc-accent)" strokeWidth={2} strokeLinecap="round" />
@@ -112,9 +112,9 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
         {hasSignal && (
           <>
             <line x1={opX} y1={GP} x2={opX} y2={opY - 5}
-              stroke="rgba(91,141,232,0.5)" strokeWidth={1} />
+              stroke="var(--signal-too-quiet)" strokeOpacity={0.5} strokeWidth={1} />
             <circle cx={opX} cy={opY} r={4}
-              fill="white" stroke={isOpen ? 'var(--signal-good)' : 'var(--lsc-text)'}
+              fill="var(--lsc-node-bg)" stroke={isOpen ? 'var(--signal-good)' : 'var(--lsc-fg)'}
               strokeWidth="1.8" opacity={isOpen ? 1 : 0.5}
             />
           </>
@@ -123,8 +123,8 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
         {/* OPEN / CLOSED badge on the graph */}
         <text
           x={GW - GP} y={GP + 8}
-          fontSize="7" fontWeight="700"
-          fill={isOpen ? 'var(--signal-good)' : 'var(--lsc-text)'}
+          fontSize="11" fontWeight="700"
+          fill={isOpen ? 'var(--signal-good)' : 'var(--lsc-fg)'}
           textAnchor="end"
           opacity={isOpen ? 1 : 0.45}
           style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}
@@ -153,9 +153,8 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
     <NodeWrapper
       nodeId={id}
       typeKey="noise-gate"
-      icon={<DoorClosed size={14} />}
+      icon={<DoorClosed size={16} />}
       label={data.label ?? t.nodes['noise-gate']?.label ?? 'Noise Gate'}
-      style={{ width: 220 }}
     >
       <div className="space-y-3">
         <SignalMeter db={inputLevel} health={getHealth(inputLevel)} label={t.meters.input} />
@@ -171,7 +170,7 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
             label={t.nodes['noise-gate']?.threshold ?? 'Threshold'}
             formatValue={(v) => `${v} dB`}
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-            color={isOpen ? 'var(--signal-good)' : 'rgba(216,149,72,0.9)'}
+            color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
             size={44}
           />
         </div>

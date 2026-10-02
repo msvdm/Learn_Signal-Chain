@@ -1,4 +1,6 @@
 import { useRef, useEffect } from 'react'
+import { StableText } from './StableText'
+import { widestFormat } from '../../utils/readout'
 
 interface KnobControlProps {
   value: number
@@ -11,6 +13,8 @@ interface KnobControlProps {
   size?: number
   color?: string
   className?: string
+  /** false = knob only; the caller shows the value and label itself */
+  showReadout?: boolean
 }
 
 const START_CLOCK = 225
@@ -32,6 +36,7 @@ export function KnobControl({
   size = 52,
   color = 'var(--signal-good)',
   className = '',
+  showReadout = true,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
@@ -47,9 +52,10 @@ export function KnobControl({
   const fillEnd = polarPoint(cx, cy, trackR, currentClock)
   const fillLargeArc = normalizedValue * SWEEP >= 180 ? 1 : 0
 
-  const indicatorTip = polarPoint(cx, cy, trackR - 5, currentClock)
+  const indicatorTip = polarPoint(cx, cy, trackR - 8, currentClock)
 
-  const display = formatValue ? formatValue(value) : String(value)
+  const format  = formatValue ?? ((v: number) => String(v))
+  const display = format(value)
 
   const startY = useRef<number | null>(null)
   const startValue = useRef(value)
@@ -82,8 +88,14 @@ export function KnobControl({
     startValue.current = valueRef.current
   }
 
+  const valueSize = size >= 52 ? 15 : 13
+  const inlineLabel = size >= 56
+
   return (
-    <div className={`nodrag flex flex-col items-center gap-0.5 select-none ${className}`} style={{ width: size }}>
+    <div
+      className={`nodrag flex flex-col items-center select-none ${className}`}
+      style={{ minWidth: size, gap: 4 }}
+    >
       <svg
         width={size}
         height={size}
@@ -92,14 +104,14 @@ export function KnobControl({
         style={{ cursor: 'ns-resize', touchAction: 'none' }}
       >
         {/* Knob body */}
-        <circle cx={cx} cy={cy} r={size / 2 - 1} fill="var(--lsc-node-bg-2)" stroke="var(--lsc-track-3)" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={size / 2 - 1} fill="var(--lsc-node-bg-2)" stroke="var(--lsc-border)" strokeWidth="1" />
 
-        {/* Track arc — full sweep, dim */}
+        {/* Track arc — full sweep */}
         <path
           d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 1 1 ${trackEnd.x.toFixed(2)},${trackEnd.y.toFixed(2)}`}
           fill="none"
           stroke="var(--lsc-border)"
-          strokeWidth="3"
+          strokeWidth="4"
           strokeLinecap="round"
         />
 
@@ -109,7 +121,7 @@ export function KnobControl({
             d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
             fill="none"
             stroke={color}
-            strokeWidth="3"
+            strokeWidth="4"
             strokeLinecap="round"
           />
         )}
@@ -119,17 +131,29 @@ export function KnobControl({
         <circle
           cx={indicatorTip.x}
           cy={indicatorTip.y}
-          r={2.5}
-          fill="white"
+          r={3}
+          fill="var(--lsc-fg)"
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
-      <span className="font-mono leading-none" style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-text)', whiteSpace: 'nowrap' }}>
-        {display}
-      </span>
-      <span className="uppercase tracking-wider leading-none" style={{ fontSize: 'var(--node-text-2xs)', color: 'var(--lsc-text)' }}>
-        {label}
-      </span>
+      {showReadout && (
+        <div
+          style={{
+            display: 'flex', flexDirection: inlineLabel ? 'row' : 'column',
+            alignItems: inlineLabel ? 'baseline' : 'center', gap: inlineLabel ? 6 : 3,
+            whiteSpace: 'nowrap', lineHeight: 1.1,
+          }}
+        >
+          <StableText
+            reserve={[widestFormat(min, max, step, format)]}
+            align="center"
+            style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}
+          >
+            {display}
+          </StableText>
+          <span className="lsc-knob-label">{label}</span>
+        </div>
+      )}
     </div>
   )
 }

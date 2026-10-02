@@ -5,6 +5,8 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
 
 interface GraphDIBoxData extends Record<string, unknown> {
   color?: string
@@ -25,14 +27,13 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="di-box"
-      icon={<Plug size={14} />}
+      icon={<Plug size={16} />}
       label={data.label ?? t.nodes['di-box']?.label ?? 'DI Box'}
-      style={{ width: 208 }}
     >
       <div className="space-y-2">
         {/* Ground lift toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>
+          <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
             {t.nodes['di-box']?.groundLift ?? 'Ground Lift'}
           </span>
           <button
@@ -44,11 +45,11 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
               borderRadius: 'var(--lsc-radius-sm)',
               border: `1px solid ${groundLift ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
               background: groundLift ? 'var(--lsc-accent-bg)' : 'transparent',
-              color: groundLift ? 'var(--lsc-accent-soft)' : 'var(--lsc-text)',
+              color: groundLift ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg)',
               cursor: 'pointer',
             }}
           >
-            {groundLift ? 'ON' : 'OFF'}
+            <StableText reserve={['ON', 'OFF']} align="center">{groundLift ? 'ON' : 'OFF'}</StableText>
           </button>
         </div>
 
@@ -65,27 +66,27 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-accent)', fontWeight: 700 }}>
               {t.nodes['di-box']?.xlrOut ?? 'XLR Out'}
             </span>
-            <span className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-text)' }}>
+            <StableText reserve={[`${LEVEL_SAMPLE} dBFS`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
               {isFinite(result?.out ?? -Infinity)
                 ? `${(result!.out).toFixed(1)} ${(result as { domain?: string })?.domain === 'digital' ? 'dBFS' : 'dBu'}`
                 : '−∞'}
-            </span>
+            </StableText>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-text)', fontWeight: 600, opacity: 0.7 }}>
+            <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-fg-muted)', fontWeight: 600 }}>
               {t.nodes['di-box']?.directOut ?? 'Direct Out'}
             </span>
-            <span className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-text)', opacity: 0.7 }}>
+            <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
               {isFinite(result?.out ?? -Infinity)
                 ? `${(result!.out).toFixed(1)} dBu`
                 : '−∞'}
-            </span>
+            </StableText>
           </div>
         </div>
 
         <div
-          className="text-[var(--node-text-xs)] leading-snug"
-          style={{ color: 'var(--lsc-text)', opacity: 0.65, borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
+          className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
+          style={{ color: 'var(--lsc-fg-muted)', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
         >
           {t.nodes['di-box']?.description ?? 'Converts high-impedance instrument signal to balanced mic-level XLR.'}
         </div>

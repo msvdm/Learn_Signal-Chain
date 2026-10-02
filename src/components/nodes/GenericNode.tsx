@@ -33,7 +33,7 @@ export function GenericNode({ id, data }: NodeProps<Node<GraphGenericData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey={typeKey}
-      icon={<Box size={14} />}
+      icon={<Box size={16} />}
       label={data.label ?? def?.label ?? typeKey}
       accentColor={data.color}
     >

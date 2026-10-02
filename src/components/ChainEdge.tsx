@@ -4,13 +4,19 @@ import { buildWirePath } from '../utils/wirePath'
 
 type Pt = { x: number; y: number }
 
+export interface ChainEdgeData extends Record<string, unknown> {
+  waypoints?: Pt[]
+  routingWarning?: boolean
+}
+
 export function ChainEdge({
   id, sourceX, sourceY, targetX, targetY,
   style, markerEnd,
   data,
 }: EdgeProps) {
-  const waypoints   = ((data as Record<string, unknown>)?.waypoints as Pt[] | undefined) ?? []
-  const routingWarn = ((data as Record<string, unknown>)?.routingWarning as boolean) ?? false
+  const d           = (data ?? {}) as ChainEdgeData
+  const waypoints   = d.waypoints ?? []
+  const routingWarn = d.routingWarning ?? false
 
   // Build the path using the same algorithm as the live wire preview.
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
@@ -21,6 +27,12 @@ export function ChainEdge({
     : style
 
   return (
-    <BaseEdge id={id} path={edgePath} style={edgeStyle} markerEnd={markerEnd} />
+    <BaseEdge
+      id={id}
+      path={edgePath}
+      style={edgeStyle}
+      markerEnd={markerEnd}
+      className={routingWarn ? undefined : 'signal-line-animated'}
+    />
   )
 }

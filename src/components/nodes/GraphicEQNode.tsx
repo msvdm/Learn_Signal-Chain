@@ -5,6 +5,7 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
 
 const FREQ_LABELS = ['31', '63', '125', '250', '500', '1k', '2k', '4k', '8k', '16k']
 const SLIDER_HEIGHT = 80
@@ -30,10 +31,9 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
     <NodeWrapper
       nodeId={id}
       typeKey="graphic-eq"
-      icon={<Sliders size={14} />}
+      icon={<Sliders size={16} />}
       label={data.label ?? t.nodes.graphicEq.label}
       accentColor={data.color}
-      style={{ width: 340 }}
     >
       <div className="space-y-2">
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
@@ -42,7 +42,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
           className="nodrag rounded-md p-2"
           style={{ background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)' }}
         >
-          <div className="flex gap-1 items-end">
+          <div className="flex items-end" style={{ gap: 6 }}>
             {/* dB axis labels */}
             <div className="flex flex-col justify-between pb-5 shrink-0" style={{ height: SLIDER_HEIGHT + 20 }}>
               {['+12', '+6', '0', '−6', '−12'].map((l) => (
@@ -55,7 +55,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
             {/* 10-band sliders */}
             <div className="flex flex-1 justify-around">
               {bandGains.map((gain, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
+                <div key={i} className="flex flex-col items-center gap-1" style={{ minWidth: 28 }}>
                   <div
                     className="relative flex items-center justify-center nodrag nopan"
                     style={{ width: 20, height: SLIDER_HEIGHT }}
@@ -86,11 +86,15 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
                   <span className="text-[var(--node-text-2xs)] font-mono leading-none" style={{ color: 'var(--lsc-fg-dim)' }}>
                     {FREQ_LABELS[i]}
                   </span>
-                  {gain !== 0 && (
-                    <span className="text-[var(--node-text-3xs)] font-mono leading-none" style={{ color: 'var(--lsc-accent)' }}>
-                      {gain > 0 ? `+${gain}` : gain}
-                    </span>
-                  )}
+                  {/* Shown only when the band is moved, but its space is always kept */}
+                  <StableText
+                    reserve={['−10.5']}
+                    align="center"
+                    className="font-mono leading-none"
+                    style={{ fontSize: 'var(--node-text-3xs)', color: 'var(--lsc-accent)', visibility: gain === 0 ? 'hidden' : 'visible' }}
+                  >
+                    {gain > 0 ? `+${gain}` : gain < 0 ? `−${-gain}` : '0'}
+                  </StableText>
                 </div>
               ))}
             </div>

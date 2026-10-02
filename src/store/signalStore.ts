@@ -9,6 +9,27 @@ export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nod
 export type { ToolMode } from '../types'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
+export type Theme = 'dark' | 'light'
+
+/** The output port a wire is currently being drawn from (null when idle). */
+export interface WireSource {
+  nodeId: string
+  handleId: string
+}
+
+function getInitialTheme(): Theme {
+  const stored = localStorage.getItem('lsc-theme')
+  if (stored === 'dark' || stored === 'light') return stored
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme
+}
+
+function getInitialSnapToGrid(): boolean {
+  return localStorage.getItem('lsc-snap-to-grid') !== 'false'
+}
 
 function getInitialLanguage(): Lang {
   const stored = localStorage.getItem('lsc-language')
@@ -26,18 +47,26 @@ function getInitialComplexityLevel(): ComplexityLevel {
 
 interface SignalChainStore {
   language: Lang
+  theme: Theme
+  snapToGrid: boolean
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
   activeTooltipTypeKey: string | null
+  selectedNodeId: string | null
   toolMode: ToolMode
+  wireSource: WireSource | null
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
 
   setLanguage: (lang: Lang) => void
+  setTheme: (theme: Theme) => void
+  setSnapToGrid: (on: boolean) => void
   setActiveTooltip: (id: string | null, typeKey?: string | null) => void
+  setSelectedNode: (id: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
+  setWireSource: (source: WireSource | null) => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
@@ -50,36 +79,63 @@ interface SignalChainStore {
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
 }
 
+const initialTheme = getInitialTheme()
+applyTheme(initialTheme)
+
 export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
+  theme: initialTheme,
+  snapToGrid: getInitialSnapToGrid(),
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
   activeTooltipTypeKey: null,
+  selectedNodeId: null,
   toolMode: 'select',
+  wireSource: null,
 
-  ...buildDefaultGraph(getInitialComplexityLevel()),
+  ...buildDefaultGraph(),
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
     set({ language: lang })
   },
 
+  setTheme: (theme) => {
+    localStorage.setItem('lsc-theme', theme)
+    applyTheme(theme)
+    set({ theme })
+  },
+
+  setSnapToGrid: (on) => {
+    localStorage.setItem('lsc-snap-to-grid', String(on))
+    set({ snapToGrid: on })
+  },
+
   setActiveTooltip: (id, typeKey = null) => set({ activeTooltipId: id, activeTooltipTypeKey: typeKey }),
+
+  setSelectedNode: (id) => set({ selectedNodeId: id }),
 
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
-    set({ complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null, toolMode: 'select', ...buildDefaultGraph(level) })
+    set({
+      complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
+      selectedNodeId: null, toolMode: 'select', wireSource: null, ...buildDefaultGraph(),
+    })
   },
 
-  setToolMode: (mode) => set({ toolMode: mode }),
+  setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wireSource: null } : { toolMode: mode }),
+
+  setWireSource: (source) => set({ wireSource: source }),
 
   resetAll: () =>
     set((s) => ({
       activeTooltipId: null,
       activeTooltipTypeKey: null,
+      selectedNodeId: null,
       complexityLevel: s.complexityLevel,
       toolMode: 'select',
-      ...buildDefaultGraph(s.complexityLevel),
+      wireSource: null,
+      ...buildDefaultGraph(),
     })),
 
   // ── Graph mutations ───────────────────────────────────────────────────────
@@ -89,12 +145,15 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   removeNode: (nodeId) =>
     set((s) => {
-      const target = s.nodes.find((n) => n.id === nodeId)
-      if (target?.typeKey === 'master-bus' && s.complexityLevel !== 'beginner') return {}
-
       const inEdges  = s.edges.filter((e) => e.target === nodeId)
       const outEdges = s.edges.filter((e) => e.source === nodeId)
       const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+
+      // Drop help / selection that pointed at the removed node
+      const cleared = {
+        ...(s.activeTooltipId === nodeId ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
+        ...(s.selectedNodeId === nodeId ? { selectedNodeId: null } : {}),
+      }
 
       // Bridge: if exactly one in and one out, reconnect them directly
       if (inEdges.length === 1 && outEdges.length === 1) {
@@ -105,10 +164,10 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
           target: outEdges[0].target,
           targetHandle: outEdges[0].targetHandle,
         }
-        return { nodes: s.nodes.filter((n) => n.id !== nodeId), edges: [...filteredEdges, bridge] }
+        return { ...cleared, nodes: s.nodes.filter((n) => n.id !== nodeId), edges: [...filteredEdges, bridge] }
       }
 
-      return { nodes: s.nodes.filter((n) => n.id !== nodeId), edges: filteredEdges }
+      return { ...cleared, nodes: s.nodes.filter((n) => n.id !== nodeId), edges: filteredEdges }
     }),
 
   updateNodeParams: (nodeId, patch) =>

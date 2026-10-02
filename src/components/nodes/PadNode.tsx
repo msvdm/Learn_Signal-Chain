@@ -32,7 +32,7 @@ export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
           fontFamily: 'var(--lsc-font-mono)',
           background: engaged ? 'var(--signal-hot-bg)' : 'var(--lsc-sunken)',
           border: `1px solid ${engaged ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
-          color: engaged ? 'var(--signal-hot)' : 'var(--lsc-text)',
+          color: engaged ? 'var(--signal-hot)' : 'var(--lsc-fg)',
           opacity: engaged ? 1 : 0.55,
           cursor: 'pointer',
         }}

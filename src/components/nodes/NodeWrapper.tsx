@@ -1,238 +1,249 @@
-import { useState } from 'react'
 import type { ReactNode, CSSProperties } from 'react'
-import { Handle, Position } from '@xyflow/react'
-import { Power, X, HelpCircle } from 'lucide-react'
+import { Power, X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
+import { nodeAcceptsWire, portIsFree } from '../../utils/connectionRules'
+import { HEADER_H, PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
+import { NodePort } from './NodePort'
 
-// Sources and passive speaker — no bypass, no remove button
-const PROTECTED_TYPES = new Set(['mic', 'line-in', 'instrument', 'speaker'])
-// These nodes can be removed but bypassing them makes no sense
-const NO_BYPASS_TYPES = new Set(['amp', 'master-bus', 'active-speaker', 'audio-interface'])
+// Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
+const NO_BYPASS_TYPES = new Set([
+  'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
+  'fader', 'switch', 'potentiometer', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
+  'master-bus', 'audio-interface',
+])
+
+// Inputs are created at runtime (one per connected channel + one free slot)
+const DYNAMIC_INPUT_TYPES = new Set(['master-bus', 'mono-bus', 'stereo-bus', 'audio-interface'])
 
 interface NodeWrapperProps {
   nodeId: string
   typeKey: string
   icon: ReactNode
   label: string
+  /** Kept for API compatibility with older node components; no longer drawn. */
   accentColor?: string
   children?: ReactNode
+  /** Ports the node renders itself (dynamic bus inputs). Registry inputs are then skipped. */
+  customInputs?: ReactNode
+  /** Number of custom input ports, so the card grows tall enough to hold them. */
+  customInputCount?: number
+  /** Horizontal alignment of the body content. */
+  align?: 'stretch' | 'start' | 'center'
   className?: string
   style?: CSSProperties
 }
 
+/**
+ * The single card shell every node uses.
+ * Width follows the content (controls, graphs); text wraps to fit.
+ * The 56px header keeps the first port line at the same height on every card,
+ * so wires between cards stay straight no matter how tall each card is.
+ */
 export function NodeWrapper({
   nodeId,
   typeKey,
   icon,
   label,
-  accentColor,
   children,
+  customInputs,
+  customInputCount,
+  align = 'stretch',
   className = '',
   style,
 }: NodeWrapperProps) {
-  const setActiveTooltip    = useSignalStore((s) => s.setActiveTooltip)
-  const activeTooltipId     = useSignalStore((s) => s.activeTooltipId)
-  const toggleBypassNode    = useSignalStore((s) => s.toggleBypassNode)
-  const removeNode          = useSignalStore((s) => s.removeNode)
-  const removeEdge          = useSignalStore((s) => s.removeEdge)
-  const complexityLevel     = useSignalStore((s) => s.complexityLevel)
-  const toolMode            = useSignalStore((s) => s.toolMode)
-  const graphEdges          = useSignalStore((s) => s.edges)
-  const { t }               = useTranslation()
+  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
+  const setSelectedNode  = useSignalStore((s) => s.setSelectedNode)
+  const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
+  const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
+  const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
+  const removeNode       = useSignalStore((s) => s.removeNode)
+  const wireSource       = useSignalStore((s) => s.wireSource)
+  const edges            = useSignalStore((s) => s.edges)
+  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
+  const { t, fmt }       = useTranslation()
 
-  const [hoveredHandle, setHoveredHandle] = useState<string | null>(null)
-
-  const isBypassed  = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId)?.bypassed ?? false)
-  // master-bus is non-removable in intermediate/advanced (it's the fixed anchor)
-  const isProtected = PROTECTED_TYPES.has(typeKey) ||
-    (typeKey === 'master-bus' && complexityLevel !== 'beginner')
-  const isNoBypass  = NO_BYPASS_TYPES.has(typeKey)
-  const hasTooltip  = Boolean(t.theory[typeKey])
+  const isBypassed = node?.bypassed ?? false
+  const canBypass  = !NO_BYPASS_TYPES.has(typeKey)
+  const hasHelp    = Boolean(t.theory[typeKey])
+  const helpOpen   = activeTooltipId === nodeId
+  const selected   = selectedNodeId === nodeId || helpOpen
 
   const def     = NODE_REGISTRY[typeKey]
-  const inputs  = def?.inputs ?? []
+  const inputs  = customInputs ? [] : (def?.inputs ?? [])
   const outputs = def?.outputs ?? []
 
-  const borderAccent = accentColor
-    ? `3px solid ${isBypassed ? 'var(--signal-hot)' : accentColor}`
-    : `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`
+  // Tall enough for the longest stack of ports
+  const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
+  const minHeight = PORT_TOP + (portRows - 1) * PORT_GAP + 24
 
-  // Edges connected to a given handle on this node
-  function edgesOnHandle(portId: string, type: 'source' | 'target') {
-    return type === 'source'
-      ? graphEdges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
-      : graphEdges.filter((e) => e.target === nodeId && e.targetHandle === portId)
-  }
+  // While a wire is being drawn, label this card if it can take the wire
+  const hasFreeInput = DYNAMIC_INPUT_TYPES.has(typeKey) ||
+    inputs.some((p) => portIsFree(nodeId, p.id, edges))
+  const isWireTarget = wireSource !== null && node !== undefined && hasFreeInput &&
+    nodeAcceptsWire(node, wireSource, edges)
 
-  // Render a delete X for a hovered handle that has connections
-  function HandleDeleteBtn({
-    portId,
-    handleType,
-    topPct,
-    side,
-  }: { portId: string; handleType: 'source' | 'target'; topPct: string; side: 'left' | 'right' }) {
-    if (toolMode !== 'select') return null
-    if (hoveredHandle !== portId) return null
-    const connected = edgesOnHandle(portId, handleType)
-    if (connected.length === 0) return null
-    return (
-      <button
-        className="nodrag nopan lsc-handle-delete"
-        style={{
-          position: 'absolute',
-          top: topPct,
-          [side]: -22,
-          transform: 'translateY(-50%)',
-        }}
-        title="Remove connection"
-        onClick={() => connected.forEach((e) => removeEdge(e.id))}
-      >
-        ×
-      </button>
-    )
+  const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
+
+  function toggleHelp() {
+    if (helpOpen) {
+      setActiveTooltip(null, null)
+    } else {
+      setActiveTooltip(nodeId, typeKey)
+      setSelectedNode(nodeId)
+    }
   }
 
   return (
     <div
-      className={`relative w-52 select-none cursor-default ${className}`}
+      className={`lsc-node-card select-none ${selected ? 'lsc-selected' : ''} ${className}`}
       style={{
+        position: 'relative',
+        width: 'max-content',
+        minWidth: 160,
+        minHeight,
+        display: 'flex',
+        flexDirection: 'column',
         background: 'var(--lsc-node-bg)',
-        border: `1px solid ${isBypassed ? 'var(--signal-hot)' : 'var(--lsc-border)'}`,
-        borderLeft: borderAccent,
+        border: `1px solid ${borderColor}`,
         borderRadius: 'var(--lsc-radius-lg)',
-        boxShadow: activeTooltipId === nodeId
-          ? '0 0 0 2px var(--lsc-accent)'
+        boxShadow: selected
+          ? '0 0 0 3px var(--lsc-accent-bg), var(--lsc-shadow-node)'
           : 'var(--lsc-shadow-node)',
-        transition: 'border-color 0.15s',
+        color: 'var(--lsc-fg)',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
         pointerEvents: 'auto',
         ...style,
       }}
     >
-      {/* Input handles — visible colored dots on the left */}
-      {inputs.map((port, i) => {
-        const topPct = inputs.length === 1 ? '50%' : `${((i + 1) / (inputs.length + 1)) * 100}%`
-        return (
-          <span key={port.id}>
-            <Handle
-              id={port.id}
-              type="target"
-              position={Position.Left}
-              title={port.label}
-              style={{
-                top: topPct,
-                width: 10, height: 10,
-                background: 'var(--lsc-border)',
-                border: '2px solid var(--lsc-node-bg)',
-                borderRadius: '50%',
-                cursor: 'crosshair',
-              }}
-              onMouseEnter={() => setHoveredHandle(port.id)}
-              onMouseLeave={() => setHoveredHandle(null)}
-            />
-            <HandleDeleteBtn
-              portId={port.id}
-              handleType="target"
-              topPct={topPct}
-              side="left"
-            />
-          </span>
-        )
-      })}
+      {/* "{Node} input" label while this card is a valid wire target */}
+      {isWireTarget && (
+        <span
+          style={{
+            position: 'absolute', left: -12, top: -30,
+            padding: '4px 8px', borderRadius: 6,
+            background: 'var(--lsc-accent)', color: '#fff',
+            fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}
+        >
+          {fmt(t.connecting.input, { node: label })}
+        </span>
+      )}
 
-      {/* Output handles — accent-colored dots on the right */}
-      {outputs.map((port, i) => {
-        const topPct = outputs.length === 1 ? '50%' : `${((i + 1) / (outputs.length + 1)) * 100}%`
-        return (
-          <span key={port.id}>
-            <Handle
-              id={port.id}
-              type="source"
-              position={Position.Right}
-              title={port.label}
-              style={{
-                top: topPct,
-                width: 10, height: 10,
-                background: accentColor ?? 'var(--lsc-accent)',
-                border: '2px solid var(--lsc-node-bg)',
-                borderRadius: '50%',
-                cursor: 'crosshair',
-              }}
-              onMouseEnter={() => setHoveredHandle(port.id)}
-              onMouseLeave={() => setHoveredHandle(null)}
-            />
-            <HandleDeleteBtn
-              portId={port.id}
-              handleType="source"
-              topPct={topPct}
-              side="right"
-            />
-          </span>
-        )
-      })}
+      {/* Ports */}
+      {inputs.map((port, i) => (
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
+      ))}
+      {customInputs}
+      {outputs.map((port, i) => (
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
+      ))}
 
-      {/* Header */}
+      {/* Header — fixed height keeps the port line aligned across cards */}
       <div
-        className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: '1px solid var(--lsc-border)' }}
+        style={{
+          position: 'relative',
+          minHeight: HEADER_H,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '0 10px 0 12px',
+          borderBottom: '1px solid var(--lsc-border-soft)',
+          flexShrink: 0,
+        }}
       >
-        <div className="flex items-center gap-2" style={{ color: 'var(--lsc-text)' }}>
-          <span>{icon}</span>
-          <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600, color: 'var(--lsc-text)' }}>{label}</span>
-          {isBypassed && (
-            <span
-              className="text-[var(--node-text-xs)] font-bold tracking-wide uppercase px-1 rounded"
-              style={{ background: 'var(--signal-hot)', color: '#fff', lineHeight: '1.4' }}
-            >
-              BYP
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {!isProtected && !isNoBypass && (
+        <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>{icon}</span>
+        {/* Short titles stay on one line (the card grows); long ones wrap */}
+        <span
+          style={{
+            flex: '0 1 auto', width: 'max-content', maxWidth: 132,
+            fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
+            padding: '6px 0',
+          }}
+        >
+          {label}
+        </span>
+        {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
+        {isBypassed && (
+          <span
+            style={{
+              position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
+              fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
+              padding: '0 6px', borderRadius: 9999,
+              background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
+              color: 'var(--signal-hot)',
+              border: '1px solid var(--signal-hot-border)',
+              pointerEvents: 'none',
+            }}
+          >
+            {t.nodeControls.bypassedShort}
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        {/* Help · On/Off (processing elements only) · Remove */}
+        <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {hasHelp && (
             <button
-              className="nodrag nopan transition-colors rounded"
-              title={isBypassed ? (t.nodeControls?.bypassed ?? 'Bypassed') : (t.nodeControls?.bypass ?? 'Bypass')}
+              className="lsc-node-btn"
+              title={t.tooltip.help}
+              onClick={toggleHelp}
               style={{
-                color: isBypassed ? 'var(--signal-hot)' : 'var(--lsc-text)',
-                padding: '1px 2px', cursor: 'pointer',
+                ...headerBtn,
+                fontSize: 12, fontWeight: 700,
+                borderColor: helpOpen ? 'var(--lsc-accent)' : 'var(--lsc-border)',
+                background: helpOpen ? 'var(--lsc-accent)' : 'transparent',
+                color: helpOpen ? '#fff' : 'var(--lsc-fg-muted)',
               }}
+            >
+              ?
+            </button>
+          )}
+          {canBypass && (
+            <button
+              className="lsc-node-btn"
+              title={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
+              aria-pressed={!isBypassed}
               onClick={() => toggleBypassNode(nodeId)}
+              style={{
+                ...headerBtn,
+                borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
+                background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
+                color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+              }}
             >
-              <Power size={12} />
+              <Power size={12} strokeWidth={2.5} />
             </button>
           )}
-          {!isProtected && (
-            <button
-              className="nodrag nopan transition-colors rounded"
-              title={t.nodeControls?.remove ?? 'Remove'}
-              style={{ color: 'var(--lsc-text)', padding: '1px 2px', cursor: 'pointer' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--signal-clipping)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lsc-text)')}
-              onClick={() => removeNode(nodeId)}
-            >
-              <X size={12} />
-            </button>
-          )}
-          {hasTooltip && (
-            <button
-              className="nodrag nopan transition-colors"
-              style={{ color: 'var(--lsc-text)', cursor: 'pointer' }}
-              onClick={() => setActiveTooltip(activeTooltipId === nodeId ? null : nodeId, activeTooltipId === nodeId ? null : typeKey)}
-            >
-              <HelpCircle size={13} />
-            </button>
-          )}
+          <button
+            className="lsc-node-btn lsc-node-btn-remove"
+            title={t.nodeControls.remove}
+            onClick={() => removeNode(nodeId)}
+            style={{ ...headerBtn, borderColor: 'var(--lsc-border)', background: 'transparent', color: 'var(--lsc-fg-muted)' }}
+          >
+            <X size={12} strokeWidth={2.5} />
+          </button>
         </div>
       </div>
 
-      {/* Content — dimmed when bypassed */}
-      <div className="p-3" style={{ opacity: isBypassed ? 0.5 : 1, transition: 'opacity 0.15s' }}>
+      {/* Body — dimmed when bypassed */}
+      <div
+        style={{
+          padding: '10px 12px 12px',
+          display: 'flex', flexDirection: 'column', gap: 8,
+          alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
+          opacity: isBypassed ? 0.5 : 1,
+          transition: 'opacity 0.15s',
+        }}
+      >
         {children}
       </div>
-
     </div>
   )
+}
+
+const headerBtn: CSSProperties = {
+  width: 22, height: 22, flexShrink: 0, borderRadius: 9999, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  borderWidth: 1, borderStyle: 'solid',
+  transition: 'background 0.1s, color 0.1s, border-color 0.1s',
 }

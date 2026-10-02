@@ -1,11 +1,12 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
+  Controls,
   type Edge,
   type Node as FlowNode,
+  type NodeChange,
   BackgroundVariant,
-  MarkerType,
   useReactFlow,
   useViewport,
 } from '@xyflow/react'
@@ -37,24 +38,27 @@ import { PanNode }             from './nodes/PanNode'
 import { AudioInterfaceNode }  from './nodes/AudioInterfaceNode'
 import { AdcDacNode }          from './nodes/AdcDacNode'
 import { ChainEdge }           from './ChainEdge'
+import type { ChainEdgeData }  from './ChainEdge'
+import { ConnectingToast }     from './ConnectingToast'
+import { HelpPopover }         from './Tooltip'
 
 import { useSignalStore }     from '../store/signalStore'
-import { useGraphSignal }     from '../hooks/useSignalChain'
+import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
+import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { NODE_REGISTRY }      from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
-  GRID, INLINE_TYPE_KEYS, BUS_TYPES,
-  nodeDims, resolveOverlap, snapOutOfCenter,
-  pushDownstream, pushUpstream,
-  shiftNodesLeft, shiftNodesRight,
-  enforceGap, findEdgeAtPoint, canInsertMidChain,
+  GRID, MIN_NODE_GAP, PORT_TOP,
+  nodeDims, recordMeasuredSize, resolveOverlap,
+  pushDownstream, enforceGap, findEdgeAtPoint, canInsertMidChain,
 } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/layoutHelpers'
-import { MASTER_BUS_FLOW_POS, CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND, MIN_NODE_GAP, getZone } from '../data/zoneConstants'
 import { buildWirePath } from '../utils/wirePath'
 import { wirePassesThroughNode } from '../utils/wireValidation'
+import { nodeAcceptsWire, portIsFree } from '../utils/connectionRules'
+import { useTranslation } from '../i18n/useTranslation'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -92,14 +96,6 @@ const nodeTypes = {
 
 const edgeTypes = { chain: ChainEdge }
 
-// Input limits per node type — enforced at connection time
-const INPUT_LIMITS: Record<string, number> = {
-  gain: 1, hpf: 1, eq: 1, comp: 1, fader: 1, switch: 1, amp: 1,
-  'di-box': 1, 'noise-gate': 1, limiter: 1, deesser: 1, potentiometer: 1,
-  pan: 1, adc: 1, dac: 1, 'graphic-eq': 1, speaker: 1, 'active-speaker': 1,
-  'stereo-fader': 2, balance: 2,
-}
-
 // ── Wire drawing types ─────────────────────────────────────────────────────────
 
 type WireDrawing =
@@ -115,15 +111,8 @@ type WireDrawing =
 
 // ── Pure DOM helpers ───────────────────────────────────────────────────────────
 
-/** Find the react-flow handle element at a screen point, optionally ignoring one element. */
-function handleUnder(clientX: number, clientY: number, skip?: Element | null): HTMLElement | null {
-  if (skip) {
-    const prev = (skip as HTMLElement).style.pointerEvents
-    ;(skip as HTMLElement).style.pointerEvents = 'none'
-    const els = document.elementsFromPoint(clientX, clientY)
-    ;(skip as HTMLElement).style.pointerEvents = prev
-    return (els.find((el) => el.classList.contains('react-flow__handle')) as HTMLElement) ?? null
-  }
+/** Find the react-flow handle element at a screen point. */
+function handleUnder(clientX: number, clientY: number): HTMLElement | null {
   return (
     document.elementsFromPoint(clientX, clientY)
       .find((el) => el.classList.contains('react-flow__handle')) as HTMLElement
@@ -143,23 +132,31 @@ export function SignalChain() {
   const graphEdges            = useSignalStore((s) => s.edges)
   const complexityLevel       = useSignalStore((s) => s.complexityLevel)
   const toolMode              = useSignalStore((s) => s.toolMode)
+  const snapToGrid            = useSignalStore((s) => s.snapToGrid)
+  const selectedNodeId        = useSignalStore((s) => s.selectedNodeId)
   const setToolMode           = useSignalStore((s) => s.setToolMode)
+  const setWireSource         = useSignalStore((s) => s.setWireSource)
+  const setSelectedNode       = useSignalStore((s) => s.setSelectedNode)
+  const setActiveTooltip      = useSignalStore((s) => s.setActiveTooltip)
   const addNode               = useSignalStore((s) => s.addNode)
   const addEdge               = useSignalStore((s) => s.addEdge)
   const removeEdge            = useSignalStore((s) => s.removeEdge)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
-  const { stages }            = useGraphSignal()
-  const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
+  const { stages, portSignal } = useGraphSignal()
+  const { t }                 = useTranslation()
+  const chainEmpty            = useChainEmpty()
+  const { screenToFlowPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
   const { x: vpX, y: vpY, zoom: vpZoom } = useViewport()
 
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
   const [snapPos, setSnapPos]               = useState<Pt | null>(null)
   const [wireWarning, setWireWarning]       = useState(false)
   const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
-  const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt } | null>(null)
+  const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt; w: number; h: number } | null>(null)
 
   // Mutable refs so document-level handlers always see current state
+  const wrapperRef      = useRef<HTMLDivElement>(null)
   const drawingRef      = useRef(drawing)
   drawingRef.current    = drawing
   const toolModeRef     = useRef(toolMode)
@@ -172,81 +169,107 @@ export function SignalChain() {
 
   const { reshaping, setReshaping } = useEdgeReshape(screenToFlowPosition, edgesRef, updateEdgeWaypoints)
 
-  // Cancel drawing when leaving connect mode; clear auto-revert timer
-  useEffect(() => {
-    if (toolMode !== 'connect') {
-      setDrawing({ active: false })
-      setSnapPos(null)
-      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
-    }
-  }, [toolMode])
+  /** React Flow nodes with their real rendered size (cards size themselves to content). */
+  function measuredNodes(): FlowNode[] {
+    return getNodes().map((n) => ({ ...n, measured: getInternalNode(n.id)?.measured ?? n.measured }))
+  }
 
-  // Keyboard shortcuts
+  function snap(p: Pt): Pt {
+    return snapToGrid
+      ? { x: Math.round(p.x / GRID) * GRID, y: Math.round(p.y / GRID) * GRID }
+      : { x: Math.round(p.x), y: Math.round(p.y) }
+  }
+
+  /** Top-left of a node dropped at the cursor: the cursor sits on its port line. */
+  function dropOrigin(raw: Pt): Pt {
+    return snap({ x: raw.x, y: raw.y - PORT_TOP })
+  }
+
+  // ── Wire state ──────────────────────────────────────────────────────────────
+
+  const cancelWire = useCallback(() => {
+    setDrawing({ active: false })
+    setSnapPos(null)
+    setWireWarning(false)
+  }, [])
+
+  // Share the wire's source with node cards so valid inputs can highlight themselves
+  const wireSourceNodeId   = drawing.active ? drawing.sourceNodeId : null
+  const wireSourceHandleId = drawing.active ? drawing.sourceHandleId : null
+  useEffect(() => {
+    setWireSource(wireSourceNodeId && wireSourceHandleId
+      ? { nodeId: wireSourceNodeId, handleId: wireSourceHandleId }
+      : null)
+  }, [wireSourceNodeId, wireSourceHandleId, setWireSource])
+
+  // Cancel drawing when leaving connect mode
+  useEffect(() => {
+    if (toolMode !== 'connect') cancelWire()
+  }, [toolMode, cancelWire])
+
+  // Esc cancels the wire being drawn, otherwise closes the help popover
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-      if (e.key === 's' || e.key === 'S') setToolMode('select')
-      if (e.key === 'c' || e.key === 'C' || e.key === 'l' || e.key === 'L') setToolMode('connect')
-      if (e.key === 'Escape') {
-        if (drawingRef.current.active) {
-          setDrawing({ active: false })
-          setSnapPos(null)
-        } else {
-          setToolMode('select')
-        }
-      }
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      if (drawingRef.current.active) cancelWire()
+      else setActiveTooltip(null, null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setToolMode])
+  }, [setActiveTooltip, cancelWire])
 
-  // Live cursor tracking + auto mode switching based on handle proximity
+  // The canvas follows the mouse: hovering a port switches to connect mode, moving
+  // away switches back to select mode after a short delay (never while a wire is drawn).
+  // While a wire is drawn, the cursor is tracked for the live preview instead.
   useEffect(() => {
-    function onMove(e: MouseEvent) {
-      const d = drawingRef.current
-
-      if (d.active) {
-        const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-        setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
-        const hEl = handleUnder(e.clientX, e.clientY)
-        if (hEl?.classList.contains('target')) {
-          setSnapPos(handleFlowPos(hEl, screenToFlowPosition))
-        } else {
-          setSnapPos(null)
-        }
-        const endPos = snapPos ?? flowPos
-        const allPts = [d.startPos, ...d.waypoints, endPos]
-        const nodesForValidation = graphNodesRef.current.map((n) => ({ id: n.id, position: n.position }))
-        setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId]))
-        return
-      }
-
-      // Auto-switch connect/select based on handle proximity
-      const hEl = handleUnder(e.clientX, e.clientY)
-      if (hEl) {
+    function followMouse(e: MouseEvent) {
+      // A button is held: a node, slider or the canvas is being dragged — don't switch mid-drag
+      if (e.buttons !== 0) return
+      if (handleUnder(e.clientX, e.clientY)) {
         if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
         if (toolModeRef.current === 'select') setToolMode('connect')
-      } else if (toolModeRef.current === 'connect') {
-        if (!revertTimerRef.current) {
-          revertTimerRef.current = setTimeout(() => {
-            revertTimerRef.current = null
-            if (!drawingRef.current.active) setToolMode('select')
-          }, 200)
-        }
+      } else if (toolModeRef.current === 'connect' && !revertTimerRef.current) {
+        revertTimerRef.current = setTimeout(() => {
+          revertTimerRef.current = null
+          if (!drawingRef.current.active) setToolMode('select')
+        }, 200)
       }
     }
+
+    function onMove(e: MouseEvent) {
+      const d = drawingRef.current
+      if (!d.active) { followMouse(e); return }
+      const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      setDrawing((prev) => (prev.active ? { ...prev, cursorPos: flowPos } : prev))
+      const hEl  = handleUnder(e.clientX, e.clientY)
+      const snapTo = hEl?.classList.contains('target') ? handleFlowPos(hEl, screenToFlowPosition) : null
+      setSnapPos(snapTo)
+      const allPts = [d.startPos, ...d.waypoints, snapTo ?? flowPos]
+      const nodesForValidation = graphNodesRef.current.map((n) => {
+        const m = getInternalNode(n.id)?.measured
+        return { id: n.id, position: n.position, width: m?.width, height: m?.height }
+      })
+      setWireWarning(wirePassesThroughNode(allPts, nodesForValidation, [d.sourceNodeId]))
+    }
     document.addEventListener('mousemove', onMove)
-    return () => document.removeEventListener('mousemove', onMove)
-  }, [screenToFlowPosition, setToolMode])
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
+    }
+  }, [screenToFlowPosition, getInternalNode, setToolMode])
 
   // Click interception — capture phase fires before React Flow's own handlers
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (toolModeRef.current !== 'connect') return
       if (e.button !== 0) return
+      const targetEl = e.target as Element
+      // Only clicks on the canvas itself — not the palette, header or popovers
+      if (!wrapperRef.current?.contains(targetEl)) return
+      if (targetEl.closest('.lsc-overlay')) return
 
-      // Check if a reshape handle (waypoint drag circle) is under the cursor
+      // A reshape handle (waypoint drag circle) under the cursor — in either mode
       const reshapeEl = document.elementsFromPoint(e.clientX, e.clientY)
         .find((el) => el.classList.contains('lsc-reshape-handle')) as Element | null
       if (reshapeEl) {
@@ -259,6 +282,8 @@ export function SignalChain() {
         setReshaping({ edgeId, waypointIndex, segmentIndex, inserting, livePos: fp })
         return
       }
+
+      if (toolModeRef.current !== 'connect') return
 
       const d       = drawingRef.current
       const hEl     = handleUnder(e.clientX, e.clientY)
@@ -275,50 +300,44 @@ export function SignalChain() {
             waypoints: [],
             cursorPos: flowPos,
           })
+        } else if (hEl?.classList.contains('target')) {
+          // An input's click unplugs its wire (NodePort) — keep React Flow from starting a drag-connection
+          e.stopPropagation()
         }
         return
       }
 
-      // Wire is being drawn — intercept ALL left-clicks
+      // Wire is being drawn — intercept ALL left-clicks on the canvas
       e.stopPropagation()
 
       if (hEl?.classList.contains('target')) {
         const targetNodeId   = hEl.dataset.nodeid!
         const targetHandleId = hEl.dataset.handleid!
-        const isDup = edgesRef.current.some(
-          (edge) =>
-            edge.source       === d.sourceNodeId   &&
-            edge.sourceHandle === d.sourceHandleId &&
-            edge.target       === targetNodeId      &&
-            edge.targetHandle === targetHandleId
-        )
+        const targetNode     = graphNodesRef.current.find((n) => n.id === targetNodeId)
+        const source         = { nodeId: d.sourceNodeId, handleId: d.sourceHandleId }
 
-        if (!isDup && d.sourceNodeId !== targetNodeId) {
-          const targetTypeKey  = graphNodesRef.current.find((n) => n.id === targetNodeId)?.typeKey
-          const limit          = targetTypeKey ? INPUT_LIMITS[targetTypeKey] : undefined
-          const existingInputs = edgesRef.current.filter((e) => e.target === targetNodeId).length
+        const allowed = targetNode !== undefined &&
+          nodeAcceptsWire(targetNode, source, edgesRef.current) &&
+          portIsFree(targetNodeId, targetHandleId, edgesRef.current)
 
-          if (limit !== undefined && existingInputs >= limit) {
+        if (!allowed) {
+          if (targetNodeId !== d.sourceNodeId) {
             hEl.classList.add('lsc-handle-rejected')
             setTimeout(() => hEl.classList.remove('lsc-handle-rejected'), 600)
-            setDrawing({ active: false })
-            setSnapPos(null)
-            return
           }
-
-          addEdge({
-            id:           `e-${d.sourceNodeId}-${targetNodeId}-${Date.now()}`,
-            source:       d.sourceNodeId,
-            sourceHandle: d.sourceHandleId,
-            target:       targetNodeId,
-            targetHandle: targetHandleId,
-            waypoints:    d.waypoints.length > 0 ? d.waypoints : undefined,
-          })
-          enforceGap(d.sourceNodeId, targetNodeId, getNodes(), updateNodePosition)
+          return
         }
-        setDrawing({ active: false })
-        setSnapPos(null)
-        setWireWarning(false)
+
+        addEdge({
+          id:           `e-${d.sourceNodeId}-${targetNodeId}-${Date.now()}`,
+          source:       d.sourceNodeId,
+          sourceHandle: d.sourceHandleId,
+          target:       targetNodeId,
+          targetHandle: targetHandleId,
+          waypoints:    d.waypoints.length > 0 ? d.waypoints : undefined,
+        })
+        enforceGap(d.sourceNodeId, targetNodeId, measuredNodes(), updateNodePosition)
+        cancelWire()
         return
       }
 
@@ -344,8 +363,7 @@ export function SignalChain() {
       if (toolModeRef.current !== 'connect') return
       if (!drawingRef.current.active) return
       e.preventDefault()
-      setDrawing({ active: false })
-      setSnapPos(null)
+      cancelWire()
     }
 
     document.addEventListener('mousedown', onDown, true)
@@ -354,7 +372,18 @@ export function SignalChain() {
       document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('contextmenu', onContext, true)
     }
-  }, [screenToFlowPosition, addEdge, getNodes, updateNodePosition, setReshaping])
+  // measuredNodes reads React Flow's live state each call
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenToFlowPosition, addEdge, updateNodePosition, setReshaping])
+
+  // ── Camera ──────────────────────────────────────────────────────────────────
+
+  // A blank canvas (start, Reset, level change, last node removed) shows 100% zoom
+  useEffect(() => {
+    if (chainEmpty) setViewport({ x: 0, y: 0, zoom: 1 })
+  }, [chainEmpty, setViewport])
+
+  // ── Drag & drop from the palette ────────────────────────────────────────────
 
   function onDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -362,18 +391,7 @@ export function SignalChain() {
     const typeKey = activeDragTypeKey
     if (!typeKey) return
     const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const { w } = nodeDims(typeKey)
-    let pos = {
-      x: Math.round(raw.x / GRID) * GRID,
-      y: Math.round(raw.y / GRID) * GRID,
-    }
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(typeKey) && notBeginner) {
-      pos.x = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, pos.x))
-    } else {
-      pos = snapOutOfCenter(pos, w, notBeginner)
-    }
-    setDropPreview({ typeKey, pos })
+    setDropPreview({ typeKey, pos: dropOrigin(raw) })
   }
 
   function onDragLeave(e: React.DragEvent) {
@@ -389,18 +407,15 @@ export function SignalChain() {
     if (!typeKey) return
     const def = NODE_REGISTRY[typeKey]
     if (!def) return
-    const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const snapped = {
-      x: Math.round(raw.x / GRID) * GRID,
-      y: Math.round(raw.y / GRID) * GRID,
-    }
+    const raw     = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const snapped = dropOrigin(raw)
     const { w, h } = nodeDims(typeKey)
     const newId = `${typeKey}-${Date.now()}`
+    const allNodes = measuredNodes()
 
     // ── Smart edge insertion ───────────────────────────────────────────────────
     // Use graphEdges from Zustand (always in sync, unlike getEdges() which can lag)
     if (canInsertMidChain(typeKey)) {
-      const allNodes      = getNodes()
       const nodePositions = new Map(
         graphNodes.map(n => [n.id, {
           id:       n.id,
@@ -409,48 +424,26 @@ export function SignalChain() {
           measured: allNodes.find(r => r.id === n.id)?.measured,
         }])
       )
-      const hitEdge = findEdgeAtPoint(snapped, graphEdges, [...nodePositions.values()] as unknown as FlowNode[])
+      const nmNodes = [...nodePositions.values()] as unknown as FlowNode[]
+      const hitEdge = findEdgeAtPoint(raw, graphEdges, nmNodes)
 
       if (hitEdge) {
         const src = nodePositions.get(hitEdge.source)
         const tgt = nodePositions.get(hitEdge.target)
         if (src && tgt) {
-          const srcDims  = nodeDims(src.type, (src as any).measured?.width, (src as any).measured?.height)
+          const srcDims  = nodeDims(src.type, src.measured?.width, src.measured?.height)
           const srcRight = src.position.x + srcDims.w
           const tgtLeft  = tgt.position.x
-          const insertY  = Math.round(snapped.y / GRID) * GRID
+          // Top-align with the source so the wires on both sides stay straight
+          const insertY  = src.position.y
 
-          const dropZone = complexityLevel !== 'beginner'
-            ? getZone(Math.round(snapped.x / GRID) * GRID)
-            : 'right'
-
-          let insertX: number
-          if (dropZone === 'left') {
-            const maxInsertX = Math.floor((tgtLeft - w - MIN_NODE_GAP) / GRID) * GRID
-            insertX = Math.min(maxInsertX, Math.round(snapped.x / GRID) * GRID)
-          } else if (dropZone === 'center') {
-            const available = tgtLeft - srcRight
-            if (available < w + MIN_NODE_GAP * 2) return
-            insertX = Math.round(snapped.x / GRID) * GRID
-          } else {
-            const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
-            insertX = Math.max(minInsertX, Math.round(snapped.x / GRID) * GRID)
-          }
-
-          const newNodeRight = insertX + w
-          const rightGap     = tgtLeft - newNodeRight
-          const nmNodes      = [...nodePositions.values()] as unknown as FlowNode[]
-          const nm           = new Map(nmNodes.map((n) => [n.id, n]))
-
-          if (dropZone === 'left') {
-            const leftGap = insertX - srcRight
-            if (leftGap < MIN_NODE_GAP) {
-              pushUpstream(srcRight, MIN_NODE_GAP - leftGap, nmNodes, nm, updateNodePosition, newId)
-            }
-          } else if (dropZone !== 'center') {
-            if (rightGap < MIN_NODE_GAP) {
-              pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
-            }
+          // Right of the source; the target and everything after it move right to make room
+          const minInsertX = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
+          const insertX    = Math.max(minInsertX, snapped.x)
+          const rightGap   = tgtLeft - (insertX + w)
+          if (rightGap < MIN_NODE_GAP) {
+            const nm = new Map(nmNodes.map((n) => [n.id, n]))
+            pushDownstream(tgtLeft, MIN_NODE_GAP - rightGap, nmNodes, nm, updateNodePosition)
           }
 
           addNode({ id: newId, typeKey, position: { x: insertX, y: insertY }, params: { ...def.defaultParams }, bypassed: false })
@@ -458,105 +451,76 @@ export function SignalChain() {
           const ts = Date.now()
           addEdge({ id: `e-${hitEdge.source}-${newId}-${ts}`,     source: hitEdge.source, sourceHandle: hitEdge.sourceHandle, target: newId,          targetHandle: def.inputs[0].id  })
           addEdge({ id: `e-${newId}-${hitEdge.target}-${ts + 1}`, source: newId,          sourceHandle: def.outputs[0].id,   target: hitEdge.target, targetHandle: hitEdge.targetHandle })
-          setTimeout(() => fitView({ padding: 0.25, duration: 400 }), 50)
+          setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
           return
         }
       }
     }
 
     // ── Normal placement (no edge hit) ────────────────────────────────────────
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(typeKey) && notBeginner) {
-      const clampedX = Math.max(CENTER_LEFT_BOUND, Math.min(CENTER_RIGHT_BOUND - w, snapped.x))
-      const finalPos = resolveOverlap({ x: clampedX, y: snapped.y }, w, h, getNodes())
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    } else if (notBeginner) {
-      const finalPos = snapOutOfCenter(snapped, w, true)
-      const allNodes = getNodes()
-      if (getZone(finalPos.x) === 'left') {
-        shiftNodesLeft(finalPos.x, allNodes, updateNodePosition)
-      } else {
-        shiftNodesRight(finalPos.x, w, allNodes, updateNodePosition)
-      }
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    } else {
-      const finalPos = resolveOverlap(snapped, w, h, getNodes())
-      addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
-    }
+    const finalPos = resolveOverlap(snapped, w, h, allNodes)
+    addNode({ id: newId, typeKey, position: finalPos, params: { ...def.defaultParams }, bypassed: false })
   }
 
+  // ── Moving nodes ────────────────────────────────────────────────────────────
+
   function onNodeDrag(_e: React.MouseEvent, node: FlowNode) {
-    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
-    let snapped = {
-      x: Math.round(node.position.x / GRID) * GRID,
-      y: Math.round(node.position.y / GRID) * GRID,
-    }
-    if (!BUS_TYPES.has(node.type ?? '')) {
-      snapped = snapOutOfCenter(snapped, w, complexityLevel !== 'beginner')
-    }
-    const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
-    setDragNodePreview({ typeKey: node.type ?? '', pos: resolved })
+    const measured = getInternalNode(node.id)?.measured
+    const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
+    const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
+    setDragNodePreview({ typeKey: node.type ?? '', pos: resolved, w, h })
   }
 
   function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
     setDragNodePreview(null)
-    if (node.type === 'master-bus' && complexityLevel !== 'beginner') {
-      updateNodePosition(node.id, MASTER_BUS_FLOW_POS)
-      return
-    }
-    let snapped = {
-      x: Math.round(node.position.x / GRID) * GRID,
-      y: Math.round(node.position.y / GRID) * GRID,
-    }
-    const { w, h } = nodeDims(node.type ?? '', node.measured?.width, node.measured?.height)
-    const notBeginner = complexityLevel !== 'beginner'
-    if (BUS_TYPES.has(node.type ?? '') && node.type !== 'master-bus' && notBeginner) {
-      // Center-zone buses move vertically only — restore original X
-      const originalX = graphNodes.find((n) => n.id === node.id)?.position.x ?? snapped.x
-      snapped.x = Math.round(originalX / GRID) * GRID
-    } else if (!BUS_TYPES.has(node.type ?? '')) {
-      snapped = snapOutOfCenter(snapped, w, notBeginner)
-    }
-    const resolved = resolveOverlap(snapped, w, h, getNodes(), node.id)
+    const measured = getInternalNode(node.id)?.measured
+    const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
+    const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
     updateNodePosition(node.id, resolved)
   }
+
+  // Selection + size bookkeeping. Positions stay owned by the store (drag commits on stop).
+  function onNodesChange(changes: NodeChange[]) {
+    for (const c of changes) {
+      if (c.type === 'select') {
+        if (c.selected) setSelectedNode(c.id)
+        else if (useSignalStore.getState().selectedNodeId === c.id) setSelectedNode(null)
+      }
+      if (c.type === 'dimensions' && c.dimensions) {
+        const typeKey = graphNodesRef.current.find((n) => n.id === c.id)?.typeKey
+        if (typeKey) recordMeasuredSize(typeKey, c.dimensions.width, c.dimensions.height)
+      }
+    }
+  }
+
+  // ── Display models ──────────────────────────────────────────────────────────
 
   const displayNodes: FlowNode[] = useMemo(
     () =>
       graphNodes.map((node) => ({
-        id:       node.id,
-        type:     node.typeKey,
-        position: node.position,
-        draggable: !(node.typeKey === 'master-bus' && complexityLevel !== 'beginner'),
-        data:     { color: node.color, label: node.label, typeKey: node.typeKey },
+        id:        node.id,
+        type:      node.typeKey,
+        position:  node.position,
+        selected:  node.id === selectedNodeId,
+        data:      { color: node.color, label: node.label, typeKey: node.typeKey },
       })),
-    [graphNodes, complexityLevel]
+    [graphNodes, selectedNodeId]
   )
 
   const displayEdges: Edge[] = useMemo(() => {
-    // Stagger parallel edges sharing the same target so elbow points separate
-    const edgesByTarget = new Map<string, string[]>()
-    for (const e of graphEdges) {
-      const arr = edgesByTarget.get(e.target) ?? []
-      arr.push(e.id)
-      edgesByTarget.set(e.target, arr)
-    }
-
     const nodesForValidation = graphNodes.map((n) => ({ id: n.id, position: n.position }))
 
     return graphEdges.map((edge) => {
       const sourceStage = stages[edge.source]
-      const healthColor = sourceStage
-        ? getHealthStyle(sourceStage.health).color
-        : 'var(--lsc-text)'
-
-      const siblings      = edgesByTarget.get(edge.target) ?? [edge.id]
-      const idx           = siblings.indexOf(edge.id)
-      const centerXOffset = (idx - (siblings.length - 1) / 2) * 20
+      const db          = portSignal.get(`${edge.source}:${edge.sourceHandle}`) ?? sourceStage?.out ?? -Infinity
+      const health      = sourceStage ? getHealth(db) : null
+      const style       = health ? getHealthStyle(health) : null
 
       const routingWarning = (edge.waypoints?.length ?? 0) > 0
         ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
         : false
+
+      const data: ChainEdgeData = { waypoints: edge.waypoints, routingWarning }
 
       return {
         id:           edge.id,
@@ -566,29 +530,48 @@ export function SignalChain() {
         targetHandle: edge.targetHandle,
         type:         'chain',
         animated:     false,
-        style:        { stroke: healthColor, strokeWidth: 3 },
-        markerEnd:    { type: MarkerType.ArrowClosed, color: healthColor, width: 18, height: 18 },
-        data:         { centerXOffset, waypoints: edge.waypoints, routingWarning },
+        style:        { stroke: style?.color ?? 'var(--lsc-border)', strokeWidth: 3 },
+        data,
       }
     })
-  }, [graphEdges, stages, graphNodes])
+  }, [graphEdges, stages, portSignal, graphNodes])
 
   // Build live wire preview path
   const wirePath = (() => {
     if (!drawing.active) return null
     const endPos = snapPos ?? drawing.cursorPos
-    const allPts = [drawing.startPos, ...drawing.waypoints, endPos]
-    return buildWirePath(allPts)
+    return buildWirePath([drawing.startPos, ...drawing.waypoints, endPos])
   })()
 
-  const sw   = 2 / vpZoom
+  const sw   = 2.5 / vpZoom
   const dash = `${6 / vpZoom} ${4 / vpZoom}`
 
+  const wireSourceLabel = (() => {
+    if (!drawing.active) return ''
+    const src = graphNodes.find((n) => n.id === drawing.sourceNodeId)
+    return src ? (t.palette.items[src.typeKey] ?? src.typeKey) : ''
+  })()
+
+  // Zoom control tooltips follow the app language
+  const ariaLabelConfig = useMemo(() => ({
+    'controls.ariaLabel':         t.toolbar.zoom,
+    'controls.zoomIn.ariaLabel':  t.toolbar.zoomIn,
+    'controls.zoomOut.ariaLabel': t.toolbar.zoomOut,
+    'controls.fitView.ariaLabel': t.toolbar.zoomFit,
+  }), [t])
+
+  const ghost = dropPreview
+    ? { pos: dropPreview.pos, ...nodeDims(dropPreview.typeKey) }
+    : dragNodePreview
+
+  const wrapperClass = [
+    'w-full h-full relative',
+    toolMode === 'connect' ? 'lsc-connect-mode' : '',
+    drawing.active ? 'lsc-wiring' : '',
+  ].join(' ')
+
   return (
-    <div
-      className={`w-full h-full relative ${toolMode === 'connect' ? 'lsc-connect-mode' : ''}`}
-      onDragLeave={onDragLeave}
-    >
+    <div ref={wrapperRef} className={wrapperClass} onDragLeave={onDragLeave}>
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
@@ -598,53 +581,41 @@ export function SignalChain() {
         nodesConnectable={false}
         elementsSelectable={toolMode === 'select'}
         panOnDrag={toolMode === 'select'}
-        nodeOrigin={[0, 0.5]}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
+        nodeOrigin={[0, 0]}
         minZoom={0.15}
         maxZoom={2}
         proOptions={{ hideAttribution: false }}
+        ariaLabelConfig={ariaLabelConfig}
         style={{ background: 'var(--lsc-canvas)' }}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onNodesChange={onNodesChange}
+        onPaneClick={() => {
+          if (toolModeRef.current !== 'select') return
+          setSelectedNode(null)
+          setActiveTooltip(null, null)
+        }}
         onEdgesDelete={(eds) => eds.forEach((e) => removeEdge(e.id))}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={18}
-          size={1}
-          color="var(--lsc-grid)"
+        {snapToGrid && (
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={GRID}
+            size={2.4}
+            color="var(--lsc-grid)"
+          />
+        )}
+        <Controls
+          position="bottom-left"
+          showInteractive={false}
+          fitViewOptions={{ padding: 0.2, maxZoom: 1, duration: 300 }}
         />
       </ReactFlow>
 
-      {/* Zone dividers — visible in intermediate/advanced modes */}
+      {/* Reshape overlay — waypoint drag handles (intermediate/advanced) */}
       {complexityLevel !== 'beginner' && (
-        <svg
-          style={{
-            position: 'absolute', top: 0, left: 0,
-            width: '100%', height: '100%',
-            pointerEvents: 'none',
-            zIndex: 50,
-            overflow: 'visible',
-          }}
-        >
-          <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
-            <line
-              x1={CENTER_LEFT_BOUND}  y1={-10000} x2={CENTER_LEFT_BOUND}  y2={10000}
-              stroke="var(--lsc-text)" strokeWidth={1 / vpZoom} opacity={0.25}
-            />
-            <line
-              x1={CENTER_RIGHT_BOUND} y1={-10000} x2={CENTER_RIGHT_BOUND} y2={10000}
-              stroke="var(--lsc-text)" strokeWidth={1 / vpZoom} opacity={0.25}
-            />
-          </g>
-        </svg>
-      )}
-
-      {/* Reshape overlay — waypoint drag handles (connect mode, intermediate/advanced) */}
-      {toolMode === 'connect' && complexityLevel !== 'beginner' && (
         <svg
           style={{
             position: 'absolute', top: 0, left: 0,
@@ -726,24 +697,23 @@ export function SignalChain() {
               stroke={wireWarning ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
               strokeWidth={sw}
               strokeDasharray={dash}
-              strokeLinecap="square"
+              strokeLinecap="round"
             />
             {snapPos && (
               <circle
                 cx={snapPos.x} cy={snapPos.y}
-                r={7 / vpZoom}
+                r={11 / vpZoom}
                 fill="none"
                 stroke={wireWarning ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
-                strokeWidth={sw}
+                strokeWidth={2 / vpZoom}
               />
             )}
             {drawing.active && drawing.waypoints.map((wp, i) => (
               <circle
                 key={i}
                 cx={wp.x} cy={wp.y}
-                r={3 / vpZoom}
+                r={4 / vpZoom}
                 fill="var(--lsc-accent)"
-                opacity={0.6}
               />
             ))}
           </g>
@@ -751,39 +721,35 @@ export function SignalChain() {
       )}
 
       {/* Ghost preview — palette drop and canvas node drag share the same look */}
-      {(dropPreview ?? dragNodePreview) && (() => {
-        const src    = (dropPreview ?? dragNodePreview)!
-        const inline = INLINE_TYPE_KEYS.has(src.typeKey)
-        const w      = inline ? 100 : 208
-        const h      = inline ? 72  : 120
-        const { x, y } = src.pos
-        return (
-          <svg
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: '100%', height: '100%',
-              pointerEvents: 'none',
-              zIndex: 99,
-              overflow: 'visible',
-            }}
-          >
-            <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
-              <rect
-                x={x}
-                y={y - h / 2}
-                width={w}
-                height={h}
-                rx={inline ? 8 : 12}
-                fill="var(--lsc-accent)"
-                fillOpacity={0.15}
-                stroke="var(--lsc-accent)"
-                strokeWidth={1.5 / vpZoom}
-                strokeDasharray={`${6 / vpZoom} ${3 / vpZoom}`}
-              />
-            </g>
-          </svg>
-        )
-      })()}
+      {ghost && (
+        <svg
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none',
+            zIndex: 99,
+            overflow: 'visible',
+          }}
+        >
+          <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
+            <rect
+              x={ghost.pos.x}
+              y={ghost.pos.y}
+              width={ghost.w}
+              height={ghost.h}
+              rx={12}
+              fill="var(--lsc-accent)"
+              fillOpacity={0.12}
+              stroke="var(--lsc-accent)"
+              strokeWidth={1.5 / vpZoom}
+              strokeDasharray={`${6 / vpZoom} ${3 / vpZoom}`}
+            />
+          </g>
+        </svg>
+      )}
+
+      <HelpPopover />
+      {drawing.active && <ConnectingToast sourceLabel={wireSourceLabel} />}
     </div>
   )
 }

@@ -1,3 +1,6 @@
+import { StableText } from '../controls/StableText'
+import { widestFormat } from '../../utils/readout'
+
 interface SliderProps {
   value: number
   min: number
@@ -7,6 +10,8 @@ interface SliderProps {
   formatValue?: (v: number) => string
   onChange: (v: number) => void
   className?: string
+  /** Texts the value can show (widest first is enough). Default: worked out from min / max / step. */
+  reserve?: string[]
 }
 
 export function ControlSlider({
@@ -18,15 +23,22 @@ export function ControlSlider({
   formatValue,
   onChange,
   className = '',
+  reserve,
 }: SliderProps) {
-  const display = formatValue ? formatValue(value) : String(value)
+  const format  = formatValue ?? ((v: number) => String(v))
+  const display = format(value)
   return (
     <div className={`nodrag nopan space-y-1 ${className}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-text)' }}>{label}</span>
-        <span className="text-[var(--node-text-sm)] font-mono font-semibold" style={{ color: 'var(--lsc-text)', minWidth: '4em', textAlign: 'right', whiteSpace: 'nowrap' }}>
+      <div className="flex items-center justify-between" style={{ gap: 8 }}>
+        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+        <StableText
+          reserve={reserve ?? [widestFormat(min, max, step, format)]}
+          align="end"
+          className="text-[var(--node-text-sm)] font-mono font-bold"
+          style={{ color: 'var(--lsc-fg)' }}
+        >
           {display}
-        </span>
+        </StableText>
       </div>
       <input
         type="range"
@@ -36,7 +48,7 @@ export function ControlSlider({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
-        style={{ accentColor: 'var(--signal-good)', background: 'var(--lsc-track)' }}
+        style={{ accentColor: 'var(--lsc-accent)', background: 'var(--lsc-track)' }}
       />
     </div>
   )

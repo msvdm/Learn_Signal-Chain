@@ -1,54 +1,48 @@
 import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
-import { CENTER_LEFT_BOUND, CENTER_RIGHT_BOUND, MIN_NODE_GAP, getZone } from '../data/zoneConstants'
 
 export type Pt = { x: number; y: number }
 
 export const GRID = 36
 
-export const INLINE_TYPE_KEYS = new Set([
-  'mic', 'line-in', 'instrument', 'fader', 'switch', 'potentiometer', 'speaker',
-  'gain', 'adc', 'dac',
-])
+// Minimum clearance between any two nodes, in all directions.
+export const MIN_NODE_GAP = 100
+
+// ── Card geometry ──────────────────────────────────────────────────────────────
+// Every node card shares the same header height and port line, so wires between
+// cards stay straight no matter how tall each card is.
+export const HEADER_H = 56
+export const PORT_TOP = 28   // first port centre, measured from the card top
+export const PORT_GAP = 24   // spacing between stacked ports on the same side
 
 /**
- * Default rendered widths per node type.
- * Used as fallback when React Flow has not yet measured a node (always the case
- * for a node about to be dropped). For existing nodes, measured.width takes precedence.
- * EQ uses 600 (advanced 4-band layout) as the conservative upper bound.
+ * Size of a node that React Flow has not measured yet (a node about to be dropped).
+ * Nodes size themselves to their content, so there is no per-type table: once any
+ * node of a type has been measured its real size is remembered and used instead.
  */
-export const NODE_DEFAULT_W: Record<string, number> = {
-  'mic': 100, 'line-in': 100, 'instrument': 100,
-  'fader': 100, 'switch': 100, 'potentiometer': 100, 'speaker': 100,
-  'gain': 100, 'adc': 100, 'dac': 100,
-  'relay': 130, 'pan': 130,
-  'hpf': 140,
-  'eq': 600,
-  'graphic-eq': 340,
-  'di-box': 208, 'noise-gate': 220, 'limiter': 208, 'deesser': 208,
-  'amp': 208, 'comp': 220, 'master-bus': 208,
-  'mono-bus': 208, 'stereo-bus': 208, 'stereo-fader': 208, 'balance': 208,
-  'audio-interface': 208, 'active-speaker': 208,
-}
+const FALLBACK_SIZE = { w: 160, h: 120 }
+const measuredSizeByType = new Map<string, { w: number; h: number }>()
 
-export const BUS_TYPES = new Set(['mono-bus', 'stereo-bus', 'master-bus'])
+export function recordMeasuredSize(typeKey: string, w: number, h: number) {
+  if (w > 0 && h > 0) measuredSizeByType.set(typeKey, { w, h })
+}
 
 export const HIT_THRESHOLD = 48
 
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
 export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
-  const inline = INLINE_TYPE_KEYS.has(typeKey)
+  const known = measuredSizeByType.get(typeKey) ?? FALLBACK_SIZE
   return {
-    w: measuredW ?? NODE_DEFAULT_W[typeKey] ?? (inline ? 100 : 208),
-    h: measuredH ?? (inline ? 72 : 120),
+    w: measuredW ?? known.w,
+    h: measuredH ?? known.h,
   }
 }
 
-// nodeOrigin=[0,0.5]: position is the left edge, vertical center
+// nodeOrigin=[0,0]: position is the top-left corner
 function nodeRect(pos: Pt, w: number, h: number) {
-  return { left: pos.x, right: pos.x + w, top: pos.y - h / 2, bottom: pos.y + h / 2 }
+  return { left: pos.x, right: pos.x + w, top: pos.y, bottom: pos.y + h }
 }
 
 // PAD = MIN_NODE_GAP / 2 so clearance between any two rects ≥ MIN_NODE_GAP in both axes.
@@ -90,22 +84,9 @@ export function resolveOverlap(
   return cur
 }
 
-/** Snap a non-bus node out of the center zone to the nearest zone boundary. */
-export function snapOutOfCenter(pos: Pt, w: number, isAdvancedOrIntermediate: boolean): Pt {
-  if (!isAdvancedOrIntermediate) return pos
-  if (getZone(pos.x) !== 'center') return pos
-  const nodeMidX  = pos.x + w / 2
-  const centerMidX = (CENTER_LEFT_BOUND + CENTER_RIGHT_BOUND) / 2
-  if (nodeMidX <= centerMidX) {
-    return { ...pos, x: Math.floor((CENTER_LEFT_BOUND - w) / GRID) * GRID }
-  } else {
-    return { ...pos, x: Math.ceil(CENTER_RIGHT_BOUND / GRID) * GRID }
-  }
-}
+// ── Push helpers ───────────────────────────────────────────────────────────────
 
-// ── Zone push helpers ──────────────────────────────────────────────────────────
-
-/** Push every non-bus node at or after fromX rightward by amount (grid-snapped). */
+/** Push every node at or after fromX rightward by amount (grid-snapped). */
 export function pushDownstream(
   fromX: number,
   amount: number,
@@ -115,76 +96,10 @@ export function pushDownstream(
 ) {
   const snapped = Math.ceil(amount / GRID) * GRID
   for (const n of nodes) {
-    if (BUS_TYPES.has(n.type ?? '')) continue
     if (n.position.x >= fromX - GRID / 2) {
       const newPos = { x: n.position.x + snapped, y: n.position.y }
       nodeMap.set(n.id, { ...n, position: newPos })
       updatePos(n.id, newPos)
-    }
-  }
-}
-
-/** Push every non-bus node ending at or before fromX leftward by amount (grid-snapped). */
-export function pushUpstream(
-  fromX: number,
-  amount: number,
-  nodes: FlowNode[],
-  nodeMap: Map<string, FlowNode>,
-  updatePos: (id: string, pos: Pt) => void,
-  skipId?: string,
-) {
-  const snapped = Math.ceil(amount / GRID) * GRID
-  for (const n of nodes) {
-    if (n.id === skipId) continue
-    if (BUS_TYPES.has(n.type ?? '')) continue
-    const dims = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-    if (n.position.x + dims.w <= fromX + GRID / 2) {
-      const newPos = { x: n.position.x - snapped, y: n.position.y }
-      nodeMap.set(n.id, { ...n, position: newPos })
-      updatePos(n.id, newPos)
-    }
-  }
-}
-
-/** Push nodes leftward to clear space for a new node landing at newNodeX.
- *  Only considers nodes that start to the LEFT of newNodeX — nodes to the right are unaffected. */
-export function shiftNodesLeft(
-  newNodeX: number,
-  nodes: FlowNode[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  const targets = [...nodes]
-    .filter(n => !BUS_TYPES.has(n.type ?? '') && n.position.x < newNodeX)
-    .sort((a, b) => b.position.x - a.position.x)
-  let clearBefore = newNodeX - MIN_NODE_GAP
-  for (const n of targets) {
-    const nd = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-    if (n.position.x + nd.w > clearBefore) {
-      const newX = Math.floor((clearBefore - nd.w) / GRID) * GRID
-      updatePos(n.id, { x: newX, y: n.position.y })
-      clearBefore = newX - MIN_NODE_GAP
-    }
-  }
-}
-
-/** Push nodes rightward to clear space for a new node at newNodeX with width newNodeW.
- *  Only considers nodes that start to the RIGHT of newNodeX — nodes to the left are unaffected. */
-export function shiftNodesRight(
-  newNodeX: number,
-  newNodeW: number,
-  nodes: FlowNode[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  const targets = [...nodes]
-    .filter(n => !BUS_TYPES.has(n.type ?? '') && n.position.x > newNodeX)
-    .sort((a, b) => a.position.x - b.position.x)
-  let clearAfter = newNodeX + newNodeW + MIN_NODE_GAP
-  for (const n of targets) {
-    if (n.position.x < clearAfter) {
-      const nd = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-      const newX = Math.ceil(clearAfter / GRID) * GRID
-      updatePos(n.id, { x: newX, y: n.position.y })
-      clearAfter = newX + nd.w + MIN_NODE_GAP
     }
   }
 }
@@ -212,7 +127,7 @@ export function enforceGap(
 /**
  * Returns the edge that "owns" the given flow-coordinate drop point.
  * Each edge owns the horizontal band between the centre of its source and target.
- * Vertical tolerance is ±HIT_THRESHOLD around both node centres.
+ * Vertical tolerance is ±HIT_THRESHOLD around both nodes' port lines.
  */
 export function findEdgeAtPoint(
   point: Pt,
@@ -229,8 +144,8 @@ export function findEdgeAtPoint(
     const srcCX = src.position.x + srcDims.w / 2
     const tgtCX = tgt.position.x + tgtDims.w / 2
     if (point.x < srcCX || point.x > tgtCX) continue
-    const minY = Math.min(src.position.y, tgt.position.y) - HIT_THRESHOLD
-    const maxY = Math.max(src.position.y, tgt.position.y) + HIT_THRESHOLD
+    const minY = Math.min(src.position.y, tgt.position.y) + PORT_TOP - HIT_THRESHOLD
+    const maxY = Math.max(src.position.y, tgt.position.y) + PORT_TOP + HIT_THRESHOLD
     if (point.y < minY || point.y > maxY) continue
     return edge
   }
