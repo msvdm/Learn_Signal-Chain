@@ -78,6 +78,7 @@
   --lsc-accent:      #6366f1;
   --lsc-accent-soft: #a5b4fc;
   --lsc-accent-bg:   rgba(99,102,241,0.14);
+  --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
 
   /* Pro tip */
   --lsc-tip:    #facc15;
@@ -136,6 +137,7 @@
   --lsc-accent:      #9a7fd4;
   --lsc-accent-soft: #b8a3de;
   --lsc-accent-bg:   rgba(154,127,212,0.08);
+  --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */
 
   /* Pro tip */
   --lsc-tip:    #d89548;

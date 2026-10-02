@@ -16,7 +16,6 @@ import { MicNode }             from './nodes/MicNode'
 import { GainNode }            from './nodes/GainNode'
 import { FaderNode }           from './nodes/FaderNode'
 import { MasterBusNode }       from './nodes/MasterBusNode'
-import { MatrixNode }          from './nodes/MatrixNode'
 import { AmpNode }             from './nodes/AmpNode'
 import { SpeakerNode }         from './nodes/SpeakerNode'
 import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
@@ -45,7 +44,7 @@ import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
-import { NODE_REGISTRY, getPorts, initialParams } from '../data/nodeRegistry'
+import { NODE_REGISTRY, getPorts, initialParams, isMatrixSource } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
@@ -75,7 +74,7 @@ const nodeTypes = {
   deesser:            DeesserNode,
   'master-bus':       MasterBusNode,
   'aux-bus':          MasterBusNode,
-  matrix:             MatrixNode,
+  'matrix-bus':       MasterBusNode,
   'audio-interface':  AudioInterfaceNode,
   hpf:                HpfNode,
   eq:                 EQNode,
@@ -149,7 +148,7 @@ export function SignalChain() {
   const addEdge               = useSignalStore((s) => s.addEdge)
   const removeEdge            = useSignalStore((s) => s.removeEdge)
   const replaceEdge           = useSignalStore((s) => s.replaceEdge)
-  const highlightEdgeId       = useSignalStore((s) => s.highlightEdgeId)
+  const highlightEdgeIds      = useSignalStore((s) => s.highlightEdgeIds)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
   const { stages, portSignal, wires } = useGraphSignal()
@@ -343,7 +342,7 @@ export function SignalChain() {
         const source         = { nodeId: d.sourceNodeId, handleId: d.sourceHandleId }
 
         const allowed = targetNode !== undefined &&
-          nodeAcceptsWire(targetNode, source, edgesRef.current) &&
+          nodeAcceptsWire(targetNode, source, edgesRef.current, graphNodesRef.current) &&
           portAcceptsWire(targetNode, targetHandleId, edgesRef.current, source)
 
         if (!allowed) {
@@ -448,6 +447,9 @@ export function SignalChain() {
     const edge  = findEdgeAtPoint(raw, graphEdges, nodes)
     const src   = edge && nodes.find((n) => n.id === edge.source)
     if (!edge || !src) return null
+    // A Matrix Bus only goes on a wire that carries a finished mix (after its fader)
+    if (typeKey === 'matrix-bus' &&
+        !isMatrixSource(edge.source, edge.sourceHandle, { nodes: graphNodes, edges: graphEdges })) return null
     const srcRight = src.position.x + nodeDims(src.type ?? '', src.measured?.width, src.measured?.height).w
     const minX     = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
     return { edge, pos: { x: Math.max(minX, dropOrigin(raw).x), y: src.position.y } }
@@ -539,11 +541,15 @@ export function SignalChain() {
 
   // ── Display models ──────────────────────────────────────────────────────────
 
-  // While a wire is pointed at in the unplug list, its chain stays lit and the rest dims
+  // While wires are pointed at (unplug list, Matrix Bus row), their chains stay lit and the rest dims
   const highlight = useMemo(() => {
-    const edge = highlightEdgeId ? graphEdges.find((e) => e.id === highlightEdgeId) : undefined
-    return edge ? chainOfEdge(edge, graphEdges) : null
-  }, [highlightEdgeId, graphEdges])
+    const chains = graphEdges.filter((e) => highlightEdgeIds.includes(e.id)).map((e) => chainOfEdge(e, graphEdges))
+    if (chains.length === 0) return null
+    return {
+      nodeIds: new Set(chains.flatMap((c) => [...c.nodeIds])),
+      edgeIds: new Set(chains.flatMap((c) => [...c.edgeIds])),
+    }
+  }, [highlightEdgeIds, graphEdges])
 
   // These objects are rebuilt on every store change. Without `measured`, React Flow treats each
   // rebuilt node as new: it hides the card until it is measured again on the next frame, and a
@@ -583,6 +589,8 @@ export function SignalChain() {
         : false
 
       const data: ChainEdgeData = { waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo' }
+      // A send into a Matrix Bus has its own colour
+      const toMatrix = graphNodes.find((n) => n.id === edge.target)?.typeKey === 'matrix-bus'
 
       return {
         id:           edge.id,
@@ -593,7 +601,7 @@ export function SignalChain() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: style?.color ?? 'var(--lsc-border)', strokeWidth: 3,
+          stroke: toMatrix ? 'var(--lsc-matrix-send)' : (style?.color ?? 'var(--lsc-border)'), strokeWidth: 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',
         },

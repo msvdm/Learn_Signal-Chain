@@ -13,7 +13,7 @@ import { NodePort } from './NodePort'
 const NO_BYPASS_TYPES = new Set([
   'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
   'fader', 'switch', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
-  'master-bus', 'matrix', 'audio-interface',
+  'master-bus', 'matrix-bus', 'audio-interface',
 ])
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
@@ -90,7 +90,7 @@ export function NodeWrapper({
 
   // While a wire is being drawn, label this card if it can take the wire
   const isWireTarget = wireSource !== null && node !== undefined &&
-    nodeAcceptsWire(node, wireSource, edges)
+    nodeAcceptsWire(node, wireSource, edges, nodes)
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
 

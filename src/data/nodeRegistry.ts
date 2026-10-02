@@ -62,15 +62,6 @@ export type SignalEdge = {
   waypoints?: { x: number; y: number }[]
 }
 
-/** Matrix size: input numbers and output numbers. */
-export const MATRIX_INPUTS  = [1, 2, 3, 4]
-export const MATRIX_OUTPUTS = [1, 2]
-
-/** Param key of one matrix knob: how much of input `i` goes to output `o`. */
-export function matrixParam(i: number, o: number): string {
-  return `x${i}${o}`
-}
-
 export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   mic: {
     typeKey: 'mic',
@@ -296,18 +287,21 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     stereo: 'optional',
     defaultParams: { faderDb: 0, stereo: false },
   },
-  matrix: {
-    typeKey: 'matrix',
-    label: 'Matrix',
-    // Makes new mixes from finished mixes. One wire per input; each output is one channel.
-    inputs: MATRIX_INPUTS.map((n) => ({ id: `in-${n}`, label: `In ${n}`, side: 'left' as const })),
-    outputs: MATRIX_OUTPUTS.map((n) => ({ id: `out-${n}`, label: `Out ${n}`, side: 'right' as const })),
+  'matrix-bus': {
+    typeKey: 'matrix-bus',
+    label: 'Matrix Bus',
+    // A bus of buses, always stereo: only finished mixes go in, after their fader — a stereo bus
+    // through its Matrix send (one stereo wire), a mono Aux Bus through its output or its fader.
+    // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
+    // A mono bus lands on both sides at full level.
+    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    outputs: [
+      { id: 'out-l', label: 'Left Out',  side: 'right' },
+      { id: 'out-r', label: 'Right Out', side: 'right' },
+    ],
     category: 'merge',
-    // x{input}{output}: how much of each input goes to each output, on an audio-taper knob
-    // (0 = off, 75 = full level, 100 = +10 dB). Every knob starts at full level.
-    defaultParams: Object.fromEntries(
-      MATRIX_INPUTS.flatMap((i) => MATRIX_OUTPUTS.map((o) => [matrixParam(i, o), 75])),
-    ),
+    stereo: 'always',
+    defaultParams: { faderDb: 0 },
   },
   'graphic-eq': {
     typeKey: 'graphic-eq',
@@ -359,7 +353,10 @@ export function initialParams(
 // ── Mono / stereo ports ────────────────────────────────────────────────────────
 
 /** Bus types whose inputs accept any number of wires (they are added together). */
-export const MULTI_WIRE_TYPES = new Set(['master-bus', 'aux-bus'])
+export const MULTI_WIRE_TYPES = new Set(['master-bus', 'aux-bus', 'matrix-bus'])
+
+/** Buses whose outputs are mixes a Matrix Bus may take. */
+export const MIX_BUS_TYPES = new Set(['master-bus', 'aux-bus'])
 
 /** True when this node's own setting is stereo (Mono | Stereo switch on, or always stereo). */
 export function isNodeStereo(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
@@ -378,7 +375,14 @@ export function portSide(portId: string): 'l' | 'r' | null {
 /** The bus output that carries the whole stereo mix while a Main Fader is attached. */
 export const MIX_PORT = 'mix'
 
+/**
+ * A stereo bus's (or its Main Fader's) send to Matrix Buses: Left and Right together on one wire,
+ * after the fader. It shows below the R output once a wire uses it.
+ */
+export const MATRIX_PORT = 'send'
+
 const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT, label: 'Mix', side: 'right' }]
+const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT, label: 'Matrix send (L + R, after the fader)', side: 'right' }
 const MAIN_FADER_OUTPUTS: NodePort[] = [
   { id: 'out-l', label: 'Left Out',  side: 'right' },
   { id: 'out-r', label: 'Right Out', side: 'right' },
@@ -397,7 +401,8 @@ export type GraphView = { nodes: SignalNode[]; edges: SignalEdge[] }
  * - a bus switched to Stereo splits its output into Left and Right;
  * - a stereo bus with a Main Fader attached has one Mix output instead
  *   (its L / R moved to the fader);
- * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs.
+ * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs;
+ * - a Matrix send output below R while a wire uses it.
  * Pass the graph so the Main Fader layout can be read from the wires.
  */
 export function getPorts(
@@ -415,6 +420,9 @@ export function getPorts(
       outputs = MIX_OUTPUTS
     } else if (node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null) {
       outputs = MAIN_FADER_OUTPUTS
+    }
+    if (graph.edges.some((e) => e.source === node.id && e.sourceHandle === MATRIX_PORT)) {
+      outputs = [...outputs, MATRIX_SEND_OUTPUT]
     }
   }
   return { inputs: def.inputs, outputs }
@@ -452,6 +460,69 @@ function findUpstream(
  */
 export function mixBusOf(faderId: string, graph: GraphView): string | null {
   return findUpstream(faderId, graph, (wire) => (wire.sourceHandle === MIX_PORT ? wire.source : null))
+}
+
+/**
+ * The Master or Aux Bus whose mix leaves this card: the bus itself, or the bus before
+ * one-input effects (a limiter, an EQ, the Main Fader …). Null when the card carries no mix.
+ */
+export function sourceBusOf(nodeId: string, graph: GraphView): string | null {
+  const seen = new Set<string>()
+  let cur = graph.nodes.find((n) => n.id === nodeId)
+  while (cur && !seen.has(cur.id)) {
+    if (MIX_BUS_TYPES.has(cur.typeKey)) return cur.id
+    const def = NODE_REGISTRY[cur.typeKey]
+    if (!def || def.stereo !== 'follow' || def.inputs.length !== 1) return null
+    seen.add(cur.id)
+    const id   = cur.id
+    const wire = graph.edges.find((e) => e.target === id)
+    cur = wire && graph.nodes.find((n) => n.id === wire.source)
+  }
+  return null
+}
+
+/**
+ * True when output `handleId` of this card may feed a Matrix Bus. Matrix sends are post-fader:
+ * - the Matrix send, or the L / R of a stereo bus or of its Main Fader (that wire becomes the
+ *   Matrix send);
+ * - a mono Aux Bus's output, straight or through its fader / effects.
+ * Never a bus's Mix output (that is before the Main Fader), a single source, or another Matrix Bus.
+ */
+export function isMatrixSource(nodeId: string, handleId: string, graph: GraphView): boolean {
+  let cur: SignalNode | undefined = graph.nodes.find((n) => n.id === nodeId)
+  if (!cur || cur.typeKey === 'matrix-bus' || handleId === MIX_PORT) return false
+  if (handleId === MATRIX_PORT || portSide(handleId) !== null) {
+    // L / R belong to a stereo bus or its Main Fader — but not a Matrix Bus's own Main Fader
+    const bus = cur.typeKey === 'fader' ? mixBusOf(cur.id, graph) : cur.id
+    return bus !== null && MIX_BUS_TYPES.has(graph.nodes.find((n) => n.id === bus)?.typeKey ?? '')
+  }
+  let port = handleId
+  const seen = new Set<string>()
+  while (cur && !seen.has(cur.id)) {
+    if (MIX_BUS_TYPES.has(cur.typeKey)) return port === 'out'
+    const def = NODE_REGISTRY[cur.typeKey]
+    if (!def || def.stereo !== 'follow' || def.inputs.length !== 1) return false
+    seen.add(cur.id)
+    const id: string = cur.id
+    const wire: SignalEdge | undefined = graph.edges.find((e) => e.target === id)
+    if (!wire) return false
+    port = wire.sourceHandle
+    cur  = graph.nodes.find((n) => n.id === wire.source)
+  }
+  return false
+}
+
+/**
+ * Which bus a wire into a Matrix Bus belongs to: one send knob per bus, so a bus's L and R
+ * wires share it. A wire that no longer carries a mix keeps a knob of its own card.
+ */
+export function matrixSendKey(wire: SignalEdge, graph: GraphView): string {
+  return sourceBusOf(wire.source, graph) ?? wire.source
+}
+
+/** Param key of a Matrix Bus send knob (`key` from matrixSendKey). */
+export function matrixSendParam(key: string): string {
+  return `send-${key}`
 }
 
 /**

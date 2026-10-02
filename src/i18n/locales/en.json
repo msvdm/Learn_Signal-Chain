@@ -212,11 +212,10 @@
       "channels": "{n} wire{s} in",
       "noChannels": "Nothing connected yet"
     },
-    "matrix": {
-      "label": "Matrix",
-      "input": "In {n}",
-      "output": "Out {n}",
-      "empty": "nothing plugged in"
+    "matrix-bus": {
+      "label": "Matrix Bus",
+      "empty": "Plug in a mix: an output of a Master Bus or an Aux Bus",
+      "sendHint": "How much of this bus goes in. Point here to light up where it comes from."
     },
     "balance": {
       "label": "Balance",
@@ -284,7 +283,7 @@
       "dac": "DAC",
       "master-bus": "Master Bus",
       "aux-bus": "Aux Bus",
-      "matrix": "Matrix",
+      "matrix-bus": "Matrix Bus",
       "audio-interface": "Audio Interface",
       "active-speaker": "Active Speaker",
       "speaker": "Speaker (passive)"
@@ -342,7 +341,7 @@
       "tip": "In a mix, most faders end up below unity. The art of mixing is in the relative balance between all channels, not in making each one as loud as possible. Fed a stereo wire, one fader moves both sides together."
     },
     "main-fader": {
-      "what": "A fader wired straight after a bus becomes its Main Fader. It controls the whole mix with one handle — left and right move together — and the bus's L and R outputs move onto it, so the speakers now hang off the fader.",
+      "what": "A fader wired straight after a bus becomes its Main Fader. It controls the whole mix with one handle — left and right move together — and the bus's L and R outputs move onto it, so the speakers now hang off the fader. Its Matrix send moves too, so Matrix Buses always get the mix after this fader.",
       "why": "This is the last level control before the speakers: it turns the whole mix up or down without changing the balance you built on the channels. One handle means left and right can never drift apart.",
       "tip": "Take a second wire from the bus's Mix output: it does not change when you move this fader, because it leaves before the fader. That is where a pre-fade listen (PFL) path starts. Effects such as a limiter may sit between the bus and this fader — it stays the Main Fader."
     },
@@ -361,10 +360,10 @@
       "why": "Use it to group sources that belong together — all backing vocals, all drums — so one control sets their combined level, or to send a separate mix to a monitor or an effect.",
       "tip": "Try this: set a Line Input to Stereo and wire it into a Mono aux bus. Left and right are added together and the level jumps by about 6 dB. That is why a stereo mix can suddenly get louder (or clip) when it is folded down to mono."
     },
-    "matrix": {
-      "what": "A matrix makes new mixes out of mixes you already have. Plug in finished mixes — the Master Bus L and R, an Aux Bus — and each knob sets how much of one input goes to one output. Every output is its own one-channel mix.",
-      "why": "Different places need different feeds: a speaker in the lobby, delay speakers at the back of a hall, a feed for a recording or a livestream. A matrix makes them all from your main mix, without touching the mix itself.",
-      "tip": "Plug Master Bus L into In 1 and R into In 2, then send both to Out 1: that is a mono feed for one speaker. It comes out about 6 dB louder when both sides carry the same sound, so turn both knobs down a little."
+    "matrix-bus": {
+      "what": "A matrix bus is a mix of your mixes. Only finished mixes go in, after their fader — the Master Bus or an Aux Bus — never a single microphone or instrument. Wire a bus's L or R output into the matrix and the wire becomes its Matrix send: one stereo wire that carries left and right together, drawn as a twin line in its own colour and marked L+R. A mono Aux Bus goes in from its output, or from the Fader after it, and lands on both sides at the same level. Each bus gets one knob on the card that sets how much of it goes in. A matrix bus is always stereo: its mix leaves on two wires, L and R.",
+      "why": "Different places need a different blend, and the main mix must not change for them: small speakers along the front edge of the stage that need more vocals, delay speakers at the back of a hall, a speaker in the lobby, a feed for a recording or a livestream. Put a Fader after it to set its overall level — that Fader becomes its Main Fader.",
+      "tip": "Try this: give the Master Bus a Main Fader, then wire the fader's L output into the matrix. Move the Main Fader: the matrix follows, because the send leaves after the fader — that is how matrix sends work on a real mixing desk. Try a microphone too: the matrix input does not light up, because a microphone is not a mix."
     },
     "balance": {
       "what": "A balance control adjusts the relative loudness between the Left and Right channels of a stereo signal. At centre, both channels pass through equally. Turning left fades out the right channel; turning right fades out the left channel.",

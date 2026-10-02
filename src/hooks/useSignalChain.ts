@@ -3,8 +3,8 @@ import { useTranslation } from '../i18n/useTranslation'
 import type { Translations } from '../i18n/translations'
 import type { SignalNode, SignalEdge, EQBand } from '../data/nodeRegistry'
 import {
-  NODE_REGISTRY, MULTI_WIRE_TYPES, MATRIX_INPUTS, MATRIX_OUTPUTS,
-  getPorts, portSide, isNodeStereo, mixBusOf, preampMicOf, matrixParam,
+  NODE_REGISTRY, MULTI_WIRE_TYPES,
+  getPorts, portSide, isNodeStereo, mixBusOf, preampMicOf, matrixSendKey, matrixSendParam,
 } from '../data/nodeRegistry'
 import { bellGain, shelfGain } from '../components/controls/eqMath'
 
@@ -103,7 +103,7 @@ export function getHealth(db: number): SignalHealth {
   return 'clipping'
 }
 
-// Audio-taper knob position (0–100), used by the Matrix knobs.
+// Audio-taper knob position (0–100), used by the Matrix Bus send knobs.
 // 0 = fully CCW → −∞,  75 = unity (0 dB),  100 = fully CW (+10 dB).
 // Below unity: log taper (−60 dB/octave feel). Above unity: linear boost to +10 dB.
 export function taperToDb(position: number): number {
@@ -228,7 +228,7 @@ function computeGraphNode(
   const domain = inputDomain // most nodes pass domain through unchanged
 
   // Domain mismatch in bus nodes — cannot sum analog and digital signals
-  if (domainMismatch && (MULTI_WIRE_TYPES.has(node.typeKey) || node.typeKey === 'audio-interface' || node.typeKey === 'matrix')) {
+  if (domainMismatch && (MULTI_WIRE_TYPES.has(node.typeKey) || node.typeKey === 'audio-interface')) {
     return { out: -Infinity, health: 'too-quiet', domain, warning: 'domainMixedBus' }
   }
 
@@ -343,24 +343,12 @@ function computeGraphNode(
     }
     case 'master-bus':
     case 'aux-bus':
+    case 'matrix-bus':
     case 'audio-interface': {
       const summed = sumSignalsToDb(inputSignals)
       const fader = (p.faderDb as number) ?? 0
       const out = isFinite(summed) ? summed + fader : -Infinity
       return { out, health: getHealth(out), domain }
-    }
-    case 'matrix': {
-      // Each output adds up every input, each turned up or down by its own knob
-      const portOutputs: Record<string, number> = {}
-      for (const o of MATRIX_OUTPUTS) {
-        portOutputs[`out-${o}`] = sumSignalsToDb(MATRIX_INPUTS.map((i) => {
-          const knobDb = taperToDb((p[matrixParam(i, o)] as number) ?? 75)
-          const inDb   = portInputs[`in-${i}`] ?? -Infinity
-          return isFinite(knobDb) ? inDb + knobDb : -Infinity
-        }))
-      }
-      const out = Math.max(...Object.values(portOutputs))
-      return { out, health: getHealth(out), domain, portOutputs }
     }
     case 'graphic-eq': {
       const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
@@ -495,6 +483,11 @@ function computeGraphSignal(
       const preamp   = node.typeKey === 'gain' && preampMicOf(node.id, { nodes, edges }) !== null
       const stereo   = node.typeKey !== 'pan' && (isNodeStereo(node) || (follows && followKind === 'stereo'))
 
+      /** A Matrix Bus turns each bus up or down by its send knob before adding them up. */
+      const sendDb = (e: SignalEdge) => node.typeKey === 'matrix-bus'
+        ? taperToDb((node.params[matrixSendParam(matrixSendKey(e, { nodes, edges }))] as number) ?? 75)
+        : 0
+
       /**
        * Signals arriving at this node, keyed by input port.
        * side = 'l' / 'r': that side of every wire (a mono wire counts on both sides,
@@ -504,9 +497,10 @@ function computeGraphSignal(
       const inputsFor = (side: 'l' | 'r' | null) => {
         const grouped: Record<string, number[]> = {}
         for (const e of incoming) {
-          const w = wireOf(e)
+          const w    = wireOf(e)
+          const send = sendDb(e)
           if (!grouped[e.targetHandle]) grouped[e.targetHandle] = []
-          grouped[e.targetHandle].push(side ? w[side] : foldToMono(w))
+          grouped[e.targetHandle].push(isFinite(send) ? (side ? w[side] : foldToMono(w)) + send : -Infinity)
         }
         const portInputs: Record<string, number> = {}
         for (const [port, dbs] of Object.entries(grouped)) portInputs[port] = sumSignalsToDb(dbs)

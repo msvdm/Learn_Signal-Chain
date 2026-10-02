@@ -1,17 +1,24 @@
 import type { SignalNode, SignalEdge, GraphView } from '../data/nodeRegistry'
-import { MIX_PORT, isStereoBus, mixBusOf, portSide } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIX_PORT, isStereoBus, mixBusOf, portSide } from '../data/nodeRegistry'
 
 // Main Fader: a Fader wired to a stereo bus's L or R output takes over the bus's outputs.
 // The wire becomes the Mix wire (the whole stereo mix), the fader gets Left / Right outputs,
-// and every wire on the bus's L / R moves to the fader. Effects may sit between the bus's
-// Mix output and the fader. The ports themselves are read from the wires (getPorts), so
-// these functions only move wires.
+// and every wire on the bus's L / R (and its Matrix send) moves to the fader. Effects may sit
+// between the bus's Mix output and the fader.
+// Matrix send: the same idea for Matrix Buses. A stereo bus's (or Main Fader's) L or R wired to a
+// Matrix Bus becomes its Matrix send — one stereo wire, after the fader.
+// The ports themselves are read from the wires (getPorts), so these functions only move wires.
 
 /** Same two ports joined twice — keep the first. */
 function dedupe(edges: SignalEdge[]): SignalEdge[] {
   return edges.filter((e, i) => edges.findIndex((x) =>
     x.source === e.source && x.sourceHandle === e.sourceHandle &&
     x.target === e.target && x.targetHandle === e.targetHandle) === i)
+}
+
+/** An output whose wires follow the bus's mix to its Main Fader and back: L, R and the Matrix send. */
+function isBusOutput(portId: string): boolean {
+  return portSide(portId) !== null || portId === MATRIX_PORT
 }
 
 /** A wire that now starts at another card: its old bends no longer fit. */
@@ -51,8 +58,8 @@ export function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): Sign
     const side = portSide(hit.sourceHandle)
     next = next.map((e) => {
       if (e.id === hit.id) return { ...e, sourceHandle: MIX_PORT }
-      // The bus's L / R wires move to the same side of the fader
-      if (e.source === hit.source && portSide(e.sourceHandle) !== null) return moveSource(e, hit.target, e.sourceHandle)
+      // The bus's L / R wires (and its Matrix send) move to the same output of the fader
+      if (e.source === hit.source && isBusOutput(e.sourceHandle)) return moveSource(e, hit.target, e.sourceHandle)
       // What the fader already fed stays on the side its new wire came from
       if (e.source === hit.target && e.sourceHandle === 'out') return { ...e, sourceHandle: `out-${side}` }
       return e
@@ -63,10 +70,16 @@ export function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): Sign
   next = next.map((e) => {
     if (byId.get(e.source)?.typeKey !== 'fader') return e
     const isMain = main.has(e.source)
-    if (!isMain && portSide(e.sourceHandle) !== null) return { ...e, sourceHandle: 'out' }
+    if (!isMain && isBusOutput(e.sourceHandle)) return { ...e, sourceHandle: 'out' }
     if (isMain && e.sourceHandle === 'out') return { ...e, sourceHandle: 'out-l' }
     return e
   })
+
+  // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and
+  // Main Faders have L / R outputs, so only they get one)
+  next = next.map((e) => (byId.get(e.target)?.typeKey === 'matrix-bus' && portSide(e.sourceHandle) !== null
+    ? { ...e, sourceHandle: MATRIX_PORT }
+    : e))
   return dedupe(next)
 }
 
@@ -86,9 +99,9 @@ export function reconcileMainFaders(prev: GraphView, next: GraphView): SignalEdg
   const busOfLost  = new Map(lost)
   const orphanBus  = new Set(busOfLost.values())
   const nodeExists = (id: string) => next.nodes.some((n) => n.id === id)
-  // The lost faders' L / R wires, taken from before the change (a deleted fader has none left)
+  // The lost faders' L / R wires and Matrix send, taken from before the change (a deleted fader has none left)
   const handBack = prev.edges
-    .filter((e) => busOfLost.has(e.source) && portSide(e.sourceHandle) !== null && nodeExists(e.target))
+    .filter((e) => busOfLost.has(e.source) && isBusOutput(e.sourceHandle) && nodeExists(e.target))
     .map((e) => moveSource(e, busOfLost.get(e.source)!, e.sourceHandle))
   const handedIds = new Set(handBack.map((e) => e.id))
 

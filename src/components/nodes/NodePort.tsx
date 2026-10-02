@@ -9,6 +9,7 @@ import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
+import { MATRIX_PORT } from '../../data/nodeRegistry'
 
 interface NodePortProps {
   nodeId: string
@@ -34,7 +35,8 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wireSource)
   const removeEdge = useSignalStore((s) => s.removeEdge)
-  const node       = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
+  const nodes      = useSignalStore((s) => s.nodes)
+  const node       = nodes.find((n) => n.id === nodeId)
   const { t }      = useTranslation()
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
@@ -57,11 +59,13 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   }
 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&
-    nodeAcceptsWire(node, wireSource, edges) && portAcceptsWire(node, portId, edges, wireSource)
+    nodeAcceptsWire(node, wireSource, edges, nodes) && portAcceptsWire(node, portId, edges, wireSource)
 
   const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
   const showUnplug = canUnplug && (hovered || menuAt !== null)
-  const side       = type === 'source' ? sideLetter(wires.get(`${nodeId}:${portId}`)?.kind) : null
+  // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
+  const isSend     = type === 'source' && portId === MATRIX_PORT
+  const side       = isSend ? 'L+R' : type === 'source' ? sideLetter(wires.get(`${nodeId}:${portId}`)?.kind) : null
   const top        = PORT_TOP + index * PORT_GAP
 
   function unplug(e: React.MouseEvent) {
@@ -101,9 +105,9 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
           aria-hidden
           style={{
             // Right of the ring, just above the wire leaving it
-            position: 'absolute', top: top - 17, right: -24,
+            position: 'absolute', top: top - 17, right: isSend ? -36 : -24,
             fontSize: 10, fontWeight: 800, lineHeight: 1,
-            color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
+            color: isSend ? 'var(--lsc-matrix-send)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}
         >
           {side}

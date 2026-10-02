@@ -3,7 +3,7 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import { buildDefaultGraph } from '../data/levels'
 import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MIX_PORT, getPorts } from '../data/nodeRegistry'
+import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, getPorts } from '../data/nodeRegistry'
 import { pickChainColor } from '../utils/chainColors'
 import { attachMainFaders, reconcileMainFaders } from '../utils/mainFader'
 import type { ToolMode } from '../types'
@@ -58,8 +58,8 @@ interface SignalChainStore {
   selectedNodeId: string | null
   toolMode: ToolMode
   wireSource: WireSource | null
-  /** Wire whose chain is highlighted (hovered in the unplug list); everything else is dimmed. */
-  highlightEdgeId: string | null
+  /** Wires whose chains are highlighted (hovered in the unplug list or a Matrix Bus row); everything else is dimmed. */
+  highlightEdgeIds: string[]
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -72,7 +72,7 @@ interface SignalChainStore {
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
   setWireSource: (source: WireSource | null) => void
-  setHighlightEdge: (edgeId: string | null) => void
+  setHighlightEdges: (edgeIds: string[]) => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
@@ -101,7 +101,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   selectedNodeId: null,
   toolMode: 'select',
   wireSource: null,
-  highlightEdgeId: null,
+  highlightEdgeIds: [],
 
   ...buildDefaultGraph(),
 
@@ -137,7 +137,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setWireSource: (source) => set({ wireSource: source }),
 
-  setHighlightEdge: (edgeId) => set({ highlightEdgeId: edgeId }),
+  setHighlightEdges: (edgeIds) => set({ highlightEdgeIds: edgeIds }),
 
   resetAll: () =>
     set((s) => ({
@@ -213,12 +213,13 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       const updated = { ...node, params: { ...node.params, stereo: on } }
       const outIds  = new Set(getPorts(updated).outputs.map((p) => p.id))
 
-      // Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l';
-      // Stereo → Mono moves 'out-l', 'out-r' and a Main Fader's 'mix' back to 'out'.
+      // Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l'
+      // (into a Matrix Bus it then becomes the Matrix send); Stereo → Mono moves 'out-l', 'out-r',
+      // the Matrix send and a Main Fader's 'mix' back to 'out'.
       function remap(portId: string): string | null {
         if (outIds.has(portId)) return portId
         if (on) return outIds.has(`${portId}-l`) ? `${portId}-l` : null
-        const base = portId === MIX_PORT ? 'out' : portId.replace(/-[lr]$/, '')
+        const base = portId === MIX_PORT || portId === MATRIX_PORT ? 'out' : portId.replace(/-[lr]$/, '')
         return outIds.has(base) ? base : null
       }
 
@@ -250,14 +251,14 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   removeEdge: (edgeId) =>
     set((s) => ({
       edges: reconcileMainFaders(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) }),
-      ...(s.highlightEdgeId === edgeId ? { highlightEdgeId: null } : {}),
+      ...(s.highlightEdgeIds.includes(edgeId) ? { highlightEdgeIds: [] } : {}),
     })),
 
   // One step, so a card dropped onto a Mix wire does not unplug the Main Fader on the way
   replaceEdge: (edgeId, replacements) =>
     set((s) => ({
       edges: reconcileMainFaders(s, { nodes: s.nodes, edges: [...s.edges.filter((e) => e.id !== edgeId), ...replacements] }),
-      ...(s.highlightEdgeId === edgeId ? { highlightEdgeId: null } : {}),
+      ...(s.highlightEdgeIds.includes(edgeId) ? { highlightEdgeIds: [] } : {}),
     })),
 
   updateEdgeWaypoints: (edgeId, waypoints) =>

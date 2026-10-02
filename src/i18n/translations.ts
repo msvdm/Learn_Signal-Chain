@@ -137,8 +137,8 @@ export interface Translations {
     'aux-bus'?: { label?: string; channels?: string; noChannels?: string }
     /** A Fader wired straight after a stereo bus */
     'main-fader': { label: string }
-    /** {n} = input / output number */
-    matrix: { label: string; input: string; output: string; empty: string }
+    /** sendHint = tooltip of a send knob (one per mix plugged in) */
+    'matrix-bus': { label: string; empty: string; sendHint: string }
     balance?: { label?: string; leftLabel?: string; rightLabel?: string; centerLabel?: string }
   }
   eqCurve: { title: string; subtitle: string; band: string }

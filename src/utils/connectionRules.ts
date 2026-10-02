@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { getPorts, MULTI_WIRE_TYPES } from '../data/nodeRegistry'
+import { getPorts, isMatrixSource, MATRIX_PORT, MULTI_WIRE_TYPES } from '../data/nodeRegistry'
 import type { WireSource } from '../store/signalStore'
 
 // Inputs are created at runtime (one per connected channel + one free slot)
@@ -26,13 +26,20 @@ export function portAcceptsWire(
   return onPort.length === 0
 }
 
-/** True when a wire from `source` may end on at least one input of `targetNode`. */
+/**
+ * True when a wire from `source` may end on at least one input of `targetNode`.
+ * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a Matrix send feeds only Matrix Buses.
+ */
 export function nodeAcceptsWire(
   targetNode: TargetNode,
   source: WireSource,
   edges: SignalEdge[],
+  nodes: SignalNode[],
 ): boolean {
   if (targetNode.id === source.nodeId) return false
+  const toMatrix = targetNode.typeKey === 'matrix-bus'
+  if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
+  if (!toMatrix && source.handleId === MATRIX_PORT) return false
   if (DYNAMIC_INPUT_TYPES.has(targetNode.typeKey)) return true
   return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source))
 }

@@ -26,7 +26,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
   const nodes           = useSignalStore((s) => s.nodes)
   const edges           = useSignalStore((s) => s.edges)
   const removeEdge      = useSignalStore((s) => s.removeEdge)
-  const setHighlight    = useSignalStore((s) => s.setHighlightEdge)
+  const setHighlight    = useSignalStore((s) => s.setHighlightEdges)
   const { t, fmt }      = useTranslation()
   const { stages, wires: signals } = useGraphSignal()
   const ref             = useRef<HTMLDivElement>(null)
@@ -48,7 +48,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
     return () => {
       document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('keydown', onKey)
-      setHighlight(null)
+      setHighlight([])
     }
   }, [setHighlight])
 
@@ -74,7 +74,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
         boxShadow: 'var(--lsc-shadow-node)',
         padding: 6, fontSize: 13,
       }}
-      onMouseLeave={() => setHighlight(null)}
+      onMouseLeave={() => setHighlight([])}
     >
       <div style={{ padding: '4px 8px 2px', fontWeight: 700 }}>{t.unplugMenu.title}</div>
       <div style={{ padding: '0 8px 6px', fontSize: 12, color: 'var(--lsc-fg-muted)' }}>{t.unplugMenu.hint}</div>
@@ -93,7 +93,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
           <div
             key={wire.id}
             role="menuitem"
-            onMouseEnter={() => setHighlight(wire.id)}
+            onMouseEnter={() => setHighlight([wire.id])}
             className="lsc-unplug-row"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
