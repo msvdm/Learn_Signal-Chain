@@ -96,6 +96,7 @@
   --lsc-shadow-popup:   0 4px 24px rgba(0,0,0,0.5);
   --lsc-shadow-tooltip: 0 4px 24px rgba(0,0,0,0.5);
   --lsc-shadow-fader:   0 1px 4px rgba(0,0,0,0.5);
+  --lsc-fader-cap-rim:  rgba(255,255,255,0.22); /* outline of the solid fader cap */
 }
 
 /* ── Light theme ────────────────────────────────────────────────────────── */
@@ -160,6 +161,7 @@
   --lsc-shadow-popup:   0 2px 12px rgba(60,50,40,0.06);
   --lsc-shadow-tooltip: 0 2px 12px rgba(60,50,40,0.05);
   --lsc-shadow-fader:   0 1px 2px rgba(60,50,40,0.08);
+  --lsc-fader-cap-rim:  rgba(0,0,0,0.55);
 }
 
 * {

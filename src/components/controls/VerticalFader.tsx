@@ -1,4 +1,4 @@
-import { Fragment, useRef, useEffect } from 'react'
+import { Fragment, useRef, useEffect, useId } from 'react'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
 import { useLatestRef } from '../../hooks/useLatestRef'
@@ -24,8 +24,9 @@ export interface FaderTaper {
 const AREA_W     = 60
 const TRACK_LEFT = 8
 const TRACK_W    = 8
-const CAP_W      = 22
-const CAP_H      = 12
+// The cap: a tall solid block, like a desk fader's (the white line across it marks the value)
+const CAP_W      = 25
+const CAP_H      = 34
 const TICK_GAP   = 2
 const MARK_FONT  = 10
 
@@ -47,6 +48,8 @@ interface VerticalFaderProps {
   showReadout?: boolean
   /** Uneven scale (a desk fader's); default: even from min to max in `step`s */
   taper?: FaderTaper
+  /** Cap colour: black, or red for the Main Fader (like a desk's master fader) */
+  capColor?: 'black' | 'red'
 }
 
 export function VerticalFader({
@@ -62,6 +65,7 @@ export function VerticalFader({
   scale = 1,
   showReadout = true,
   taper,
+  capColor = 'black',
 }: VerticalFaderProps) {
   const k         = scale
   const trackLeft = TRACK_LEFT * k
@@ -69,7 +73,7 @@ export function VerticalFader({
   const capW      = CAP_W * k
   const capH      = CAP_H * k
   const capLeft   = trackLeft + trackW / 2 - capW / 2   // centres cap on track
-  const tickLeft  = trackLeft + trackW + TICK_GAP * k   // right of track + gap
+  const tickLeft  = capLeft + capW + TICK_GAP * k       // the scale starts clear of the cap
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
   // Grabbing the cap keeps the spot you hold under the pointer (no jump): pointer − cap centre
@@ -166,25 +170,16 @@ export function VerticalFader({
           )
         })}
 
-        {/* Fader cap */}
-        <div style={{
-          position: 'absolute',
-          left: capLeft, width: capW, height: capH,
-          top: `${100 - pct}%`, marginTop: -(capH / 2),
-          background: 'var(--lsc-node-bg-2)',
-          border: `${Math.max(1, Math.round(k))}px solid var(--lsc-fg-muted)`,
-          borderRadius: 2 * k,
-          boxShadow: 'var(--lsc-shadow-fader)',
-          pointerEvents: 'none',
-        }}>
-          {/* Centre line on cap */}
-          <div style={{
-            position: 'absolute', left: '50%', top: '50%',
-            width: '60%', height: Math.max(1, Math.round(k)),
-            transform: 'translate(-50%, -50%)',
-            background: 'var(--lsc-fg-muted)',
-          }} />
-        </div>
+        {/* Fader cap — its white line sits on the value */}
+        <FaderCap
+          color={capColor}
+          style={{
+            position: 'absolute',
+            left: capLeft, width: capW, height: capH,
+            top: `${100 - pct}%`, marginTop: -(capH / 2),
+            pointerEvents: 'none',
+          }}
+        />
       </div>
 
       {/* Value readout */}
@@ -201,5 +196,45 @@ export function VerticalFader({
         </span>
       </div>}
     </div>
+  )
+}
+
+// Solid cap colours: a lit top edge, the body, the dark underside, and the ridge across the middle
+const CAP_COLORS = {
+  black: { hi: '#5d6066', base: '#25262a', lo: '#09090b', ridge: '#3d3f45' },
+  red:   { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d' },
+}
+
+/** A desk fader's cap: sloped upper face, a ridge with a white line across the middle, sloped lower face. */
+function FaderCap({ color, style }: { color: 'black' | 'red'; style: React.CSSProperties }) {
+  const id = useId()
+  const c  = CAP_COLORS[color]
+  return (
+    <svg
+      viewBox="0 0 60 80"
+      preserveAspectRatio="none"
+      style={{ ...style, overflow: 'visible', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.35))' }}
+    >
+      <defs>
+        <linearGradient id={`${id}-upper`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={c.hi} />
+          <stop offset="1" stopColor={c.base} />
+        </linearGradient>
+        <linearGradient id={`${id}-lower`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={c.base} />
+          <stop offset="1" stopColor={c.lo} />
+        </linearGradient>
+      </defs>
+      {/* Body */}
+      <rect x="0" y="0" width="60" height="80" rx="6" fill={c.base} stroke="var(--lsc-fader-cap-rim)" strokeWidth="1.2" />
+      {/* Upper face, rising towards the top edge */}
+      <path d="M2,8 Q30,1 58,8 L58,35 L2,35 Z" fill={`url(#${id}-upper)`} />
+      {/* Ridge across the middle, catching the light */}
+      <rect x="1" y="35" width="58" height="10" fill={c.ridge} />
+      {/* The value line */}
+      <rect x="8" y="38.5" width="44" height="3" rx="1.5" fill="#f4f4f4" />
+      {/* Lower face, falling away into shadow */}
+      <path d="M2,45 L58,45 L58,72 Q30,79 2,72 Z" fill={`url(#${id}-lower)`} />
+    </svg>
   )
 }

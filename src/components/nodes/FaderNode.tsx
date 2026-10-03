@@ -61,6 +61,7 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
           height={FADER_H}
           scale={FADER_SCALE}
           showReadout={false}
+          capColor={main ? 'red' : 'black'}
         />
         {main && <VerticalMeterPair dbL={levels.out} dbR={levels.outR ?? levels.out} height={FADER_H} />}
       </div>
