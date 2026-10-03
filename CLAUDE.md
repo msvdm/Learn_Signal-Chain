@@ -36,12 +36,13 @@ The canvas works like a drawing app and **follows the mouse** — there is no mo
 5. **Reshape a wire** (Intermediate / Advanced) — wires with bends show drag handles on their corners and segment midpoints, in either mode.
 6. **Esc** cancels a wire in progress, otherwise closes the help popover.
 7. **Zoom** — mouse wheel / trackpad, or the React Flow `<Controls>` (zoom in / out / fit) at the bottom-left of the canvas.
+8. **Overview** — zoomed out below 55% (back above 65%: hysteresis, `OVERVIEW_ENTER_ZOOM` / `OVERVIEW_LEAVE_ZOOM` in `SignalChain.tsx`), every card swaps its controls for its name, as big as it fits, and the level leaving it (see Node card shell). Wires are drawn thicker. Wiring, dragging and unplugging work as usual.
 
 Every level starts from a **blank canvas** at 100% zoom (also after Reset, a level change or removing the last node). There is no preset layout, no fixed Master Bus and no position restrictions. Levels control which node types appear in the palette, not the graph structure.
 
 ### Header
 
-Brand · level stepper (Beginner / Intermediate / Advanced, with an in-app `ConfirmDialog` before clearing the canvas) · **Snap to grid** switch (on = snap to `GRID` + dotted background; off = free placement, no dots; text label hidden below 1200px so the header fits) · Light / Dark · language menu · Reset.
+Palette toggle (collapses the left palette to zero width, like a sidebar; persisted) · brand · level stepper (Beginner / Intermediate / Advanced, with an in-app `ConfirmDialog` before clearing the canvas) · **Snap to grid** switch (on = snap to `GRID` + dotted background; off = free placement, no dots; text label hidden below 1200px so the header fits) · Light / Dark · language menu · Reset.
 
 ### Data flow (read this first)
 
@@ -59,7 +60,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 
 | File | What it owns |
 |---|---|
-| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme` and `snapToGrid` (both persisted), `toolMode`, `selectedNodeId`, `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, `highlightEdgeIds` (chains lit up from the unplug list or a Matrix Bus row), all graph mutations incl. `setNodeStereo` and `replaceEdge` (a card dropped onto a wire, in one step) |
+| `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme`, `snapToGrid` and `paletteOpen` (all persisted), `overview` (zoomed out — set only by `SignalChain` from the zoom, not persisted; cards read this flag, never the zoom), `toolMode`, `selectedNodeId`, `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, `highlightEdgeIds` (chains lit up from the unplug list or a Matrix Bus row), all graph mutations incl. `setNodeStereo` and `replaceEdge` (a card dropped onto a wire, in one step) |
 | `src/hooks/useSignalChain.ts` | `useGraphSignal()` — pure BFS signal math over the graph, shared by all callers (computed once). No side effects. |
 | `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R when a stereo wire comes in / goes out (`stage.stereoIn` / `stereoOut`), plus `inPeak` (louder input side). |
 | `src/hooks/useGainStaging.ts` | `getHealthStyle(health)` — maps `SignalHealth` → CSS color, label, background. No logic. |
@@ -67,7 +68,9 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
 | `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
 | `src/hooks/useMediaQuery.ts` | `useMediaQuery()`, `TABLET_QUERY` (≤ 1024px: palette icon rail, no tagline), `WIDE_HEADER_QUERY` (≥ 1200px: all header labels fit). |
-| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews), `resolveOverlap`, `enforceGap` (room for a new wire), `makeRoomForInsert` (room for a card dropped onto a wire), `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `HIT_THRESHOLD` and the `Pt` type. |
+| `src/utils/layoutHelpers.ts` | All pure canvas placement math: `nodeDims` / `recordMeasuredSize` (cards size to content; the last measured size per type is reused for drop previews, a type never measured counts as `CARD_MIN_W` × `CARD_MIN_H`), `resolveOverlap`, `enforceGap` (room for a new wire), `makeRoomForInsert` (room for a card dropped onto a wire), `findEdgeAtPoint`, `canInsertMidChain`. Also exports `GRID`, `MIN_NODE_GAP`, `HEADER_H`, `PORT_TOP`, `PORT_GAP`, `CARD_MIN_W` / `CARD_MIN_H` (280 × 210), `HIT_THRESHOLD` and the `Pt` type. |
+| `src/utils/fitText.ts` | `fitText()` — the largest font size at which a text fits a box, on one line or two (broken at a space), measured on a cached canvas; `textWidth()`, `cssVar()`. Used by the overview face. |
+| `src/utils/twoColumns.ts` | `twoColumns` (two 170px columns: In meter \| Out meter, then controls \| graph) and `twoColumnCard` (min height so a 398px card is never wider than 3:2). |
 | `src/utils/connectionRules.ts` | `nodeAcceptsWire()` / `portAcceptsWire()` — which inputs may take a wire (one wire per input; Master / Aux / Matrix bus inputs take any number; a Matrix Bus takes finished mixes only, after their fader — `isMatrixSource`; a Matrix send feeds only Matrix Buses). |
 | `src/utils/chainColors.ts` | Chain colours (one per source, picked on `addNode`), `upstreamOf` / `chainOfEdge` / `chainColorsOf` / `chainSourcesOfEdge` for the card stripe, unplug list and highlight. |
 | `src/utils/wirePath.ts` | `buildWirePath()` — orthogonal route with rounded corners, shared by the live preview and committed edges. |
@@ -82,28 +85,33 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/App.tsx` | Header (see above) and the `ConfirmDialog` for Reset / level change. |
 | `src/components/SignalChain.tsx` | React Flow canvas. Owns `nodeTypes` map, `WireDrawing` state machine, the mouse-follow mode switch, drag-drop handlers, `onNodeDrag/Stop`, edge color, zoom `<Controls>`, and the SVG overlays (reshape handles, wire preview, ghost preview). |
 | `src/components/ElementPalette.tsx` | Left sidebar: search, tabs, draggable tiles. Level-gated visibility via `PALETTE_BY_LEVEL`. |
-| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints (no level badge — levels are shown on the cards). A stereo wire is drawn as a twin line (a canvas-coloured stroke down the middle). Wires into a Matrix Bus are drawn in `--lsc-matrix-send` instead of their health colour. |
+| `src/components/ChainEdge.tsx` | Custom edge: orthogonal path through waypoints (no level badge — levels are shown on the cards). A stereo wire is drawn as a twin line (a canvas-coloured stroke down the middle). The twin line and the dashes scale with the stroke width (thicker in overview). Wires into a Matrix Bus are drawn in `--lsc-matrix-send` instead of their health colour. |
 | `src/components/Tooltip.tsx` | `HelpPopover` — anchored under the node whose "?" was clicked, Previous / Next in signal order. |
 | `src/components/ConnectingToast.tsx` | Bottom-centre "Connecting from …" status while a wire is drawn. |
 | `src/components/UnplugMenu.tsx` | List of the wires on a bus input that holds several: hover = light up that chain, × = unplug one wire. Portal to `document.body`. |
 | `src/components/ConfirmDialog.tsx` | In-app `window.confirm` replacement, rendered with `createPortal` to `document.body`. |
 | `src/components/nodes/NodeWrapper.tsx` | The single card shell every node uses (see below). |
+| `src/components/nodes/OverviewFace.tsx` | The card's overview face (zoomed out): fitted name + output level meter, reading and health word. A layer over the hidden controls. |
+| `src/components/nodes/DynamicsLayout.tsx` | `KnobStack` and `ReductionReadout` ("Turning down −4.5 dB" bar) for the two-column dynamics cards (Compressor, Limiter, Noise Gate, De-esser). |
 | `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug; 2+ wires open `UnplugMenu`), L / R letter on an output whose wire carries one side, "L+R" on a Matrix send. `BusInputPorts` for the audio interface's dynamic inputs. |
 | `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
+| `src/components/controls/KnobControl.tsx` | Rotary knob (drag up / down). `layout="side"` puts the value and label beside the knob (label may wrap to two lines) instead of under it. |
 | `src/components/controls/StableText.tsx` | `StableText` — a reading that keeps the width of its widest value. Helpers `LEVEL_SAMPLE` / `widestFormat()` live in `src/utils/readout.ts`. |
 | `src/components/controls/EQGraph.tsx` | Interactive EQ curve drawn at exact pixel size (never stretched): drag a band dot, double-click = 0 dB, scroll = width (Q). Response math in `controls/eqMath.ts`. |
 
 ### Node card shell
 
 Every node uses `NodeWrapper`:
-- **Width follows content** (no fixed widths; `minWidth: 160`), text wraps to fit.
+- **At least 280 × 210** (`CARD_MIN_W` / `CARD_MIN_H`) and **landscape**: never taller than wide (aim 4:3, anything 1:1 to about 3:2). The only exception is height from stacked ports or per-wire rows (Audio Interface, Matrix Bus sends). Small cards centre their content. A card whose content would come out portrait is rearranged into two columns (`utils/twoColumns.ts`: In meter | Out meter on top, knobs (`KnobControl layout="side"`) | graph below) — Compressor (the reference, 398 × 298 in English), Limiter, Noise Gate, De-esser, DI Box, Active Speaker, Intermediate Equalizer.
+- **Width follows content** above that minimum, text wraps to fit.
 - A fixed **56px header** (icon, title, "?" help) keeps the first port line at `PORT_TOP` (80px — just below the header's divider, clear of the header buttons) on every card, so wires between cards stay straight; stacked ports are `PORT_GAP` (36px) apart. Port rings are 28px (40px while showing the unplug ×) so they are easy to see and hit.
 - The header row is **icon · title · ? (help) · On/Off (bypass) · × (remove)**. Types in `NO_BYPASS_TYPES` (sources, outputs, faders, switches, `master-bus` …) have no On/Off — the control itself is the state. Every node, including Master Bus, can be removed.
 - **A card never changes size while values change** (no flicker). Wrap every changing reading in `StableText` (`components/controls/StableText.tsx`), which reserves the width of the widest value it can show: `LEVEL_SAMPLE` for signal levels, `widestFormat()` for a control's readout (both in `utils/readout.ts`). `KnobControl`, `VerticalFader`, `ControlSlider` and `SignalMeter` already do this. Text that only sometimes shows keeps its space (`visibility: hidden`) instead of being removed. The "Bypassed" tag sits on the header's bottom line, outside the layout. Wide cards (Parametric EQ) use a fixed body width.
 - Controls and In/Out meters stay on the cards; there is **no status chip**.
 - Only types with `stereo: 'optional'` (Line In, Aux Bus) get a **Mono | Stereo** switch under the header (not dimmed by bypass). Meters take `dbR` to show L / R bars.
 - A thin **chain-colour stripe** on the card's top edge shows which sources (chains) pass through it.
+- **Overview** (`overview` in the store, zoomed out): the header, Mono / Stereo switch and body stay mounted with `visibility: hidden`, so the card keeps **exactly** the same size and its ports stay put; `OverviewFace` is drawn over them (`inset: 0`, `pointer-events: none`, under the port rings). It shows the header's label (dynamic names included) fitted by `fitText` (weight 600, up to 96px, a second line only if that makes it bigger), and at the bottom the level **leaving** the card (louder of L / R; a speaker shows the level arriving): a meter, the reading (`formatDb`) and the health word in `--signal-*-text` (darker shades in the light theme, ≥ 4.5:1). Sizes follow the card width; the health word has one size per language (the longest word fits), so a health change never moves anything. Bypassed: the face at 50% with the "Bypassed" tag. Crossfade 120ms (`.lsc-fade`), none under `prefers-reduced-motion`.
 
 ### Mono / Stereo
 
