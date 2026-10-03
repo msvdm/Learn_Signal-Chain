@@ -7,7 +7,7 @@ import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { ElementPalette } from './components/ElementPalette'
 import { ConfirmDialog } from './components/ConfirmDialog'
-import { RotateCcw, Radio, Sun, Moon, Globe, Check, Grid3x3 } from 'lucide-react'
+import { RotateCcw, Radio, Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
 import { useMediaQuery, TABLET_QUERY, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
@@ -34,6 +34,8 @@ function App() {
   const setTheme           = useSignalStore((s) => s.setTheme)
   const snapToGrid         = useSignalStore((s) => s.snapToGrid)
   const setSnapToGrid      = useSignalStore((s) => s.setSnapToGrid)
+  const paletteOpen        = useSignalStore((s) => s.paletteOpen)
+  const setPaletteOpen     = useSignalStore((s) => s.setPaletteOpen)
   const { t, fmt }       = useTranslation()
   const isTablet           = useMediaQuery(TABLET_QUERY)
   const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
@@ -82,8 +84,19 @@ function App() {
           background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)',
         }}
       >
-        {/* Left: brand */}
+        {/* Left: palette toggle, brand */}
         <div className="flex items-center flex-shrink-0" style={{ gap: 10 }}>
+          <button
+            onClick={() => setPaletteOpen(!paletteOpen)}
+            title={paletteOpen ? t.palette.hide : t.palette.show}
+            aria-label={paletteOpen ? t.palette.hide : t.palette.show}
+            aria-expanded={paletteOpen}
+            aria-controls="lsc-palette"
+            className="lsc-btn-outline"
+            style={{ ...headerBtn, width: 34, padding: 0, justifyContent: 'center' }}
+          >
+            {paletteOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          </button>
           <div
             style={{
               width: 32, height: 32, borderRadius: 8,
@@ -251,7 +264,18 @@ function App() {
 
       {/* Main canvas with left palette */}
       <main className="flex-1 overflow-hidden min-h-0 flex flex-row">
-        <ElementPalette />
+        {/* Collapsible: slides to zero width, so the canvas gets the room */}
+        <div
+          id="lsc-palette"
+          className="lsc-palette-slide"
+          style={{
+            width: paletteOpen ? (isTablet ? 64 : 240) : 0,
+            flexShrink: 0, height: '100%', overflow: 'hidden',
+            visibility: paletteOpen ? 'visible' : 'hidden',
+          }}
+        >
+          <ElementPalette />
+        </div>
         <ReactFlowProvider>
           <SignalChain />
         </ReactFlowProvider>

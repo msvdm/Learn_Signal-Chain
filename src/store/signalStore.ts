@@ -34,6 +34,10 @@ function getInitialSnapToGrid(): boolean {
   return localStorage.getItem('lsc-snap-to-grid') !== 'false'
 }
 
+function getInitialPaletteOpen(): boolean {
+  return localStorage.getItem('lsc-palette-open') !== 'false'
+}
+
 function getInitialLanguage(): Lang {
   const stored = localStorage.getItem('lsc-language')
   if (stored && stored in LOCALES) return stored
@@ -52,6 +56,8 @@ interface SignalChainStore {
   language: Lang
   theme: Theme
   snapToGrid: boolean
+  /** The element palette on the left is shown (persisted); collapsed = more room for the canvas. */
+  paletteOpen: boolean
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
   activeTooltipTypeKey: string | null
@@ -69,6 +75,7 @@ interface SignalChainStore {
   setLanguage: (lang: Lang) => void
   setTheme: (theme: Theme) => void
   setSnapToGrid: (on: boolean) => void
+  setPaletteOpen: (open: boolean) => void
   setActiveTooltip: (id: string | null, typeKey?: string | null) => void
   setSelectedNode: (id: string | null) => void
   setComplexityLevel: (level: ComplexityLevel) => void
@@ -98,6 +105,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   language: getInitialLanguage(),
   theme: initialTheme,
   snapToGrid: getInitialSnapToGrid(),
+  paletteOpen: getInitialPaletteOpen(),
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
   activeTooltipTypeKey: null,
@@ -123,6 +131,11 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   setSnapToGrid: (on) => {
     localStorage.setItem('lsc-snap-to-grid', String(on))
     set({ snapToGrid: on })
+  },
+
+  setPaletteOpen: (open) => {
+    localStorage.setItem('lsc-palette-open', String(open))
+    set({ paletteOpen: open })
   },
 
   setActiveTooltip: (id, typeKey = null) => set({ activeTooltipId: id, activeTooltipTypeKey: typeKey }),

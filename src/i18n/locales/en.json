@@ -254,6 +254,8 @@
     "all": "All",
     "startHere": "Start here",
     "noResults": "No elements match",
+    "hide": "Hide the elements panel (more room for the canvas)",
+    "show": "Show the elements panel",
     "categories": {
       "source": "Sources",
       "processing": "Processing",

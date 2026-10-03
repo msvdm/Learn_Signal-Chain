@@ -232,7 +232,13 @@ kbd {
   transition: opacity 120ms ease, visibility 120ms;
 }
 
+/* The element palette collapsing / reopening (header toggle) */
+.lsc-palette-slide {
+  transition: width 200ms ease, visibility 200ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .lsc-palette-slide    { transition: none; }
   .signal-line-animated { animation: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }

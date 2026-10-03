@@ -171,6 +171,9 @@ export interface Translations {
     all: string
     startHere: string
     noResults: string
+    /** Header button that collapses / reopens the palette */
+    hide: string
+    show: string
     categories: { source: string; processing: string; routing: string; output: string }
     items: Record<string, string>
   }
