@@ -34,6 +34,20 @@ export interface Translations {
     zoomOut: string
     zoomFit: string
   }
+  /** The left-click tools at the bottom left of the canvas */
+  tools: {
+    label: string
+    drag: string
+    dragHint: string
+    select: string
+    selectHint: string
+    remove: string
+    removeHint: string
+    undo: string
+    undoHint: string
+    redo: string
+    redoHint: string
+  }
   connecting: { from: string; hint: string; cancel: string; input: string }
   levels: {
     beginner:     { title: string; description: string }
@@ -72,6 +86,7 @@ export interface Translations {
   nodes: {
     mic: { label: string; sensitivity: string; micInfo: string }
     preamp: { label: string; gain: string }
+    amp: { level: string; levelL: string; levelR: string }
     hpf: { label: string; cutoff: string }
     eq: {
       label: string
@@ -124,6 +139,8 @@ export interface Translations {
     activeSpeaker: {
       label: string
       volume: string
+      /** Shown when an amplifier feeds it */
+      blown: string
     }
     // New nodes — optional so older locale files remain valid during translation
     'di-box'?: { label?: string; groundLift?: string; xlrOut?: string; directOut?: string; description?: string }
@@ -158,6 +175,20 @@ export interface Translations {
   nodeMenu: {
     bypass: string
     turnOn: string
+    cut: string
+    copy: string
+    paste: string
+    pasteEmpty: string
+    duplicate: string
+    duplicateLeft: string
+    duplicateRight: string
+    duplicateUp: string
+    duplicateDown: string
+    selectAll: string
+    /** "{count} elements selected" */
+    selected: string
+    /** "Remove {count} elements" */
+    removeMany: string
   }
   stereo: {
     mono: string

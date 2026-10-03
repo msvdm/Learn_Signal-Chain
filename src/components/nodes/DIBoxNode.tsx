@@ -37,7 +37,8 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
-          health={getHealth(levels.inPeak)}
+          health={getHealth(levels.inPeak, levels.inDomain)}
+          domain={levels.inDomain}
           label={t.meters.input}
         />
 

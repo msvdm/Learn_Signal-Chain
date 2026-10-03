@@ -17,6 +17,9 @@ export function useStereoLevels(id: string) {
   const inR = stereoIn ? (stage?.inR ?? -Infinity) : undefined
   return {
     stereo,
+    /** Analog (dBu) or digital (dBFS), arriving and leaving — an ADC / DAC changes it */
+    inDomain:  stage?.inDomain ?? stage?.domain ?? 'analog',
+    outDomain: stage?.domain ?? 'analog',
     in: inL, inR, inPeak: Math.max(inL, inR ?? -Infinity),
     out:  stereo ? (stage?.outL ?? -Infinity) : (stage?.out ?? -Infinity),
     outR: stereo ? (stage?.outR ?? -Infinity) : undefined,

@@ -173,8 +173,8 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
       label={data.label ?? tg?.label ?? 'Noise Gate'}
     >
       <div style={twoColumns}>
-        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
         <KnobStack>
           <KnobControl

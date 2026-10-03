@@ -59,11 +59,11 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
         {/* L/R stereo meters or mono meter */}
         {(result.outL !== undefined && result.outR !== undefined) ? (
           <div className="space-y-1">
-            <SignalMeter db={result.outL} health={result.health} label={`L ${unit}`} />
-            <SignalMeter db={result.outR} health={result.health} label={`R ${unit}`} />
+            <SignalMeter db={result.outL} health={result.health} label={`L ${unit}`} domain={domain === 'digital' ? 'digital' : 'analog'} />
+            <SignalMeter db={result.outR} health={result.health} label={`R ${unit}`} domain={domain === 'digital' ? 'digital' : 'analog'} />
           </div>
         ) : (
-          <SignalMeter db={result.out} health={result.health} label={`${t.meters.output} (${unit})`} />
+          <SignalMeter db={result.out} health={result.health} label={`${t.meters.output} (${unit})`} domain={domain === 'digital' ? 'digital' : 'analog'} />
         )}
 
         <div

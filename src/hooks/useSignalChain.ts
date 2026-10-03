@@ -78,12 +78,14 @@ export interface StageResult {
   outR?: number                     // stereo nodes, pan: right channel out
   inL?: number                      // stereo nodes: left channel in
   inR?: number                      // stereo nodes: right channel in
+  inDomain?: SignalDomain           // what arrives (an ADC takes analog, a DAC digital; others = domain)
   stereoIn?: boolean                // a stereo wire comes in (two input meter bars)
   stereoOut?: boolean               // the node sends out Left and Right (two output meter bars)
   mainFader?: boolean               // a Fader on a bus's Mix output: controls the whole mix
   preamp?: boolean                  // a Gain after a microphone: lifts it up to line level
   warning?: string                  // domain violation or blocked signal
   needsAmp?: boolean                // a passive speaker fed without an amplifier: silent
+  blown?: boolean                   // an active speaker fed from an amplifier: far too strong, it breaks
   portOutputs?: Record<string, number> // per-port overrides for multi-output nodes
 }
 
@@ -98,10 +100,24 @@ export interface DeesserResult extends StageResult {
 export const DEFAULT_STAGE: StageResult = { out: -Infinity, health: 'too-quiet', domain: 'analog' }
 export const DEFAULT_COMP: CompressorResult = { out: -Infinity, health: 'too-quiet', domain: 'analog', gainReductionDb: 0 }
 
-export function getHealth(db: number): SignalHealth {
-  if (db < -40) return 'too-quiet'
-  if (db <= -12) return 'good'
-  if (db <= 0) return 'hot'
+/** Unity: the level the analog chain is built around (0 dBu). Up to here the signal is healthy. */
+export const UNITY_DBU = 0
+/** Clip level: the most an analog stage passes (+20 dBu, where every gain stops); at it the signal distorts. */
+export const CLIP_DBU = 20
+/** Converters line up unity with this digital level (0 dBu = −18 dBFS, so 0 dBFS = +18 dBu). */
+export const ALIGNMENT_DB = 18
+
+/**
+ * Analog (dBu): too quiet below −40, good up to unity (0 dBu), hot above it, clipping at the clip
+ * level (+20 dBu). Digital (dBFS): the same zones moved down by the converter alignment — good up
+ * to −18 dBFS (unity) — but clipping at 0 dBFS, the digital ceiling.
+ */
+export function getHealth(db: number, domain: SignalDomain = 'analog'): SignalHealth {
+  const unity = domain === 'digital' ? UNITY_DBU - ALIGNMENT_DB : UNITY_DBU
+  const clip  = domain === 'digital' ? 0 : CLIP_DBU
+  if (db < unity - 40) return 'too-quiet'
+  if (db <= unity) return 'good'
+  if (db < clip) return 'hot'
   return 'clipping'
 }
 
@@ -117,6 +133,12 @@ export function taperToDb(position: number): number {
   }
   return ((t - 0.75) / 0.25) * 10                       // 0 → +10 dB above unity
 }
+
+/**
+ * How much stronger an amplifier's output (speaker level) is than the line level an active
+ * speaker expects. Fed from an amplifier, an active speaker shows at least the clip level.
+ */
+export const SPEAKER_LEVEL_DB = 40
 
 /** A Gain (not a Preamp) turned all the way down is switched off. */
 export const GAIN_OFF_DB = -60
@@ -223,7 +245,7 @@ function computeGraphNode(
   inputDomain: SignalDomain,
   domainMismatch: boolean,
   portInputs: Record<string, number> = {},
-  opts: { preamp?: boolean } = {},
+  opts: { preamp?: boolean; side?: 'l' | 'r' | null } = {},
 ): StageResult | CompressorResult | DeesserResult {
   const input = inputSignals[0] ?? -Infinity
   const p = node.params
@@ -266,7 +288,11 @@ function computeGraphNode(
       return { out, health: getHealth(out), domain }
     }
     case 'amp': {
-      const out = Math.min(input + ((p.gainDb as number) ?? 20), 20)
+      // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel
+      // (a two-channel amp): Left uses gainDb, Right gainDbR (starts where gainDb is).
+      const raw    = opts.side === 'r' ? ((p.gainDbR as number) ?? (p.gainDb as number)) : (p.gainDb as number)
+      const gainDb = Math.min(raw ?? 0, 0)
+      const out = gainDb <= GAIN_OFF_DB ? -Infinity : input + gainDb
       return { out, health: getHealth(out), domain }
     }
     case 'hpf': {
@@ -358,7 +384,11 @@ function computeGraphNode(
       return { out, health: getHealth(out), domain }
     }
     case 'graphic-eq': {
-      const gains = GEQ_CENTERS.map((_, i) => (p[`b${i}`] as number) ?? 0)
+      // In stereo the right side has its own sliders (r0…r30); untouched, they copy the left
+      const gains = GEQ_CENTERS.map((_, i) => {
+        const left = (p[`b${i}`] as number) ?? 0
+        return opts.side === 'r' ? ((p[`r${i}`] as number) ?? left) : left
+      })
       const levelChange = graphicEqPinkNoiseLevelChange(gains)
       const out = input + levelChange
       return { out, health: getHealth(out), domain }
@@ -367,16 +397,17 @@ function computeGraphNode(
       if (inputDomain === 'digital') {
         return { out: -Infinity, health: 'too-quiet', domain: 'digital', warning: 'adcExpectsAnalog' }
       }
-      const alignment = (p.alignmentDb as number) ?? 18
-      const out = isFinite(input) ? input + alignment : -Infinity
-      return { out, health: getHealth(out), domain: 'digital' }
+      // Unity (0 dBu) lands at −18 dBFS, leaving headroom up to the digital ceiling (0 dBFS)
+      const alignment = (p.alignmentDb as number) ?? ALIGNMENT_DB
+      const out = isFinite(input) ? input - alignment : -Infinity
+      return { out, health: getHealth(out, 'digital'), domain: 'digital' }
     }
     case 'dac': {
       if (inputDomain === 'analog') {
         return { out: -Infinity, health: 'too-quiet', domain: 'analog', warning: 'dacExpectsDigital' }
       }
-      const alignment = (p.alignmentDb as number) ?? 18
-      const out = isFinite(input) ? input - alignment : -Infinity
+      const alignment = (p.alignmentDb as number) ?? ALIGNMENT_DB
+      const out = isFinite(input) ? input + alignment : -Infinity
       return { out, health: getHealth(out), domain: 'analog' }
     }
     case 'speaker': {
@@ -549,7 +580,7 @@ function computeGraphSignal(
           const pass = signals[0] ?? -Infinity
           return { out: pass, health: getHealth(pass), domain: inputDomain }
         }
-        return computeGraphNode(node, signals, inputDomain, domainMismatch, portInputs, { preamp })
+        return computeGraphNode(node, signals, inputDomain, domainMismatch, portInputs, { preamp, side })
       }
 
       /** Value of output port `portId` (e.g. 'out', 'direct') from one side's result. */
@@ -631,6 +662,13 @@ function computeGraphSignal(
         for (const port of ports.outputs) send(port.id, oneChannelWire(kind, portValue(result, port.id)))
       }
 
+      // An amplifier's output is speaker level — far too strong for an active speaker's input
+      if (node.typeKey === 'active-speaker' && myUpstream.has('amp') && isFinite(result.out)) {
+        result = { ...result, out: Math.max(result.out + SPEAKER_LEVEL_DB, CLIP_DBU), blown: true }
+      }
+      // Health in the domain the signal leaves in (the cases above judge it as analog)
+      result.health   = getHealth(result.out, result.domain)
+      result.inDomain = inputDomain
       if (node.typeKey === 'fader' && mixBusOf(node.id, { nodes, edges }) !== null) result.mainFader = true
       if (preamp) result.preamp = true
       result.stereoIn  = follows ? followKind === 'stereo' : anyStereo

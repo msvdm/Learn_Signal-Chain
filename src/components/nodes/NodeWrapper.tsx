@@ -59,7 +59,7 @@ export function NodeWrapper({
   faceOnly = false,
 }: NodeWrapperProps) {
   const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
-  const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
+  const isSelected       = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
   // Joined into a string so the card only re-renders when its chains change
@@ -74,7 +74,7 @@ export function NodeWrapper({
   const isBypassed = node?.bypassed ?? false
   const canBypass  = canBypassType(typeKey)
   const helpOpen   = activeTooltipId === nodeId
-  const selected   = selectedNodeId === nodeId || helpOpen
+  const selected   = isSelected || helpOpen
 
   const ports      = getPorts(node ?? { typeKey, params: {} }, { nodes, edges })
   const canStereo  = NODE_REGISTRY[typeKey]?.stereo === 'optional'
@@ -95,6 +95,8 @@ export function NodeWrapper({
     nodeAcceptsWire(node, wireSource, edges, nodes)
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
+  // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
+  const ring = overview ? 12 : 4
 
   return (
     <div
@@ -108,11 +110,13 @@ export function NodeWrapper({
         minHeight,
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--lsc-node-bg)',
+        background: selected
+          ? 'linear-gradient(var(--lsc-select-tint), var(--lsc-select-tint)), var(--lsc-node-bg)'
+          : 'var(--lsc-node-bg)',
         border: `1px solid ${borderColor}`,
         borderRadius: 'var(--lsc-radius-lg)',
         boxShadow: selected
-          ? '0 0 0 3px var(--lsc-accent-bg), var(--lsc-shadow-node)'
+          ? `0 0 0 ${ring}px var(--lsc-accent), 0 0 0 ${ring * 3}px var(--lsc-select-halo), var(--lsc-shadow-node)`
           : 'var(--lsc-shadow-node)',
         color: 'var(--lsc-fg)',
         transition: 'border-color 0.15s, box-shadow 0.15s',

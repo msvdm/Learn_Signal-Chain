@@ -63,7 +63,7 @@ export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
           showReadout={false}
           capColor={main ? 'red' : 'black'}
         />
-        {main && <VerticalMeterPair dbL={levels.out} dbR={levels.outR ?? levels.out} height={FADER_H} />}
+        {main && <VerticalMeterPair dbL={levels.out} dbR={levels.outR ?? levels.out} height={FADER_H} domain={levels.outDomain} />}
       </div>
     </FreeControl>
   )

@@ -159,7 +159,7 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
     stereo: 'follow',
-    defaultParams: { gainDb: 20 },
+    defaultParams: { gainDb: 0 },
   },
   'di-box': {
     typeKey: 'di-box',
@@ -397,10 +397,56 @@ export const MATRIX_PORT = 'send'
 
 const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT, label: 'Mix', side: 'right' }]
 const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT, label: 'Matrix send (L + R, after the fader)', side: 'right' }
-const MAIN_FADER_OUTPUTS: NodePort[] = [
+const SIDE_OUTPUTS: NodePort[] = [
   { id: 'out-l', label: 'Left Out',  side: 'right' },
   { id: 'out-r', label: 'Right Out', side: 'right' },
 ]
+
+/**
+ * Cards that take a stereo mix's Left / Right outputs over when wired to one of them, and send
+ * L and R out separately: the Fader after a bus (Main Fader), the Graphic EQ and the Amplifier
+ * (a two-channel amp). The Graphic EQ and the Amplifier do it for any stereo wire; fed one
+ * channel they stay single-channel.
+ */
+export const SPLIT_TYPES = new Set(['fader', 'graphic-eq', 'amp'])
+
+/** What a wire carries: one channel, both sides, or one side of a stereo mix. */
+export type WireKind = 'mono' | 'stereo' | 'left' | 'right'
+
+/**
+ * What output `handleId` of a card carries, read from the wires (the signal maths gives the
+ * same answer): L / R outputs carry one side, a Mix or Matrix send both; a Pan, a stereo source or
+ * bus sends stereo; an effect passes on what reaches it; everything else is one channel.
+ */
+export function outputKind(nodeId: string, handleId: string, graph: GraphView, seen = new Set<string>()): WireKind {
+  const side = portSide(handleId)
+  if (side) return side === 'l' ? 'left' : 'right'
+  if (handleId === MIX_PORT || handleId === MATRIX_PORT) return 'stereo'
+  const node = graph.nodes.find((n) => n.id === nodeId)
+  if (!node || seen.has(nodeId)) return 'mono'
+  seen.add(nodeId)
+  if (node.typeKey === 'pan') return 'stereo'
+  if (NODE_REGISTRY[node.typeKey]?.stereo !== 'follow') return isNodeStereo(node) ? 'stereo' : 'mono'
+  // The Relay passes on its selected input
+  const selected = (node.params.selectedInput as string) ?? 'a'
+  const wire = graph.edges.find((e) => e.target === nodeId && (node.typeKey !== 'relay' || e.targetHandle === `in-${selected}`))
+  return wire ? outputKind(wire.source, wire.sourceHandle, graph, seen) : 'mono'
+}
+
+/**
+ * True when this card splits a stereo signal into Left and Right: a Fader fed a bus's mix (the
+ * Main Fader), or a Graphic EQ / Amplifier fed a stereo wire. A Graphic EQ / Amplifier with
+ * nothing plugged in keeps the layout its wires show, so plugging it back in restores L and R.
+ */
+export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, graph: GraphView): boolean {
+  if (!SPLIT_TYPES.has(node.typeKey)) return false
+  if (node.typeKey === 'fader') return mixBusOf(node.id, graph) !== null
+  const wire = graph.edges.find((e) => e.target === node.id)
+  if (!wire) {
+    return graph.edges.some((e) => e.source === node.id && (portSide(e.sourceHandle) !== null || e.sourceHandle === MIX_PORT))
+  }
+  return outputKind(wire.source, wire.sourceHandle, graph) === 'stereo'
+}
 
 /** A bus that sends its mix out as Left and Right: the Master, or an Aux set to Stereo. */
 export function isStereoBus(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
@@ -413,11 +459,12 @@ export type GraphView = { nodes: SignalNode[]; edges: SignalEdge[] }
 /**
  * The ports a node shows right now. Inputs never change. Outputs:
  * - a bus switched to Stereo splits its output into Left and Right;
- * - a stereo bus with a Main Fader attached has one Mix output instead
- *   (its L / R moved to the fader);
- * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs;
+ * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs; a Graphic EQ
+ *   or Amplifier fed a stereo wire has Left and Right outputs too (splitsStereo);
+ * - any of these whose L / R were taken over by the next card (a Main Fader, an EQ, an amp) has
+ *   one Mix output instead;
  * - a Matrix send output below R while a wire uses it.
- * Pass the graph so the Main Fader layout can be read from the wires.
+ * Pass the graph so the layout can be read from the wires.
  */
 export function getPorts(
   node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
@@ -430,10 +477,12 @@ export function getPorts(
   if (!def) return { inputs: [], outputs: [] }
   let outputs = def.stereoOutputs && isNodeStereo(node) ? def.stereoOutputs : def.outputs
   if (graph && node.id) {
-    if (isStereoBus(node) && graph.edges.some((e) => e.source === node.id && e.sourceHandle === MIX_PORT)) {
+    const id      = node.id
+    const passing = graph.edges.some((e) => e.source === id && e.sourceHandle === MIX_PORT)
+    if (isStereoBus(node) && passing) {
       outputs = MIX_OUTPUTS
-    } else if (node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null) {
-      outputs = MAIN_FADER_OUTPUTS
+    } else if (splitsStereo({ id, typeKey: node.typeKey }, graph)) {
+      outputs = passing ? MIX_OUTPUTS : SIDE_OUTPUTS
     }
     if (graph.edges.some((e) => e.source === node.id && e.sourceHandle === MATRIX_PORT)) {
       outputs = [...outputs, MATRIX_SEND_OUTPUT]
@@ -469,11 +518,30 @@ function findUpstream(
 }
 
 /**
- * The bus whose Mix output feeds this Fader — straight in, or through effects on the way
- * (a limiter on the master, say). Null when it is not a Main Fader.
+ * The card whose Mix output feeds this one — straight in, or through effects on the way.
+ * Null when no mix reaches it.
  */
-export function mixBusOf(faderId: string, graph: GraphView): string | null {
-  return findUpstream(faderId, graph, (wire) => (wire.sourceHandle === MIX_PORT ? wire.source : null))
+export function mixSourceOf(nodeId: string, graph: GraphView): string | null {
+  return findUpstream(nodeId, graph, (wire) => (wire.sourceHandle === MIX_PORT ? wire.source : null))
+}
+
+/**
+ * The bus whose mix feeds this card — through effects on the way (a limiter on the master, say)
+ * and through cards that passed it on (a Main Fader, a Graphic EQ). For a Fader: null when it is
+ * not a Main Fader.
+ */
+export function mixBusOf(nodeId: string, graph: GraphView): string | null {
+  const seen = new Set<string>()
+  let cur: string | null = nodeId
+  while (cur && !seen.has(cur)) {
+    seen.add(cur)
+    const via = mixSourceOf(cur, graph)
+    const src = via ? graph.nodes.find((n) => n.id === via) : undefined
+    if (!src) return null
+    if (isStereoBus(src)) return src.id
+    cur = src.id
+  }
+  return null
 }
 
 /**

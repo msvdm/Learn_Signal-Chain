@@ -129,7 +129,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
         </>
       ) : (
         <>
-          <SignalMeter db={result.out} health={result.health} showValue={false} />
+          <SignalMeter db={result.out} health={result.health} showValue={false} domain={domain === 'digital' ? 'digital' : 'analog'} />
           <div style={{ fontSize: 12, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)', textAlign: 'right' }}>
             <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(result.out) ? result.out.toFixed(1) : '−∞'}</StableText> {unit}
           </div>

@@ -3,7 +3,7 @@ import { Radio } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal, getHealth, GAIN_OFF_DB } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -12,6 +12,9 @@ interface GraphAmpData extends Record<string, unknown> {
   color?: string
   label?: string
 }
+
+// The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
+const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
 export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
   const { stages }          = useGraphSignal()
@@ -22,7 +25,10 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
   const params = node?.params ?? {}
   const levels = useStereoLevels(id)
   const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const gainDb = (params.gainDb as number) ?? 20
+  const gainDb  = Math.min((params.gainDb as number) ?? 0, 0)
+  const gainDbR = Math.min((params.gainDbR as number) ?? gainDb, 0)
+  // Fed a stereo wire it is a two-channel amp: a Volume knob for each side
+  const stereo  = levels.stereo
 
   return (
     <NodeWrapper
@@ -33,18 +39,28 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
       accentColor={data.color}
     >
       <div className="space-y-3">
-        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
 
         <ControlSlider
           value={gainDb}
-          min={0}
-          max={40}
-          label={t.nodes.preamp.gain}
-          formatValue={(v) => `+${v} dB`}
+          min={GAIN_OFF_DB}
+          max={0}
+          label={stereo ? t.nodes.amp.levelL : t.nodes.amp.level}
+          formatValue={formatLevel}
           onChange={(v) => updateNodeParams(id, { gainDb: v })}
         />
+        {stereo && (
+          <ControlSlider
+            value={gainDbR}
+            min={GAIN_OFF_DB}
+            max={0}
+            label={t.nodes.amp.levelR}
+            formatValue={formatLevel}
+            onChange={(v) => updateNodeParams(id, { gainDbR: v })}
+          />
+        )}
 
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

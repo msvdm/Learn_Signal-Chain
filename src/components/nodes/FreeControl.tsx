@@ -39,7 +39,8 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
   const nodes          = useSignalStore((s) => s.nodes)
   const edges          = useSignalStore((s) => s.edges)
   const wireSource     = useSignalStore((s) => s.wireSource)
-  const selected       = useSignalStore((s) => s.selectedNodeId === nodeId || s.activeTooltipId === nodeId)
+  const selected       = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.activeTooltipId === nodeId)
+  const overview       = useSignalStore((s) => s.overview)
   // Joined into a string so the control only re-renders when its chains change
   const chainColors    = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
   const { t, fmt }     = useTranslation()
@@ -61,13 +62,18 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
         pointerEvents: 'auto',
       }}
     >
-      {/* Outline: faint on hover, accent while selected — shows what you are about to move */}
+      {/* Outline: faint dashes on hover; selected = a solid ring, a soft glow and a tinted
+          background (thicker zoomed out, so it still shows) */}
       <div
         aria-hidden
         className="lsc-free-outline"
         style={{
           position: 'absolute', inset: 0, borderRadius: 'var(--lsc-radius-lg)', pointerEvents: 'none',
-          ...(selected ? { borderColor: 'var(--lsc-accent)' } : {}),
+          ...(selected ? {
+            border: `${overview ? 12 : 4}px solid var(--lsc-accent)`,
+            background: 'var(--lsc-select-tint)',
+            boxShadow: `0 0 0 ${overview ? 36 : 12}px var(--lsc-select-halo)`,
+          } : {}),
         }}
       />
 

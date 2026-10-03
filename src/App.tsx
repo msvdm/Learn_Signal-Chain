@@ -39,6 +39,7 @@ function App() {
   const { t, fmt }       = useTranslation()
   const isTablet           = useMediaQuery(TABLET_QUERY)
   const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
+  const paletteWidth       = paletteOpen ? (isTablet ? 64 : 240) : 0
 
   const [showLanguages, setShowLanguages] = useState(false)
   const [pending, setPending]             = useState<PendingConfirm>(null)
@@ -263,15 +264,19 @@ function App() {
       </header>
 
       {/* Main canvas with left palette */}
-      <main className="flex-1 overflow-hidden min-h-0 flex flex-row">
-        {/* Collapsible: slides to zero width, so the canvas gets the room */}
+      <main
+        className="flex-1 overflow-hidden min-h-0 relative"
+        style={{ '--lsc-palette-w': `${paletteWidth}px` } as CSSProperties}
+      >
+        {/* Collapsible: slides over the canvas (the canvas keeps its size and nothing on it moves) */}
         <div
           id="lsc-palette"
           className="lsc-palette-slide"
           style={{
-            width: paletteOpen ? (isTablet ? 64 : 240) : 0,
-            flexShrink: 0, height: '100%', overflow: 'hidden',
+            position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20,
+            width: paletteWidth, overflow: 'hidden',
             visibility: paletteOpen ? 'visible' : 'hidden',
+            boxShadow: paletteOpen ? 'var(--lsc-shadow-popup)' : 'none',
           }}
         >
           <ElementPalette />

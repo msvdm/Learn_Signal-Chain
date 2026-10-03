@@ -91,9 +91,9 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
   // The level leaving the card; a speaker's is the sound it plays (its stage result)
   const db     = Math.max(levels.out, hasOutput ? (levels.outR ?? -Infinity) : -Infinity)
-  const state  = getHealth(db)
+  const state  = getHealth(db, levels.outDomain)
   const style  = getHealthStyle(state)
-  const [value, unitText] = formatDb(db).split(' ')
+  const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
   const healthWord = (
     <StableText
       reserve={Object.values(t.health)}
@@ -147,7 +147,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
       {/* Level leaving the card: meter, then reading + health word */}
       {showLevel && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
-        <MeterBar db={db} color={style.color} height={layout.meter} />
+        <MeterBar db={db} color={style.color} height={layout.meter} domain={levels.outDomain} />
         <div
           style={{
             marginTop: METER_GAP, height: layout.number,

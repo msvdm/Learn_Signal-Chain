@@ -178,8 +178,8 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
       label={data.label ?? t.nodes.limiter?.label ?? 'Limiter'}
     >
       <div style={twoColumns}>
-        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
 
         <KnobStack>
           <KnobControl

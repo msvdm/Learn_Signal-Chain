@@ -83,6 +83,8 @@
   --lsc-accent:      #6366f1;
   --lsc-accent-soft: #a5b4fc;
   --lsc-accent-bg:   rgba(99,102,241,0.14);
+  --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
+  --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
   --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
 
   /* Pro tip */
@@ -148,6 +150,8 @@
   --lsc-accent:      #9a7fd4;
   --lsc-accent-soft: #b8a3de;
   --lsc-accent-bg:   rgba(154,127,212,0.08);
+  --lsc-select-halo: rgba(154,127,212,0.38);
+  --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */
 
   /* Pro tip */
@@ -239,8 +243,15 @@ kbd {
   transition: width 200ms ease, visibility 200ms;
 }
 
+/* The palette slides over the canvas: the canvas's bottom-left tools step out from under it */
+.react-flow__panel.lsc-left-tools {
+  margin-left: calc(15px + var(--lsc-palette-w, 0px));
+  transition: margin-left 200ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lsc-palette-slide    { transition: none; }
+  .react-flow__panel.lsc-left-tools { transition: none; }
   .signal-line-animated { animation: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
@@ -339,6 +350,118 @@ kbd {
   background: var(--signal-clipping-bg) !important;
 }
 
+/* Canvas tools (Drag / Select / Remove · Undo / Redo): one row of icons right of the zoom
+   controls (3 × 32px + border + 8px gap) */
+.react-flow__panel.left.lsc-canvas-tools {
+  left: 106px;
+}
+.lsc-tool-bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--lsc-header);
+  border: 1px solid var(--lsc-border);
+  border-radius: var(--lsc-radius-md);
+  box-shadow: var(--lsc-shadow-popup);
+  /* no overflow: hidden — it would clip the hover labels */
+}
+.lsc-tool-divider {
+  width: 1px;
+  margin: 5px 3px;
+  background: var(--lsc-border);
+}
+.lsc-tool-button {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--lsc-fg-muted);
+  cursor: pointer;
+}
+.lsc-tool-bar > :first-child > .lsc-tool-button:first-child {
+  border-radius: calc(var(--lsc-radius-md) - 1px) 0 0 calc(var(--lsc-radius-md) - 1px);
+}
+.lsc-tool-bar > .lsc-tool-button:last-child {
+  border-radius: 0 calc(var(--lsc-radius-md) - 1px) calc(var(--lsc-radius-md) - 1px) 0;
+}
+.lsc-tool-button:hover:not(:disabled) { background: var(--lsc-sunken); color: var(--lsc-fg); }
+.lsc-tool-button:disabled { cursor: default; }
+.lsc-tool-button:disabled > svg { opacity: 0.35; }
+.lsc-tool-button.lsc-tool-active {
+  background: var(--lsc-accent-bg);
+  color: var(--lsc-accent);
+  box-shadow: inset 0 -3px 0 var(--lsc-accent);
+}
+.lsc-tool-button.lsc-tool-remove.lsc-tool-active {
+  background: var(--signal-clipping-bg);
+  color: var(--signal-clipping-text);
+  box-shadow: inset 0 -3px 0 var(--signal-clipping);
+}
+
+/* Hover label above a tool button: its name, shortcut and a line of help */
+.lsc-tool-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: max-content;
+  max-width: 260px;
+  padding: 7px 10px;
+  border-radius: var(--lsc-radius-sm);
+  border: 1px solid var(--lsc-border);
+  background: var(--lsc-node-bg);
+  color: var(--lsc-fg);
+  box-shadow: var(--lsc-shadow-popup);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s, visibility 0.12s;
+  z-index: 10;
+}
+.lsc-tool-tip strong { font-weight: 600; font-size: 13px; }
+.lsc-tool-tip-key { margin-left: 8px; color: var(--lsc-fg-dim); }
+.lsc-tool-tip-hint { display: block; margin-top: 2px; color: var(--lsc-fg-muted); }
+.lsc-tool-button:hover > .lsc-tool-tip,
+.lsc-tool-button:focus-visible > .lsc-tool-tip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.15s;
+}
+
+/* Remove tool: whatever is under the cursor shows it will go */
+.lsc-remove-mode .react-flow__node { cursor: pointer; }
+.lsc-remove-mode .react-flow__node * { cursor: pointer !important; }
+.lsc-remove-mode .react-flow__node:hover {
+  outline: 3px solid var(--signal-clipping);
+  outline-offset: 6px;
+  border-radius: 14px;
+  opacity: 0.75;
+}
+/* (React Flow makes wires inert while nothing is selectable — the Remove tool needs them) */
+.lsc-remove-mode .react-flow__edge.inactive { pointer-events: visibleStroke; }
+.lsc-remove-mode .react-flow__edge { cursor: pointer; }
+.lsc-remove-mode .react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--signal-clipping) !important;
+}
+
+/* Select tool: a crosshair says "drag a box" */
+.lsc-select-mode .react-flow__pane { cursor: crosshair; }
+
+/* Selection box while dragging; the box React Flow leaves around a selection is not used
+   (dragging any selected element moves them all, and the box would cover the controls) */
+.react-flow__selection {
+  background: var(--lsc-accent-bg);
+  border: 1.5px dashed var(--lsc-accent);
+}
+.react-flow__nodesselection { display: none; }
+
 /* Zoom controls (bottom-left) — themed to match the header */
 .react-flow__controls {
   --xy-controls-button-background-color:       var(--lsc-header);
@@ -362,6 +485,7 @@ kbd {
 }
 .react-flow__controls .react-flow__controls-button:last-child {
   border-bottom: none;
+  border-right: none;
 }
 
 .react-flow__attribution {

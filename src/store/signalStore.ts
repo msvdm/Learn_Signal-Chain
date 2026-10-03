@@ -6,13 +6,20 @@ import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, getPorts } from '../data/nodeRegistry'
 import { pickChainColor } from '../utils/chainColors'
 import { attachMainFaders, reconcileMainFaders } from '../utils/mainFader'
-import type { ToolMode } from '../types'
+import type { ToolMode, LeftTool } from '../types'
+import type { NodeGroup } from '../utils/nodeGroup'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
-export type { ToolMode } from '../types'
+export type { ToolMode, LeftTool } from '../types'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 export type Theme = 'dark' | 'light'
+
+/** The whole graph, as one undo step remembers it. */
+interface GraphSnapshot {
+  nodes: import('../data/nodeRegistry').SignalNode[]
+  edges: import('../data/nodeRegistry').SignalEdge[]
+}
 
 /** The output port a wire is currently being drawn from (null when idle). */
 export interface WireSource {
@@ -61,8 +68,16 @@ interface SignalChainStore {
   complexityLevel: ComplexityLevel
   activeTooltipId: string | null
   activeTooltipTypeKey: string | null
-  selectedNodeId: string | null
+  /** Selected elements (several with the Select tool, Ctrl+click or Shift+drag) */
+  selectedNodeIds: string[]
   toolMode: ToolMode
+  /** What a left-click does: drag (move and pan), select (pick several) or remove */
+  leftTool: LeftTool
+  /** Elements copied or cut, ready to paste (not persisted) */
+  clipboard: NodeGroup | null
+  /** Undo / redo steps: the graph before each change (see the history section at the bottom) */
+  past: GraphSnapshot[]
+  future: GraphSnapshot[]
   wireSource: WireSource | null
   /** Wires whose chains are highlighted (hovered in the unplug list or a Matrix Bus row); everything else is dimmed. */
   highlightEdgeIds: string[]
@@ -78,6 +93,11 @@ interface SignalChainStore {
   setPaletteOpen: (open: boolean) => void
   setActiveTooltip: (id: string | null, typeKey?: string | null) => void
   setSelectedNode: (id: string | null) => void
+  setSelection: (ids: string[]) => void
+  setLeftTool: (tool: LeftTool) => void
+  setClipboard: (group: NodeGroup | null) => void
+  undo: () => void
+  redo: () => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
   setWireSource: (source: WireSource | null) => void
@@ -87,6 +107,10 @@ interface SignalChainStore {
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
   removeNode: (nodeId: string) => void
+  /** Remove several elements at once (no bridging wire, unlike removing one) */
+  removeNodes: (nodeIds: string[]) => void
+  /** Add pasted / duplicated elements with their wires, and select them */
+  addGroup: (nodes: import('../data/nodeRegistry').SignalNode[], edges: import('../data/nodeRegistry').SignalEdge[]) => void
   updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
   toggleBypassNode: (nodeId: string) => void
   setNodeStereo: (nodeId: string, on: boolean) => void
@@ -96,12 +120,14 @@ interface SignalChainStore {
   replaceEdge: (edgeId: string, replacements: import('../data/nodeRegistry').SignalEdge[]) => void
   updateEdgeWaypoints: (edgeId: string, waypoints: { x: number; y: number }[]) => void
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
+  /** Move several elements by the same distance; wires between them take their bends along */
+  moveNodes: (nodeIds: string[], delta: { x: number; y: number }) => void
 }
 
 const initialTheme = getInitialTheme()
 applyTheme(initialTheme)
 
-export const useSignalStore = create<SignalChainStore>((set) => ({
+export const useSignalStore = create<SignalChainStore>((set, get) => ({
   language: getInitialLanguage(),
   theme: initialTheme,
   snapToGrid: getInitialSnapToGrid(),
@@ -109,8 +135,12 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
   activeTooltipTypeKey: null,
-  selectedNodeId: null,
+  selectedNodeIds: [],
   toolMode: 'select',
+  leftTool: 'drag',
+  clipboard: null,
+  past: [],
+  future: [],
   wireSource: null,
   highlightEdgeIds: [],
   overview: false,
@@ -140,14 +170,43 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
 
   setActiveTooltip: (id, typeKey = null) => set({ activeTooltipId: id, activeTooltipTypeKey: typeKey }),
 
-  setSelectedNode: (id) => set({ selectedNodeId: id }),
+  setSelectedNode: (id) => set({ selectedNodeIds: id ? [id] : [] }),
+
+  setSelection: (ids) => set({ selectedNodeIds: ids }),
+
+  setLeftTool: (tool) => set({ leftTool: tool }),
+
+  setClipboard: (group) => set({ clipboard: group }),
+
+  undo: () => {
+    const { past, nodes, edges } = get()
+    const step = past[past.length - 1]
+    if (!step) return
+    withoutHistory(() => set((s) => ({
+      ...restore(s, step),
+      past:   past.slice(0, -1),
+      future: [...s.future, { nodes, edges }],
+    })))
+  },
+
+  redo: () => {
+    const { future, nodes, edges } = get()
+    const step = future[future.length - 1]
+    if (!step) return
+    withoutHistory(() => set((s) => ({
+      ...restore(s, step),
+      past:   [...s.past, { nodes, edges }].slice(-HISTORY_LIMIT),
+      future: future.slice(0, -1),
+    })))
+  },
 
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
-    set({
+    // A new level starts a new history: its palette has other elements
+    withoutHistory(() => set({
       complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
-      selectedNodeId: null, toolMode: 'select', wireSource: null, ...buildDefaultGraph(),
-    })
+      selectedNodeIds: [], toolMode: 'select', wireSource: null, past: [], future: [], ...buildDefaultGraph(),
+    }))
   },
 
   setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wireSource: null } : { toolMode: mode }),
@@ -162,7 +221,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     set((s) => ({
       activeTooltipId: null,
       activeTooltipTypeKey: null,
-      selectedNodeId: null,
+      selectedNodeIds: [],
       complexityLevel: s.complexityLevel,
       toolMode: 'select',
       wireSource: null,
@@ -191,7 +250,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       // Drop help / selection that pointed at the removed node
       const cleared = {
         ...(s.activeTooltipId === nodeId ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
-        ...(s.selectedNodeId === nodeId ? { selectedNodeId: null } : {}),
+        ...(s.selectedNodeIds.includes(nodeId) ? { selectedNodeIds: s.selectedNodeIds.filter((id) => id !== nodeId) } : {}),
       }
 
       // Bridge: if exactly one in and one out, reconnect them directly
@@ -207,6 +266,35 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
       }
 
       return { ...cleared, nodes, edges: settle(filteredEdges) }
+    }),
+
+  removeNodes: (nodeIds) =>
+    set((s) => {
+      const gone  = new Set(nodeIds)
+      const nodes = s.nodes.filter((n) => !gone.has(n.id))
+      const edges = s.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target))
+      return {
+        nodes,
+        edges: reconcileMainFaders(s, { nodes, edges }),
+        selectedNodeIds: s.selectedNodeIds.filter((id) => !gone.has(id)),
+        highlightEdgeIds: [],
+        ...(s.activeTooltipId && gone.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
+      }
+    }),
+
+  addGroup: (added, addedEdges) =>
+    set((s) => {
+      // Each copied source starts a chain of its own colour
+      let nodes = s.nodes
+      for (const n of added) {
+        const isSource = NODE_REGISTRY[n.typeKey]?.category === 'source'
+        nodes = [...nodes, isSource && !n.color ? { ...n, color: pickChainColor(nodes) } : n]
+      }
+      return {
+        nodes,
+        edges: attachMainFaders(nodes, [...s.edges, ...addedEdges]),
+        selectedNodeIds: added.map((n) => n.id),
+      }
     }),
 
   updateNodeParams: (nodeId, patch) =>
@@ -289,4 +377,62 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
     set((s) => ({
       nodes: s.nodes.map((n) => n.id === nodeId ? { ...n, position } : n),
     })),
+
+  moveNodes: (nodeIds, delta) =>
+    set((s) => {
+      const moving = new Set(nodeIds)
+      const move   = (p: { x: number; y: number }) => ({ x: p.x + delta.x, y: p.y + delta.y })
+      return {
+        nodes: s.nodes.map((n) => (moving.has(n.id) ? { ...n, position: move(n.position) } : n)),
+        edges: s.edges.map((e) => (moving.has(e.source) && moving.has(e.target) && e.waypoints
+          ? { ...e, waypoints: e.waypoints.map(move) }
+          : e)),
+      }
+    }),
 }))
+
+// ── History (undo / redo) ───────────────────────────────────────────────────
+// Every change to the graph is remembered, wherever it comes from. Changes that follow each
+// other closely (a knob being turned, the cards that slide aside after a drop) make one step.
+
+const HISTORY_LIMIT = 100
+const STEP_QUIET_MS = 400
+
+let recording = true
+let inStep    = false
+let stepTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Change the store without it becoming an undo step (undo / redo themselves, a level change). */
+function withoutHistory(fn: () => void) {
+  recording = false
+  try { fn() } finally { recording = true }
+  inStep = false
+}
+
+/** The graph back as it was in `step`; selection and help that point at missing elements are dropped. */
+function restore(s: SignalChainStore, step: GraphSnapshot): Partial<SignalChainStore> {
+  const ids = new Set(step.nodes.map((n) => n.id))
+  return {
+    nodes: step.nodes,
+    edges: step.edges,
+    selectedNodeIds: s.selectedNodeIds.filter((id) => ids.has(id)),
+    highlightEdgeIds: [],
+    // A wire being drawn may start from an element that is gone
+    toolMode: 'select',
+    wireSource: null,
+    ...(s.activeTooltipId && !ids.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
+  }
+}
+
+useSignalStore.subscribe((s, prev) => {
+  if (!recording || (s.nodes === prev.nodes && s.edges === prev.edges)) return
+  clearTimeout(stepTimer)
+  stepTimer = setTimeout(() => { inStep = false }, STEP_QUIET_MS)
+  if (inStep) return
+  inStep = true
+  // A new change: the steps that were undone can no longer be redone
+  useSignalStore.setState({
+    past: [...prev.past, { nodes: prev.nodes, edges: prev.edges }].slice(-HISTORY_LIMIT),
+    future: [],
+  })
+})

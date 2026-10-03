@@ -30,6 +30,19 @@
     "zoomOut": "Zoom out",
     "zoomFit": "Show everything on screen"
   },
+  "tools": {
+    "label": "What a click does",
+    "drag": "Drag",
+    "dragHint": "Drag an element to move it. Drag empty space to look around the canvas.",
+    "select": "Select",
+    "selectHint": "Click elements to pick several (click again to drop one), or drag a box around them. Then right-click one to copy or duplicate them all.",
+    "remove": "Remove",
+    "removeHint": "Click an element or a wire to remove it.",
+    "undo": "Undo",
+    "undoHint": "Take back the last change.",
+    "redo": "Redo",
+    "redoHint": "Bring back the change you just took back."
+  },
   "connecting": {
     "from": "Connecting from {node}.",
     "hint": "Click a highlighted input. Click empty space to add a bend.",
@@ -98,6 +111,11 @@
       "label": "Preamp",
       "gain": "Gain"
     },
+    "amp": {
+      "level": "Volume",
+      "levelL": "Left volume",
+      "levelR": "Right volume"
+    },
     "hpf": {
       "label": "HPF",
       "cutoff": "Cutoff frequency"
@@ -161,7 +179,8 @@
     },
     "activeSpeaker": {
       "label": "Active Speaker",
-      "volume": "Volume"
+      "volume": "Volume",
+      "blown": "Blown! An amplifier's output is far too strong for it."
     },
     "di-box": {
       "label": "DI Box",
@@ -245,7 +264,19 @@
   },
   "nodeMenu": {
     "bypass": "Bypass — let the signal pass through unchanged",
-    "turnOn": "Turn back on"
+    "turnOn": "Turn back on",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste here",
+    "pasteEmpty": "Paste — copy something first",
+    "duplicate": "Duplicate",
+    "duplicateLeft": "Put a copy on the left",
+    "duplicateRight": "Put a copy on the right",
+    "duplicateUp": "Put a copy above",
+    "duplicateDown": "Put a copy below",
+    "selectAll": "Select everything",
+    "selected": "{count} elements selected",
+    "removeMany": "Remove {count} elements"
   },
   "stereo": {
     "mono": "Mono",
@@ -312,7 +343,7 @@
     "line-in": {
       "what": "A line input accepts signals that are already at \"line level\" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.",
       "why": "Line-level signals are strong enough to drive mixing and processing gear directly without a preamp. They sit well above the noise floor and well below the clipping point.",
-      "tip": "If your line-level signal looks green (-40 to -12 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire."
+      "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire."
     },
     "instrument": {
       "what": "An instrument input (also called \"Hi-Z\" or high impedance) is designed for direct connection of guitars, basses, and similar passive pickups. The signal is louder than a microphone but still below true line level — typically -30 to -10 dBu.",
@@ -322,12 +353,12 @@
     "gain": {
       "what": "A gain stage turns a signal up or down by a set amount: right of 0 dB makes it louder, left of 0 dB quieter, and all the way left switches it off. Placed right after a microphone, this same card becomes a Preamp.",
       "why": "Every device in a chain expects a certain level. A gain stage fixes a signal that arrives too weak or too strong — a quiet line source, say, or a hot one before an effect that would clip.",
-      "tip": "Start at 0 dB (no change) and move it only until the meter after it sits in the green (−40 to −12 dBu). Turning up raises the noise along with the signal; turning down too far leaves the next stage too little to work with."
+      "tip": "Start at 0 dB (no change) and move it only until the meter after it sits in the green (−40 to 0 dBu). Turning up raises the noise along with the signal; turning down too far leaves the next stage too little to work with."
     },
     "preamp": {
       "what": "The preamplifier (preamp) boosts the weak microphone-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB. It is what the Gain card becomes when you place it right after a microphone.",
       "why": "Without enough gain here, all downstream processors — EQ, compressor, fader — work with a weak signal and introduce more noise. Too much gain causes distortion before anything else can help.",
-      "tip": "Aim for the output to land in the green zone (-40 to -12 dBu). This is called gain staging, and it starts right here at the preamp."
+      "tip": "Aim for the output to land in the green zone (-40 to 0 dBu). This is called gain staging, and it starts right here at the preamp."
     },
     "hpf": {
       "what": "The High-Pass Filter (HPF) removes frequencies below a chosen cutoff point. Everything below that frequency is rolled off — \"blocked\". Everything above it \"passes\" through unchanged.",
@@ -340,7 +371,7 @@
       "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate the Equalizer has three knobs like a simple mixing desk: Low and High are shelves, Mid is a bell. \"Parametric\" means you set each band's frequency and width yourself — that is what the Parametric Equalizer in Advanced adds, with a curve you can drag and a Bell / Shelf choice for Low and High. Feed it a stereo wire and both sides get the same settings."
     },
     "graphic-eq": {
-      "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 31 bands, three per octave — a third of an octave each — from 20 Hz to 20 kHz). Each band has its own fader — push it up to boost that band, pull it down to cut. The line across the sliders shows the shape you have drawn.",
+      "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 31 bands, three per octave — a third of an octave each — from 20 Hz to 20 kHz). Each band has its own fader — push it up to boost that band, pull it down to cut. The line across the sliders shows the shape you have drawn. Wire it to the L or R of a bus or its Main Fader (or feed it any stereo wire) and it works on both sides: the whole mix comes in on one wire and leaves as L and R, ready for an amplifier or two speakers. The sliders then split in two — Left on top, Right below — so each side can be shaped on its own; the right side starts as a copy of the left. Fed one channel, it stays single-channel.",
       "why": "Graphic EQs are found on the master output of PA systems as the final tool for correcting room acoustics — a sudden peak at 4 kHz, a resonant boom at 63 Hz. They are less precise than parametric EQs but faster to use for broad shaping.",
       "tip": "In live sound the graphic EQ on the master output is used mainly to prevent feedback and correct for the room, not to shape the mix. Keep moves gentle — small cuts (−3 to −6 dB) solve most problems. Large boosts cause feedback and distortion."
     },
@@ -360,7 +391,7 @@
       "tip": "Take a second wire from the bus's Mix output: it does not change when you move this fader, because it leaves before the fader. That is where a pre-fade listen (PFL) path starts. Effects such as a limiter may sit between the bus and this fader — it stays the Main Fader."
     },
     "amp": {
-      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound.",
+      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, each side gets its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",
       "why": "Line-level signals are powerful enough for mixing and processing, but not powerful enough to physically move a speaker cone. The power amp provides the current needed to do the work.",
       "tip": "Power amps are rated in watts. For studio monitors you typically need 50–100 W. For live PA systems, 500–2000 W per side is common. More wattage = more headroom before clipping, not necessarily more loudness."
     },
@@ -387,7 +418,7 @@
     "master-bus": {
       "what": "The master bus is the final mixing point where every channel is added together before the sound leaves the system. Its one input takes as many wires as you like; the mix leaves on two wires, L and R — one for each speaker. A stereo wire keeps its left and right. A wire from another bus's L or R output stays on its side. A mono wire lands on both sides at full level — put a Pan knob in front to place it. Wire a Fader to its L or R output and it becomes the Main Fader: the L and R outputs move onto the fader.",
       "why": "The master bus controls the overall output level. It is also the place for final mix bus processing — subtle compression or limiting to control peaks and add cohesion.",
-      "tip": "Leave headroom on the master bus — ideally keep peaks below −6 dBu. This gives a mastering engineer (or limiter) room to work. A master bus that is already at 0 dBu has nowhere to go."
+      "tip": "Leave headroom on the master bus — keep it in the green, at or below 0 dBu (unity). Above that it turns yellow (hot): there is less room left before it clips at +20 dBu, and a limiter or the next device has less to work with."
     },
     "master": {
       "what": "The master bus receives all channel signals mixed together. It is the final stage before the signal leaves the system. A small trim here adjusts the overall output level.",
@@ -402,7 +433,7 @@
     "active-speaker": {
       "what": "An active (powered) speaker has a built-in amplifier. It accepts line-level signals directly from a mixer, audio interface, or any line-level output — no separate power amp needed.",
       "why": "Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.",
-      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain."
+      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. Never plug it into an Amplifier's output: that signal is already strong enough to drive a passive speaker, far too much for the line input of a speaker with its own amp inside — it blows."
     },
     "di-box": {
       "what": "A DI box (Direct Injection) converts a high-impedance unbalanced instrument signal — like a guitar or keyboard — into a low-impedance balanced signal that travels cleanly over long cables to a mixing desk. It has two outputs: an XLR output (balanced, for the preamp) and a Direct Output (instrument-level thru, for connecting to an amplifier at the same time).",
@@ -442,15 +473,15 @@
     "audio-interface": {
       "what": "An audio interface is the device that connects your studio to your computer. It receives the final analog signal from your mixer or monitor controller, converts it to digital, and sends it to your recording software. In this signal chain, it is the last stop — nothing comes after it.",
       "why": "Every recording studio needs a way to get audio into a computer. The audio interface takes the balanced analog outputs from your desk and converts them to digital data that your DAW can record. It also handles the reverse — playing back digital audio from your computer as analog signal for monitoring.",
-      "tip": "The level reaching the audio interface matters. Aim for a signal that peaks in the green zone (−20 to −12 dBFS in digital terms, roughly −18 to −12 dBu in the analog chain). This gives the converter enough signal to work cleanly while leaving headroom for unexpected peaks."
+      "tip": "The level reaching the audio interface matters. Aim for a signal that peaks in the green zone — up to about 0 dBu in the analog chain, which is −18 dBFS in digital terms. This gives the converter enough signal to work cleanly while leaving headroom for unexpected peaks."
     },
     "adc": {
-      "what": "An Analog-to-Digital Converter (ADC) samples the continuously varying analog voltage from your gear thousands of times per second and converts each measurement into a digital number. The level scale changes from dBu (analog) to dBFS (digital full scale). With the standard alignment of −18 dBu = 0 dBFS, a signal at −18 dBu becomes 0 dBFS.",
+      "what": "An Analog-to-Digital Converter (ADC) samples the continuously varying analog voltage from your gear thousands of times per second and converts each measurement into a digital number. The level scale changes from dBu (analog) to dBFS (digital full scale). With the standard alignment, 0 dBu (unity) becomes −18 dBFS — so the digital ceiling, 0 dBFS, is +18 dBu. Healthy analog levels land well below it.",
       "why": "Computers work with numbers, not voltages. The ADC is the bridge between the physical world of microphones and amplifiers and the digital world of DAWs and plugins. Everything after the ADC is math, not electricity.",
       "tip": "0 dBFS is the ceiling in digital audio — there is no louder. Unlike analog gear which can go a few dB over nominal before distorting, digital clips instantly and harshly at 0 dBFS. Aim to keep peaks well below 0 dBFS (−18 to −6 dBFS) to protect against sudden transients."
     },
     "dac": {
-      "what": "A Digital-to-Analog Converter (DAC) does the reverse of an ADC: it reads the digital numbers from your computer and reconstructs a continuously varying analog voltage. Using the same −18 dBu = 0 dBFS alignment, 0 dBFS becomes −18 dBu, and anything after the DAC is back in the analog world.",
+      "what": "A Digital-to-Analog Converter (DAC) does the reverse of an ADC: it reads the digital numbers from your computer and reconstructs a continuously varying analog voltage. Using the same alignment, −18 dBFS becomes 0 dBu (unity) again, and anything after the DAC is back in the analog world.",
       "why": "Speakers and amplifiers are analog devices — they respond to voltage, not numbers. The DAC converts the digital mix back into real electrical signal so you can hear it through speakers. Without a DAC, digital audio stays in the computer.",
       "tip": "Place the DAC before any analog gear that follows — amplifiers, passive speakers, analog signal processors. The domain indicator on the node turns green (analog) after the DAC, confirming that everything downstream is back in the correct electrical domain."
     }

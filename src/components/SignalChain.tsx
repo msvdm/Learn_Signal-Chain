@@ -7,7 +7,9 @@ import {
   type Node as FlowNode,
   type NodeChange,
   BackgroundVariant,
+  SelectionMode,
   useReactFlow,
+  useStoreApi,
   useViewport,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -37,7 +39,8 @@ import { ChainEdge }           from './ChainEdge'
 import type { ChainEdgeData }  from './ChainEdge'
 import { ConnectingToast }     from './ConnectingToast'
 import { HelpPopover }         from './Tooltip'
-import { NodeMenu }            from './NodeMenu'
+import { NodeMenu, CanvasMenu } from './NodeMenu'
+import { CanvasTools }         from './CanvasTools'
 
 import { useSignalStore }     from '../store/signalStore'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
@@ -45,6 +48,7 @@ import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
+import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 import { NODE_REGISTRY, getPorts, initialParams, isMatrixSource } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { activeDragTypeKey }  from '../utils/dragState'
@@ -59,6 +63,8 @@ import { wirePassesThroughNode } from '../utils/wireValidation'
 import { chainOfEdge } from '../utils/chainColors'
 import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
 import { useTranslation } from '../i18n/useTranslation'
+import { takeGroup, cloneGroup, groupBox, duplicateOffset, pasteOffset } from '../utils/nodeGroup'
+import type { Direction, Placed } from '../utils/nodeGroup'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -122,6 +128,19 @@ function handleUnder(clientX: number, clientY: number): HTMLElement | null {
   ) ?? null
 }
 
+/** What is used, not selected, when clicked inside a card: its controls and ports. */
+const INTERACTIVE = '.nodrag, button, input, select, textarea, a, [role="slider"], .react-flow__handle'
+
+/** The element (card or control) or wire a Remove-tool click lands on, if any. */
+function removeTargetOf(target: EventTarget | null): { node?: string; edge?: string } | null {
+  const el = target as Element | null
+  if (!el?.closest || el.closest('.lsc-overlay, .react-flow__panel')) return null
+  const node = el.closest('.react-flow__node')?.getAttribute('data-id')
+  if (node) return { node }
+  const edge = el.closest('.react-flow__edge')?.getAttribute('data-id')
+  return edge ? { edge } : null
+}
+
 /** Get flow-coordinate center of a handle DOM element. */
 function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
   const r = el.getBoundingClientRect()
@@ -147,10 +166,19 @@ export function SignalChain() {
   const complexityLevel       = useSignalStore((s) => s.complexityLevel)
   const toolMode              = useSignalStore((s) => s.toolMode)
   const snapToGrid            = useSignalStore((s) => s.snapToGrid)
-  const selectedNodeId        = useSignalStore((s) => s.selectedNodeId)
+  const selectedNodeIds       = useSignalStore((s) => s.selectedNodeIds)
+  const leftTool              = useSignalStore((s) => s.leftTool)
+  const paletteOpen           = useSignalStore((s) => s.paletteOpen)
+  const clipboard             = useSignalStore((s) => s.clipboard)
   const setToolMode           = useSignalStore((s) => s.setToolMode)
   const setWireSource         = useSignalStore((s) => s.setWireSource)
   const setSelectedNode       = useSignalStore((s) => s.setSelectedNode)
+  const setSelection          = useSignalStore((s) => s.setSelection)
+  const setClipboard          = useSignalStore((s) => s.setClipboard)
+  const addGroup              = useSignalStore((s) => s.addGroup)
+  const removeNode            = useSignalStore((s) => s.removeNode)
+  const removeNodes           = useSignalStore((s) => s.removeNodes)
+  const moveNodes             = useSignalStore((s) => s.moveNodes)
   const setActiveTooltip      = useSignalStore((s) => s.setActiveTooltip)
   const addNode               = useSignalStore((s) => s.addNode)
   const addEdge               = useSignalStore((s) => s.addEdge)
@@ -164,16 +192,25 @@ export function SignalChain() {
   const { stages, portSignal, wires } = useGraphSignal()
   const { t }                 = useTranslation()
   const chainEmpty            = useChainEmpty()
-  const { screenToFlowPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
+  const { screenToFlowPosition, flowToScreenPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
+  const flowStore             = useStoreApi()
+  const isTablet              = useMediaQuery(TABLET_QUERY)
+  // The palette slides over the canvas: "show everything" keeps clear of it
+  const paletteWidth          = paletteOpen ? (isTablet ? 64 : 240) : 0
   const { x: vpX, y: vpY, zoom: vpZoom } = useViewport()
+  const vpZoomRef             = useLatestRef(vpZoom)
 
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
   const [snapPos, setSnapPos]               = useState<Pt | null>(null)
   const [wireWarning, setWireWarning]       = useState(false)
   const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
-  const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt; w: number; h: number } | null>(null)
-  // Right-click menu of an element (Help, Bypass, Remove)
-  const [nodeMenu, setNodeMenu]             = useState<{ nodeId: string; x: number; y: number } | null>(null)
+  // Where the dragged elements will land (several when a selection is dragged)
+  const [dragGhosts, setDragGhosts]         = useState<{ pos: Pt; w: number; h: number }[]>([])
+  // Right-click menu of an element (Help, Bypass, Cut, Copy, Duplicate, Remove) — `targets` are
+  // what its actions apply to: the element, or the whole selection it belongs to
+  const [nodeMenu, setNodeMenu]             = useState<{ nodeId: string; targets: string[]; x: number; y: number } | null>(null)
+  // Right-click menu of the empty canvas (Paste here, Select everything); `at` in flow coordinates
+  const [canvasMenu, setCanvasMenu]         = useState<{ x: number; y: number; at: Pt } | null>(null)
   // React Flow's measured card sizes, handed back with the nodes (see displayNodes)
   const [measuredSizes, setMeasuredSizes]   = useState<Record<string, { width: number; height: number; ports: string }>>({})
 
@@ -181,6 +218,11 @@ export function SignalChain() {
   const wrapperRef      = useRef<HTMLDivElement>(null)
   const drawingRef      = useLatestRef(drawing)
   const toolModeRef     = useLatestRef(toolMode)
+  const leftToolRef     = useLatestRef(leftTool)
+  // Last mouse position on screen — Ctrl+V pastes there when it is over the canvas
+  const lastMouseRef    = useRef<Pt | null>(null)
+  // Where the last press started and whether it was on a control (see onNodeClick)
+  const pressRef        = useRef<{ x: number; y: number; onControl: boolean } | null>(null)
   const edgesRef        = useLatestRef(graphEdges)
   const graphNodesRef   = useLatestRef(graphNodes)
   const revertTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -243,12 +285,14 @@ export function SignalChain() {
       if (e.key !== 'Escape') return
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      const { activeTooltipId } = useSignalStore.getState()
       if (drawingRef.current.active) cancelWire()
-      else setActiveTooltip(null, null)
+      else if (activeTooltipId) setActiveTooltip(null, null)
+      else setSelection([])
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setActiveTooltip, cancelWire, drawingRef])
+  }, [setActiveTooltip, setSelection, cancelWire, drawingRef])
 
   // The canvas follows the mouse: hovering a port switches to connect mode, moving
   // away switches back to select mode after a short delay (never while a wire is drawn).
@@ -257,6 +301,11 @@ export function SignalChain() {
     function followMouse(e: MouseEvent) {
       // A button is held: a node, slider or the canvas is being dragged — don't switch mid-drag
       if (e.buttons !== 0) return
+      // The Remove tool never wires: a click on a port removes its element
+      if (leftToolRef.current === 'remove') {
+        if (toolModeRef.current === 'connect') setToolMode('select')
+        return
+      }
       if (handleUnder(e.clientX, e.clientY)) {
         if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
         if (toolModeRef.current === 'select') setToolMode('connect')
@@ -269,6 +318,7 @@ export function SignalChain() {
     }
 
     function onMove(e: MouseEvent) {
+      lastMouseRef.current = { x: e.clientX, y: e.clientY }
       const d = drawingRef.current
       if (!d.active) { followMouse(e); return }
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
@@ -291,12 +341,31 @@ export function SignalChain() {
       document.removeEventListener('mousemove', onMove)
       if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
     }
-  }, [screenToFlowPosition, getInternalNode, setToolMode, drawingRef, toolModeRef, graphNodesRef])
+  }, [screenToFlowPosition, getInternalNode, setToolMode, drawingRef, toolModeRef, leftToolRef, graphNodesRef])
 
   // Click interception — capture phase fires before React Flow's own handlers
   useEffect(() => {
+    // Remove tool: a press on an element or wire removes it. Pointer events come first —
+    // knobs and faders listen to them — so nothing inside the card reacts to the press.
+    function onPointerDown(e: PointerEvent) {
+      pressRef.current = { x: e.clientX, y: e.clientY, onControl: Boolean((e.target as Element).closest?.(INTERACTIVE)) }
+      if (e.button !== 0 || leftToolRef.current !== 'remove') return
+      // A removed element takes its click with it — a flag left from that press must not eat this one
+      swallowClickRef.current = false
+      if (!wrapperRef.current?.contains(e.target as Element)) return
+      const hit = removeTargetOf(e.target)
+      if (!hit) return
+      e.preventDefault()
+      e.stopPropagation()
+      swallowClickRef.current = true
+      if (hit.node) removeNode(hit.node)
+      else if (hit.edge) removeEdge(hit.edge)
+    }
+
     function onDown(e: MouseEvent) {
       if (e.button !== 0) return
+      // (The press was already handled by onPointerDown; keep its click swallowed)
+      if (leftToolRef.current === 'remove' && swallowClickRef.current) { e.stopPropagation(); return }
       swallowClickRef.current = false
       const targetEl = e.target as Element
       // Only clicks on the canvas itself — not the palette, header or popovers
@@ -413,17 +482,143 @@ export function SignalChain() {
       cancelWire()
     }
 
+    document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('mousedown', onDown, true)
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContext, true)
     return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContext, true)
     }
   // measuredNodes reads React Flow's live state each call
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screenToFlowPosition, addEdge, updateNodePosition, setReshaping])
+  }, [screenToFlowPosition, addEdge, removeNode, removeEdge, updateNodePosition, setReshaping])
+
+  // ── Selection, copy and paste ───────────────────────────────────────────────
+
+  /**
+   * A click on an element selects it — only on its empty parts: using a knob, slider, button or
+   * port is not selecting the card. The Select tool (or Ctrl / ⌘ / Shift) adds it to the
+   * selection, or drops it again.
+   */
+  function onNodeClick(e: React.MouseEvent, node: FlowNode) {
+    // Judged by where the press started: a knob drag that ends off the knob clicks the card itself
+    const press = pressRef.current
+    const moved = press ? Math.hypot(e.clientX - press.x, e.clientY - press.y) > 4 : false
+    if (!canEdit || press?.onControl || moved || (e.target as Element).closest(INTERACTIVE)) return
+    const selected = useSignalStore.getState().selectedNodeIds
+    const toggle   = leftTool === 'select' || e.ctrlKey || e.metaKey || e.shiftKey
+    if (!toggle) setSelection([node.id])
+    else setSelection(selected.includes(node.id) ? selected.filter((id) => id !== node.id) : [...selected, node.id])
+  }
+
+  /**
+   * Dragging an element of the selection moves the whole selection; dragging any other element
+   * moves just that one (React Flow drags it alone) and does not select it — the old selection is dropped.
+   */
+  function onNodeDragStart(e: React.MouseEvent, node: FlowNode) {
+    const selected = useSignalStore.getState().selectedNodeIds
+    if (selected.includes(node.id)) return
+    // Ctrl-drag: React Flow takes the selection along with it
+    if (e.ctrlKey || e.metaKey) setSelection([...selected, node.id])
+    else if (selected.length > 0) setSelection([])
+  }
+
+  /** An element's real size (cards size to content). */
+  function sizeOf(n: SignalNode) {
+    const m = getInternalNode(n.id)?.measured
+    return nodeDims(n.typeKey, m?.width, m?.height)
+  }
+
+  function placedNodes(): Placed[] {
+    return graphNodesRef.current.map((n) => ({ position: n.position, size: sizeOf(n) }))
+  }
+
+  function groupOf(ids: string[]) {
+    const { nodes, edges } = useSignalStore.getState()
+    return takeGroup(ids, nodes, edges, sizeOf)
+  }
+
+  /** Add a copy of `group` moved by `offset`, select it and bring it on screen. */
+  function placeCopy(group: ReturnType<typeof groupOf>, offset: Pt) {
+    const { nodes, edges } = useSignalStore.getState()
+    const copy = cloneGroup(group, offset, { nodes, edges })
+    addGroup(copy.nodes, copy.edges)
+    // Only move the camera when the copy is (partly) off screen; never zoom in
+    const box    = groupBox(group)
+    const tl     = flowToScreenPosition({ x: box.left + offset.x, y: box.top + offset.y })
+    const br     = flowToScreenPosition({ x: box.right + offset.x, y: box.bottom + offset.y })
+    const bounds = wrapperRef.current?.getBoundingClientRect()
+    if (bounds && (tl.x < bounds.left + paletteWidth || tl.y < bounds.top || br.x > bounds.right || br.y > bounds.bottom)) {
+      const ids = [...group.nodes.map((n) => n.id), ...copy.nodes.map((n) => n.id)]
+      setTimeout(() => fitView({ ...fitViewOptions, maxZoom: Math.min(1, vpZoomRef.current), nodes: ids.map((id) => ({ id })) }), 50)
+    }
+  }
+
+  function duplicateNodes(ids: string[], dir: Direction) {
+    if (ids.length === 0) return
+    const group = groupOf(ids)
+    placeCopy(group, duplicateOffset(group, dir, placedNodes()))
+  }
+
+  function copyNodes(ids: string[]) {
+    if (ids.length > 0) setClipboard(groupOf(ids))
+  }
+
+  function cutNodes(ids: string[]) {
+    if (ids.length === 0) return
+    copyNodes(ids)
+    removeNodes(ids)
+  }
+
+  function removeSelected(ids: string[]) {
+    if (ids.length === 1) removeNode(ids[0])   // one element: its neighbours are wired together
+    else if (ids.length > 1) removeNodes(ids)
+  }
+
+  /** Paste the copied elements with their top-left corner at `at` (flow coordinates), or beside where they were. */
+  function pasteAt(at: Pt | null) {
+    const clip = useSignalStore.getState().clipboard
+    if (!clip || clip.nodes.length === 0) return
+    const box = groupBox(clip)
+    placeCopy(clip, pasteOffset(clip, snap(at ?? { x: box.left + 2 * GRID, y: box.top + 2 * GRID }), placedNodes()))
+  }
+
+  // Keyboard: Ctrl / ⌘ + C, X, V, D (duplicate to the right), A (select everything), Z (undo),
+  // Shift+Z or Y (redo); Delete removes
+  const actionsRef = useLatestRef({ duplicateNodes, copyNodes, cutNodes, pasteAt, removeSelected })
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      if (target.closest('[role="menu"], [role="dialog"]')) return
+      const a   = actionsRef.current
+      const ids = useSignalStore.getState().selectedNodeIds
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (ids.length > 0) { e.preventDefault(); a.removeSelected(ids) }
+        return
+      }
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      const key = e.key.toLowerCase()
+      const { undo, redo } = useSignalStore.getState()
+      if (key === 'z') (e.shiftKey ? redo : undo)()
+      else if (key === 'y') redo()
+      else if (key === 'c' && ids.length > 0) a.copyNodes(ids)
+      else if (key === 'x' && ids.length > 0) a.cutNodes(ids)
+      else if (key === 'd' && ids.length > 0) a.duplicateNodes(ids, 'right')
+      else if (key === 'v') {
+        const m    = lastMouseRef.current
+        const over = m && wrapperRef.current?.contains(document.elementFromPoint(m.x, m.y))
+        a.pasteAt(over ? screenToFlowPosition(m) : null)
+      } else if (key === 'a') setSelection(useSignalStore.getState().nodes.map((n) => n.id))
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [actionsRef, screenToFlowPosition, setSelection])
 
   // ── Camera ──────────────────────────────────────────────────────────────────
 
@@ -516,20 +711,38 @@ export function SignalChain() {
     const { nodes, edges } = useSignalStore.getState()
     const placed = layoutNodes(nodes).map((n) => (n.id === nodeId ? { ...n, measured: size } : n))
     for (const [id, pos] of makeRoomForInsert(nodeId, placed, edges)) updateNodePosition(id, pos)
-    setTimeout(() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 }), 50)
+    setTimeout(() => fitView({ ...fitViewOptions, duration: 400 }), 50)
   }
 
   // ── Moving nodes ────────────────────────────────────────────────────────────
 
-  function onNodeDrag(_e: React.MouseEvent, node: FlowNode) {
+  /** How far a dragged selection moves: the grabbed element snaps, the others keep their places around it. */
+  function groupDelta(node: FlowNode): Pt {
+    const from = graphNodesRef.current.find((n) => n.id === node.id)?.position ?? node.position
+    const to   = snap(node.position)
+    return { x: to.x - from.x, y: to.y - from.y }
+  }
+
+  function onNodeDrag(_e: React.MouseEvent, node: FlowNode, dragged: FlowNode[]) {
+    if (dragged.length > 1) {
+      const d = groupDelta(node)
+      setDragGhosts(graphNodesRef.current
+        .filter((n) => dragged.some((x) => x.id === n.id))
+        .map((n) => ({ pos: { x: n.position.x + d.x, y: n.position.y + d.y }, ...sizeOf(n) })))
+      return
+    }
     const measured = getInternalNode(node.id)?.measured
     const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
     const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
-    setDragNodePreview({ typeKey: node.type ?? '', pos: resolved, w, h })
+    setDragGhosts([{ pos: resolved, w, h }])
   }
 
-  function onNodeDragStop(_e: React.MouseEvent, node: FlowNode) {
-    setDragNodePreview(null)
+  function onNodeDragStop(_e: React.MouseEvent, node: FlowNode, dragged: FlowNode[]) {
+    setDragGhosts([])
+    if (dragged.length > 1) {
+      moveNodes(dragged.map((n) => n.id), groupDelta(node))
+      return
+    }
     const measured = getInternalNode(node.id)?.measured
     const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
     const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
@@ -539,10 +752,15 @@ export function SignalChain() {
   // Selection + size bookkeeping. Positions stay owned by the store (drag commits on stop).
   function onNodesChange(changes: NodeChange[]) {
     const sizes: Record<string, { width: number; height: number; ports: string }> = {}
+    let selection: Set<string> | null = null
+    // React Flow selects on any click inside a card and when a drag starts; only its selection
+    // box counts (its rectangle is set before the box's first change). Clicks: onNodeClick.
+    const boxSelecting = flowStore.getState().userSelectionRect !== null
     for (const c of changes) {
-      if (c.type === 'select') {
-        if (c.selected) setSelectedNode(c.id)
-        else if (useSignalStore.getState().selectedNodeId === c.id) setSelectedNode(null)
+      if (c.type === 'select' && boxSelecting) {
+        selection ??= new Set(useSignalStore.getState().selectedNodeIds)
+        if (c.selected) selection.add(c.id)
+        else selection.delete(c.id)
       }
       if (c.type === 'dimensions' && c.dimensions) {
         const node = graphNodesRef.current.find((n) => n.id === c.id)
@@ -556,6 +774,7 @@ export function SignalChain() {
         }
       }
     }
+    if (selection) setSelection([...selection])
     if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))
   }
 
@@ -586,12 +805,12 @@ export function SignalChain() {
           measured:  size && size.ports === portLayoutKey(node, graphNodes, graphEdges)
             ? { width: size.width, height: size.height }
             : undefined,
-          selected:  node.id === selectedNodeId,
+          selected:  selectedNodeIds.includes(node.id),
           className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
           data:      { color: node.color, label: node.label, typeKey: node.typeKey },
         }
       }),
-    [graphNodes, graphEdges, selectedNodeId, highlight, measuredSizes]
+    [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes]
   )
 
   const displayEdges: Edge[] = useMemo(() => {
@@ -601,7 +820,7 @@ export function SignalChain() {
       const sourceStage = stages[edge.source]
       const key         = `${edge.source}:${edge.sourceHandle}`
       const db          = portSignal.get(key) ?? sourceStage?.out ?? -Infinity
-      const health      = sourceStage ? getHealth(db) : null
+      const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
       const style       = health ? getHealthStyle(health) : null
 
       const routingWarning = (edge.waypoints?.length ?? 0) > 0
@@ -650,6 +869,9 @@ export function SignalChain() {
     return src ? (t.palette.items[src.typeKey] ?? src.typeKey) : ''
   })()
 
+  // "Show everything" fits the elements in the part of the canvas the palette leaves free
+  const fitViewOptions = { padding: { top: 0.1, right: 0.1, bottom: 0.1, left: `${paletteWidth + 48}px` } as const, maxZoom: 1, duration: 300 }
+
   // Zoom control tooltips follow the app language
   const ariaLabelConfig = useMemo(() => ({
     'controls.ariaLabel':         t.toolbar.zoom,
@@ -658,27 +880,35 @@ export function SignalChain() {
     'controls.fitView.ariaLabel': t.toolbar.zoomFit,
   }), [t])
 
-  const ghost = dropPreview
-    ? { pos: dropPreview.pos, ...nodeDims(dropPreview.typeKey) }
-    : dragNodePreview
+  const ghosts = dropPreview
+    ? [{ pos: dropPreview.pos, ...nodeDims(dropPreview.typeKey) }]
+    : dragGhosts
 
   const wrapperClass = [
     'w-full h-full relative',
     toolMode === 'connect' ? 'lsc-connect-mode' : '',
     drawing.active ? 'lsc-wiring' : '',
+    leftTool === 'remove' ? 'lsc-remove-mode' : '',
+    leftTool === 'select' ? 'lsc-select-mode' : '',
   ].join(' ')
+  const canEdit = toolMode === 'select' && leftTool !== 'remove'
 
   return (
-    <div ref={wrapperRef} className={wrapperClass} onDragLeave={onDragLeave}>
+    // `isolation`: everything drawn on the canvas stays under the palette that slides over it
+    <div ref={wrapperRef} className={wrapperClass} style={{ isolation: 'isolate' }} onDragLeave={onDragLeave}>
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        nodesDraggable={toolMode === 'select'}
+        nodesDraggable={canEdit}
         nodesConnectable={false}
-        elementsSelectable={toolMode === 'select'}
-        panOnDrag={toolMode === 'select'}
+        elementsSelectable={canEdit}
+        // Select tool: dragging empty space draws a selection box (the middle button still pans)
+        panOnDrag={toolMode !== 'select' ? false : leftTool === 'select' ? [1] : true}
+        selectionOnDrag={canEdit && leftTool === 'select'}
+        selectionMode={SelectionMode.Partial}
+        deleteKeyCode={null}
         nodeOrigin={[0, 0]}
         minZoom={0.15}
         maxZoom={2}
@@ -687,20 +917,29 @@ export function SignalChain() {
         style={{ background: 'var(--lsc-canvas)' }}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodesChange={onNodesChange}
         onNodeContextMenu={(e, node) => {
           // (A right-click while drawing a wire never gets here: it only cancels the wire)
           e.preventDefault()
-          setNodeMenu({ nodeId: node.id, x: e.clientX, y: e.clientY })
+          // Part of a selection: the menu acts on all of it. Otherwise this element becomes the selection.
+          const selected = useSignalStore.getState().selectedNodeIds
+          const targets  = selected.includes(node.id) ? selected : [node.id]
+          if (!selected.includes(node.id)) setSelectedNode(node.id)
+          setNodeMenu({ nodeId: node.id, targets, x: e.clientX, y: e.clientY })
+        }}
+        onPaneContextMenu={(e) => {
+          e.preventDefault()
+          setCanvasMenu({ x: e.clientX, y: e.clientY, at: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
         }}
         onPaneClick={() => {
-          if (toolModeRef.current !== 'select') return
-          setSelectedNode(null)
+          if (toolModeRef.current !== 'select' || leftToolRef.current === 'remove') return
+          setSelection([])
           setActiveTooltip(null, null)
         }}
-        onEdgesDelete={(eds) => eds.forEach((e) => removeEdge(e.id))}
       >
         {snapToGrid && (
           <Background
@@ -712,9 +951,12 @@ export function SignalChain() {
         )}
         <Controls
           position="bottom-left"
+          className="lsc-left-tools"
+          orientation="horizontal"
           showInteractive={false}
-          fitViewOptions={{ padding: 0.2, maxZoom: 1, duration: 300 }}
+          fitViewOptions={fitViewOptions}
         />
+        <CanvasTools />
       </ReactFlow>
 
       {/* Reshape overlay — waypoint drag handles (intermediate/advanced) */}
@@ -834,7 +1076,7 @@ export function SignalChain() {
       )}
 
       {/* Ghost preview — palette drop and canvas node drag share the same look */}
-      {ghost && (
+      {ghosts.length > 0 && (
         <svg
           style={{
             position: 'absolute', top: 0, left: 0,
@@ -845,24 +1087,47 @@ export function SignalChain() {
           }}
         >
           <g transform={`translate(${vpX}, ${vpY}) scale(${vpZoom})`}>
-            <rect
-              x={ghost.pos.x}
-              y={ghost.pos.y}
-              width={ghost.w}
-              height={ghost.h}
-              rx={12}
-              fill="var(--lsc-accent)"
-              fillOpacity={0.12}
-              stroke="var(--lsc-accent)"
-              strokeWidth={1.5 / vpZoom}
-              strokeDasharray={`${6 / vpZoom} ${3 / vpZoom}`}
-            />
+            {ghosts.map((ghost, i) => (
+              <rect
+                key={i}
+                x={ghost.pos.x}
+                y={ghost.pos.y}
+                width={ghost.w}
+                height={ghost.h}
+                rx={12}
+                fill="var(--lsc-accent)"
+                fillOpacity={0.12}
+                stroke="var(--lsc-accent)"
+                strokeWidth={1.5 / vpZoom}
+                strokeDasharray={`${6 / vpZoom} ${3 / vpZoom}`}
+              />
+            ))}
           </g>
         </svg>
       )}
 
       <HelpPopover />
-      {nodeMenu && <NodeMenu {...nodeMenu} onClose={() => setNodeMenu(null)} />}
+      {nodeMenu && (
+        <NodeMenu
+          {...nodeMenu}
+          onCut={() => cutNodes(nodeMenu.targets)}
+          onCopy={() => copyNodes(nodeMenu.targets)}
+          onDuplicate={(dir) => duplicateNodes(nodeMenu.targets, dir)}
+          onRemove={() => removeSelected(nodeMenu.targets)}
+          onClose={() => setNodeMenu(null)}
+        />
+      )}
+      {canvasMenu && (
+        <CanvasMenu
+          x={canvasMenu.x}
+          y={canvasMenu.y}
+          canPaste={(clipboard?.nodes.length ?? 0) > 0}
+          canSelectAll={graphNodes.length > 0}
+          onPaste={() => pasteAt(canvasMenu.at)}
+          onSelectAll={() => setSelection(graphNodes.map((n) => n.id))}
+          onClose={() => setCanvasMenu(null)}
+        />
+      )}
       {drawing.active && <ConnectingToast sourceLabel={wireSourceLabel} />}
     </div>
   )

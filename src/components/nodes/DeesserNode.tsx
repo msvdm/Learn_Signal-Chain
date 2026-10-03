@@ -45,12 +45,14 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
-          health={getHealth(levels.inPeak)}
+          health={getHealth(levels.inPeak, levels.inDomain)}
+          domain={levels.inDomain}
           label={t.meters.input}
         />
         <SignalMeter
           db={levels.out}
           dbR={levels.outR}
+          domain={levels.outDomain}
           health={result?.health ?? 'too-quiet'}
           label={t.meters.output}
         />

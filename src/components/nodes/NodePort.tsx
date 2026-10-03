@@ -31,7 +31,7 @@ interface NodePortProps {
  *   shows a small L / R letter beside the dot.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
-  const { portSignal, wires } = useGraphSignal()
+  const { portSignal, wires, stages } = useGraphSignal()
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wireSource)
   const removeEdge = useSignalStore((s) => s.removeEdge)
@@ -55,7 +55,9 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
           const wireDb = portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity
           return sum + (isFinite(wireDb) ? Math.pow(10, wireDb / 20) : 0)
         }, 0))
-    ringColor = getHealthStyle(getHealth(db)).color
+    // Judged in the domain of the card the signal comes from (dBu or dBFS)
+    const from = type === 'source' ? nodeId : connected[0].source
+    ringColor = getHealthStyle(getHealth(db, stages[from]?.domain)).color
   }
 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&

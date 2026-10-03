@@ -1,4 +1,4 @@
-import type { SignalHealth } from './useSignalChain'
+import type { SignalHealth, SignalDomain } from './useSignalChain'
 
 export interface HealthStyle {
   color: string
@@ -48,8 +48,9 @@ export function dbToPercent(db: number): number {
   return Math.max(0, Math.min(100, ((db + 60) / 80) * 100))
 }
 
-export function formatDb(db: number): string {
+export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
   // A real reading down to −99.9 (a microphone sits at −60 dBu); below that it is silence
-  if (!isFinite(db) || db <= -100) return '-∞ dBu'
-  return `${db >= 0 ? '+' : ''}${db.toFixed(1)} dBu`
+  const unit = domain === 'digital' ? 'dBFS' : 'dBu'
+  if (!isFinite(db) || db <= -100) return `-∞ ${unit}`
+  return `${db >= 0 ? '+' : ''}${db.toFixed(1)} ${unit}`
 }
