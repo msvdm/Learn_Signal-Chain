@@ -45,3 +45,25 @@ export function formatGain(db: number): string {
   if (db === 0) return '0.0 dB'
   return `${db > 0 ? '+' : '−'}${Math.abs(db).toFixed(1)} dB`
 }
+
+// ── Graphic EQ: 31 bands, a third of an octave apart (the standard ISO centres) ──
+export const GEQ_CENTERS = [
+  20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800,
+  1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000,
+]
+/** Boost / cut range of each band (±dB) */
+export const GEQ_RANGE = 12
+/** Q of a one-third-octave band */
+export const GEQ_Q = 4.32
+
+/** Short label printed under a slider, like on the hardware: "31.5", "800", "1k25", "16k". */
+export function geqShortLabel(hz: number): string {
+  if (hz < 1000) return String(hz)
+  const k = String(hz / 1000)
+  return k.includes('.') ? k.replace('.', 'k') : `${k}k`
+}
+
+/** Full frequency for the readout: "31.5 Hz", "1.25 kHz". */
+export function geqLongLabel(hz: number): string {
+  return hz < 1000 ? `${hz} Hz` : `${hz / 1000} kHz`
+}

@@ -165,6 +165,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 - **Amp**: `output = clamp(input + gainDb, −∞, +20)`
 - **HPF**: passthrough placeholder (no frequency weighting at this level)
 - **EQ**: `output = input + sum(bandGains)` — additive only
+- **Graphic EQ**: 31 one-third-octave bands, 20 Hz … 20 kHz (`GEQ_CENTERS` in `controls/eqMath.ts`, params `b0`…`b30`, ±12 dB in 0.5 dB steps); the level change is the pink-noise-weighted sum of the band bells (Q ≈ 4.3). The card is the Parametric EQ's size: In | Out meters, a readout of the band being touched, a Flat button, and the 31 sliders with a curve through their caps (double-click = 0 dB; a drag stays on the slider it started on)
 - **Compressor**: `gainReduction = max(0, (input − threshold) × (1 − 1/ratio))`, then `output = input − gainReduction + makeupGain`. Attack and Release (`attackMs`, `releaseMs`) are on the card but do not change the sound yet
 - **Noise Gate**: open (`input ≥ threshold`) → `output = input`; closed → `output = input + range` (Range −80…0 dB, −80 ≈ silence). Hold, Attack and Release (`holdMs`, `attackMs`, `releaseMs`) are on the card but do not change the sound yet. Same card layout and size as the Compressor
 - **Fader**: `output = input + faderDb`, −100…+10 dB. The fader's travel is uneven like a desk's (`faderTaper.ts`): unity at 85% of the travel, 0.5 dB steps above −20 dB, the quiet end squeezed together

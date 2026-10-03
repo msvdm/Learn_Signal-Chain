@@ -6,14 +6,15 @@ import {
   NODE_REGISTRY, MULTI_WIRE_TYPES,
   getPorts, portSide, isNodeStereo, mixBusOf, preampMicOf, matrixSendKey, matrixSendParam,
 } from '../data/nodeRegistry'
-import { bellGain, shelfGain } from '../components/controls/eqMath'
+import { bellGain, shelfGain, GEQ_CENTERS, GEQ_Q } from '../components/controls/eqMath'
 
 // ── Pink-noise-weighted EQ level change ───────────────────────────────────────
 // Pink noise has equal power per octave. Sampling log-uniformly from 20–20kHz
 // gives each octave the same weight, which is the correct weighting for perceptual
 // level change estimation (as opposed to just summing band gains).
-const GRAPHIC_EQ_CENTERS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 const EQ_SAMPLES = 64
+// A one-third-octave band is narrow: sample finely enough that every band counts
+const GEQ_SAMPLES = 256
 
 function eqPinkNoiseLevelChange(bands: EQBand[]): number {
   if (bands.every((b) => b.gainDb === 0)) return 0
@@ -37,17 +38,17 @@ function eqPinkNoiseLevelChange(bands: EQBand[]): number {
 function graphicEqPinkNoiseLevelChange(gains: number[]): number {
   if (gains.every((g) => g === 0)) return 0
   let sumPower = 0
-  for (let i = 0; i < EQ_SAMPLES; i++) {
-    const t = i / (EQ_SAMPLES - 1)
+  for (let i = 0; i < GEQ_SAMPLES; i++) {
+    const t = i / (GEQ_SAMPLES - 1)
     const freq = Math.pow(10, t * (Math.log10(20000) - Math.log10(20)) + Math.log10(20))
     let gain = 0
-    for (let b = 0; b < 10; b++) {
-      // Q=1.4 gives about one-octave bandwidth, matching a graphic EQ band
-      gain += bellGain(freq, GRAPHIC_EQ_CENTERS[b], gains[b], 1.4)
+    // One-third-octave bands (Q ≈ 4.3), one per slider
+    for (let b = 0; b < GEQ_CENTERS.length; b++) {
+      if (gains[b] !== 0) gain += bellGain(freq, GEQ_CENTERS[b], gains[b], GEQ_Q)
     }
     sumPower += Math.pow(10, gain / 10)
   }
-  return 10 * Math.log10(sumPower / EQ_SAMPLES)
+  return 10 * Math.log10(sumPower / GEQ_SAMPLES)
 }
 
 // 2nd-order Butterworth HPF: |H(f)|² = r⁴/(1+r⁴), r = f/cutoff
@@ -357,7 +358,7 @@ function computeGraphNode(
       return { out, health: getHealth(out), domain }
     }
     case 'graphic-eq': {
-      const gains = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (p[`b${i}`] as number) ?? 0)
+      const gains = GEQ_CENTERS.map((_, i) => (p[`b${i}`] as number) ?? 0)
       const levelChange = graphicEqPinkNoiseLevelChange(gains)
       const out = input + levelChange
       return { out, health: getHealth(out), domain }

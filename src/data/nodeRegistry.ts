@@ -312,8 +312,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
     stereo: 'follow',
-    // b0..b9 = gain for each of the 10 standard octave bands
-    defaultParams: { b0: 0, b1: 0, b2: 0, b3: 0, b4: 0, b5: 0, b6: 0, b7: 0, b8: 0, b9: 0 },
+    // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
+    defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
   },
   speaker: {
     typeKey: 'speaker',

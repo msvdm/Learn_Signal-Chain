@@ -92,7 +92,7 @@ export interface Translations {
       /** Extra graph hint when the band width can be changed (Advanced) */
       graphHintWidth?: string
     }
-    graphicEq: { label: string }
+    graphicEq: { label: string; hint: string; flat: string; flatHint: string }
     comp: {
       label: string
       threshold: string

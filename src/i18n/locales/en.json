@@ -120,7 +120,10 @@
       "graphHintWidth": "Scroll over a dot to make its band wider or narrower."
     },
     "graphicEq": {
-      "label": "Graphic EQ"
+      "label": "Graphic EQ",
+      "hint": "Drag a slider up to boost that frequency, down to cut it. Double-click = 0 dB.",
+      "flat": "Flat",
+      "flatHint": "Set every slider back to 0 dB"
     },
     "comp": {
       "label": "Compressor",
@@ -337,7 +340,7 @@
       "tip": "EQ is mostly subtractive in professional practice — cut what you don't need rather than boosting everything. Boosting adds energy; cutting cleans up the mix. In Intermediate the Equalizer has three knobs like a simple mixing desk: Low and High are shelves, Mid is a bell. \"Parametric\" means you set each band's frequency and width yourself — that is what the Parametric Equalizer in Advanced adds, with a curve you can drag and a Bell / Shelf choice for Low and High. Feed it a stereo wire and both sides get the same settings."
     },
     "graphic-eq": {
-      "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 10 bands, one per octave from 31 Hz to 16 kHz). Each band has its own fader — push it up to boost that octave, pull it down to cut.",
+      "what": "The Graphic EQ divides the spectrum into fixed frequency bands (here: 31 bands, three per octave — a third of an octave each — from 20 Hz to 20 kHz). Each band has its own fader — push it up to boost that band, pull it down to cut. The line across the sliders shows the shape you have drawn.",
       "why": "Graphic EQs are found on the master output of PA systems as the final tool for correcting room acoustics — a sudden peak at 4 kHz, a resonant boom at 63 Hz. They are less precise than parametric EQs but faster to use for broad shaping.",
       "tip": "In live sound the graphic EQ on the master output is used mainly to prevent feedback and correct for the room, not to shape the mix. Keep moves gentle — small cuts (−3 to −6 dB) solve most problems. Large boosts cause feedback and distortion."
     },
