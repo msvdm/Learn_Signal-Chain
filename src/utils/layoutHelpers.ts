@@ -37,7 +37,7 @@ const CARD_MIN_BY_TYPE: Record<string, { w: number; h: number }> = {
 const FREE_CONTROL_SIZE: Record<string, { w: number; h: number }> = {
   gain:   { w: 162, h: 216 },
   pan:    { w: 232, h: 266 },
-  fader:  { w: 196, h: 541 },
+  fader:  { w: 174, h: 541 },
   switch: { w: 175, h: 188 },
 }
 

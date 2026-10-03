@@ -2,6 +2,7 @@ import { Fragment, useRef, useEffect, useId } from 'react'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
 import { useLatestRef } from '../../hooks/useLatestRef'
+import type { FaderMark } from '../../utils/faderTaper'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
@@ -20,15 +21,21 @@ export interface FaderTaper {
   fromPosition: (position: number) => number
 }
 
-// Layout constants (px, at scale 1)
-const AREA_W     = 60
-const TRACK_LEFT = 8
-const TRACK_W    = 8
+// Layout (px, at scale 1), like a desk's fader print:
+// numbers on the left | ticks · track · ticks (the cap slides over the ticks)
+const LABEL_W    = 22     // numbers, right-aligned
+const LABEL_GAP  = 2
 // The cap: a tall solid block, like a desk fader's (the white line across it marks the value)
 const CAP_W      = 25
 const CAP_H      = 34
-const TICK_GAP   = 2
-const MARK_FONT  = 10
+const AREA_W     = LABEL_W + LABEL_GAP + CAP_W + 2
+const TRACK_CX   = LABEL_W + LABEL_GAP + CAP_W / 2   // track centre
+const TRACK_W    = 6
+const TICK_IN    = TRACK_W / 2 + 1.5                 // ticks start this far from the track centre
+const TICK_MAJOR = 6
+const TICK_MINOR = 3.5
+const DOT_R      = 0.75                              // dots of the high-resolution zone
+const MARK_FONT  = 8
 
 interface VerticalFaderProps {
   value: number
@@ -37,8 +44,8 @@ interface VerticalFaderProps {
   step?: number
   onChange: (v: number) => void
   formatValue?: (v: number) => string
-  /** Scale marks; one without a label is drawn as a short tick */
-  marks?: Array<{ db: number; label?: string }>
+  /** Scale marks: numbered, short ticks (no label) or dots (the high-resolution zone) */
+  marks?: FaderMark[]
   height?: number
   /** Word shown under the readout at 0 dB. */
   unityLabel?: string
@@ -68,12 +75,12 @@ export function VerticalFader({
   capColor = 'black',
 }: VerticalFaderProps) {
   const k         = scale
-  const trackLeft = TRACK_LEFT * k
+  const trackCx   = TRACK_CX * k
   const trackW    = TRACK_W * k
   const capW      = CAP_W * k
   const capH      = CAP_H * k
-  const capLeft   = trackLeft + trackW / 2 - capW / 2   // centres cap on track
-  const tickLeft  = capLeft + capW + TICK_GAP * k       // the scale starts clear of the cap
+  const capLeft   = trackCx - capW / 2                  // centres cap on track
+  const line      = Math.max(1, Math.round(k * 0.75))   // tick thickness
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
   // Grabbing the cap keeps the spot you hold under the pointer (no jump): pointer − cap centre
@@ -136,31 +143,48 @@ export function VerticalFader({
       >
         {/* Track groove */}
         <div style={{
-          position: 'absolute', left: trackLeft, top: 0, bottom: 0, width: trackW,
+          position: 'absolute', left: trackCx - trackW / 2, top: 0, bottom: 0, width: trackW,
           borderRadius: 4 * k,
           background: 'var(--lsc-sunken)',
           border: '1px solid var(--lsc-border)',
           pointerEvents: 'none',
         }} />
 
-        {/* Scale: ticks + labels to the right of the track; unlabelled marks are short ticks */}
-        {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label }) => {
-          const topPct  = 100 - positionOf(db) * 100
+        {/* Scale: numbers on the left, ticks on both sides of the track, dots around unity */}
+        {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label, dot }) => {
+          const top     = `${100 - positionOf(db) * 100}%`
           const isUnity = db === 0
+          const color   = isUnity ? 'var(--signal-good)' : label ? 'var(--lsc-fg-dim)' : 'var(--lsc-border)'
+          if (dot) {
+            // Two dots each side: the fine-control zone around unity, one row per dB
+            return [-1, 1].flatMap((side) => [TICK_IN + 1.5, TICK_IN + 4.5].map((x) => (
+              <span
+                key={`${db}:${side}:${x}`}
+                style={{
+                  position: 'absolute', top, left: trackCx + side * x * k - DOT_R * k,
+                  width: DOT_R * 2 * k, height: DOT_R * 2 * k, marginTop: -DOT_R * k,
+                  borderRadius: 9999, background: 'var(--lsc-fg-dim)', pointerEvents: 'none',
+                }}
+              />
+            )))
+          }
+          const len = (label ? TICK_MAJOR : TICK_MINOR) * k
           return (
             <Fragment key={db}>
-              <div style={{
-                position: 'absolute',
-                top: `${topPct}%`, left: tickLeft,
-                width: (isUnity ? 8 : label ? 5 : 3) * k, height: Math.max(1, Math.round(k * 0.75)),
-                background: isUnity ? 'var(--signal-good)' : label ? 'var(--lsc-fg-dim)' : 'var(--lsc-border)',
-                pointerEvents: 'none',
-              }} />
+              {[-1, 1].map((side) => (
+                <div
+                  key={side}
+                  style={{
+                    position: 'absolute', top, marginTop: -line / 2, height: line, width: len,
+                    left: side < 0 ? trackCx - TICK_IN * k - len : trackCx + TICK_IN * k,
+                    background: color, pointerEvents: 'none',
+                  }}
+                />
+              ))}
               {label && <span style={{
-                position: 'absolute',
-                top: `${topPct}%`, left: tickLeft + (isUnity ? 10 : 7) * k,
+                position: 'absolute', top, right: (AREA_W - LABEL_W) * k,
                 transform: 'translateY(-50%)',
-                fontSize: MARK_FONT * k, fontFamily: 'var(--lsc-font-mono)', lineHeight: 1,
+                fontSize: MARK_FONT * k, fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, lineHeight: 1,
                 color: isUnity ? 'var(--signal-good)' : 'var(--lsc-fg-muted)',
                 pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
               }}>

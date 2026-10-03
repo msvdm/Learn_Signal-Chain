@@ -1,20 +1,21 @@
 /**
  * A mixing-desk fader's scale: not even in dB. The top of the travel gives fine control around
  * unity (0 dB, high up the travel), the bottom squeezes the quiet end together — like a real
- * console, where pulling a fader halfway down already takes about 20 dB off.
+ * console, where pulling a fader halfway down already takes about 20 dB off. The spacing follows
+ * a real desk's fader print: 5 dB steps from +10 to −10, 10 dB steps below, closing up towards
+ * the bottom.
  * Points along the travel (0 = bottom, 1 = top) with the dB there; straight lines in between.
  */
 const POINTS: Array<[db: number, position: number]> = [
   [-100, 0],
-  [-80,  0.075],
-  [-60,  0.17],
-  [-50,  0.25],
-  [-40,  0.34],
-  [-30,  0.44],
-  [-20,  0.555],
-  [-15,  0.62],
-  [-10,  0.69],
-  [-5,   0.77],
+  [-80,  0.06],
+  [-60,  0.135],
+  [-50,  0.215],
+  [-40,  0.30],
+  [-30,  0.41],
+  [-20,  0.52],
+  [-10,  0.655],
+  [-5,   0.745],
   [0,    0.85],
   [5,    0.925],
   [10,   1],
@@ -56,17 +57,23 @@ export function faderDbAt(position: number): number {
   return Math.max(FADER_MIN_DB, Math.min(FADER_MAX_DB, Math.round(db / step) * step))
 }
 
-/** Scale printed beside the fader: numbered marks, and short unnumbered ticks in between. */
-export const FADER_MARKS: Array<{ db: number; label?: string }> = (() => {
-  const labelled = [10, 5, 0, -5, -10, -15, -20, -30, -40, -50, -60, -80, -100]
-  const ticks = [
-    ...range(10, -10, 1),     // every 1 dB around unity
-    ...range(-10, -20, 2.5),
-    ...range(-20, -60, 5),
-    ...range(-60, -100, 10),
-  ]
-  const marks = new Map<number, { db: number; label?: string }>()
-  for (const db of ticks) marks.set(db, { db })
+export interface FaderMark {
+  db: number
+  /** Numbered mark */
+  label?: string
+  /** A dot of the high-resolution zone around unity (one row per dB) instead of a tick */
+  dot?: boolean
+}
+
+/**
+ * Scale printed beside the fader, like a desk's: numbered marks, a dotted high-resolution zone
+ * around unity (+5…−5 dB, where the fader moves in 0.5 dB steps) and short half-way ticks below.
+ */
+export const FADER_MARKS: FaderMark[] = (() => {
+  const labelled = [10, 5, 0, -5, -10, -20, -30, -40, -50, -60, -80, -100]
+  const marks = new Map<number, FaderMark>()
+  for (const db of range(4, -4, 1)) marks.set(db, { db, dot: true })
+  for (const db of [-15, -25, -35, -45, -55, -70, -90]) marks.set(db, { db })
   for (const db of labelled) marks.set(db, { db, label: db > 0 ? `+${db}` : db === 0 ? '0' : `−${-db}` })
   return [...marks.values()]
 })()
