@@ -131,7 +131,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
     stereo: 'follow',
-    defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0 },
+    // Attack / Release are shown on the card but do not change the sound yet
+    defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
   fader: {
     typeKey: 'fader',

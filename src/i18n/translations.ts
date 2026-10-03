@@ -100,6 +100,8 @@ export interface Translations {
       makeupGain: string
       gainReduction: string
       turningDown: string
+      attack: string
+      release: string
     }
     fader: { label: string; unity: string }
     master: {

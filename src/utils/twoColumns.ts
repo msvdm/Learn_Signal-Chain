@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 
 /**
  * Two-column body shared by the dynamics cards (Compressor, Limiter, Noise Gate, De-esser), and used
- * by the DI Box, Active Speaker and Intermediate Equalizer to stay landscape:
+ * by the DI Box and the Intermediate Equalizer to stay landscape:
  * row 1 = Input meter | Output meter (the signal comes in on the left and leaves on the right),
  * row 2 = knobs stacked on the left | graph and reading on the right (components in DynamicsLayout.tsx).
  */

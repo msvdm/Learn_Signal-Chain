@@ -49,6 +49,7 @@ export function dbToPercent(db: number): number {
 }
 
 export function formatDb(db: number): string {
-  if (db <= -60) return '-∞ dBu'
+  // A real reading down to −99.9 (a microphone sits at −60 dBu); below that it is silence
+  if (!isFinite(db) || db <= -100) return '-∞ dBu'
   return `${db >= 0 ? '+' : ''}${db.toFixed(1)} dBu`
 }

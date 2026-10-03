@@ -39,7 +39,7 @@ interface OverviewFaceProps {
   /** Fully visible (zoomed out); otherwise faded out and hidden. */
   shown: boolean
   bypassed: boolean
-  /** Cards without an output (speakers) show the level arriving instead. */
+  /** Cards without an output (speakers) show the level they play: silent for a passive speaker without an amp. */
   hasOutput: boolean
 }
 
@@ -89,7 +89,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
   if (!layout) return null
 
-  const db     = hasOutput ? Math.max(levels.out, levels.outR ?? -Infinity) : levels.inPeak
+  // The level leaving the card; a speaker's is the sound it plays (its stage result)
+  const db     = Math.max(levels.out, hasOutput ? (levels.outR ?? -Infinity) : -Infinity)
   const state  = getHealth(db)
   const style  = getHealthStyle(state)
   const [value, unitText] = formatDb(db).split(' ')
@@ -175,10 +176,14 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 }
 
 /** A card's icon drawn as big as the overview box allows (sources and speakers show this instead of a name). */
-export function OverviewIcon({ icon, box }: { icon: ReactNode; box: { w: number; h: number } }) {
+export function OverviewIcon({ icon, box, color = 'var(--lsc-fg)' }: {
+  icon: ReactNode
+  box: { w: number; h: number }
+  color?: string
+}) {
   const size = Math.floor(Math.min(box.w, box.h))
   return (
-    <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color: 'var(--lsc-fg)' }}>
+    <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color }}>
       {icon}
     </span>
   )

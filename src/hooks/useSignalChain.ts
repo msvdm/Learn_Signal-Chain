@@ -82,6 +82,7 @@ export interface StageResult {
   mainFader?: boolean               // a Fader on a bus's Mix output: controls the whole mix
   preamp?: boolean                  // a Gain after a microphone: lifts it up to line level
   warning?: string                  // domain violation or blocked signal
+  needsAmp?: boolean                // a passive speaker fed without an amplifier: silent
   portOutputs?: Record<string, number> // per-port overrides for multi-output nodes
 }
 
@@ -528,7 +529,7 @@ function computeGraphSignal(
 
       // Passive speaker requires a power amplifier (amp node) somewhere upstream
       if (node.typeKey === 'speaker' && !myUpstream.has('amp') && incoming.length > 0) {
-        const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet', domain: inputDomain }
+        const noAmpResult: StageResult = { out: -Infinity, health: 'too-quiet', domain: inputDomain, needsAmp: true }
         stages[node.id] = noAmpResult
         inputDb[node.id] = inputsFor(null).signals[0] ?? -Infinity
         for (const port of ports.outputs) send(port.id, SILENT_WIRE)

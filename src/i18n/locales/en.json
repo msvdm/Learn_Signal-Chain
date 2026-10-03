@@ -128,7 +128,9 @@
       "ratio": "Ratio",
       "makeupGain": "Makeup gain",
       "gainReduction": "Gain reduction",
-      "turningDown": "Turning down"
+      "turningDown": "Turning down",
+      "attack": "Attack",
+      "release": "Release"
     },
     "fader": {
       "label": "Fader",
@@ -152,7 +154,7 @@
       "statusHot": "Loud — near limit",
       "statusClipping": "Distortion! Signal clipping",
       "statusQuiet": "Too quiet — noise audible",
-      "needsAmp": "Needs a power amplifier — connect an Amp node before this speaker"
+      "needsAmp": "Silent — needs an Amplifier before it"
     },
     "activeSpeaker": {
       "label": "Active Speaker",

@@ -1,10 +1,8 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Volume2 } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { InlineNode } from './InlineNode'
+import { Volume2, VolumeX } from 'lucide-react'
+import { NodeWrapper } from './NodeWrapper'
 import { OverviewIcon } from './OverviewFace'
 import { useGraphSignal } from '../../hooks/useSignalChain'
-import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphSpeakerData extends Record<string, unknown> {
@@ -12,41 +10,44 @@ interface GraphSpeakerData extends Record<string, unknown> {
   label?: string
 }
 
-export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
-  const { stages }  = useGraphSignal()
-  const result      = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const healthStyle = getHealthStyle(result.health)
-  const { t }       = useTranslation()
+const NOTE_LINE = 1.25
 
-  const amplitude  = Math.max(2, Math.min(18, ((result.out + 60) / 80) * 24))
-  const isClipping = result.health === 'clipping'
+/**
+ * Passive speaker: a card with a big icon and the level it plays, at every zoom.
+ * It has no amplifier inside — fed without an Amplifier before it, it stays silent,
+ * and the card says so (crossed-out speaker + a note).
+ */
+export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
+  const { stages } = useGraphSignal()
+  const { t }      = useTranslation()
+  const needsAmp   = stages[id]?.needsAmp ?? false
 
   return (
-    <InlineNode
+    <NodeWrapper
       nodeId={id}
       typeKey="speaker"
       icon={<Volume2 size={20} />}
       label={data.label ?? t.nodes.speaker.label}
-      accentColor={data.color}
-      overviewArt={(box) => <OverviewIcon icon={<Volume2 />} box={box} />}
-    >
-      <motion.svg
-        viewBox="0 0 60 24"
-        style={{ width: 60, height: 24 }}
-        animate={isClipping ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
-        transition={isClipping ? { duration: 0.5, repeat: Infinity } : {}}
-      >
-        <motion.path
-          initial={false}
-          animate={{
-            d: `M 0 12 Q 7.5 ${12 - amplitude * 0.5} 15 12 Q 22.5 ${12 + amplitude * 0.5} 30 12 Q 37.5 ${12 - amplitude * 0.5} 45 12 Q 52.5 ${12 + amplitude * 0.5} 60 12`,
-          }}
-          fill="none"
-          stroke={healthStyle.color}
-          strokeWidth="2"
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        />
-      </motion.svg>
-    </InlineNode>
+      faceOnly
+      overviewArt={(box) => {
+        if (!needsAmp) return <OverviewIcon icon={<Volume2 />} box={box} />
+        // Room for a two-line note under the icon
+        const note = Math.max(13, Math.min(18, Math.round(box.w * 0.065)))
+        const noteH = note * NOTE_LINE * 2 + 6
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h: box.h - noteH }} color="var(--signal-hot-text)" />
+            <span
+              style={{
+                fontSize: note, fontWeight: 700, lineHeight: NOTE_LINE, textAlign: 'center',
+                color: 'var(--signal-hot-text)', maxWidth: box.w,
+              }}
+            >
+              {t.nodes.speaker.needsAmp}
+            </span>
+          </div>
+        )
+      }}
+    />
   )
 }

@@ -33,6 +33,8 @@ interface NodeWrapperProps {
   overviewArt?: OverviewArt
   /** Overview: false = no level block, the art takes the whole card. */
   overviewLevel?: boolean
+  /** Show only the overview face (icon + level) at every zoom: no header, no body. */
+  faceOnly?: boolean
 }
 
 /**
@@ -54,6 +56,7 @@ export function NodeWrapper({
   style,
   overviewArt,
   overviewLevel = true,
+  faceOnly = false,
 }: NodeWrapperProps) {
   const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
   const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
@@ -96,6 +99,8 @@ export function NodeWrapper({
   return (
     <div
       className={`lsc-node-card select-none ${selected ? 'lsc-selected' : ''} ${className}`}
+      // A face-only card shows an icon, not its name: the name appears on hover
+      title={faceOnly ? label : undefined}
       style={{
         position: 'relative',
         width: 'max-content',
@@ -153,94 +158,97 @@ export function NodeWrapper({
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
       ))}
 
-      {/* Header — fixed height keeps the port line aligned across cards */}
-      <div
-        className="lsc-fade"
-        style={{
-          ...hideInOverview,
-          position: 'relative',
-          minHeight: HEADER_H,
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '0 10px 0 12px',
-          borderBottom: '1px solid var(--lsc-border-soft)',
-          flexShrink: 0,
-        }}
-      >
-        <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>{icon}</span>
-        {/* Short titles stay on one line (the card grows); long ones wrap */}
-        <span
+      {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
+      {!faceOnly && <>
+        {/* Header — fixed height keeps the port line aligned across cards */}
+        <div
+          className="lsc-fade"
           style={{
-            flex: '0 1 auto', width: 'max-content', maxWidth: 132,
-            fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
-            padding: '6px 0',
+            ...hideInOverview,
+            position: 'relative',
+            minHeight: HEADER_H,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '0 10px 0 12px',
+            borderBottom: '1px solid var(--lsc-border-soft)',
+            flexShrink: 0,
           }}
         >
-          {label}
-        </span>
-        {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
-        {isBypassed && (
+          <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>{icon}</span>
+          {/* Short titles stay on one line (the card grows); long ones wrap */}
           <span
             style={{
-              position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
-              fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
-              padding: '0 6px', borderRadius: 9999,
-              background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
-              color: 'var(--signal-hot)',
-              border: '1px solid var(--signal-hot-border)',
-              pointerEvents: 'none',
+              flex: '0 1 auto', width: 'max-content', maxWidth: 132,
+              fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
+              padding: '6px 0',
             }}
           >
-            {t.nodeControls.bypassedShort}
+            {label}
           </span>
-        )}
-        <span style={{ flex: 1 }} />
-        {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
-        <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {canBypass && (
-            <button
-              className="lsc-node-btn"
-              title={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
-              aria-pressed={!isBypassed}
-              onClick={() => toggleBypassNode(nodeId)}
+          {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
+          {isBypassed && (
+            <span
               style={{
-                ...headerBtn,
-                borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
-                background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
-                color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+                position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
+                fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
+                padding: '0 6px', borderRadius: 9999,
+                background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
+                color: 'var(--signal-hot)',
+                border: '1px solid var(--signal-hot-border)',
+                pointerEvents: 'none',
               }}
             >
-              <Power size={12} strokeWidth={2.5} />
-            </button>
+              {t.nodeControls.bypassedShort}
+            </span>
           )}
+          <span style={{ flex: 1 }} />
+          {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
+          <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            {canBypass && (
+              <button
+                className="lsc-node-btn"
+                title={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
+                aria-pressed={!isBypassed}
+                onClick={() => toggleBypassNode(nodeId)}
+                style={{
+                  ...headerBtn,
+                  borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
+                  background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
+                  color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+                }}
+              >
+                <Power size={12} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
-      {canStereo && node && (
-        <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
-          <StereoToggle
-            stereo={isNodeStereo(node)}
-            onChange={(on) => setNodeStereo(nodeId, on)}
-            labels={[t.stereo.mono, t.stereo.stereo]}
-            hint={t.stereo.toggleHint}
-          />
+        {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
+        {canStereo && node && (
+          <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
+            <StereoToggle
+              stereo={isNodeStereo(node)}
+              onChange={(on) => setNodeStereo(nodeId, on)}
+              labels={[t.stereo.mono, t.stereo.stereo]}
+              hint={t.stereo.toggleHint}
+            />
+          </div>
+        )}
+
+        {/* Body — dimmed when bypassed; centred in cards bigger than their controls */}
+        <div
+          className="lsc-fade"
+          style={{
+            flex: 1,
+            padding: `10px ${BODY_PAD_X}px 12px`,
+            display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center',
+            alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
+            opacity: isBypassed ? 0.5 : 1,
+            ...hideInOverview,
+          }}
+        >
+          {children}
         </div>
-      )}
-
-      {/* Body — dimmed when bypassed; centred in cards bigger than their controls */}
-      <div
-        className="lsc-fade"
-        style={{
-          flex: 1,
-          padding: `10px ${BODY_PAD_X}px 12px`,
-          display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center',
-          alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
-          opacity: isBypassed ? 0.5 : 1,
-          ...hideInOverview,
-        }}
-      >
-        {children}
-      </div>
+      </>}
 
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
       <OverviewFace
@@ -249,7 +257,7 @@ export function NodeWrapper({
         label={label}
         art={overviewArt}
         showLevel={overviewLevel}
-        shown={overview}
+        shown={overview || faceOnly}
         bypassed={isBypassed}
         hasOutput={outputs.length > 0}
       />

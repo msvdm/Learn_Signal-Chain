@@ -162,6 +162,9 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
   const threshold   = (params.thresholdDb as number) ?? -20
   const ratio       = (params.ratio as number) ?? 2
   const makeupGain  = (params.makeupGainDb as number) ?? 0
+  // Shown and stored, but not part of the sound yet
+  const attackMs    = (params.attackMs as number) ?? 10
+  const releaseMs   = (params.releaseMs as number) ?? 100
   const gainReduction = compResult.gainReductionDb ?? 0
 
   return (
@@ -225,6 +228,32 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
           />
           <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
         </div>
+
+        {/* How fast it starts turning down (Attack) and lets go again (Release) */}
+        <KnobControl
+          value={attackMs}
+          min={1}
+          max={100}
+          step={1}
+          label={t.nodes.comp.attack}
+          formatValue={(v) => `${v} ms`}
+          onChange={(v) => updateNodeParams(id, { attackMs: v })}
+          color="var(--lsc-accent)"
+          size={44}
+          layout="side"
+        />
+        <KnobControl
+          value={releaseMs}
+          min={10}
+          max={1000}
+          step={10}
+          label={t.nodes.comp.release}
+          formatValue={(v) => `${v} ms`}
+          onChange={(v) => updateNodeParams(id, { releaseMs: v })}
+          color="var(--lsc-accent)"
+          size={44}
+          layout="side"
+        />
       </div>
     </NodeWrapper>
   )

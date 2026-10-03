@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
 import { Mic, Guitar } from 'lucide-react'
+import { NodeWrapper } from './NodeWrapper'
 import { InlineNode } from './InlineNode'
 import { OverviewIcon } from './OverviewFace'
 import { useSignalStore } from '../../store/signalStore'
@@ -33,6 +34,10 @@ const ICONS: Record<string, ReactNode> = {
   instrument: <Guitar size={20} />,
 }
 
+/**
+ * Microphone and Instrument: a card with just a big icon and the level they send out, at every
+ * zoom (nothing to set on them). Line Input keeps a full card: it has a Mono / Stereo switch.
+ */
 export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
   const node  = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const { t } = useTranslation()
@@ -41,17 +46,23 @@ export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
   const params          = node?.params ?? {}
   const levelDb         = (params.sensitivityDb as number) ?? (params.levelDb as number) ?? -60
   const icon            = ICONS[resolvedTypeKey] ?? <Mic size={20} />
+  const label           = data.label ?? t.palette.items[resolvedTypeKey] ?? t.nodes.mic.label
+  const art             = (box: { w: number; h: number }) => <OverviewIcon icon={icon} box={box} />
+
+  if (resolvedTypeKey !== 'line-in') {
+    return <NodeWrapper nodeId={id} typeKey={resolvedTypeKey} icon={icon} label={label} overviewArt={art} faceOnly />
+  }
 
   return (
     <InlineNode
       nodeId={id}
       typeKey={resolvedTypeKey}
       icon={icon}
-      label={data.label ?? t.palette.items[resolvedTypeKey] ?? t.nodes.mic.label}
+      label={label}
       accentColor={data.color}
       value={`${levelDb} dBu`}
       align="start"
-      overviewArt={(box) => <OverviewIcon icon={icon} box={box} />}
+      overviewArt={art}
     />
   )
 }
