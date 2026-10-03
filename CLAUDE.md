@@ -74,6 +74,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/utils/twoColumns.ts` | `twoColumns` (two 170px columns: In meter \| Out meter, then controls \| graph) and `twoColumnCard` (min height so a 398px card is never wider than 3:2). |
 | `src/utils/connectionRules.ts` | `nodeAcceptsWire()` / `portAcceptsWire()` — which inputs may take a wire (one wire per input; Master / Aux / Matrix bus inputs take any number; a Matrix Bus takes finished mixes only, after their fader — `isMatrixSource`; a Matrix send feeds only Matrix Buses). |
 | `src/utils/chainColors.ts` | Chain colours (one per source, picked on `addNode`), `upstreamOf` / `chainOfEdge` / `chainColorsOf` / `chainSourcesOfEdge` for the card stripe, unplug list and highlight. |
+| `src/utils/faderTaper.ts` | `faderPosition()` / `faderDbAt()` — a desk fader's uneven dB scale (points along the travel, straight lines between, rounded to 0.5 / 1 / 2 dB) and `FADER_MARKS` (numbered marks + short ticks). |
 | `src/utils/wirePath.ts` | `buildWirePath()` — orthogonal route with rounded corners, shared by the live preview and committed edges. |
 | `src/utils/wireValidation.ts` | `wirePassesThroughNode()` — orange warning when a wire crosses another card. |
 | `src/utils/mainFader.ts` | Main Fader and Matrix send wiring rules: `attachMainFaders()` (a Fader on a stereo bus's L / R takes them over, with the Matrix send; L / R into a Matrix Bus becomes the Matrix send), `reconcileMainFaders()` (hand L / R and the send back when the Main Fader is unplugged or deleted). Used by every store graph mutation. |
@@ -118,7 +119,7 @@ Every node uses `NodeWrapper`:
 
 ### Free-standing controls
 
-**Gain (Preamp), Pan (Balance), Fader (Main Fader) and Switch are not cards**: each is the bare control with its connection points (`FreeControl`) — a 110px knob, a 260px fader (`VerticalFader scale={2}`), a 110px square On / Off button with rounded corners. Large, and the same at every zoom (no overview face). Under the control: its name (follows the wiring, wraps at 200px) and its reading (`StableText`). Pan has a slim L / R meter under it, the Main Fader upright L / R meters beside it (`VerticalMeterPair`). The control sits so that its port line is at `PORT_TOP`, level with the cards' first port, so wires stay straight. Grab the name or the space around the control to move it; the control itself carries `nodrag nopan`. Their drop-preview sizes are in `FREE_CONTROL_SIZE` (`layoutHelpers.ts`).
+**Gain (Preamp), Pan (Balance), Fader (Main Fader) and Switch are not cards**: each is the bare control with its connection points (`FreeControl`) — a 110px knob, a 440px fader (`VerticalFader scale={2.4}`, −100…+10 dB on a desk-style uneven scale: `utils/faderTaper.ts`), a 110px square On / Off button with rounded corners. Large, and the same at every zoom (no overview face). Under the control: its name (follows the wiring, wraps at 200px) and its reading (`StableText`). Pan has a slim L / R meter under it, the Main Fader upright L / R meters beside it (`VerticalMeterPair`). The control sits so that its port line is at `PORT_TOP`, level with the cards' first port, so wires stay straight. Grab the name or the space around the control to move it; the control itself carries `nodrag nopan`. Only the left button moves a knob or fader (a right-click opens the menu and changes nothing); grabbing the fader cap drags it from where it is held, a click on the track jumps there. Their drop-preview sizes are in `FREE_CONTROL_SIZE` (`layoutHelpers.ts`).
 
 ### Mono / Stereo
 
@@ -164,7 +165,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 - **HPF**: passthrough placeholder (no frequency weighting at this level)
 - **EQ**: `output = input + sum(bandGains)` — additive only
 - **Compressor**: `gainReduction = max(0, (input − threshold) × (1 − 1/ratio))`, then `output = input − gainReduction + makeupGain`
-- **Fader**: `output = input + faderDb`
+- **Fader**: `output = input + faderDb`, −100…+10 dB. The fader's travel is uneven like a desk's (`faderTaper.ts`): unity at 85% of the travel, 0.5 dB steps above −20 dB, the quiet end squeezed together
 - **Switch**: `output = on ? input : −∞`
 - **Master Bus / Aux Bus**: `output = 20 × log10(Σ 10^(inputN/20))` (voltage sum of all wires — two identical signals give +6 dB), per side in stereo
 - **Matrix Bus** (always stereo): a bus of buses — only finished mixes go in, after their fader (a stereo bus's Matrix send, a mono Aux's output). Each wire first gets its bus's send knob (`params[send-<busId>]`, one per bus; audio taper `taperToDb`: 0 = off, 75 = 0 dB), then the usual stereo bus sum (a mono bus lands on both sides at full level). Its overall level is a Fader after it (its Main Fader)

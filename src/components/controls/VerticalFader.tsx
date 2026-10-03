@@ -13,6 +13,13 @@ const DEFAULT_MARKS = [
   { db: -80, label: '−∞'  },
 ]
 
+/** A non-even scale: where a value sits along the travel (0 = bottom, 1 = top) and back. */
+export interface FaderTaper {
+  toPosition: (value: number) => number
+  /** The value at a point of the travel, already rounded to a step */
+  fromPosition: (position: number) => number
+}
+
 // Layout constants (px, at scale 1)
 const AREA_W     = 60
 const TRACK_LEFT = 8
@@ -29,7 +36,8 @@ interface VerticalFaderProps {
   step?: number
   onChange: (v: number) => void
   formatValue?: (v: number) => string
-  marks?: Array<{ db: number; label: string }>
+  /** Scale marks; one without a label is drawn as a short tick */
+  marks?: Array<{ db: number; label?: string }>
   height?: number
   /** Word shown under the readout at 0 dB. */
   unityLabel?: string
@@ -37,6 +45,8 @@ interface VerticalFaderProps {
   scale?: number
   /** false = no value readout beside the fader; the caller shows it. */
   showReadout?: boolean
+  /** Uneven scale (a desk fader's); default: even from min to max in `step`s */
+  taper?: FaderTaper
 }
 
 export function VerticalFader({
@@ -51,6 +61,7 @@ export function VerticalFader({
   unityLabel = 'unity',
   scale = 1,
   showReadout = true,
+  taper,
 }: VerticalFaderProps) {
   const k         = scale
   const trackLeft = TRACK_LEFT * k
@@ -61,20 +72,26 @@ export function VerticalFader({
   const tickLeft  = trackLeft + trackW + TICK_GAP * k   // right of track + gap
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
+  // Grabbing the cap keeps the spot you hold under the pointer (no jump): pointer − cap centre
+  const grabOffset   = useRef(0)
   const valueRef     = useLatestRef(value)
 
-  const pct          = ((value - min) / (max - min)) * 100
+  const positionOf = (v: number) => taper ? taper.toPosition(v) : (v - min) / (max - min)
+  const valueAt    = (fraction: number) => {
+    if (taper) return taper.fromPosition(fraction)
+    const stepped = Math.round((min + fraction * (max - min)) / step) * step
+    return Math.max(min, Math.min(max, stepped))
+  }
+
+  const pct          = positionOf(value) * 100
   const format       = formatValue ?? ((v: number) => `${v >= 0 ? '+' : ''}${v} dB`)
   const displayValue = format(value)
 
   function computeFromPointer(clientY: number): number {
     if (!containerRef.current) return valueRef.current
-    const rect     = containerRef.current.getBoundingClientRect()
-    const relY     = Math.max(0, Math.min(rect.height, clientY - rect.top))
-    const fraction = 1 - relY / rect.height
-    const raw      = min + fraction * (max - min)
-    const stepped  = Math.round(raw / step) * step
-    return Math.max(min, Math.min(max, stepped))
+    const rect = containerRef.current.getBoundingClientRect()
+    const relY = Math.max(0, Math.min(rect.height, clientY - grabOffset.current - rect.top))
+    return valueAt(1 - relY / rect.height)
   }
 
   useEffect(() => {
@@ -90,10 +107,18 @@ export function VerticalFader({
   }, [min, max, step, onChange])
 
   function handlePointerDown(e: React.PointerEvent) {
+    // Only the main button moves the fader: a right-click opens the element's menu instead
+    if (e.button !== 0) return
     e.stopPropagation()
     e.preventDefault()
     isDragging.current = true
-    onChange(computeFromPointer(e.clientY))
+    // On the cap: drag it from where it is held. On the track: the cap jumps there.
+    const rect     = e.currentTarget.getBoundingClientRect()
+    const capY     = rect.top + (1 - positionOf(valueRef.current)) * rect.height
+    const capHalf  = (capH / 2) * (rect.height / height)
+    const onCap    = Math.abs(e.clientY - capY) <= capHalf
+    grabOffset.current = onCap ? e.clientY - capY : 0
+    if (!onCap) onChange(computeFromPointer(e.clientY))
   }
 
   return (
@@ -114,20 +139,20 @@ export function VerticalFader({
           pointerEvents: 'none',
         }} />
 
-        {/* Scale: ticks + labels to the right of the track */}
+        {/* Scale: ticks + labels to the right of the track; unlabelled marks are short ticks */}
         {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label }) => {
-          const topPct  = 100 - ((db - min) / (max - min)) * 100
+          const topPct  = 100 - positionOf(db) * 100
           const isUnity = db === 0
           return (
             <Fragment key={db}>
               <div style={{
                 position: 'absolute',
                 top: `${topPct}%`, left: tickLeft,
-                width: (isUnity ? 8 : 5) * k, height: Math.max(1, Math.round(k * 0.75)),
-                background: isUnity ? 'var(--signal-good)' : 'var(--lsc-border)',
+                width: (isUnity ? 8 : label ? 5 : 3) * k, height: Math.max(1, Math.round(k * 0.75)),
+                background: isUnity ? 'var(--signal-good)' : label ? 'var(--lsc-fg-dim)' : 'var(--lsc-border)',
                 pointerEvents: 'none',
               }} />
-              <span style={{
+              {label && <span style={{
                 position: 'absolute',
                 top: `${topPct}%`, left: tickLeft + (isUnity ? 10 : 7) * k,
                 transform: 'translateY(-50%)',
@@ -136,7 +161,7 @@ export function VerticalFader({
                 pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
               }}>
                 {label}
-              </span>
+              </span>}
             </Fragment>
           )
         })}

@@ -85,6 +85,8 @@ export function KnobControl({
   }, [min, max, range, step, onChange])
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // Only the main button turns the knob: a right-click opens the element's menu instead
+    if (e.button !== 0) return
     e.stopPropagation()
     e.preventDefault()
     startY.current = e.clientY
