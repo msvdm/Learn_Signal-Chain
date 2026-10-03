@@ -15,6 +15,7 @@ import {
   BAND_COLORS, DB_MIN, DB_MAX, Q_MIN, Q_MAX,
   isShelf, formatFreq, formatGain,
 } from '../controls/eqMath'
+import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 
 const DEFAULT_BANDS = NODE_REGISTRY.eq.defaultParams.bands as EQBand[]
 
@@ -253,6 +254,7 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
       icon={<Activity size={16} />}
       label={data.label ?? t.nodes.eq.label}
       accentColor={data.color}
+      style={advanced ? undefined : twoColumnCard}
     >
       {advanced ? (
         <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -286,9 +288,11 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
         </div>
       ) : (
         // A simple mixing desk's EQ: no curve, just turn a range up or down
-        <div className="space-y-3">
+        // Landscape: In | Out meters side by side, the knobs in one row under them
+        <div style={twoColumns}>
           {meterIn}
-          <div style={{ display: 'flex', justifyContent: 'space-around', gap: 8, paddingTop: 2 }}>
+          {meterOut}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-around', gap: 8, paddingTop: 2 }}>
             {specs.map((s) => (
               <KnobControl
                 key={s.index}
@@ -299,7 +303,6 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
               />
             ))}
           </div>
-          {meterOut}
         </div>
       )}
     </NodeWrapper>

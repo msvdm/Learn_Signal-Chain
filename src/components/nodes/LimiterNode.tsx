@@ -7,8 +7,9 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { twoColumns } from '../../utils/twoColumns'
+import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
 interface GraphLimiterData extends Record<string, unknown> {
   color?: string
@@ -22,8 +23,8 @@ interface GraphLimiterData extends Record<string, unknown> {
 // The abrupt 90° corner at the ceiling is the visual signature of a limiter
 // vs. a compressor (which has a shallower slope, not a flat line).
 
-const GW = 196   // SVG canvas width (px — drawn 1:1)
-const GH = 120
+const GW = 168   // SVG canvas width (px — drawn 1:1; with its border the box fills the 170px column)
+const GH = 112
 const GP = 14    // padding inside SVG
 
 const DB_IN_MIN  = -60
@@ -176,18 +177,11 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
       icon={<ShieldAlert size={16} />}
       label={data.label ?? t.nodes.limiter?.label ?? 'Limiter'}
     >
-      <div className="space-y-3">
+      <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
 
-        <LimiterCurve
-          ceiling={ceiling}
-          makeupGain={makeupGain}
-          inputLevel={inputLevel}
-          gainReduction={gainReduction}
-        />
-
-        {/* Knob row */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', paddingTop: 2 }}>
+        <KnobStack>
           <KnobControl
             value={ceiling}
             min={-20}
@@ -198,6 +192,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
             color="var(--signal-hot)"
             size={44}
+            layout="side"
           />
           <KnobControl
             value={makeupGain}
@@ -209,38 +204,19 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
             onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
             color="var(--signal-good)"
             size={44}
+            layout="side"
           />
-        </div>
+        </KnobStack>
 
-        {/* GR meter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
-            {t.nodes.comp.turningDown}
-          </span>
-          <div
-            style={{
-              flex: 1, height: 6, minWidth: 40,
-              background: 'var(--lsc-sunken)',
-              borderRadius: 9999,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${Math.min(100, (gainReduction / 20) * 100)}%`,
-                height: '100%',
-                background: 'var(--signal-hot)',
-                borderRadius: 3,
-                transition: 'width 0.1s ease-out',
-              }}
-            />
-          </div>
-          <StableText reserve={['−00.0']} align="end" style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)' }}>
-            {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
-          </StableText>
+        <div>
+          <LimiterCurve
+            ceiling={ceiling}
+            makeupGain={makeupGain}
+            inputLevel={inputLevel}
+            gainReduction={gainReduction}
+          />
+          <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
         </div>
-
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

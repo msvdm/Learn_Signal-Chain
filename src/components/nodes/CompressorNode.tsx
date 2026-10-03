@@ -7,8 +7,9 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { twoColumns } from '../../utils/twoColumns'
+import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
 interface GraphCompData extends Record<string, unknown> {
   color?: string
@@ -20,8 +21,8 @@ interface GraphCompData extends Record<string, unknown> {
 // Below threshold: 1:1 diagonal (unity gain). Above: shallower slope = compression.
 // The gap between the 1:1 reference line and the curve = gain reduction.
 
-const GW = 196   // SVG canvas width (px — drawn 1:1)
-const GH = 120   // SVG canvas height
+const GW = 168   // SVG canvas width (px — drawn 1:1; with its border the box fills the 170px column)
+const GH = 112   // SVG canvas height
 const GP = 14    // padding inside SVG
 
 // Input/output range shown on axes (dBFS)
@@ -171,19 +172,11 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
       label={data.label ?? t.nodes.comp.label}
       accentColor={data.color}
     >
-      <div className="space-y-3">
+      <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
 
-        <DynamicsCurve
-          threshold={threshold}
-          ratio={ratio}
-          makeupGain={makeupGain}
-          inputLevel={input}
-          gainReduction={gainReduction}
-        />
-
-        {/* Knob row */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', paddingTop: 2 }}>
+        <KnobStack>
           <KnobControl
             value={threshold}
             min={-60}
@@ -194,6 +187,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
             color="var(--signal-hot)"
             size={44}
+            layout="side"
           />
           <KnobControl
             value={ratio}
@@ -205,6 +199,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             onChange={(v) => updateNodeParams(id, { ratio: v })}
             color="var(--lsc-accent)"
             size={44}
+            layout="side"
           />
           <KnobControl
             value={makeupGain}
@@ -216,38 +211,20 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
             onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
             color="var(--signal-good)"
             size={44}
+            layout="side"
           />
-        </div>
+        </KnobStack>
 
-        {/* GR meter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 'var(--node-text-xs)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
-            {t.nodes.comp.turningDown}
-          </span>
-          <div
-            style={{
-              flex: 1, height: 6, minWidth: 40,
-              background: 'var(--lsc-sunken)',
-              borderRadius: 9999,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${Math.min(100, (gainReduction / 20) * 100)}%`,
-                height: '100%',
-                background: 'var(--signal-hot)',
-                borderRadius: 3,
-                transition: 'width 0.1s ease-out',
-              }}
-            />
-          </div>
-          <StableText reserve={['−00.0']} align="end" style={{ fontSize: 'var(--node-text-xs)', fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)' }}>
-            {gainReduction > 0 ? `−${gainReduction.toFixed(1)}` : '0.0'}
-          </StableText>
+        <div>
+          <DynamicsCurve
+            threshold={threshold}
+            ratio={ratio}
+            makeupGain={makeupGain}
+            inputLevel={input}
+            gainReduction={gainReduction}
+          />
+          <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
         </div>
-
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

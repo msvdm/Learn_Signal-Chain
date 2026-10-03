@@ -15,6 +15,8 @@ interface KnobControlProps {
   className?: string
   /** false = knob only; the caller shows the value and label itself */
   showReadout?: boolean
+  /** Where the value and label go: under the knob (default) or beside it (the label may wrap to two lines). */
+  layout?: 'below' | 'side'
 }
 
 const START_CLOCK = 225
@@ -37,6 +39,7 @@ export function KnobControl({
   color = 'var(--signal-good)',
   className = '',
   showReadout = true,
+  layout = 'below',
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
@@ -88,18 +91,19 @@ export function KnobControl({
 
   const valueSize = size >= 52 ? 15 : 13
   const inlineLabel = size >= 56
+  const side = layout === 'side'
 
   return (
     <div
-      className={`nodrag flex flex-col items-center select-none ${className}`}
-      style={{ minWidth: size, gap: 4 }}
+      className={`nodrag flex ${side ? 'flex-row' : 'flex-col'} items-center select-none ${className}`}
+      style={{ minWidth: size, gap: side ? 10 : 4 }}
     >
       <svg
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         onPointerDown={onPointerDown}
-        style={{ cursor: 'ns-resize', touchAction: 'none' }}
+        style={{ cursor: 'ns-resize', touchAction: 'none', flexShrink: 0 }}
       >
         {/* Knob body */}
         <circle cx={cx} cy={cy} r={size / 2 - 1} fill="var(--lsc-node-bg-2)" stroke="var(--lsc-border)" strokeWidth="1" />
@@ -134,7 +138,18 @@ export function KnobControl({
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
-      {showReadout && (
+      {showReadout && side && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, lineHeight: 1.1 }}>
+          <StableText
+            reserve={[widestFormat(min, max, step, format)]}
+            style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: valueSize, fontWeight: 700, color: 'var(--lsc-fg)' }}
+          >
+            {display}
+          </StableText>
+          <span className="lsc-knob-label" style={{ lineHeight: 1.15 }}>{label}</span>
+        </div>
+      )}
+      {showReadout && !side && (
         <div
           style={{
             display: 'flex', flexDirection: inlineLabel ? 'row' : 'column',

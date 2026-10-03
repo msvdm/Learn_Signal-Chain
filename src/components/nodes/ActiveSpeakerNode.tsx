@@ -8,6 +8,7 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
+import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 
 interface GraphActiveSpeakerData extends Record<string, unknown> {
   color?: string
@@ -38,26 +39,27 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
     <NodeWrapper
       nodeId={id}
       typeKey="active-speaker"
+      style={twoColumnCard}
       icon={<Volume2 size={16} />}
       label={data.label ?? t.nodes.activeSpeaker.label}
       accentColor={data.color}
     >
-      <div className="space-y-3">
+      <div style={{ ...twoColumns, alignItems: 'center' }}>
         <SignalMeter db={input} health={getHealth(input)} label={t.meters.input} />
+        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <KnobControl
-            value={volumeDb}
-            min={-20}
-            max={10}
-            step={0.5}
-            label={t.nodes.activeSpeaker.volume}
-            formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
-            onChange={(v) => updateNodeParams(id, { volumeDb: v })}
-            color="var(--signal-good)"
-            size={48}
-          />
-        </div>
+        <KnobControl
+          value={volumeDb}
+          min={-20}
+          max={10}
+          step={0.5}
+          label={t.nodes.activeSpeaker.volume}
+          formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
+          onChange={(v) => updateNodeParams(id, { volumeDb: v })}
+          color="var(--signal-good)"
+          size={48}
+          layout="side"
+        />
 
         <motion.svg
           viewBox="0 0 60 24"
@@ -74,8 +76,6 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
           />
         </motion.svg>
-
-        <SignalMeter db={result.out} health={result.health} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

@@ -8,6 +8,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { twoColumns } from '../../utils/twoColumns'
 
 interface GraphDIBoxData extends Record<string, unknown> {
   color?: string
@@ -31,9 +32,17 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
       icon={<Plug size={16} />}
       label={data.label ?? t.nodes['di-box']?.label ?? 'DI Box'}
     >
-      <div className="space-y-2">
+      <div style={twoColumns}>
+        {/* Signal flow */}
+        <SignalMeter
+          db={levels.in}
+          dbR={levels.inR}
+          health={getHealth(levels.inPeak)}
+          label={t.meters.input}
+        />
+
         {/* Ground lift toggle */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" style={{ gap: 8 }}>
           <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
             {t.nodes['di-box']?.groundLift ?? 'Ground Lift'}
           </span>
@@ -54,16 +63,8 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
           </button>
         </div>
 
-        {/* Signal flow */}
-        <SignalMeter
-          db={levels.in}
-          dbR={levels.inR}
-          health={getHealth(levels.inPeak)}
-          label={t.meters.input}
-        />
-
         {/* Two outputs — both carry the same signal level */}
-        <div className="space-y-1">
+        <div className="space-y-1" style={{ gridColumn: '1 / -1' }}>
           <div className="flex items-center justify-between">
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-accent)', fontWeight: 700 }}>
               {t.nodes['di-box']?.xlrOut ?? 'XLR Out'}
@@ -88,7 +89,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
 
         <div
           className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
-          style={{ color: 'var(--lsc-fg-muted)', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
+          style={{ gridColumn: '1 / -1', color: 'var(--lsc-fg-muted)', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
         >
           {t.nodes['di-box']?.description ?? 'Converts high-impedance instrument signal to balanced mic-level XLR.'}
         </div>

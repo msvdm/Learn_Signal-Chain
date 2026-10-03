@@ -7,8 +7,9 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import type { DeesserResult } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
+import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
 interface GraphDeesserData extends Record<string, unknown> {
   color?: string
@@ -36,71 +37,11 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="deesser"
+      style={twoColumnCard}
       icon={<AudioWaveform size={16} />}
       label={data.label ?? t.nodes.deesser?.label ?? 'De-esser'}
     >
-      <div className="space-y-3">
-        <div className="flex justify-around">
-          <KnobControl
-            value={threshold}
-            min={-60}
-            max={0}
-            label={t.nodes.deesser?.threshold ?? 'Threshold'}
-            formatValue={(v) => `${v} dB`}
-            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-            color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
-            size={40}
-          />
-          <KnobControl
-            value={frequency}
-            min={2000}
-            max={12000}
-            step={100}
-            label={t.nodes.deesser?.frequency ?? 'Frequency'}
-            formatValue={(v) => `${formatFreq(v)} Hz`}
-            onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
-            color="var(--lsc-accent)"
-            size={40}
-          />
-        </div>
-
-        {/* Gain reduction meter */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
-              {t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'}
-            </span>
-            <StableText
-              reserve={['−00.0 dB']}
-              align="end"
-              className="text-[var(--node-text-xs)] font-mono"
-              style={{ color: isActive ? 'var(--signal-hot)' : 'var(--lsc-fg)', fontWeight: 700 }}
-            >
-              {isActive ? `−${gr.toFixed(1)} dB` : '—'}
-            </StableText>
-          </div>
-          {/* Simple GR bar */}
-          <div
-            style={{
-              height: 6,
-              background: 'var(--lsc-sunken)',
-              borderRadius: 9999,
-              border: '1px solid var(--lsc-border-soft)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${Math.min(100, (gr / 12) * 100)}%`,
-                background: 'var(--signal-hot)',
-                borderRadius: 2,
-                transition: 'width 0.1s',
-              }}
-            />
-          </div>
-        </div>
-
+      <div style={twoColumns}>
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
@@ -113,6 +54,34 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
           health={result?.health ?? 'too-quiet'}
           label={t.meters.output}
         />
+
+        <KnobStack>
+          <KnobControl
+            value={threshold}
+            min={-60}
+            max={0}
+            label={t.nodes.deesser?.threshold ?? 'Threshold'}
+            formatValue={(v) => `${v} dB`}
+            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
+            color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
+            size={44}
+            layout="side"
+          />
+          <KnobControl
+            value={frequency}
+            min={2000}
+            max={12000}
+            step={100}
+            label={t.nodes.deesser?.frequency ?? 'Frequency'}
+            formatValue={(v) => `${formatFreq(v)} Hz`}
+            onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
+            color="var(--lsc-accent)"
+            size={44}
+            layout="side"
+          />
+        </KnobStack>
+
+        <ReductionReadout db={gr} maxDb={12} label={t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'} />
       </div>
     </NodeWrapper>
   )

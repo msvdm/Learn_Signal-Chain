@@ -7,6 +7,7 @@ import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { twoColumns } from '../../utils/twoColumns'
 
 interface GraphNoiseGateData extends Record<string, unknown> {
   color?: string
@@ -19,8 +20,8 @@ interface GraphNoiseGateData extends Record<string, unknown> {
 // At and above threshold: output = input (1:1, gate open).
 // The hard right-angle at the threshold is the visual signature of a gate.
 
-const GW = 196   // SVG canvas width (px — drawn 1:1)
-const GH = 120
+const GW = 168   // SVG canvas width (px — drawn 1:1; with its border the box fills the 170px column)
+const GH = 112
 const GP = 14    // padding inside SVG
 
 const DB_MIN = -60
@@ -158,26 +159,24 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
       icon={<DoorClosed size={16} />}
       label={data.label ?? t.nodes['noise-gate']?.label ?? 'Noise Gate'}
     >
-      <div className="space-y-3">
+      <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
+        <SignalMeter db={levels.out} dbR={levels.outR} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
+
+        <KnobControl
+          value={threshold}
+          min={-80}
+          max={0}
+          step={1}
+          label={t.nodes['noise-gate']?.threshold ?? 'Threshold'}
+          formatValue={(v) => `${v} dB`}
+          onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
+          color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
+          size={44}
+          layout="side"
+        />
 
         <GateCurve threshold={threshold} inputLevel={inputLevel} isOpen={isOpen} />
-
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 2 }}>
-          <KnobControl
-            value={threshold}
-            min={-80}
-            max={0}
-            step={1}
-            label={t.nodes['noise-gate']?.threshold ?? 'Threshold'}
-            formatValue={(v) => `${v} dB`}
-            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-            color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
-            size={44}
-          />
-        </div>
-
-        <SignalMeter db={levels.out} dbR={levels.outR} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )
