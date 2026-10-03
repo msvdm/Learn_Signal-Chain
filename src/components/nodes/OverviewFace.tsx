@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
 import { MeterBar } from '../SignalMeter'
 import { StableText } from '../controls/StableText'
@@ -21,9 +22,20 @@ const HEALTH_MAX  = 0.75   // health word, relative to the number
 const HEALTH_MIN  = 0.55   // below this it moves to its own row
 const NUMBER_SAMPLE = '-00.0'   // widest level reading (formatDb, mono font)
 
+// Names in capitals look much bigger than mixed-case ones at the same size
+const NAME_MAX_BY_TYPE: Record<string, number> = { hpf: 70 }
+
+/** Drawn instead of the name, given the box it may fill (px). */
+export type OverviewArt = (box: { w: number; h: number }) => ReactNode
+
 interface OverviewFaceProps {
   nodeId: string
+  typeKey: string
   label: string
+  /** Shown instead of the name (a big icon, the control itself). */
+  art?: OverviewArt
+  /** false = no level block: the art fills the card. */
+  showLevel?: boolean
   /** Fully visible (zoomed out); otherwise faded out and hidden. */
   shown: boolean
   bypassed: boolean
@@ -36,7 +48,7 @@ interface OverviewFaceProps {
  * leaving it. A layer over the card — the card's controls stay in place underneath, hidden,
  * so the card keeps exactly the same size and its ports stay where they are.
  */
-export function OverviewFace({ nodeId, label, shown, bypassed, hasOutput }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, shown, bypassed, hasOutput }: OverviewFaceProps) {
   const { t } = useTranslation()
   // A string, so dragging the card (a new internal node each frame) does not re-render it
   const sizeKey = useStore((s) => {
@@ -64,15 +76,16 @@ export function OverviewFace({ nodeId, label, shown, bypassed, hasOutput }: Over
     const ownRow   = beside < number * HEALTH_MIN
     const health   = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
 
-    const levelH = meter + METER_GAP + number + (ownRow ? 4 + health : 0)
+    const levelH = showLevel ? meter + METER_GAP + number + (ownRow ? 4 + health : 0) + NAME_GAP : 0
     const tag    = Math.round(number * 0.5)
     const tagH   = bypassed ? tag * 1.4 + 2 + 8 : 0
-    const nameH  = H - 2 - PAD * 2 - levelH - NAME_GAP - tagH
+    const nameH  = H - 2 - PAD * 2 - levelH - tagH
     const name   = fitText(label, innerW, nameH, {
-      family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1, maxSize: NAME_MAX, maxLines: 2,
+      family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
+      maxSize: NAME_MAX_BY_TYPE[typeKey] ?? NAME_MAX, maxLines: 2,
     })
-    return { number, unit, meter, health, ownRow, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed])
+    return { number, unit, meter, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel])
 
   if (!layout) return null
 
@@ -107,14 +120,16 @@ export function OverviewFace({ nodeId, label, shown, bypassed, hasOutput }: Over
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >
-        <div
-          style={{
-            fontSize: layout.name.fontSize, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1,
-            textAlign: 'center', whiteSpace: 'nowrap', color: 'var(--lsc-fg)',
-          }}
-        >
-          {layout.name.lines.map((line) => <div key={line}>{line}</div>)}
-        </div>
+        {art ? art({ w: layout.nameW, h: layout.nameH }) : (
+          <div
+            style={{
+              fontSize: layout.name.fontSize, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1,
+              textAlign: 'center', whiteSpace: 'nowrap', color: 'var(--lsc-fg)',
+            }}
+          >
+            {layout.name.lines.map((line) => <div key={line}>{line}</div>)}
+          </div>
+        )}
         {bypassed && (
           <span
             style={{
@@ -130,7 +145,7 @@ export function OverviewFace({ nodeId, label, shown, bypassed, hasOutput }: Over
       </div>
 
       {/* Level leaving the card: meter, then reading + health word */}
-      <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
+      {showLevel && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
         <MeterBar db={db} color={style.color} height={layout.meter} />
         <div
           style={{
@@ -154,7 +169,17 @@ export function OverviewFace({ nodeId, label, shown, bypassed, hasOutput }: Over
           {!layout.ownRow && healthWord}
         </div>
         {layout.ownRow && <div style={{ marginTop: 4, height: layout.health, display: 'flex' }}>{healthWord}</div>}
-      </div>
+      </div>}
     </div>
+  )
+}
+
+/** A card's icon drawn as big as the overview box allows (sources and speakers show this instead of a name). */
+export function OverviewIcon({ icon, box }: { icon: ReactNode; box: { w: number; h: number } }) {
+  const size = Math.floor(Math.min(box.w, box.h))
+  return (
+    <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color: 'var(--lsc-fg)' }}>
+      {icon}
+    </span>
   )
 }

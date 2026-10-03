@@ -1,16 +1,19 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { MoveHorizontal } from 'lucide-react'
-import { NodeWrapper } from './NodeWrapper'
+import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useSignalChain'
 import { KnobControl } from '../controls/KnobControl'
-import { SignalMeter } from '../SignalMeter'
+import { StableText } from '../controls/StableText'
+import { ChannelRow } from '../SignalMeter'
 
 interface GraphPanData extends Record<string, unknown> {
   color?: string
   label?: string
 }
+
+// A free-standing knob, big enough to read zoomed out
+const KNOB = 110
 
 function positionLabel(pos: number): string {
   if (pos <= 2)  return 'L'
@@ -24,9 +27,10 @@ function positionLabel(pos: number): string {
  * Always sends out a stereo wire.
  * Mono wire in: Pan knob — spreads it over L / R (equal-power, −3 dB each side at centre).
  * Stereo wire in: Balance knob — turning only fades the opposite side.
+ * Drawn as a bare knob (no card) with a slim L / R meter under it.
  */
 export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
-  const { stages } = useGraphSignal()
+  const { stages }       = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -34,37 +38,38 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
   const stage       = stages[id]
   const balance     = stage?.stereoIn ?? false
   const panPosition = (node?.params.panPosition as number) ?? 50
-  const outL = stage?.outL ?? -Infinity
-  const outR = stage?.outR ?? -Infinity
-  const out  = stage?.out ?? -Infinity
 
-  const label = balance
+  const label = data.label ?? (balance
     ? (t.nodes.pan?.balanceLabel ?? 'Balance')
-    : (t.nodes.pan?.label ?? 'Pan')
+    : (t.nodes.pan?.label ?? 'Pan'))
 
   return (
-    <NodeWrapper
+    <FreeControl
       nodeId={id}
       typeKey="pan"
-      icon={<MoveHorizontal size={16} />}
-      label={data.label ?? label}
+      label={label}
+      portLine={KNOB / 2}
+      value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
+      footer={
+        <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <ChannelRow ch="L" db={stage?.outL ?? -Infinity} />
+          <ChannelRow ch="R" db={stage?.outR ?? -Infinity} />
+        </div>
+      }
     >
       {/* 0 = full left, 50 = centre, 100 = full right */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <KnobControl
-          value={panPosition}
-          min={0}
-          max={100}
-          step={1}
-          label="L ← → R"
-          formatValue={positionLabel}
-          onChange={(v) => updateNodeParams(id, { panPosition: v })}
-          color="var(--lsc-accent)"
-          size={48}
-        />
-      </div>
-
-      <SignalMeter db={outL} dbR={outR} health={getHealth(out)} label={t.meters.output} showValue={false} />
-    </NodeWrapper>
+      <KnobControl
+        value={panPosition}
+        min={0}
+        max={100}
+        step={1}
+        label="L ← → R"
+        formatValue={positionLabel}
+        onChange={(v) => updateNodeParams(id, { panPosition: v })}
+        color="var(--lsc-accent)"
+        size={KNOB}
+        showReadout={false}
+      />
+    </FreeControl>
   )
 }

@@ -1,21 +1,14 @@
 import type { ReactNode, CSSProperties } from 'react'
-import { Power, X } from 'lucide-react'
+import { Power } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { NODE_REGISTRY, getPorts, helpKeyOf, isNodeStereo } from '../../data/nodeRegistry'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { NODE_REGISTRY, getPorts, isNodeStereo, canBypass as canBypassType } from '../../data/nodeRegistry'
 import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { chainColorsOf } from '../../utils/chainColors'
-import { HEADER_H, PORT_TOP, PORT_GAP, CARD_MIN_W, CARD_MIN_H } from '../../utils/layoutHelpers'
+import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
 import { NodePort } from './NodePort'
 import { OverviewFace } from './OverviewFace'
-
-// Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
-const NO_BYPASS_TYPES = new Set([
-  'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
-  'fader', 'switch', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
-  'master-bus', 'matrix-bus', 'audio-interface',
-])
+import type { OverviewArt } from './OverviewFace'
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
 const BODY_PAD_X = 20
@@ -36,6 +29,10 @@ interface NodeWrapperProps {
   align?: 'stretch' | 'start' | 'center'
   className?: string
   style?: CSSProperties
+  /** Overview (zoomed out): drawn instead of the name, e.g. a big icon or the control itself. */
+  overviewArt?: OverviewArt
+  /** Overview: false = no level block, the art takes the whole card. */
+  overviewLevel?: boolean
 }
 
 /**
@@ -55,13 +52,12 @@ export function NodeWrapper({
   align = 'stretch',
   className = '',
   style,
+  overviewArt,
+  overviewLevel = true,
 }: NodeWrapperProps) {
-  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
-  const setSelectedNode  = useSignalStore((s) => s.setSelectedNode)
   const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
   const selectedNodeId   = useSignalStore((s) => s.selectedNodeId)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
-  const removeNode       = useSignalStore((s) => s.removeNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
   // Joined into a string so the card only re-renders when its chains change
   const chainColors      = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
@@ -70,13 +66,10 @@ export function NodeWrapper({
   const nodes            = useSignalStore((s) => s.nodes)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const overview         = useSignalStore((s) => s.overview)
-  const { stages }       = useGraphSignal()
   const { t, fmt }       = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
-  const canBypass  = !NO_BYPASS_TYPES.has(typeKey)
-  const helpKey    = node ? helpKeyOf(node, stages[nodeId]) : typeKey
-  const hasHelp    = Boolean(t.theory[helpKey])
+  const canBypass  = canBypassType(typeKey)
   const helpOpen   = activeTooltipId === nodeId
   const selected   = selectedNodeId === nodeId || helpOpen
 
@@ -88,7 +81,8 @@ export function NodeWrapper({
 
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
-  const minHeight = Math.max(CARD_MIN_H, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
+  const minSize   = cardMinSize(typeKey)
+  const minHeight = Math.max(minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
@@ -99,22 +93,13 @@ export function NodeWrapper({
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
 
-  function toggleHelp() {
-    if (helpOpen) {
-      setActiveTooltip(null, null)
-    } else {
-      setActiveTooltip(nodeId, helpKey)
-      setSelectedNode(nodeId)
-    }
-  }
-
   return (
     <div
       className={`lsc-node-card select-none ${selected ? 'lsc-selected' : ''} ${className}`}
       style={{
         position: 'relative',
         width: 'max-content',
-        minWidth: CARD_MIN_W,
+        minWidth: minSize.w,
         minHeight,
         display: 'flex',
         flexDirection: 'column',
@@ -209,24 +194,8 @@ export function NodeWrapper({
           </span>
         )}
         <span style={{ flex: 1 }} />
-        {/* Help · On/Off (processing elements only) · Remove */}
+        {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
         <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {hasHelp && (
-            <button
-              className="lsc-node-btn"
-              title={t.tooltip.help}
-              onClick={toggleHelp}
-              style={{
-                ...headerBtn,
-                fontSize: 12, fontWeight: 700,
-                borderColor: helpOpen ? 'var(--lsc-accent)' : 'var(--lsc-border)',
-                background: helpOpen ? 'var(--lsc-accent)' : 'transparent',
-                color: helpOpen ? '#fff' : 'var(--lsc-fg-muted)',
-              }}
-            >
-              ?
-            </button>
-          )}
           {canBypass && (
             <button
               className="lsc-node-btn"
@@ -243,14 +212,6 @@ export function NodeWrapper({
               <Power size={12} strokeWidth={2.5} />
             </button>
           )}
-          <button
-            className="lsc-node-btn lsc-node-btn-remove"
-            title={t.nodeControls.remove}
-            onClick={() => removeNode(nodeId)}
-            style={{ ...headerBtn, borderColor: 'var(--lsc-border)', background: 'transparent', color: 'var(--lsc-fg-muted)' }}
-          >
-            <X size={12} strokeWidth={2.5} />
-          </button>
         </div>
       </div>
 
@@ -284,7 +245,10 @@ export function NodeWrapper({
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
       <OverviewFace
         nodeId={nodeId}
+        typeKey={typeKey}
         label={label}
+        art={overviewArt}
+        showLevel={overviewLevel}
         shown={overview}
         bypassed={isBypassed}
         hasOutput={outputs.length > 0}

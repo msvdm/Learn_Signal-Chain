@@ -286,6 +286,17 @@ export function ElementPalette() {
           {t.palette.noResults}
         </p>
       )}
+
+      {/* Help and Remove live in the right-click menu, which nothing else shows */}
+      <p
+        style={{
+          marginTop: 'auto', marginBottom: 0, padding: '10px 2px 0', flexShrink: 0,
+          borderTop: '1px solid var(--lsc-border-soft)',
+          fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)',
+        }}
+      >
+        {t.palette.rightClickTip}
+      </p>
     </aside>
   )
 }

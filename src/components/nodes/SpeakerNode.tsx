@@ -2,6 +2,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Volume2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { InlineNode } from './InlineNode'
+import { OverviewIcon } from './OverviewFace'
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { getHealthStyle } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -27,6 +28,7 @@ export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
       icon={<Volume2 size={20} />}
       label={data.label ?? t.nodes.speaker.label}
       accentColor={data.color}
+      overviewArt={(box) => <OverviewIcon icon={<Volume2 />} box={box} />}
     >
       <motion.svg
         viewBox="0 0 60 24"

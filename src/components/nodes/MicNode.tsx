@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
 import { Mic, Guitar } from 'lucide-react'
 import { InlineNode } from './InlineNode'
+import { OverviewIcon } from './OverviewFace'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -39,16 +40,18 @@ export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
   const resolvedTypeKey = (data.typeKey as string) ?? 'mic'
   const params          = node?.params ?? {}
   const levelDb         = (params.sensitivityDb as number) ?? (params.levelDb as number) ?? -60
+  const icon            = ICONS[resolvedTypeKey] ?? <Mic size={20} />
 
   return (
     <InlineNode
       nodeId={id}
       typeKey={resolvedTypeKey}
-      icon={ICONS[resolvedTypeKey] ?? <Mic size={20} />}
+      icon={icon}
       label={data.label ?? t.palette.items[resolvedTypeKey] ?? t.nodes.mic.label}
       accentColor={data.color}
       value={`${levelDb} dBu`}
       align="start"
+      overviewArt={(box) => <OverviewIcon icon={icon} box={box} />}
     />
   )
 }

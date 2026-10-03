@@ -13,13 +13,14 @@ const DEFAULT_MARKS = [
   { db: -80, label: '−∞'  },
 ]
 
-// Layout constants (px)
+// Layout constants (px, at scale 1)
+const AREA_W     = 60
 const TRACK_LEFT = 8
 const TRACK_W    = 8
 const CAP_W      = 22
 const CAP_H      = 12
-const CAP_LEFT   = TRACK_LEFT + TRACK_W / 2 - CAP_W / 2   // centres cap on track
-const TICK_LEFT  = TRACK_LEFT + TRACK_W + 2                // right of track + gap
+const TICK_GAP   = 2
+const MARK_FONT  = 10
 
 interface VerticalFaderProps {
   value: number
@@ -32,6 +33,10 @@ interface VerticalFaderProps {
   height?: number
   /** Word shown under the readout at 0 dB. */
   unityLabel?: string
+  /** Draw everything this many times bigger (the free-standing fader). Height is set separately. */
+  scale?: number
+  /** false = no value readout beside the fader; the caller shows it. */
+  showReadout?: boolean
 }
 
 export function VerticalFader({
@@ -44,7 +49,16 @@ export function VerticalFader({
   marks = DEFAULT_MARKS,
   height = 120,
   unityLabel = 'unity',
+  scale = 1,
+  showReadout = true,
 }: VerticalFaderProps) {
+  const k         = scale
+  const trackLeft = TRACK_LEFT * k
+  const trackW    = TRACK_W * k
+  const capW      = CAP_W * k
+  const capH      = CAP_H * k
+  const capLeft   = trackLeft + trackW / 2 - capW / 2   // centres cap on track
+  const tickLeft  = trackLeft + trackW + TICK_GAP * k   // right of track + gap
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging   = useRef(false)
   const valueRef     = useLatestRef(value)
@@ -88,13 +102,13 @@ export function VerticalFader({
       {/* Draggable fader area */}
       <div
         ref={containerRef}
-        style={{ position: 'relative', width: 60, height, touchAction: 'none', cursor: 'ns-resize', flexShrink: 0 }}
+        style={{ position: 'relative', width: AREA_W * k, height, touchAction: 'none', cursor: 'ns-resize', flexShrink: 0 }}
         onPointerDown={handlePointerDown}
       >
         {/* Track groove */}
         <div style={{
-          position: 'absolute', left: TRACK_LEFT, top: 0, bottom: 0, width: TRACK_W,
-          borderRadius: 4,
+          position: 'absolute', left: trackLeft, top: 0, bottom: 0, width: trackW,
+          borderRadius: 4 * k,
           background: 'var(--lsc-sunken)',
           border: '1px solid var(--lsc-border)',
           pointerEvents: 'none',
@@ -108,16 +122,16 @@ export function VerticalFader({
             <Fragment key={db}>
               <div style={{
                 position: 'absolute',
-                top: `${topPct}%`, left: TICK_LEFT,
-                width: isUnity ? 8 : 5, height: 1,
+                top: `${topPct}%`, left: tickLeft,
+                width: (isUnity ? 8 : 5) * k, height: Math.max(1, Math.round(k * 0.75)),
                 background: isUnity ? 'var(--signal-good)' : 'var(--lsc-border)',
                 pointerEvents: 'none',
               }} />
               <span style={{
                 position: 'absolute',
-                top: `${topPct}%`, left: TICK_LEFT + (isUnity ? 10 : 7),
+                top: `${topPct}%`, left: tickLeft + (isUnity ? 10 : 7) * k,
                 transform: 'translateY(-50%)',
-                fontSize: 10, fontFamily: 'var(--lsc-font-mono)', lineHeight: 1,
+                fontSize: MARK_FONT * k, fontFamily: 'var(--lsc-font-mono)', lineHeight: 1,
                 color: isUnity ? 'var(--signal-good)' : 'var(--lsc-fg-muted)',
                 pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
               }}>
@@ -130,18 +144,18 @@ export function VerticalFader({
         {/* Fader cap */}
         <div style={{
           position: 'absolute',
-          left: CAP_LEFT, width: CAP_W, height: CAP_H,
-          top: `${100 - pct}%`, marginTop: -(CAP_H / 2),
+          left: capLeft, width: capW, height: capH,
+          top: `${100 - pct}%`, marginTop: -(capH / 2),
           background: 'var(--lsc-node-bg-2)',
-          border: '1px solid var(--lsc-fg-muted)',
-          borderRadius: 2,
+          border: `${Math.max(1, Math.round(k))}px solid var(--lsc-fg-muted)`,
+          borderRadius: 2 * k,
           boxShadow: 'var(--lsc-shadow-fader)',
           pointerEvents: 'none',
         }}>
           {/* Centre line on cap */}
           <div style={{
             position: 'absolute', left: '50%', top: '50%',
-            width: '60%', height: 1,
+            width: '60%', height: Math.max(1, Math.round(k)),
             transform: 'translate(-50%, -50%)',
             background: 'var(--lsc-fg-muted)',
           }} />
@@ -149,7 +163,7 @@ export function VerticalFader({
       </div>
 
       {/* Value readout */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 52 }}>
+      {showReadout && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 52 }}>
         <StableText
           reserve={[widestFormat(min, max, step, format)]}
           align="center"
@@ -160,7 +174,7 @@ export function VerticalFader({
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--signal-good)', visibility: value === 0 ? 'visible' : 'hidden' }}>
           {unityLabel}
         </span>
-      </div>
+      </div>}
     </div>
   )
 }

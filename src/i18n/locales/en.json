@@ -236,6 +236,10 @@
     "bypassedShort": "Bypassed",
     "unplug": "Click to unplug this wire"
   },
+  "nodeMenu": {
+    "bypass": "Bypass — let the signal pass through unchanged",
+    "turnOn": "Turn back on"
+  },
   "stereo": {
     "mono": "Mono",
     "stereo": "Stereo",
@@ -254,6 +258,7 @@
     "all": "All",
     "startHere": "Start here",
     "noResults": "No elements match",
+    "rightClickTip": "Tip: right-click an element on the canvas for help, to bypass it or to remove it.",
     "hide": "Hide the elements panel (more room for the canvas)",
     "show": "Show the elements panel",
     "categories": {

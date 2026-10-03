@@ -353,6 +353,18 @@ export function initialParams(
 // ── Mono / stereo ports ────────────────────────────────────────────────────────
 
 /** Bus types whose inputs accept any number of wires (they are added together). */
+// Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
+const NO_BYPASS_TYPES = new Set([
+  'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
+  'fader', 'switch', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
+  'master-bus', 'matrix-bus', 'audio-interface',
+])
+
+/** Can this element be bypassed (On / Off)? */
+export function canBypass(typeKey: string): boolean {
+  return !NO_BYPASS_TYPES.has(typeKey)
+}
+
 export const MULTI_WIRE_TYPES = new Set(['master-bus', 'aux-bus', 'matrix-bus'])
 
 /** Buses whose outputs are mixes a Matrix Bus may take. */

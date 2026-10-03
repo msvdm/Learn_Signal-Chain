@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NodeWrapper } from './NodeWrapper'
+import type { OverviewArt } from './OverviewFace'
 
 interface InlineNodeProps {
   nodeId: string
@@ -11,6 +12,8 @@ interface InlineNodeProps {
   value?: string
   children?: ReactNode
   align?: 'start' | 'center'
+  overviewArt?: OverviewArt
+  overviewLevel?: boolean
 }
 
 /**
@@ -25,9 +28,14 @@ export function InlineNode({
   value,
   children,
   align = 'center',
+  overviewArt,
+  overviewLevel,
 }: InlineNodeProps) {
   return (
-    <NodeWrapper nodeId={nodeId} typeKey={typeKey} icon={icon} label={label} align={align}>
+    <NodeWrapper
+      nodeId={nodeId} typeKey={typeKey} icon={icon} label={label} align={align}
+      overviewArt={overviewArt} overviewLevel={overviewLevel}
+    >
       {value && (
         <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>
           {value}

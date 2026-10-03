@@ -37,6 +37,7 @@ import { ChainEdge }           from './ChainEdge'
 import type { ChainEdgeData }  from './ChainEdge'
 import { ConnectingToast }     from './ConnectingToast'
 import { HelpPopover }         from './Tooltip'
+import { NodeMenu }            from './NodeMenu'
 
 import { useSignalStore }     from '../store/signalStore'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
@@ -93,8 +94,8 @@ const edgeTypes = { chain: ChainEdge }
 
 // Overview: zoomed out this far, cards show only their name and output level. Two thresholds
 // (hysteresis), so a zoom resting near the boundary never flips the cards back and forth.
-const OVERVIEW_ENTER_ZOOM = 0.55
-const OVERVIEW_LEAVE_ZOOM = 0.65
+const OVERVIEW_ENTER_ZOOM = 0.42
+const OVERVIEW_LEAVE_ZOOM = 0.5
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
 const OVERVIEW_WIRE_WIDTH = 8
 
@@ -171,6 +172,8 @@ export function SignalChain() {
   const [wireWarning, setWireWarning]       = useState(false)
   const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
   const [dragNodePreview, setDragNodePreview] = useState<{ typeKey: string; pos: Pt; w: number; h: number } | null>(null)
+  // Right-click menu of an element (Help, Bypass, Remove)
+  const [nodeMenu, setNodeMenu]             = useState<{ nodeId: string; x: number; y: number } | null>(null)
   // React Flow's measured card sizes, handed back with the nodes (see displayNodes)
   const [measuredSizes, setMeasuredSizes]   = useState<Record<string, { width: number; height: number; ports: string }>>({})
 
@@ -405,6 +408,8 @@ export function SignalChain() {
       if (toolModeRef.current !== 'connect') return
       if (!drawingRef.current.active) return
       e.preventDefault()
+      // The right-click only cancels the wire: it must not open the element's menu too
+      e.stopPropagation()
       cancelWire()
     }
 
@@ -685,6 +690,11 @@ export function SignalChain() {
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodesChange={onNodesChange}
+        onNodeContextMenu={(e, node) => {
+          // (A right-click while drawing a wire never gets here: it only cancels the wire)
+          e.preventDefault()
+          setNodeMenu({ nodeId: node.id, x: e.clientX, y: e.clientY })
+        }}
         onPaneClick={() => {
           if (toolModeRef.current !== 'select') return
           setSelectedNode(null)
@@ -852,6 +862,7 @@ export function SignalChain() {
       )}
 
       <HelpPopover />
+      {nodeMenu && <NodeMenu {...nodeMenu} onClose={() => setNodeMenu(null)} />}
       {drawing.active && <ConnectingToast sourceLabel={wireSourceLabel} />}
     </div>
   )

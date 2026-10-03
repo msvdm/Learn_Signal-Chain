@@ -95,3 +95,38 @@ export function SignalMeter({ db, health, label, showValue = true, dbR }: Signal
     </div>
   )
 }
+
+/** Two upright level bars, Left and Right, like a mixing desk's master meters (beside the Main Fader). */
+export function VerticalMeterPair({ dbL, dbR, height }: { dbL: number; dbR: number; height: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {([['L', dbL], ['R', dbR]] as const).map(([ch, db]) => (
+        <div key={ch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div
+            className="relative overflow-hidden"
+            style={{
+              width: 12, height, borderRadius: 9999,
+              background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
+            }}
+          >
+            <motion.div
+              className="absolute left-0 bottom-0 w-full"
+              style={{ borderRadius: 9999, backgroundColor: isFinite(db) ? getHealthStyle(getHealth(db)).color : 'transparent' }}
+              animate={{ height: `${dbToPercent(db)}%` }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            />
+            {/* Zone tick marks at -40, -12, 0 */}
+            {[-40, -12, 0].map((tick) => (
+              <div
+                key={tick}
+                className="absolute left-0 w-full"
+                style={{ bottom: `${dbToPercent(tick)}%`, height: 2, background: tick === 0 ? 'var(--lsc-fg-muted)' : 'var(--lsc-border)' }}
+              />
+            ))}
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
+        </div>
+      ))}
+    </div>
+  )
+}

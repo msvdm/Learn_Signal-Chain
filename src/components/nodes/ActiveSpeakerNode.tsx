@@ -2,6 +2,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Volume2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { NodeWrapper } from './NodeWrapper'
+import { OverviewIcon } from './OverviewFace'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
@@ -40,6 +41,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
       nodeId={id}
       typeKey="active-speaker"
       style={twoColumnCard}
+      overviewArt={(box) => <OverviewIcon icon={<Volume2 />} box={box} />}
       icon={<Volume2 size={16} />}
       label={data.label ?? t.nodes.activeSpeaker.label}
       accentColor={data.color}

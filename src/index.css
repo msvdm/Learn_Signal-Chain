@@ -326,6 +326,17 @@ kbd {
   background: var(--lsc-sunken);
 }
 
+/* Right-click menu of an element */
+.lsc-menu-item:hover,
+.lsc-menu-item:focus-visible {
+  background: var(--lsc-sunken) !important;
+  outline: none;
+}
+.lsc-menu-item-danger:hover,
+.lsc-menu-item-danger:focus-visible {
+  background: var(--signal-clipping-bg) !important;
+}
+
 /* Zoom controls (bottom-left) — themed to match the header */
 .react-flow__controls {
   --xy-controls-button-background-color:       var(--lsc-header);
@@ -360,7 +371,16 @@ kbd {
 
 /* ── Node card ──────────────────────────────────────────────────────────── */
 
-/* Header buttons: help, on/off, remove */
+/* Free-standing control (Gain, Pan, Fader, Switch): dashed outline on hover, accent when selected (inline) */
+.lsc-free-outline {
+  border: 2px dashed transparent;
+  transition: border-color 0.15s;
+}
+.lsc-free-control:hover .lsc-free-outline {
+  border-color: var(--lsc-border);
+}
+
+/* Header buttons: on/off (and the unplug list's ×) */
 .lsc-node-btn:hover {
   border-color: var(--lsc-accent) !important;
 }
@@ -374,6 +394,11 @@ kbd {
 .lsc-node-icon svg {
   width: 16px;
   height: 16px;
+}
+/* …and the overview draws them as big as its box (OverviewIcon sets the box) */
+.lsc-overview-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* React Flow sets cursor:grab on node wrappers — controls get pointers */

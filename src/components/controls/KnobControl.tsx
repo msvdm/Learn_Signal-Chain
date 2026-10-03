@@ -47,7 +47,9 @@ export function KnobControl({
 
   const cx = size / 2
   const cy = size / 2
-  const trackR = size / 2 - 6
+  // Strokes grow with a big knob (free-standing Gain / Pan); at card sizes they stay 4px
+  const stroke = Math.max(4, size * 0.075)
+  const trackR = size / 2 - stroke * 1.5
 
   const trackStart = polarPoint(cx, cy, trackR, START_CLOCK)
   const trackEnd = polarPoint(cx, cy, trackR, START_CLOCK + SWEEP - 0.01)
@@ -55,7 +57,7 @@ export function KnobControl({
   const fillEnd = polarPoint(cx, cy, trackR, currentClock)
   const fillLargeArc = normalizedValue * SWEEP >= 180 ? 1 : 0
 
-  const indicatorTip = polarPoint(cx, cy, trackR - 8, currentClock)
+  const indicatorTip = polarPoint(cx, cy, trackR - stroke * 2, currentClock)
 
   const format  = formatValue ?? ((v: number) => String(v))
   const display = format(value)
@@ -113,7 +115,7 @@ export function KnobControl({
           d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 1 1 ${trackEnd.x.toFixed(2)},${trackEnd.y.toFixed(2)}`}
           fill="none"
           stroke="var(--lsc-border)"
-          strokeWidth="4"
+          strokeWidth={stroke}
           strokeLinecap="round"
         />
 
@@ -123,7 +125,7 @@ export function KnobControl({
             d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
             fill="none"
             stroke={color}
-            strokeWidth="4"
+            strokeWidth={stroke}
             strokeLinecap="round"
           />
         )}
@@ -133,7 +135,7 @@ export function KnobControl({
         <circle
           cx={indicatorTip.x}
           cy={indicatorTip.y}
-          r={3}
+          r={Math.max(3, size * 0.05)}
           fill="var(--lsc-fg)"
           style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />

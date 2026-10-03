@@ -25,12 +25,32 @@ export const PORT_GAP = 36   // spacing between stacked ports on the same side (
 export const CARD_MIN_W = 280
 export const CARD_MIN_H = 210
 
+// Cards with their own minimum size
+const CARD_MIN_BY_TYPE: Record<string, { w: number; h: number }> = {
+  // Mixing buses: the size of the Compressor card, so their long names stay big in overview
+  'master-bus': { w: 398, h: 298 },
+  'aux-bus':    { w: 398, h: 298 },
+  'matrix-bus': { w: 398, h: 298 },
+}
+
+// Free-standing controls (Gain, Pan, Fader, Switch — FreeControl, not cards): their usual size, for drop previews
+const FREE_CONTROL_SIZE: Record<string, { w: number; h: number }> = {
+  gain:   { w: 162, h: 216 },
+  pan:    { w: 232, h: 266 },
+  fader:  { w: 172, h: 361 },
+  switch: { w: 175, h: 188 },
+}
+
+/** The smallest a card of this type can be (it grows with its content). */
+export function cardMinSize(typeKey: string): { w: number; h: number } {
+  return CARD_MIN_BY_TYPE[typeKey] ?? { w: CARD_MIN_W, h: CARD_MIN_H }
+}
+
 /**
- * Size of a node that React Flow has not measured yet (a node about to be dropped).
- * Nodes size themselves to their content, so there is no per-type table: once any
- * node of a type has been measured its real size is remembered and used instead.
+ * Size of a node that React Flow has not measured yet (a node about to be dropped): its minimum
+ * size. Nodes size themselves to their content, so once any node of a type has been measured its
+ * real size is remembered and used instead.
  */
-const FALLBACK_SIZE = { w: CARD_MIN_W, h: CARD_MIN_H }
 const measuredSizeByType = new Map<string, { w: number; h: number }>()
 
 export function recordMeasuredSize(typeKey: string, w: number, h: number) {
@@ -42,7 +62,7 @@ export const HIT_THRESHOLD = 48
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
 export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
-  const known = measuredSizeByType.get(typeKey) ?? FALLBACK_SIZE
+  const known = measuredSizeByType.get(typeKey) ?? FREE_CONTROL_SIZE[typeKey] ?? cardMinSize(typeKey)
   return {
     w: measuredW ?? known.w,
     h: measuredH ?? known.h,

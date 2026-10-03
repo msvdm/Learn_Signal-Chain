@@ -152,6 +152,11 @@ export interface Translations {
     /** Tooltip of a connected input port (it unplugs the wire on click) */
     unplug: string
   }
+  /** Right-click menu of an element on the canvas */
+  nodeMenu: {
+    bypass: string
+    turnOn: string
+  }
   stereo: {
     mono: string
     stereo: string
@@ -171,6 +176,8 @@ export interface Translations {
     all: string
     startHere: string
     noResults: string
+    /** Shown under the palette: the right-click menu is not visible otherwise */
+    rightClickTip: string
     /** Header button that collapses / reopens the palette */
     hide: string
     show: string
