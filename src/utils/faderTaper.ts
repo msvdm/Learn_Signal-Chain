@@ -61,20 +61,24 @@ export interface FaderMark {
   db: number
   /** Numbered mark */
   label?: string
-  /** A dot of the high-resolution zone around unity (one row per dB) instead of a tick */
+  /** Short tick on each side of the track */
+  tick?: boolean
+  /** A row of the dotted high-resolution zone around unity, beside the cap */
   dot?: boolean
 }
 
 /**
- * Scale printed beside the fader, like a desk's: numbered marks, a dotted high-resolution zone
- * around unity (+5…−5 dB, where the fader moves in 0.5 dB steps) and short half-way ticks below.
+ * Scale printed beside the fader, like a desk's: numbered marks, half-way ticks below −10, and a
+ * dotted high-resolution zone around unity (+5…−5 dB): one dot row per 0.5 dB, the step the fader
+ * moves in there. The dots sit beside the cap, so they stay visible wherever the cap is.
  */
 export const FADER_MARKS: FaderMark[] = (() => {
   const labelled = [10, 5, 0, -5, -10, -20, -30, -40, -50, -60, -80, -100]
   const marks = new Map<number, FaderMark>()
-  for (const db of range(4, -4, 1)) marks.set(db, { db, dot: true })
-  for (const db of [-15, -25, -35, -45, -55, -70, -90]) marks.set(db, { db })
-  for (const db of labelled) marks.set(db, { db, label: db > 0 ? `+${db}` : db === 0 ? '0' : `−${-db}` })
+  const put = (db: number, patch: Omit<FaderMark, 'db'>) => marks.set(db, { ...(marks.get(db) ?? { db }), ...patch })
+  for (const db of range(5, -5, 0.5)) put(db, { dot: true })
+  for (const db of [-15, -25, -35, -45, -55, -70, -90]) put(db, { tick: true })
+  for (const db of labelled) put(db, { tick: true, label: db > 0 ? `+${db}` : db === 0 ? '0' : `−${-db}` })
   return [...marks.values()]
 })()
 

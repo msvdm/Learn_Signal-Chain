@@ -22,19 +22,23 @@ export interface FaderTaper {
 }
 
 // Layout (px, at scale 1), like a desk's fader print:
-// numbers on the left | ticks · track · ticks (the cap slides over the ticks)
+// numbers | dots | ticks · track · ticks | dots   (the cap slides over the ticks, between the dots)
 const LABEL_W    = 22     // numbers, right-aligned
-const LABEL_GAP  = 2
+const GAP        = 1
+const DOT_BLOCK  = 5      // two columns of dots: the high-resolution zone, beside the cap
 // The cap: a tall solid block, like a desk fader's (the white line across it marks the value)
 const CAP_W      = 25
 const CAP_H      = 34
-const AREA_W     = LABEL_W + LABEL_GAP + CAP_W + 2
-const TRACK_CX   = LABEL_W + LABEL_GAP + CAP_W / 2   // track centre
+const CAP_LEFT   = LABEL_W + GAP + DOT_BLOCK + GAP
+const AREA_W     = CAP_LEFT + CAP_W + GAP + DOT_BLOCK + 1
+const TRACK_CX   = CAP_LEFT + CAP_W / 2              // track centre
 const TRACK_W    = 6
 const TICK_IN    = TRACK_W / 2 + 1.5                 // ticks start this far from the track centre
 const TICK_MAJOR = 6
 const TICK_MINOR = 3.5
-const DOT_R      = 0.75                              // dots of the high-resolution zone
+const DOT_R      = 0.65
+// Dot columns: centres measured outwards from the cap's edge
+const DOT_COLS   = [GAP + 1.2, GAP + 3.7]
 const MARK_FONT  = 8
 
 interface VerticalFaderProps {
@@ -151,27 +155,29 @@ export function VerticalFader({
         }} />
 
         {/* Scale: numbers on the left, ticks on both sides of the track, dots around unity */}
-        {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label, dot }) => {
+        {marks.filter((m) => m.db >= min && m.db <= max).map(({ db, label, tick, dot }) => {
           const top     = `${100 - positionOf(db) * 100}%`
           const isUnity = db === 0
           const color   = isUnity ? 'var(--signal-good)' : label ? 'var(--lsc-fg-dim)' : 'var(--lsc-border)'
-          if (dot) {
-            // Two dots each side: the fine-control zone around unity, one row per dB
-            return [-1, 1].flatMap((side) => [TICK_IN + 1.5, TICK_IN + 4.5].map((x) => (
-              <span
-                key={`${db}:${side}:${x}`}
-                style={{
-                  position: 'absolute', top, left: trackCx + side * x * k - DOT_R * k,
-                  width: DOT_R * 2 * k, height: DOT_R * 2 * k, marginTop: -DOT_R * k,
-                  borderRadius: 9999, background: 'var(--lsc-fg-dim)', pointerEvents: 'none',
-                }}
-              />
-            )))
-          }
-          const len = (label ? TICK_MAJOR : TICK_MINOR) * k
+          const len     = (label ? TICK_MAJOR : TICK_MINOR) * k
           return (
             <Fragment key={db}>
-              {[-1, 1].map((side) => (
+              {/* High-resolution zone: two dots each side, beside the cap (never under it) */}
+              {dot && [-1, 1].flatMap((side) => DOT_COLS.map((c) => {
+                const x = side < 0 ? capLeft - c * k : capLeft + capW + c * k
+                return (
+                  <span
+                    key={`${side}:${c}`}
+                    style={{
+                      position: 'absolute', top, left: x - DOT_R * k,
+                      width: DOT_R * 2 * k, height: DOT_R * 2 * k, marginTop: -DOT_R * k,
+                      borderRadius: 9999, background: isUnity ? 'var(--signal-good)' : 'var(--lsc-fg-muted)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )
+              }))}
+              {(tick || label) && [-1, 1].map((side) => (
                 <div
                   key={side}
                   style={{
