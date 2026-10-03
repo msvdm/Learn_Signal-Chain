@@ -6,8 +6,10 @@ import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { twoColumns } from '../../utils/twoColumns'
+import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
 interface GraphNoiseGateData extends Record<string, unknown> {
   color?: string
@@ -37,19 +39,23 @@ function toY(db: number): number {
 
 interface GateCurveProps {
   threshold: number
+  /** How far it turns down when closed (negative dB) */
+  range: number
   inputLevel: number
   isOpen: boolean
+  openLabel: string
+  closedLabel: string
 }
 
-function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
+function GateCurve({ threshold, range, inputLevel, isOpen, openLabel, closedLabel }: GateCurveProps) {
   // Gate transfer function:
-  //  - from DB_MIN to threshold: flat at the floor
+  //  - below the threshold: turned down by the range (a line under the 1:1, or the floor)
   //  - from threshold onward: 1:1 diagonal
   const STEPS = 80
   const pts: string[] = []
   for (let i = 0; i <= STEPS; i++) {
     const inDb  = DB_MIN + (i / STEPS) * (DB_MAX - DB_MIN)
-    const outDb = inDb >= threshold ? inDb : DB_MIN
+    const outDb = inDb >= threshold ? inDb : inDb + range
     pts.push(`${i === 0 ? 'M' : 'L'} ${toX(inDb).toFixed(1)},${toY(outDb).toFixed(1)}`)
   }
   const curvePath = pts.join(' ')
@@ -60,7 +66,7 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
   // Current operating point
   const clampedInput = Math.max(DB_MIN, Math.min(DB_MAX, inputLevel))
   const opX   = toX(clampedInput)
-  const opY   = toY(isOpen ? clampedInput : DB_MIN)
+  const opY   = toY(isOpen ? clampedInput : clampedInput + range)
   const hasSignal = isFinite(inputLevel) && inputLevel > DB_MIN
 
   const threshX = toX(threshold)
@@ -131,7 +137,7 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
           opacity={isOpen ? 1 : 0.45}
           style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}
         >
-          {isOpen ? 'OPEN' : 'CLOSED'}
+          {isOpen ? openLabel : closedLabel}
         </text>
       </svg>
     </div>
@@ -141,15 +147,22 @@ function GateCurve({ threshold, inputLevel, isOpen }: GateCurveProps) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>) {
-  const { stages }          = useGraphSignal()
+  const { stages }       = useGraphSignal()
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
+  const tg               = t.nodes['noise-gate']
 
-  const threshold  = (node?.params.thresholdDb as number) ?? -40
+  const params     = node?.params ?? {}
+  const threshold  = (params.thresholdDb as number) ?? -40
+  const range      = (params.rangeDb as number) ?? -80
+  // Shown and stored, but timings are not part of the sound yet
+  const holdMs     = (params.holdMs as number) ?? 50
+  const attackMs   = (params.attackMs as number) ?? 1
+  const releaseMs  = (params.releaseMs as number) ?? 100
   const levels     = useStereoLevels(id)
   const inputLevel = levels.inPeak
-  const result     = stages[id]
+  const result     = stages[id] as CompressorResult | undefined
   const isOpen     = isFinite(inputLevel) && inputLevel >= threshold
 
   return (
@@ -157,26 +170,89 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
       nodeId={id}
       typeKey="noise-gate"
       icon={<DoorClosed size={16} />}
-      label={data.label ?? t.nodes['noise-gate']?.label ?? 'Noise Gate'}
+      label={data.label ?? tg?.label ?? 'Noise Gate'}
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak)} label={t.meters.input} />
         <SignalMeter db={levels.out} dbR={levels.outR} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
+        <KnobStack>
+          <KnobControl
+            value={threshold}
+            min={-80}
+            max={0}
+            step={1}
+            label={tg?.threshold ?? 'Threshold'}
+            formatValue={(v) => `${v} dB`}
+            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
+            color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
+            size={44}
+            layout="side"
+          />
+          {/* How far it turns down when closed: −80 dB = silence */}
+          <KnobControl
+            value={range}
+            min={-80}
+            max={0}
+            step={1}
+            label={tg?.range ?? 'Range'}
+            formatValue={(v) => `${v} dB`}
+            onChange={(v) => updateNodeParams(id, { rangeDb: v })}
+            color="var(--signal-hot)"
+            size={44}
+            layout="side"
+          />
+          <KnobControl
+            value={holdMs}
+            min={0}
+            max={500}
+            step={5}
+            label={tg?.hold ?? 'Hold'}
+            formatValue={(v) => `${v} ms`}
+            onChange={(v) => updateNodeParams(id, { holdMs: v })}
+            color="var(--lsc-accent)"
+            size={44}
+            layout="side"
+          />
+        </KnobStack>
+
+        <div>
+          <GateCurve
+            threshold={threshold}
+            range={range}
+            inputLevel={inputLevel}
+            isOpen={isOpen}
+            openLabel={tg?.statusOpen ?? 'Open'}
+            closedLabel={tg?.statusClosed ?? 'Closed'}
+          />
+          <ReductionReadout db={result?.gainReductionDb ?? 0} maxDb={80} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
+        </div>
+
+        {/* How fast it opens (Attack) and closes again (Release) */}
         <KnobControl
-          value={threshold}
-          min={-80}
-          max={0}
+          value={attackMs}
+          min={1}
+          max={50}
           step={1}
-          label={t.nodes['noise-gate']?.threshold ?? 'Threshold'}
-          formatValue={(v) => `${v} dB`}
-          onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-          color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
+          label={t.nodes.comp.attack}
+          formatValue={(v) => `${v} ms`}
+          onChange={(v) => updateNodeParams(id, { attackMs: v })}
+          color="var(--lsc-accent)"
           size={44}
           layout="side"
         />
-
-        <GateCurve threshold={threshold} inputLevel={inputLevel} isOpen={isOpen} />
+        <KnobControl
+          value={releaseMs}
+          min={10}
+          max={1000}
+          step={10}
+          label={t.nodes.comp.release}
+          formatValue={(v) => `${v} ms`}
+          onChange={(v) => updateNodeParams(id, { releaseMs: v })}
+          color="var(--lsc-accent)"
+          size={44}
+          layout="side"
+        />
       </div>
     </NodeWrapper>
   )

@@ -170,6 +170,8 @@
     "noise-gate": {
       "label": "Noise Gate",
       "threshold": "Threshold",
+      "range": "Range",
+      "hold": "Hold",
       "statusOpen": "Open",
       "statusClosed": "Closed"
     },
@@ -407,7 +409,7 @@
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",
       "why": "Every microphone and cable picks up some background noise — air conditioning hum, electrical interference, room ambience. Between musical phrases, when the performer is quiet, that noise is audible. The gate simply closes during those quiet moments, removing the noise before it reaches the mix.",
-      "tip": "Set the threshold just above the noise floor and just below the quietest musical content. Too high, and the gate clips the start of notes (chatter). Too low, and the noise gets through. The OPEN/CLOSED indicator shows you exactly when the gate fires."
+      "tip": "Set the threshold just above the noise floor and just below the quietest musical content. Too high, and the gate clips the start of notes (chatter). Too low, and the noise gets through. The OPEN/CLOSED indicator shows you exactly when the gate fires. Range is how far it turns down when closed: all the way (−80 dB, silence) or only a little, so the background drops without vanishing. Attack is how fast it opens, Hold keeps it open for a moment after the sound stops, and Release is how gently it closes."
     },
     "limiter": {
       "what": "A limiter is a compressor with an extremely high ratio — effectively infinite. It sets a hard ceiling: no signal can exceed the threshold, no matter how loud the input gets. Below the ceiling, the signal passes through unchanged.",

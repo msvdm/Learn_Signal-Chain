@@ -292,9 +292,14 @@ function computeGraphNode(
       return { out, health: getHealth(out), gainReductionDb, domain }
     }
     case 'noise-gate': {
+      // Closed (below the threshold): turned down by the Range (−80 dB ≈ silence). Hold, Attack and
+      // Release are shown on the card but are timings, not part of this level math.
       const threshold = (p.thresholdDb as number) ?? -40
-      const out = input >= threshold ? input : -Infinity
-      return { out, health: getHealth(out), domain }
+      const range     = (p.rangeDb as number) ?? -80
+      const open      = input >= threshold
+      const out       = open ? input : input + range
+      const gainReductionDb = open || !isFinite(input) ? 0 : -range
+      return { out, health: getHealth(out), gainReductionDb, domain }
     }
     case 'limiter': {
       const ceiling = (p.thresholdDb as number) ?? -3

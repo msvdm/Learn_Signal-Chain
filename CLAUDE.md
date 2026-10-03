@@ -166,6 +166,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 - **HPF**: passthrough placeholder (no frequency weighting at this level)
 - **EQ**: `output = input + sum(bandGains)` — additive only
 - **Compressor**: `gainReduction = max(0, (input − threshold) × (1 − 1/ratio))`, then `output = input − gainReduction + makeupGain`. Attack and Release (`attackMs`, `releaseMs`) are on the card but do not change the sound yet
+- **Noise Gate**: open (`input ≥ threshold`) → `output = input`; closed → `output = input + range` (Range −80…0 dB, −80 ≈ silence). Hold, Attack and Release (`holdMs`, `attackMs`, `releaseMs`) are on the card but do not change the sound yet. Same card layout and size as the Compressor
 - **Fader**: `output = input + faderDb`, −100…+10 dB. The fader's travel is uneven like a desk's (`faderTaper.ts`): unity at 85% of the travel, 0.5 dB steps above −20 dB, the quiet end squeezed together
 - **Switch**: `output = on ? input : −∞`
 - **Master Bus / Aux Bus**: `output = 20 × log10(Σ 10^(inputN/20))` (voltage sum of all wires — two identical signals give +6 dB), per side in stereo

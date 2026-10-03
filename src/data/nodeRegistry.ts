@@ -180,7 +180,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
     outputs: [{ id: 'out', label: 'Output', side: 'right' }],
     category: 'processor',
     stereo: 'follow',
-    defaultParams: { thresholdDb: -40 },
+    // Range sets how far it turns down when closed; Hold / Attack / Release are shown, not simulated
+    defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {
     typeKey: 'limiter',
