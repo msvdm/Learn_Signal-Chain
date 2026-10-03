@@ -20,12 +20,17 @@ export const HEADER_H = 56
 export const PORT_TOP = HEADER_H + 24
 export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
 
+// Every card is at least this big and landscape (never taller than wide, except a tall stack of
+// ports), so its name has room to grow in overview (zoomed out)
+export const CARD_MIN_W = 280
+export const CARD_MIN_H = 210
+
 /**
  * Size of a node that React Flow has not measured yet (a node about to be dropped).
  * Nodes size themselves to their content, so there is no per-type table: once any
  * node of a type has been measured its real size is remembered and used instead.
  */
-const FALLBACK_SIZE = { w: 160, h: 120 }
+const FALLBACK_SIZE = { w: CARD_MIN_W, h: CARD_MIN_H }
 const measuredSizeByType = new Map<string, { w: number; h: number }>()
 
 export function recordMeasuredSize(typeKey: string, w: number, h: number) {

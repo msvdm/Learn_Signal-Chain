@@ -15,11 +15,14 @@ interface SignalMeterProps {
   dbR?: number
 }
 
-function MeterBar({ db, color }: { db: number; color: string }) {
+/** One level bar on the −60…+20 dB scale, with tick marks at the zone edges. `height` includes the border. */
+export function MeterBar({ db, color, height = 6 }: { db: number; color: string; height?: number }) {
+  // Ticks widen with a tall bar (the overview meter), so they stay visible zoomed out
+  const tick = Math.max(1, Math.round(height / 8))
   return (
     <div
       className="relative w-full overflow-hidden"
-      style={{ height: 6, borderRadius: 9999, background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)' }}
+      style={{ height, borderRadius: 9999, background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)' }}
     >
       <motion.div
         className="absolute left-0 top-0 h-full"
@@ -28,9 +31,9 @@ function MeterBar({ db, color }: { db: number; color: string }) {
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       />
       {/* Zone tick marks at -40 (25%), -12 (60%), 0 (75%) */}
-      <div className="absolute top-0 h-full w-px" style={{ left: `${dbToPercent(-40)}%`, background: 'var(--lsc-border)' }} />
-      <div className="absolute top-0 h-full w-px" style={{ left: `${dbToPercent(-12)}%`, background: 'var(--lsc-border)' }} />
-      <div className="absolute top-0 h-full w-px" style={{ left: `${dbToPercent(0)}%`, background: 'var(--lsc-fg-muted)' }} />
+      <div className="absolute top-0 h-full" style={{ width: tick, left: `${dbToPercent(-40)}%`, background: 'var(--lsc-border)' }} />
+      <div className="absolute top-0 h-full" style={{ width: tick, left: `${dbToPercent(-12)}%`, background: 'var(--lsc-border)' }} />
+      <div className="absolute top-0 h-full" style={{ width: tick, left: `${dbToPercent(0)}%`, background: 'var(--lsc-fg-muted)' }} />
     </div>
   )
 }

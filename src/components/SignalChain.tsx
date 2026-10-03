@@ -91,6 +91,13 @@ const nodeTypes = {
 
 const edgeTypes = { chain: ChainEdge }
 
+// Overview: zoomed out this far, cards show only their name and output level. Two thresholds
+// (hysteresis), so a zoom resting near the boundary never flips the cards back and forth.
+const OVERVIEW_ENTER_ZOOM = 0.55
+const OVERVIEW_LEAVE_ZOOM = 0.65
+// Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
+const OVERVIEW_WIRE_WIDTH = 8
+
 // ── Wire drawing types ─────────────────────────────────────────────────────────
 
 type WireDrawing =
@@ -149,6 +156,8 @@ export function SignalChain() {
   const removeEdge            = useSignalStore((s) => s.removeEdge)
   const replaceEdge           = useSignalStore((s) => s.replaceEdge)
   const highlightEdgeIds      = useSignalStore((s) => s.highlightEdgeIds)
+  const overview              = useSignalStore((s) => s.overview)
+  const setOverview           = useSignalStore((s) => s.setOverview)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
   const { stages, portSignal, wires } = useGraphSignal()
@@ -418,6 +427,12 @@ export function SignalChain() {
     if (chainEmpty) setViewport({ x: 0, y: 0, zoom: 1 })
   }, [chainEmpty, setViewport])
 
+  // Cards read only this flag, never the zoom itself, so a wheel tick does not re-render them all
+  useEffect(() => {
+    if (!overview && vpZoom < OVERVIEW_ENTER_ZOOM) setOverview(true)
+    else if (overview && vpZoom > OVERVIEW_LEAVE_ZOOM) setOverview(false)
+  }, [vpZoom, overview, setOverview])
+
   // ── Drag & drop from the palette ────────────────────────────────────────────
 
   function onDragOver(e: React.DragEvent) {
@@ -601,14 +616,15 @@ export function SignalChain() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: toMatrix ? 'var(--lsc-matrix-send)' : (style?.color ?? 'var(--lsc-border)'), strokeWidth: 3,
+          stroke: toMatrix ? 'var(--lsc-matrix-send)' : (style?.color ?? 'var(--lsc-border)'),
+          strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',
         },
         data,
       }
     })
-  }, [graphEdges, stages, portSignal, wires, graphNodes, highlight])
+  }, [graphEdges, stages, portSignal, wires, graphNodes, highlight, overview])
 
   // Build live wire preview path
   const wirePath = (() => {

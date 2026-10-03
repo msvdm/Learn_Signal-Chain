@@ -6,8 +6,9 @@ import { NODE_REGISTRY, getPorts, helpKeyOf, isNodeStereo } from '../../data/nod
 import { useGraphSignal } from '../../hooks/useSignalChain'
 import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { chainColorsOf } from '../../utils/chainColors'
-import { HEADER_H, PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
+import { HEADER_H, PORT_TOP, PORT_GAP, CARD_MIN_W, CARD_MIN_H } from '../../utils/layoutHelpers'
 import { NodePort } from './NodePort'
+import { OverviewFace } from './OverviewFace'
 
 // Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
 const NO_BYPASS_TYPES = new Set([
@@ -68,6 +69,7 @@ export function NodeWrapper({
   const edges            = useSignalStore((s) => s.edges)
   const nodes            = useSignalStore((s) => s.nodes)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
+  const overview         = useSignalStore((s) => s.overview)
   const { stages }       = useGraphSignal()
   const { t, fmt }       = useTranslation()
 
@@ -86,7 +88,10 @@ export function NodeWrapper({
 
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
-  const minHeight = PORT_TOP + (portRows - 1) * PORT_GAP + 24
+  const minHeight = Math.max(CARD_MIN_H, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
+
+  // In overview the controls stay in place, invisible, so the card keeps its exact size
+  const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
 
   // While a wire is being drawn, label this card if it can take the wire
   const isWireTarget = wireSource !== null && node !== undefined &&
@@ -109,7 +114,7 @@ export function NodeWrapper({
       style={{
         position: 'relative',
         width: 'max-content',
-        minWidth: 160,
+        minWidth: CARD_MIN_W,
         minHeight,
         display: 'flex',
         flexDirection: 'column',
@@ -165,7 +170,9 @@ export function NodeWrapper({
 
       {/* Header — fixed height keeps the port line aligned across cards */}
       <div
+        className="lsc-fade"
         style={{
+          ...hideInOverview,
           position: 'relative',
           minHeight: HEADER_H,
           display: 'flex', alignItems: 'center', gap: 8,
@@ -249,7 +256,7 @@ export function NodeWrapper({
 
       {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
       {canStereo && node && (
-        <div style={{ padding: `10px ${BODY_PAD_X}px 0` }}>
+        <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
           <StereoToggle
             stereo={isNodeStereo(node)}
             onChange={(on) => setNodeStereo(nodeId, on)}
@@ -259,18 +266,29 @@ export function NodeWrapper({
         </div>
       )}
 
-      {/* Body — dimmed when bypassed */}
+      {/* Body — dimmed when bypassed; centred in cards bigger than their controls */}
       <div
+        className="lsc-fade"
         style={{
+          flex: 1,
           padding: `10px ${BODY_PAD_X}px 12px`,
-          display: 'flex', flexDirection: 'column', gap: 8,
+          display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center',
           alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
           opacity: isBypassed ? 0.5 : 1,
-          transition: 'opacity 0.15s',
+          ...hideInOverview,
         }}
       >
         {children}
       </div>
+
+      {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
+      <OverviewFace
+        nodeId={nodeId}
+        label={label}
+        shown={overview}
+        bypassed={isBypassed}
+        hasOutput={outputs.length > 0}
+      />
     </div>
   )
 }

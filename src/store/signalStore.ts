@@ -60,6 +60,8 @@ interface SignalChainStore {
   wireSource: WireSource | null
   /** Wires whose chains are highlighted (hovered in the unplug list or a Matrix Bus row); everything else is dimmed. */
   highlightEdgeIds: string[]
+  /** Zoomed out far enough that cards show only their name and output level (set by SignalChain, not persisted). */
+  overview: boolean
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -73,6 +75,7 @@ interface SignalChainStore {
   setToolMode: (mode: ToolMode) => void
   setWireSource: (source: WireSource | null) => void
   setHighlightEdges: (edgeIds: string[]) => void
+  setOverview: (on: boolean) => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
@@ -102,6 +105,7 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   toolMode: 'select',
   wireSource: null,
   highlightEdgeIds: [],
+  overview: false,
 
   ...buildDefaultGraph(),
 
@@ -138,6 +142,8 @@ export const useSignalStore = create<SignalChainStore>((set) => ({
   setWireSource: (source) => set({ wireSource: source }),
 
   setHighlightEdges: (edgeIds) => set({ highlightEdgeIds: edgeIds }),
+
+  setOverview: (on) => set({ overview: on }),
 
   resetAll: () =>
     set((s) => ({

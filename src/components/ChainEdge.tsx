@@ -25,9 +25,15 @@ export function ChainEdge({
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
   const edgePath = buildWirePath(points)
 
+  // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
+  // The dash period stays a divisor of the 24px flow animation, so it loops smoothly.
+  const width = Number(style?.strokeWidth ?? 3)
+  const thick = width > 3
+  const dash  = thick ? { strokeDasharray: '16 8' } : {}
+
   const edgeStyle = routingWarn
-    ? { ...style, stroke: 'var(--signal-hot)', strokeDasharray: '6 4' }
-    : twin ? { ...style, strokeWidth: 6 } : style
+    ? { ...style, stroke: 'var(--signal-hot)', strokeDasharray: thick ? '16 8' : '6 4' }
+    : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
 
   return (
     <>
@@ -45,7 +51,7 @@ export function ChainEdge({
           d={edgePath}
           fill="none"
           className="signal-line-animated"
-          style={{ stroke: 'var(--lsc-canvas)', strokeWidth: 2, opacity: style?.opacity, transition: style?.transition, pointerEvents: 'none' }}
+          style={{ stroke: 'var(--lsc-canvas)', strokeWidth: (width * 2) / 3, ...dash, opacity: style?.opacity, transition: style?.transition, pointerEvents: 'none' }}
         />
       )}
     </>

@@ -69,7 +69,6 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
       typeKey={typeKey}
       icon={<Merge size={16} />}
       label={data.label ?? defaultLabel}
-      style={{ minWidth: 200 }}
     >
       {isMatrix && (n > 0 ? (
         // One row per bus plugged in: its name, and its send knob

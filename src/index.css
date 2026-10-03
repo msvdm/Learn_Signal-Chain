@@ -73,6 +73,11 @@
   --signal-hot-border:       rgba(250,204,21,0.28);
   --signal-clipping-bg:      rgba(248,113,113,0.10);
   --signal-clipping-border:  rgba(248,113,113,0.28);
+  /* Health words as text (overview cards) — the colours above already reach 4.5:1 here */
+  --signal-too-quiet-text:   var(--signal-too-quiet);
+  --signal-good-text:        var(--signal-good);
+  --signal-hot-text:         var(--signal-hot);
+  --signal-clipping-text:    var(--signal-clipping);
 
   /* Accent */
   --lsc-accent:      #6366f1;
@@ -132,6 +137,11 @@
   --signal-hot-border:       rgba(216,149,72,0.24);
   --signal-clipping-bg:      rgba(216,107,107,0.08);
   --signal-clipping-border:  rgba(216,107,107,0.24);
+  /* Health words as text (overview cards): darker shades, at least 4.5:1 on --lsc-node-bg */
+  --signal-too-quiet-text:   #2f5fb8;
+  --signal-good-text:        #2f7a52;
+  --signal-hot-text:         #93591a;
+  --signal-clipping-text:    #b23b3b;
 
   /* Accent */
   --lsc-accent:      #9a7fd4;
@@ -216,8 +226,15 @@ kbd {
   animation: clip-pulse 0.5s ease-in-out infinite;
 }
 
+/* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
+   and at the start when showing, so nothing hidden stays clickable. */
+.lsc-fade {
+  transition: opacity 120ms ease, visibility 120ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .signal-line-animated { animation: none; }
+  .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
 }
 
