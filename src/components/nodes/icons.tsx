@@ -1,18 +1,17 @@
-// Icons lucide does not have, drawn in its style (24 × 24, round caps). See nodeLook.ts.
+// Icons lucide does not have (24 × 24). See nodeLook.ts.
 
-/** A jack plug (Line Input), in lucide's style. */
+/**
+ * A jack plug (Line Input): tip, ring and sleeve, the handle and its cable — filled, tilted with the
+ * tip up-left. Drawn upright, then turned.
+ */
 export function JackPlugIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" stroke="none">
       <g transform="rotate(-45 12 12)">
-        <line x1="10.5" y1="22" x2="10.5" y2="20" />
-        <line x1="13.5" y1="22" x2="13.5" y2="20" />
-        <rect x="8.5" y="13" width="7" height="7.5" rx="1.5" />
-        <line x1="10" y1="13" x2="10" y2="11" />
-        <line x1="14" y1="13" x2="14" y2="11" />
-        <line x1="10" y1="11" x2="14" y2="11" />
-        <path d="M10 11 L10 6.5 Q10 4 12 4 Q14 4 14 6.5 L14 11" />
-        <line x1="10" y1="8.5" x2="14" y2="8.5" />
+        <path d="M10.2 1.85V0.45A1.8 1.8 0 0 1 13.8 0.45V1.85Z" />
+        <rect x="10.2" y="3.15" width="3.6" height="2.3" />
+        <path d="M10.2 6.75H13.8V11.35H15.4V16.35A3.4 3.4 0 0 1 8.6 16.35V11.35H10.2Z" />
+        <path d="M11.05 18.75H12.95V25.8A0.95 0.95 0 0 1 11.05 25.8Z" />
       </g>
     </svg>
   )
