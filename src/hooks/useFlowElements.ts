@@ -93,7 +93,7 @@ export function useFlowElements() {
       return { id: n.id, position: n.position, size: nodeDims(n.typeKey, size?.width, size?.height) }
     })
 
-    /** A wire with corners runs through another card, as it is drawn: port, corners, port. */
+    /** The wire runs through another card, as it is drawn: port, corners (if any), port — as its preview did. */
     function crossesCard(edge: SignalEdge): boolean {
       const src = cards.find((c) => c.id === edge.source)
       const tgt = cards.find((c) => c.id === edge.target)
@@ -113,8 +113,7 @@ export function useFlowElements() {
       const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
-      // (A wire without corners is routed for you: only one with corners gets the warning)
-      const routingWarning = (edge.waypoints?.length ?? 0) > 0 && crossesCard(edge)
+      const routingWarning = crossesCard(edge)
 
       const data: ChainEdgeData = {
         waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview,

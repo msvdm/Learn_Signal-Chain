@@ -103,12 +103,14 @@ export function getPorts(
 
 /**
  * The card whose Mix output feeds this one — straight in, or through effects on the way.
- * Null when no mix reaches it.
+ * Null when no mix reaches it: also when one side of it does (an effect on an Amplifier's R output
+ * carries the right side only, so a Fader after it is a plain fader, not a Main Fader).
  */
 export function mixSourceOf(nodeId: string, view: GraphView): string | null {
   const own = graphOf(view).node(nodeId)?.typeKey
   for (const { wire, source } of walkPassthrough(nodeId, view)) {
     if (wire.sourceHandle === MIX_PORT) return wire.source
+    if (portSide(wire.sourceHandle) !== null) return null
     // Another card of the same type would take the role itself
     if (source.typeKey === own) return null
   }

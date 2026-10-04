@@ -338,19 +338,28 @@ corners never gets the warning once committed (the preview still warns while dra
   switched between two outputs ("Output A or Output B"); the card picks one of two inputs and has
   one output. It needs rewriting, which is a teaching decision.
 
-## Left open — decisions, not refactors
+## ~~Left open~~ — decided (2026-10-04)
 
-Found during the steps above and kept as they were, because each changes what the learner sees
-or is taught:
-- **Dropping a card onto a wire** accepts a few drops that wiring by hand refuses (onto a Matrix
-  send, a Relay or a Matrix Bus between a mono Aux and a Matrix Bus …; step 5). Refusing them is
-  probably right: the card is then placed freely.
-- **A Fader fed one side of a two-channel Amplifier through an effect** counts as a Main Fader
-  (step 3).
-- **A committed wire without corners** never shows the crossing warning, though its preview does
-  while it is drawn (Geometry).
-- **A digital signal into an Amplifier or a speaker** silences it with no note on the card: the
-  engine sets `digitalToAmp` / `digitalToSpeaker` and the texts exist (`warnings.*`), but only the
-  ADC / DAC and the buses show theirs (Display names).
-- **The Relay's help text** (both languages) describes one input switched between two outputs;
-  the card picks one of two inputs (English shown to Bulgarian users).
+- ~~**Dropping a card onto a wire** accepts a few drops that wiring by hand refuses.~~ Now the two
+  wires a drop makes must each be allowed by hand (`wireTakesCard` checks them with
+  `nodeAcceptsWire` / `portAcceptsWire`); a refused drop places the card unwired. Compared with
+  HEAD on 2,500 random graphs, every wire × every type: the only differences are drops now refused —
+  any card onto a Matrix send, a Relay or a Matrix Bus between a mono Aux (or a Switch / effect after
+  it) and a Matrix Bus. Checked in the browser: a Relay dropped on Aux → Matrix Bus lands unwired, a
+  Compressor goes in between.
+- ~~**A Fader fed one side of a two-channel Amplifier through an effect** counts as a Main
+  Fader.~~ `mixSourceOf` stops at a wire carrying one side: Amp R → Pad → Fader is a plain fader
+  with one output (it had L / R and the Main Fader role). A chain saved the old way is tidied when
+  it is opened (the takeover tidy folds the L / R wires back). No other visible change in the 2,500
+  random graphs (ports, Matrix eligibility, roles, levels, takeovers).
+- ~~**A committed wire without corners** never shows the crossing warning.~~ Every finished wire
+  that runs through a card shows it, as its preview did while it was drawn.
+- **A digital signal into an Amplifier or a speaker** silences it with no note on the card — on
+  hold: the whole digital / analog chain is to be rethought.
+- ~~**The Relay's help text** describes one input switched between two outputs.~~ Rewritten in
+  both languages: two inputs, one output (A is the top input). The Relay card has one look at every
+  zoom: its name at half the size it would fit and two big A / B buttons, clickable zoomed out; its
+  input level readings and the `relay.input` text are gone.
+
+Also: the Line Input icon is a filled jack plug (tip, ring, sleeve, handle, cable), tilted with the
+tip up-left like the old outline one.

@@ -42,15 +42,33 @@ export function nodeAcceptsWire(
   return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source))
 }
 
+/** Id of the card being dropped while its wires are checked (it is not on the canvas yet). */
+const DROPPED = '__dropped__'
+
 /**
- * True when a card of this type dropped onto `wire` goes in the middle of it (the wire is replaced
- * by one into the card's first input and one from its first output): it needs an input and an
- * output, and a Matrix Bus goes only on a wire that carries a finished mix (after its fader).
- * Looser than wiring by hand (see TODO.md): any card may go on a Matrix send, a Relay or Matrix
- * Bus between a mono Aux and a Matrix Bus.
+ * True when a card of this type dropped onto `wire` goes in the middle of it: the wire is replaced
+ * by one from its source into the card's first input and one from the card's first output to its
+ * target (withNodeOnWire), and each must be a wire you could draw by hand. Otherwise the card is
+ * placed where it was dropped, unwired.
  */
 export function wireTakesCard(typeKey: TypeKey, wire: SignalEdge, view: GraphView): boolean {
   const def = NODE_REGISTRY[typeKey]
   if (def.inputs.length === 0 || def.outputs.length === 0) return false
-  return typeKey !== 'matrix-bus' || isMatrixSource(wire.source, wire.sourceHandle, view)
+  const card: SignalNode = { id: DROPPED, typeKey, position: { x: 0, y: 0 }, params: {}, bypassed: false }
+  const { inputs, outputs } = getPorts(card)
+  const nodes  = [...view.nodes, card]
+  const target = view.nodes.find((n) => n.id === wire.target)
+  if (!target) return false
+
+  // The wire's source into the card …
+  const rest = view.edges.filter((e) => e.id !== wire.id)
+  const fromSource: WireSource = { nodeId: wire.source, handleId: wire.sourceHandle }
+  if (!nodeAcceptsWire(card, fromSource, rest, nodes) || !portAcceptsWire(card, inputs[0].id, rest, fromSource)) return false
+
+  // … then the card into the wire's target
+  const withIn: SignalEdge[] = [...rest, {
+    id: `${DROPPED}-in`, source: wire.source, sourceHandle: wire.sourceHandle, target: DROPPED, targetHandle: inputs[0].id,
+  }]
+  const fromCard: WireSource = { nodeId: DROPPED, handleId: outputs[0].id }
+  return nodeAcceptsWire(target, fromCard, withIn, nodes) && portAcceptsWire(target, wire.targetHandle, withIn, fromCard)
 }
