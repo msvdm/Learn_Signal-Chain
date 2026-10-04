@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
@@ -11,6 +12,7 @@ const BUTTON = 110
 export function SwitchNode({ id }: CardProps) {
   const p                = useParams(id, 'switch')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const { t }            = useTranslation()
 
   const isOn = p('on')
 
@@ -32,7 +34,7 @@ export function SwitchNode({ id }: CardProps) {
           transition: 'background 0.1s, border-color 0.1s, color 0.1s',
         }}
       >
-        {isOn ? 'ON' : 'OFF'}
+        {isOn ? t.nodeControls.on : t.nodeControls.off}
       </button>
     </FreeControl>
   )

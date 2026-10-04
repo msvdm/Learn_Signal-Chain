@@ -72,8 +72,8 @@ export function LimiterNode({ id }: CardProps) {
             outMaxDb={20}
             ceilingDb={ceiling + makeupGain}
             badge={limiting
-              ? { text: 'LIMITING', color: 'var(--signal-hot)', opacity: 1 }
-              : { text: 'PASS', color: 'var(--lsc-fg)', opacity: 0.4 }}
+              ? { text: t.nodes.limiter.limiting, color: 'var(--signal-hot)', opacity: 1 }
+              : { text: t.nodes.limiter.pass, color: 'var(--lsc-fg)', opacity: 0.4 }}
             pointColor={limiting ? 'var(--signal-hot)' : 'var(--lsc-accent)'}
           />
           <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />

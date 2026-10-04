@@ -1,18 +1,24 @@
-import type { NodePort as Port } from '../../data/nodeRegistry'
+import type { NodePort as Port, TypeKey } from '../../data/nodeRegistry'
 import { useTranslation } from '../../i18n/useTranslation'
+import { portName } from '../../utils/nodeName'
 import { NodePort } from './NodePort'
 
 // Pieces every element's shell draws around its controls (NodeWrapper, FreeControl; useNodeChrome)
 
 /** The element's inputs down its left edge and outputs down its right, from the first port line. */
-export function PortStack({ nodeId, ports }: { nodeId: string; ports: { inputs: Port[]; outputs: Port[] } }) {
+export function PortStack({ nodeId, typeKey, ports }: {
+  nodeId: string
+  typeKey: TypeKey
+  ports: { inputs: Port[]; outputs: Port[] }
+}) {
+  const { t } = useTranslation()
   return (
     <>
       {ports.inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={portName(t, typeKey, port.id)} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={portName(t, typeKey, port.id)} />
       ))}
     </>
   )

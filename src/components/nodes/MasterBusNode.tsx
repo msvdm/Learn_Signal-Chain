@@ -134,7 +134,7 @@ export function MasterBusNode({ id, type }: CardProps) {
       {!isMatrix && (
         <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)' }}>
           {n > 0
-            ? fmt(t.nodes['aux-bus'].channels, { n: String(n), s: n > 1 ? 's' : '' })
+            ? n === 1 ? t.nodes['aux-bus'].channelsOne : fmt(t.nodes['aux-bus'].channels, { n: String(n) })
             : t.nodes['aux-bus'].noChannels}
         </span>
       )}

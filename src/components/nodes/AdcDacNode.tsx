@@ -107,8 +107,8 @@ export function AdcDacNode({ id, type }: CardProps) {
           fontWeight: 600,
         }}
       >
-        <StableText reserve={['● Digital out', '● Analog out']} align="center">
-          {domain === 'digital' ? '● Digital out' : '● Analog out'}
+        <StableText reserve={[`● ${t.meters.digitalOut}`, `● ${t.meters.analogOut}`]} align="center">
+          ● {domain === 'digital' ? t.meters.digitalOut : t.meters.analogOut}
         </StableText>
       </div>
     </NodeWrapper>

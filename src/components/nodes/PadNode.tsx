@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
@@ -7,6 +8,7 @@ import { useParams } from '../../hooks/useParams'
 export function PadNode({ id }: CardProps) {
   const p                = useParams(id, 'pad')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const { t }            = useTranslation()
 
   const engaged = p('engaged')
 
@@ -31,7 +33,7 @@ export function PadNode({ id }: CardProps) {
         }}
         onClick={() => updateNodeParams(id, { engaged: !engaged })}
       >
-        {engaged ? '−20 dB' : 'OFF'}
+        {engaged ? t.nodes.pad.on : t.nodes.pad.off}
       </button>
     </NodeWrapper>
   )

@@ -99,7 +99,10 @@
   },
   "meters": {
     "input": "Вход",
-    "output": "Изход"
+    "output": "Изход",
+    "analogOut": "Аналогов изход",
+    "digitalOut": "Цифров изход",
+    "axisIn": "0 dB вход"
   },
   "health": {
     "too-quiet": "Прекалено тихо",
@@ -108,11 +111,11 @@
     "clipping": "Изкривяване!"
   },
   "warnings": {
-    "domainMixedBus": "Cannot mix analog and digital signals — insert a DAC before this bus, or keep signals in the same domain.",
-    "digitalToAmp": "Amp cannot amplify a digital signal. Insert a DAC before the amp to convert back to analog.",
-    "digitalToSpeaker": "Speaker cannot receive a digital signal. Insert a DAC before the speaker.",
-    "adcExpectsAnalog": "ADC expects an analog input. Connect it after analog gear, not after another ADC or digital node.",
-    "dacExpectsDigital": "DAC expects a digital input. Connect it after an ADC or other digital node."
+    "domainMixedBus": "Аналогови и цифрови сигнали не могат да се смесват — сложи ЦАП преди тази шина или дръж всички сигнали от един вид.",
+    "digitalToAmp": "Усилвателят не може да усили цифров сигнал. Сложи ЦАП преди усилвателя, за да върнеш сигнала в аналогов вид.",
+    "digitalToSpeaker": "Говорителят не може да приеме цифров сигнал. Сложи ЦАП преди говорителя.",
+    "adcExpectsAnalog": "АЦП очаква аналогов сигнал на входа. Свържи го след аналогово устройство, а не след друг АЦП или цифров елемент.",
+    "dacExpectsDigital": "ЦАП очаква цифров сигнал на входа. Свържи го след АЦП или друг цифров елемент."
   },
   "tooltip": {
     "whatIsThis": "Какво е това?",
@@ -197,10 +200,10 @@
     },
     "di-box": {
       "label": "DI Кутия",
-      "groundLift": "Ground Lift",
+      "groundLift": "Изолация на земя",
       "xlrOut": "XLR Изход",
       "directOut": "Директен Изход",
-      "description": "Converts high-impedance instrument signal to balanced mic-level XLR."
+      "description": "Превръща сигнала на инструмента (висок импеданс) в балансиран XLR сигнал на микрофонно ниво."
     },
     "noise-gate": {
       "label": "Гейт",
@@ -214,7 +217,8 @@
       "label": "Лимитер",
       "ceiling": "Таван",
       "makeupGain": "Компенсация",
-      "limiting": "Ограничава"
+      "limiting": "Ограничава",
+      "pass": "Пропуска"
     },
     "pad": {
       "label": "Пад",
@@ -228,7 +232,8 @@
       "gainReduction": "Намаляване на съскащи звуци"
     },
     "relay": {
-      "label": "Реле"
+      "label": "Реле",
+      "input": "Вход {ch}"
     },
     "pan": {
       "label": "Панорама"
@@ -242,6 +247,7 @@
     "aux-bus": {
       "label": "Aux шина",
       "channels": "Входящи кабели: {n}",
+      "channelsOne": "Входящи кабели: 1",
       "noChannels": "Още нищо не е свързано"
     },
     "matrix-bus": {
@@ -253,16 +259,13 @@
       "label": "Баланс"
     }
   },
-  "eqCurve": {
-    "title": "Еквалайзер крива",
-    "subtitle": "Дърпай цветните дръжки, за да оформиш честотния отговор",
-    "band": "Лента"
-  },
   "nodeControls": {
     "turnOff": "Включен — кликни за байпас (сигналът тогава минава без промяна)",
     "turnOn": "Байпас — сигналът минава без промяна. Кликни, за да го включиш отново",
     "remove": "Премахни от веригата",
     "bypassedShort": "Байпас",
+    "on": "ВКЛ",
+    "off": "ИЗКЛ",
     "unplug": "Кликни, за да откачиш този кабел"
   },
   "nodeMenu": {
@@ -286,6 +289,32 @@
     "mono": "Моно",
     "stereo": "Стерео",
     "toggleHint": "Моно = един канал. Стерео = левият и десният канал пътуват заедно по един кабел (изобразен с двойна линия)."
+  },
+  "ports": {
+    "in": "Вход",
+    "out": "Изход",
+    "out-l": "Ляв изход",
+    "out-r": "Десен изход",
+    "mix": "Микс",
+    "send": "Матрично изпращане (Л + Д, след плъзгача)",
+    "byType": {
+      "di-box": {
+        "out": "XLR изход",
+        "direct": "Директен изход"
+      },
+      "relay": {
+        "in-a": "Вход A",
+        "in-b": "Вход B"
+      },
+      "adc": {
+        "in": "Аналогов вход",
+        "out": "Цифров изход"
+      },
+      "dac": {
+        "in": "Цифров вход",
+        "out": "Аналогов изход"
+      }
+    }
   },
   "unplugMenu": {
     "title": "Кабели на този вход",

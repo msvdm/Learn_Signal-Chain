@@ -4,10 +4,9 @@
 import type { ComplexityLevel } from './levels'
 import { LEVELS } from './levels'
 
+/** A connection point. Its tooltip is in the locales (`ports`, utils/nodeName.ts portName). */
 export type NodePort = {
   id: string
-  /** Tooltip of the port */
-  label: string
 }
 
 export type NodeCategory = 'source' | 'processor' | 'merge' | 'sink'
@@ -105,11 +104,11 @@ export type SignalEdge = {
   waypoints?: { x: number; y: number }[]
 }
 
-const IN: NodePort[]    = [{ id: 'in', label: 'Input' }]
-const OUT: NodePort[]   = [{ id: 'out', label: 'Output' }]
+const IN: NodePort[]    = [{ id: 'in' }]
+const OUT: NodePort[]   = [{ id: 'out' }]
 const SIDES: NodePort[] = [
-  { id: 'out-l', label: 'Left Out' },
-  { id: 'out-r', label: 'Right Out' },
+  { id: 'out-l' },
+  { id: 'out-r' },
 ]
 // Mixing buses: the size of the Compressor card, so their long names stay big in overview
 const BUS_SIZE: Size = { w: 398, h: 298 }
@@ -190,8 +189,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   'di-box': {
     category: 'processor', inputs: IN, stereo: 'follow',
     outputs: [
-      { id: 'out', label: 'XLR Out' },
-      { id: 'direct', label: 'Direct Out' },
+      { id: 'out' },
+      { id: 'direct' },
     ],
     minLevel: 'beginner', bypass: true,
     defaultParams: { groundLift: false },
@@ -214,8 +213,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   relay: {
     category: 'processor', stereo: 'follow',
     inputs: [
-      { id: 'in-a', label: 'Input A' },
-      { id: 'in-b', label: 'Input B' },
+      { id: 'in-a' },
+      { id: 'in-b' },
     ],
     outputs: OUT,
     minLevel: 'intermediate', bypass: false,
@@ -229,8 +228,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   adc: {
     category: 'processor', stereo: 'follow',
-    inputs: [{ id: 'in', label: 'Analog In' }],
-    outputs: [{ id: 'out', label: 'Digital Out' }],
+    inputs: [{ id: 'in' }],
+    outputs: [{ id: 'out' }],
     minLevel: 'advanced', bypass: false,
     // alignmentDb: how far below the digital ceiling unity sits (EBU R68: 0 dBu = −18 dBFS,
     // so 0 dBFS = +18 dBu). dBFS = dBu − alignmentDb.
@@ -238,8 +237,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   dac: {
     category: 'processor', stereo: 'follow',
-    inputs: [{ id: 'in', label: 'Digital In' }],
-    outputs: [{ id: 'out', label: 'Analog Out' }],
+    inputs: [{ id: 'in' }],
+    outputs: [{ id: 'out' }],
     minLevel: 'advanced', bypass: false,
     defaultParams: { alignmentDb: 18 },
   },

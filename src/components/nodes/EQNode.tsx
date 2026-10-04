@@ -44,7 +44,7 @@ function bandSpecs(advanced: boolean, t: Translations): BandSpec[] {
     // Four fully parametric bands
     return [
       { index: 0, name: eq.bandLow,                freqRange: [40, 500],     shelfType: 'low-shelf' },
-      { index: 1, name: eq.bandLoMid ?? 'Lo-Mid', freqRange: [200, 1500] },
+      { index: 1, name: eq.bandLoMid, freqRange: [200, 1500] },
       { index: 2, name: eq.bandMid,                freqRange: [500, 5000] },
       { index: 3, name: eq.bandHigh,               freqRange: [2000, 16000], shelfType: 'high-shelf' },
     ]

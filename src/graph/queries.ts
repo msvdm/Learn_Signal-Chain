@@ -60,11 +60,11 @@ export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: Gra
   return outputKind(wire.source, wire.sourceHandle, graph) === 'stereo'
 }
 
-const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT, label: 'Mix' }]
-const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT, label: 'Matrix send (L + R, after the fader)' }
+const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT }]
+const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT }
 const SIDE_OUTPUTS: NodePort[] = [
-  { id: 'out-l', label: 'Left Out' },
-  { id: 'out-r', label: 'Right Out' },
+  { id: 'out-l' },
+  { id: 'out-r' },
 ]
 
 /**

@@ -99,7 +99,10 @@
   },
   "meters": {
     "input": "Input",
-    "output": "Output"
+    "output": "Output",
+    "analogOut": "Analog out",
+    "digitalOut": "Digital out",
+    "axisIn": "0 dB in"
   },
   "health": {
     "too-quiet": "Too Quiet",
@@ -214,7 +217,8 @@
       "label": "Limiter",
       "ceiling": "Ceiling",
       "makeupGain": "Makeup",
-      "limiting": "Limiting"
+      "limiting": "Limiting",
+      "pass": "Pass"
     },
     "pad": {
       "label": "Pad",
@@ -228,7 +232,8 @@
       "gainReduction": "Sibilance reduction"
     },
     "relay": {
-      "label": "Relay"
+      "label": "Relay",
+      "input": "In {ch}"
     },
     "pan": {
       "label": "Pan"
@@ -241,7 +246,8 @@
     },
     "aux-bus": {
       "label": "Aux Bus",
-      "channels": "{n} wire{s} in",
+      "channels": "{n} wires in",
+      "channelsOne": "1 wire in",
       "noChannels": "Nothing connected yet"
     },
     "matrix-bus": {
@@ -253,16 +259,13 @@
       "label": "Balance"
     }
   },
-  "eqCurve": {
-    "title": "EQ Curve",
-    "subtitle": "Drag the colored handles to shape the frequency response",
-    "band": "Band"
-  },
   "nodeControls": {
     "turnOff": "On — click to bypass it (the signal then passes through unchanged)",
     "turnOn": "Bypassed — the signal passes through unchanged. Click to turn it back on",
     "remove": "Remove from chain",
     "bypassedShort": "Bypassed",
+    "on": "ON",
+    "off": "OFF",
     "unplug": "Click to unplug this wire"
   },
   "nodeMenu": {
@@ -286,6 +289,32 @@
     "mono": "Mono",
     "stereo": "Stereo",
     "toggleHint": "Mono = one channel. Stereo = Left and Right travel together on one wire (drawn as a double line)."
+  },
+  "ports": {
+    "in": "Input",
+    "out": "Output",
+    "out-l": "Left Out",
+    "out-r": "Right Out",
+    "mix": "Mix",
+    "send": "Matrix send (L + R, after the fader)",
+    "byType": {
+      "di-box": {
+        "out": "XLR Out",
+        "direct": "Direct Out"
+      },
+      "relay": {
+        "in-a": "Input A",
+        "in-b": "Input B"
+      },
+      "adc": {
+        "in": "Analog In",
+        "out": "Digital Out"
+      },
+      "dac": {
+        "in": "Digital In",
+        "out": "Analog Out"
+      }
+    }
   },
   "unplugMenu": {
     "title": "Wires on this input",

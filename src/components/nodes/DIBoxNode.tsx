@@ -58,7 +58,9 @@ export function DIBoxNode({ id }: CardProps) {
               cursor: 'pointer',
             }}
           >
-            <StableText reserve={['ON', 'OFF']} align="center">{groundLift ? 'ON' : 'OFF'}</StableText>
+            <StableText reserve={[t.nodeControls.on, t.nodeControls.off]} align="center">
+              {groundLift ? t.nodeControls.on : t.nodeControls.off}
+            </StableText>
           </button>
         </div>
 

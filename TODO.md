@@ -314,7 +314,20 @@ corners never gets the warning once committed (the preview still warns while dra
   Found, not changed: the engine sets `digitalToAmp` / `digitalToSpeaker` (a digital signal into
   an Amplifier or speaker: silent), and `warnings.*` has their texts, but no card shows them — the
   Amplifier and the speakers just go quiet. The ADC / DAC and the buses do show theirs.
-- English shown to Bulgarian users (a separate suggestion may cover it — check `git log`):
-  hard-coded — the Aux Bus's English plural `s` param, "LIMITING" / "PASS", the curves'
-  "0 dB in", port tooltips taken from the registry's English port labels; and bg.json values that were never translated — the `warnings.*` domain
-  texts, `nodes.di-box` (groundLift, description), Relay "In A / In B".
+- ~~English shown to Bulgarian users~~ — done. Into the locales: the Limiter's state word
+  (`limiter.limiting` / `pass`, still drawn in capitals), the curves' axis ("0 dB in",
+  `meters.axisIn`), the Pad's button (`pad.on` / `off`, already there), the Switch and DI Box
+  ON / OFF (`nodeControls.on` / `off`), the ADC / DAC "● Digital / Analog out"
+  (`meters.digitalOut` / `analogOut`), the Relay's "In A / B" (`relay.input`), the Aux Bus count
+  (`channels` / `channelsOne` instead of an English plural `s`), and every port tooltip (`ports`,
+  with `byType` for the DI Box, Relay, ADC and DAC; `portName()` in `utils/nodeName.ts` — the
+  registry's English port labels are gone, a port is just its id). Translated in bg.json: the
+  `warnings.*` texts, the DI Box's ground lift ("Изолация на земя", as its help text calls it)
+  and description. Gone: the EQ's `'Lo-Mid'` fallback and the unused `eqCurve` texts. English
+  reads as before everywhere. Checked in the browser: the whole Advanced palette on one canvas
+  in Bulgarian — no English text or tooltip left on the cards, header or palette (units and
+  names like HPF, XLR, Aux aside) — and the longer words fit ("ИЗКЛ" on the Switch,
+  "ОГРАНИЧАВА" on the curve).
+  Found, not changed: the Relay's help text (`theory.relay`, both languages) describes one input
+  switched between two outputs ("Output A or Output B"); the card picks one of two inputs and has
+  one output. It needs rewriting, which is a teaching decision.

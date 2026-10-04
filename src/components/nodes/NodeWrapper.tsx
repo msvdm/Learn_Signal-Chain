@@ -114,7 +114,7 @@ export function NodeWrapper({
         </div>
       )}
 
-      <PortStack nodeId={nodeId} ports={ports} />
+      <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
 
       {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
       {!faceOnly && <>

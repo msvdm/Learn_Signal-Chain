@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { StableText } from '../controls/StableText'
 import type { Transfer } from '../../signal/process'
+import { useTranslation } from '../../i18n/useTranslation'
 
 // Pieces of the two-column dynamics body (layout: utils/twoColumns.ts): knobs, the transfer curve,
 // the turning-down reading
@@ -80,6 +81,7 @@ export function TransferCurve({
   pointColor?: string
   pointOpacity?: number
 }) {
+  const { t } = useTranslation()
   const x = (db: number) => GP + ((db - IN_MIN) / (IN_MAX - IN_MIN)) * (GW - GP * 2)
   const y = (db: number) => {
     const clamped = Math.max(OUT_MIN, Math.min(outMaxDb, db))
@@ -126,7 +128,7 @@ export function TransferCurve({
 
         <text x={GW - GP + 2} y={y(0) + 3} fontSize="11" fill="var(--lsc-fg-muted)">0</text>
         <text x={GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="middle">−60</text>
-        <text x={GW - GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="end">0 dB in</text>
+        <text x={GW - GP} y={GH - 2} fontSize="11" fill="var(--lsc-fg-muted)" textAnchor="end">{t.meters.axisIn}</text>
 
         <line
           x1={threshX} y1={GP} x2={threshX} y2={GH - GP}

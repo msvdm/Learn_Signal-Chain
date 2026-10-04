@@ -8,12 +8,14 @@ import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { healthColor } from '../../signal/levels'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export function RelayNode({ id }: CardProps) {
   const { stages, wires } = useGraphSignal()
   const p                = useParams(id, 'relay')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const allEdges         = useSignalStore((s) => s.edges)
+  const { t, fmt }       = useTranslation()
 
   const selected = p('selectedInput')
   const result   = stages[id]
@@ -64,7 +66,7 @@ export function RelayNode({ id }: CardProps) {
           return (
             <div key={ch} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 'var(--node-text-sm)', fontWeight: 700, color: active ? 'var(--signal-good)' : 'var(--lsc-fg-dim)' }}>
-                In {ch.toUpperCase()}
+                {fmt(t.nodes.relay.input, { ch: ch.toUpperCase() })}
               </span>
               <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{
                 fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)',

@@ -63,7 +63,7 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
 
       {wireTarget && <WireTargetBadge label={label} />}
 
-      <PortStack nodeId={nodeId} ports={ports} />
+      <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
 
       {children}
 
