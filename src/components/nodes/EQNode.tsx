@@ -142,7 +142,7 @@ function ShelfToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
         transition: 'all 0.12s',
       }}
     >
-      {t.nodes.eq.shelf ?? 'Shelf'}
+      {t.nodes.eq.shelf}
     </button>
   )
 }
@@ -155,8 +155,8 @@ function BandCell({ spec, band, onChange }: {
   const { t }     = useTranslation()
   const color     = BAND_COLORS[spec.index]
   const shelf     = isShelf(band)
-  const gainLabel = t.nodes.eq.gain ?? 'Gain'
-  const freqLabel = t.nodes.eq.freq ?? 'Freq'
+  const gainLabel = t.nodes.eq.gain
+  const freqLabel = t.nodes.eq.freq
   const q         = band.Q ?? 1.4
 
   return (
@@ -211,7 +211,7 @@ function BandCell({ spec, band, onChange }: {
 
       {/* Width — kept in place (greyed out) on a shelf so the card does not change height */}
       <BandSlider
-        label={t.nodes.eq.widthQ ?? 'Width (Q)'} display={shelf ? '—' : q.toFixed(1)}
+        label={t.nodes.eq.widthQ} display={shelf ? '—' : q.toFixed(1)}
         value={q} min={Q_MIN} max={Q_MAX} step={0.1}
         color={color} disabled={shelf} title={shelf ? t.nodes.eq.widthShelf : undefined}
         onChange={(v) => onChange({ Q: v })}
@@ -253,7 +253,6 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
       typeKey="eq"
       icon={<Activity size={16} />}
       label={data.label ?? t.nodes.eq.label}
-      accentColor={data.color}
       style={advanced ? undefined : twoColumnCard}
     >
       {advanced ? (

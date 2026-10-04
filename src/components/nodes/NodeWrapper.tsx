@@ -18,8 +18,6 @@ interface NodeWrapperProps {
   typeKey: string
   icon: ReactNode
   label: string
-  /** Kept for API compatibility with older node components; no longer drawn. */
-  accentColor?: string
   children?: ReactNode
   /** Ports the node renders itself (dynamic bus inputs). Registry inputs are then skipped. */
   customInputs?: ReactNode

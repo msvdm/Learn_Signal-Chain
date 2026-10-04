@@ -173,7 +173,6 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
       typeKey="comp"
       icon={<Box size={16} />}
       label={data.label ?? t.nodes.comp.label}
-      accentColor={data.color}
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />

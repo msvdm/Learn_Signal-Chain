@@ -36,7 +36,6 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
       typeKey="amp"
       icon={<Radio size={16} />}
       label={data.label ?? t.palette.items['amp']}
-      accentColor={data.color}
     >
       <div className="space-y-3">
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />

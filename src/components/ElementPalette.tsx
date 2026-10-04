@@ -9,7 +9,7 @@ import {
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
-import type { ComplexityLevel } from '../store/signalStore'
+import type { ComplexityLevel } from '../data/levels'
 import { setActiveDragTypeKey } from '../utils/dragState'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainEmpty } from '../hooks/useChainEmpty'

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { getHealthStyle, dbToPercent, formatDb } from '../hooks/useGainStaging'
+import { healthColor, dbToPercent, formatDb } from '../hooks/useGainStaging'
 import { useTranslation } from '../i18n/useTranslation'
 import { getHealth, UNITY_DBU, ALIGNMENT_DB } from '../hooks/useSignalChain'
 import type { SignalHealth, SignalDomain } from '../hooks/useSignalChain'
@@ -55,7 +55,7 @@ export function MeterBar({ db, color, height = 6, domain = 'analog' }: { db: num
 
 /** One labelled channel bar (L or R) with its level, coloured by its own health. */
 export function ChannelRow({ ch, db, domain = 'analog' }: { ch: string; db: number; domain?: SignalDomain }) {
-  const color = isFinite(db) ? getHealthStyle(getHealth(db, domain)).color : 'var(--lsc-border)'
+  const color = isFinite(db) ? healthColor(getHealth(db, domain)) : 'var(--lsc-border)'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
       <span style={{ fontWeight: 700, width: 10, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
@@ -70,7 +70,7 @@ export function ChannelRow({ ch, db, domain = 'analog' }: { ch: string; db: numb
 }
 
 export function SignalMeter({ db, health, label, showValue = true, dbR, domain = 'analog' }: SignalMeterProps) {
-  const style  = getHealthStyle(health)
+  const color  = healthColor(health)
   const { t }  = useTranslation()
   const stereo = dbR !== undefined
 
@@ -87,21 +87,21 @@ export function SignalMeter({ db, health, label, showValue = true, dbR, domain =
           <ChannelRow ch="R" db={dbR} domain={domain} />
         </>
       ) : (
-        <MeterBar db={db} color={style.color} domain={domain} />
+        <MeterBar db={db} color={color} domain={domain} />
       )}
       {showValue && (
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
           {/* In stereo each bar shows its own level, so only the health word stays here */}
           <StableText
             reserve={[domain === 'digital' ? '+00.0 dBFS' : '+00.0 dBu']}
-            style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color: style.color }}
+            style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color }}
           >
             {stereo ? '' : formatDb(db, domain)}
           </StableText>
           <StableText
             reserve={Object.values(t.health)}
             align="end"
-            style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color: style.color }}
+            style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color }}
           >
             {t.health[health]}
           </StableText>
@@ -126,7 +126,7 @@ export function VerticalMeterPair({ dbL, dbR, height, domain = 'analog' }: { dbL
           >
             <motion.div
               className="absolute left-0 bottom-0 w-full"
-              style={{ borderRadius: 9999, backgroundColor: isFinite(db) ? getHealthStyle(getHealth(db, domain)).color : 'transparent' }}
+              style={{ borderRadius: 9999, backgroundColor: isFinite(db) ? healthColor(getHealth(db, domain)) : 'transparent' }}
               animate={{ height: `${dbToPercent(db)}%` }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />

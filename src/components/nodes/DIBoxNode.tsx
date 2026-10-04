@@ -30,7 +30,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
       nodeId={id}
       typeKey="di-box"
       icon={<Plug size={16} />}
-      label={data.label ?? t.nodes['di-box']?.label ?? 'DI Box'}
+      label={data.label ?? t.nodes['di-box'].label}
     >
       <div style={twoColumns}>
         {/* Signal flow */}
@@ -45,7 +45,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
         {/* Ground lift toggle */}
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
           <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
-            {t.nodes['di-box']?.groundLift ?? 'Ground Lift'}
+            {t.nodes['di-box'].groundLift}
           </span>
           <button
             className="nodrag nopan"
@@ -68,7 +68,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
         <div className="space-y-1" style={{ gridColumn: '1 / -1' }}>
           <div className="flex items-center justify-between">
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-accent)', fontWeight: 700 }}>
-              {t.nodes['di-box']?.xlrOut ?? 'XLR Out'}
+              {t.nodes['di-box'].xlrOut}
             </span>
             <StableText reserve={[`${LEVEL_SAMPLE} dBFS`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
               {isFinite(result?.out ?? -Infinity)
@@ -78,7 +78,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-fg-muted)', fontWeight: 600 }}>
-              {t.nodes['di-box']?.directOut ?? 'Direct Out'}
+              {t.nodes['di-box'].directOut}
             </span>
             <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
               {isFinite(result?.out ?? -Infinity)
@@ -92,7 +92,7 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
           className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
           style={{ gridColumn: '1 / -1', color: 'var(--lsc-fg-muted)', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
         >
-          {t.nodes['di-box']?.description ?? 'Converts high-impedance instrument signal to balanced mic-level XLR.'}
+          {t.nodes['di-box'].description}
         </div>
       </div>
     </NodeWrapper>

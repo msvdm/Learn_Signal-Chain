@@ -31,7 +31,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
       nodeId={id}
       typeKey="audio-interface"
       icon={<Cpu size={16} />}
-      label={data.label ?? t.nodes['audio-interface']?.label ?? 'Audio Interface'}
+      label={data.label ?? t.nodes['audio-interface'].label}
       customInputs={<BusInputPorts nodeId={id} connectedHandles={incomingEdges.map((e) => e.targetHandle)} />}
       customInputCount={incomingEdges.length + 1}
     >
@@ -39,7 +39,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
         <div className="lsc-wrap-text text-[var(--node-text-sm)] leading-relaxed" style={{ color: 'var(--lsc-fg-muted)' }}>
           {incomingEdges.length > 0
             ? `${incomingEdges.length} channel${incomingEdges.length > 1 ? 's' : ''} received`
-            : t.nodes['audio-interface']?.noChannels ?? 'No channels connected'}
+            : t.nodes['audio-interface'].noChannels}
         </div>
 
         {domainWarning && (
@@ -52,7 +52,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
               background: 'var(--signal-clipping-bg)',
             }}
           >
-            {t.warnings?.domainMixedBus ?? 'Cannot mix analog and digital signals'}
+            {t.warnings.domainMixedBus}
           </div>
         )}
 
@@ -75,8 +75,8 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
           }}
         >
           {domain === 'digital'
-            ? (t.nodes['audio-interface']?.digitalIn ?? '↓ Digital — End of chain')
-            : (t.nodes['audio-interface']?.analogIn ?? '↓ Analog — End of chain')}
+            ? t.nodes['audio-interface'].digitalIn
+            : t.nodes['audio-interface'].analogIn}
         </div>
       </div>
     </NodeWrapper>

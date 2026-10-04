@@ -59,7 +59,6 @@ export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
       typeKey={resolvedTypeKey}
       icon={icon}
       label={label}
-      accentColor={data.color}
       value={`${levelDb} dBu`}
       align="start"
       overviewArt={art}

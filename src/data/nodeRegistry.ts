@@ -1,10 +1,12 @@
 // Node type registry — single source of truth for port definitions and defaults.
-// No imports from the rest of the app; safe to import from anywhere.
+// No imports from the rest of the app (only the level type); safe to import from anywhere.
+
+import type { ComplexityLevel } from './levels'
 
 export type NodePort = {
   id: string
+  /** Tooltip of the port */
   label: string
-  side: 'left' | 'right'
 }
 
 export type NodeCategory = 'source' | 'processor' | 'merge' | 'sink'
@@ -29,7 +31,6 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 
 export type NodeTypeDef = {
   typeKey: string
-  label: string
   inputs: NodePort[]
   outputs: NodePort[]
   category: NodeCategory
@@ -65,34 +66,30 @@ export type SignalEdge = {
 export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   mic: {
     typeKey: 'mic',
-    label: 'Microphone',
     inputs: [],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'source',
     defaultParams: { sensitivityDb: -60 },
   },
   'line-in': {
     typeKey: 'line-in',
-    label: 'Line Input',
     inputs: [],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'source',
     stereo: 'optional',
     defaultParams: { levelDb: -10, stereo: false },
   },
   instrument: {
     typeKey: 'instrument',
-    label: 'Instrument',
     inputs: [],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'source',
     defaultParams: { levelDb: -30 },
   },
   gain: {
     typeKey: 'gain',
-    label: 'Gain',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
@@ -101,18 +98,16 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   hpf: {
     typeKey: 'hpf',
-    label: 'High-Pass Filter',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
     typeKey: 'eq',
-    label: 'Parametric EQ',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: {
@@ -126,9 +121,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   comp: {
     typeKey: 'comp',
-    label: 'Compressor',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     // Attack / Release are shown on the card but do not change the sound yet
@@ -136,38 +130,34 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   fader: {
     typeKey: 'fader',
-    label: 'Fader',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { faderDb: 0 },
   },
   switch: {
     typeKey: 'switch',
-    label: 'Switch',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { on: true },
   },
   amp: {
     typeKey: 'amp',
-    label: 'Amplifier',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { gainDb: 0 },
   },
   'di-box': {
     typeKey: 'di-box',
-    label: 'DI Box',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     outputs: [
-      { id: 'out', label: 'XLR Out', side: 'right' },
-      { id: 'direct', label: 'Direct Out', side: 'right' },
+      { id: 'out', label: 'XLR Out' },
+      { id: 'direct', label: 'Direct Out' },
     ],
     category: 'processor',
     stereo: 'follow',
@@ -175,9 +165,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   'noise-gate': {
     typeKey: 'noise-gate',
-    label: 'Noise Gate',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     // Range sets how far it turns down when closed; Hold / Attack / Release are shown, not simulated
@@ -185,56 +174,50 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   limiter: {
     typeKey: 'limiter',
-    label: 'Limiter',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   pad: {
     typeKey: 'pad',
-    label: 'Pad',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { engaged: true },
   },
   deesser: {
     typeKey: 'deesser',
-    label: 'De-esser',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
   relay: {
     typeKey: 'relay',
-    label: 'Relay',
     inputs: [
-      { id: 'in-a', label: 'Input A', side: 'left' },
-      { id: 'in-b', label: 'Input B', side: 'left' },
+      { id: 'in-a', label: 'Input A' },
+      { id: 'in-b', label: 'Input B' },
     ],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { selectedInput: 'a' },
   },
   pan: {
     typeKey: 'pan',
-    label: 'Pan',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { panPosition: 50 },
   },
   'audio-interface': {
     typeKey: 'audio-interface',
-    label: 'Audio Interface',
     inputs: [], // dynamic at runtime — one per connected channel
     outputs: [],
     category: 'sink',
@@ -242,33 +225,30 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   adc: {
     typeKey: 'adc',
-    label: 'ADC',
-    inputs: [{ id: 'in', label: 'Analog In', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Digital Out', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Analog In' }],
+    outputs: [{ id: 'out', label: 'Digital Out' }],
     category: 'processor',
     stereo: 'follow',
-    // alignmentDb: offset between analog reference level and digital full scale
-    // Standard: -18 dBu = 0 dBFS (EBU R68). So a -18 dBu signal becomes 0 dBFS.
+    // alignmentDb: how far below the digital ceiling unity sits (EBU R68: 0 dBu = −18 dBFS,
+    // so 0 dBFS = +18 dBu). dBFS = dBu − alignmentDb.
     defaultParams: { alignmentDb: 18 },
   },
   dac: {
     typeKey: 'dac',
-    label: 'DAC',
-    inputs: [{ id: 'in', label: 'Digital In', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Analog Out', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Digital In' }],
+    outputs: [{ id: 'out', label: 'Analog Out' }],
     category: 'processor',
     stereo: 'follow',
     defaultParams: { alignmentDb: 18 },
   },
   'master-bus': {
     typeKey: 'master-bus',
-    label: 'Master Bus',
     // Always stereo. The input accepts any number of wires; they are added together.
     // The mix leaves on two wires: Left and Right.
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     outputs: [
-      { id: 'out-l', label: 'Left Out',  side: 'right' },
-      { id: 'out-r', label: 'Right Out', side: 'right' },
+      { id: 'out-l', label: 'Left Out' },
+      { id: 'out-r', label: 'Right Out' },
     ],
     category: 'merge',
     stereo: 'always',
@@ -276,14 +256,13 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   'aux-bus': {
     typeKey: 'aux-bus',
-    label: 'Aux Bus',
     // The input accepts any number of wires; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     stereoOutputs: [
-      { id: 'out-l', label: 'Left Out',  side: 'right' },
-      { id: 'out-r', label: 'Right Out', side: 'right' },
+      { id: 'out-l', label: 'Left Out' },
+      { id: 'out-r', label: 'Right Out' },
     ],
     category: 'merge',
     stereo: 'optional',
@@ -291,15 +270,14 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   'matrix-bus': {
     typeKey: 'matrix-bus',
-    label: 'Matrix Bus',
     // A bus of buses, always stereo: only finished mixes go in, after their fader — a stereo bus
     // through its Matrix send (one stereo wire), a mono Aux Bus through its output or its fader.
     // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
     // A mono bus lands on both sides at full level.
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     outputs: [
-      { id: 'out-l', label: 'Left Out',  side: 'right' },
-      { id: 'out-r', label: 'Right Out', side: 'right' },
+      { id: 'out-l', label: 'Left Out' },
+      { id: 'out-r', label: 'Right Out' },
     ],
     category: 'merge',
     stereo: 'always',
@@ -307,9 +285,8 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   'graphic-eq': {
     typeKey: 'graphic-eq',
-    label: 'Graphic EQ',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
-    outputs: [{ id: 'out', label: 'Output', side: 'right' }],
+    inputs: [{ id: 'in', label: 'Input' }],
+    outputs: [{ id: 'out', label: 'Output' }],
     category: 'processor',
     stereo: 'follow',
     // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
@@ -317,8 +294,7 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   speaker: {
     typeKey: 'speaker',
-    label: 'Speaker',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     outputs: [],
     category: 'sink',
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
@@ -326,8 +302,7 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
   },
   'active-speaker': {
     typeKey: 'active-speaker',
-    label: 'Active Speaker',
-    inputs: [{ id: 'in', label: 'Input', side: 'left' }],
+    inputs: [{ id: 'in', label: 'Input' }],
     outputs: [],
     category: 'sink',
     // Active/powered speaker — has built-in amplification, works directly from line level
@@ -342,7 +317,7 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
  */
 export function initialParams(
   typeKey: string,
-  level: 'beginner' | 'intermediate' | 'advanced',
+  level: ComplexityLevel,
 ): Record<string, NodeParamValue> {
   const params = { ...NODE_REGISTRY[typeKey]?.defaultParams }
   if (typeKey === 'eq' && level !== 'advanced') {
@@ -354,7 +329,6 @@ export function initialParams(
 
 // ── Mono / stereo ports ────────────────────────────────────────────────────────
 
-/** Bus types whose inputs accept any number of wires (they are added together). */
 // Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
 const NO_BYPASS_TYPES = new Set([
   'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
@@ -367,6 +341,7 @@ export function canBypass(typeKey: string): boolean {
   return !NO_BYPASS_TYPES.has(typeKey)
 }
 
+/** Bus types whose inputs accept any number of wires (they are added together). */
 export const MULTI_WIRE_TYPES = new Set(['master-bus', 'aux-bus', 'matrix-bus'])
 
 /** Buses whose outputs are mixes a Matrix Bus may take. */
@@ -395,11 +370,11 @@ export const MIX_PORT = 'mix'
  */
 export const MATRIX_PORT = 'send'
 
-const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT, label: 'Mix', side: 'right' }]
-const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT, label: 'Matrix send (L + R, after the fader)', side: 'right' }
+const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT, label: 'Mix' }]
+const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT, label: 'Matrix send (L + R, after the fader)' }
 const SIDE_OUTPUTS: NodePort[] = [
-  { id: 'out-l', label: 'Left Out',  side: 'right' },
-  { id: 'out-r', label: 'Right Out', side: 'right' },
+  { id: 'out-l', label: 'Left Out' },
+  { id: 'out-r', label: 'Right Out' },
 ]
 
 /**

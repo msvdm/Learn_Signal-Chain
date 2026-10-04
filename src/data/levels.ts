@@ -1,10 +1,7 @@
-import type { SignalNode, SignalEdge } from './nodeRegistry'
+// The complexity levels. They change which elements the palette shows (and how a few of them look),
+// never what is on the canvas: every level starts from a blank canvas.
 
-export type BusType = 'aux' | 'fx' | 'pfl' | 'matrix'
+export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 
-// ── Default graph ─────────────────────────────────────────────────────────────
-
-/** Every level starts from a blank canvas — the learner builds the chain. */
-export function buildDefaultGraph(): { nodes: SignalNode[]; edges: SignalEdge[] } {
-  return { nodes: [], edges: [] }
-}
+/** The levels from easiest to hardest */
+export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']

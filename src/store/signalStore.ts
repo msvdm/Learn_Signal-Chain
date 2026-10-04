@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
-import { buildDefaultGraph } from '../data/levels'
+import type { ComplexityLevel } from '../data/levels'
+import { LEVELS } from '../data/levels'
 import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, getPorts } from '../data/nodeRegistry'
 import { pickChainColor } from '../utils/chainColors'
@@ -14,9 +15,6 @@ import { parseChainFile, toChainFile } from '../utils/chainFile'
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 export type { ToolMode, LeftTool } from '../types'
 
-export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
-/** The levels from easiest to hardest */
-export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
 export type Theme = 'dark' | 'light'
 
 /** The whole graph, as one undo step remembers it. */
@@ -58,9 +56,7 @@ function getInitialLanguage(): Lang {
 
 function getInitialComplexityLevel(): ComplexityLevel {
   const stored = localStorage.getItem('lsc-complexity-level')
-  if (stored === 'beginner' || stored === 'intermediate' ||
-      stored === 'advanced') return stored
-  return 'beginner'
+  return LEVELS.find((l) => l === stored) ?? 'beginner'
 }
 
 /** The autosaved canvas (see the autosave section at the bottom) */
@@ -75,7 +71,7 @@ function getInitialCanvas() {
       return { nodes, edges, chainName: name, complexityLevel: level }
     }
   } catch { /* a broken save: start blank */ }
-  return { ...buildDefaultGraph(), chainName: '', complexityLevel: getInitialComplexityLevel() }
+  return { nodes: [], edges: [], chainName: '', complexityLevel: getInitialComplexityLevel() }
 }
 
 interface SignalChainStore {
@@ -245,7 +241,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     withoutHistory(() => set({
       complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
       selectedNodeIds: [], toolMode: 'select', wireSource: null, past: [], future: [], chainName: '',
-      ...buildDefaultGraph(),
+      nodes: [], edges: [],
     }))
   },
 
@@ -286,16 +282,15 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   clearNotice: () => set({ notice: null }),
 
   resetAll: () =>
-    set((s) => ({
+    set({
       activeTooltipId: null,
       activeTooltipTypeKey: null,
       selectedNodeIds: [],
-      complexityLevel: s.complexityLevel,
       toolMode: 'select',
       wireSource: null,
       chainName: '',
-      ...buildDefaultGraph(),
-    })),
+      nodes: [], edges: [],
+    }),
 
   // ── Graph mutations ───────────────────────────────────────────────────────
 

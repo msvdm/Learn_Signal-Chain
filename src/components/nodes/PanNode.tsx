@@ -40,8 +40,8 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
   const panPosition = (node?.params.panPosition as number) ?? 50
 
   const label = data.label ?? (balance
-    ? (t.nodes.pan?.balanceLabel ?? 'Balance')
-    : (t.nodes.pan?.label ?? 'Pan'))
+    ? t.nodes.pan.balanceLabel
+    : t.nodes.pan.label)
 
   return (
     <FreeControl

@@ -7,7 +7,6 @@ interface InlineNodeProps {
   typeKey: string
   icon: ReactNode
   label: string
-  accentColor?: string
   /** A single big reading shown at the top of the body (e.g. a source's level). */
   value?: string
   children?: ReactNode

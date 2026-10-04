@@ -1,6 +1,7 @@
 import type { SignalNode, SignalEdge, NodeParamValue } from '../data/nodeRegistry'
 import { NODE_REGISTRY, initialParams } from '../data/nodeRegistry'
-import type { ComplexityLevel } from '../store/signalStore'
+import type { ComplexityLevel } from '../data/levels'
+import { LEVELS } from '../data/levels'
 import type { NodeGroup, Size } from './nodeGroup'
 import { nodeDims } from './layoutHelpers'
 import { isPng, readPngText } from './pngText'
@@ -14,8 +15,6 @@ export const CHAIN_VERSION = 1
 export const PNG_KEYWORD   = 'lsc-chain'
 /** A share link is the app's address + this + the encoded chain */
 export const LINK_PREFIX   = '#chain='
-
-const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
 
 export interface ChainFile {
   app: typeof CHAIN_APP

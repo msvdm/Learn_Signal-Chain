@@ -47,8 +47,8 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
   const tm       = t.nodes['matrix-bus']
 
   const defaultLabel = isMatrix ? tm.label
-    : isAux ? (t.nodes['aux-bus']?.label ?? 'Aux Bus')
-    : (t.nodes.master.label ?? 'Master Bus')
+    : isAux ? t.nodes['aux-bus'].label
+    : t.nodes.master.label
 
   const n = incomingEdges.length
 
@@ -139,8 +139,8 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
       {!isMatrix && (
         <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)' }}>
           {n > 0
-            ? fmt(t.nodes['aux-bus']?.channels ?? '{n} wire{s} in', { n: String(n), s: n > 1 ? 's' : '' })
-            : (t.nodes['aux-bus']?.noChannels ?? 'Nothing connected yet')}
+            ? fmt(t.nodes['aux-bus'].channels, { n: String(n), s: n > 1 ? 's' : '' })
+            : t.nodes['aux-bus'].noChannels}
         </span>
       )}
 
@@ -154,7 +154,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
             background: 'var(--signal-clipping-bg)',
           }}
         >
-          {t.warnings?.domainMixedBus ?? 'Cannot mix analog and digital signals'}
+          {t.warnings.domainMixedBus}
         </div>
       )}
     </NodeWrapper>

@@ -44,9 +44,10 @@ import { CanvasTools }         from './CanvasTools'
 import { ConfirmDialog }       from './ConfirmDialog'
 import { DirectionArrows }     from './DirectionArrows'
 
-import { useSignalStore, LEVELS } from '../store/signalStore'
+import { useSignalStore } from '../store/signalStore'
+import { LEVELS } from '../data/levels'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
-import { getHealthStyle }     from '../hooks/useGainStaging'
+import { healthColor }        from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
@@ -898,7 +899,7 @@ export function SignalChain() {
       const key         = `${edge.source}:${edge.sourceHandle}`
       const db          = portSignal.get(key) ?? sourceStage?.out ?? -Infinity
       const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
-      const style       = health ? getHealthStyle(health) : null
+      const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
       const routingWarning = (edge.waypoints?.length ?? 0) > 0
         ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
@@ -917,7 +918,7 @@ export function SignalChain() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: toMatrix ? 'var(--lsc-matrix-send)' : (style?.color ?? 'var(--lsc-border)'),
+          stroke: toMatrix ? 'var(--lsc-matrix-send)' : color,
           strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',

@@ -30,8 +30,8 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
   const outputUnit = isAdc ? 'dBFS' : 'dBu'
 
   const label = data.label ?? (isAdc
-    ? (t.nodes.adc?.label ?? 'ADC')
-    : (t.nodes.dac?.label ?? 'DAC'))
+    ? t.nodes.adc.label
+    : t.nodes.dac.label)
 
   const hasWarning = Boolean(warning)
 
@@ -41,7 +41,6 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
       typeKey={typeKey}
       icon={isAdc ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
       label={label}
-      accentColor={hasWarning ? 'var(--signal-clipping)' : (isAdc ? 'var(--lsc-accent)' : 'var(--signal-good)')}
     >
       {/* Conversion label */}
       <div
@@ -98,9 +97,9 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
           }}
         >
           {warning === 'adcExpectsAnalog'
-            ? (t.warnings?.adcExpectsAnalog ?? 'Needs analog input')
+            ? t.warnings.adcExpectsAnalog
             : warning === 'dacExpectsDigital'
-              ? (t.warnings?.dacExpectsDigital ?? 'Needs digital input')
+              ? t.warnings.dacExpectsDigital
               : '⚠'}
         </div>
       )}

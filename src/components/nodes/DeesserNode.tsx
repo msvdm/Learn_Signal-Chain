@@ -39,7 +39,7 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
       typeKey="deesser"
       style={twoColumnCard}
       icon={<AudioWaveform size={16} />}
-      label={data.label ?? t.nodes.deesser?.label ?? 'De-esser'}
+      label={data.label ?? t.nodes.deesser.label}
     >
       <div style={twoColumns}>
         <SignalMeter
@@ -62,7 +62,7 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
             value={threshold}
             min={-60}
             max={0}
-            label={t.nodes.deesser?.threshold ?? 'Threshold'}
+            label={t.nodes.deesser.threshold}
             formatValue={(v) => `${v} dB`}
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
             color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
@@ -74,7 +74,7 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
             min={2000}
             max={12000}
             step={100}
-            label={t.nodes.deesser?.frequency ?? 'Frequency'}
+            label={t.nodes.deesser.frequency}
             formatValue={(v) => `${formatFreq(v)} Hz`}
             onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
             color="var(--lsc-accent)"
@@ -83,7 +83,7 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
           />
         </KnobStack>
 
-        <ReductionReadout db={gr} maxDb={12} label={t.nodes.deesser?.gainReduction ?? 'Sibilance reduction'} />
+        <ReductionReadout db={gr} maxDb={12} label={t.nodes.deesser.gainReduction} />
       </div>
     </NodeWrapper>
   )

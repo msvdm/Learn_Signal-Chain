@@ -125,7 +125,6 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
         </svg>
       }
       label={data.label ?? t.nodes.hpf.label}
-      accentColor={data.color}
     >
       <div className="space-y-2">
         <HPFGraph cutoffHz={cutoffHz} bypassed={bypassed} />

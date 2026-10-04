@@ -21,8 +21,7 @@ export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
       nodeId={id}
       typeKey="pad"
       icon={<Minus size={18} />}
-      label={data.label ?? t.nodes.pad?.label ?? 'Pad'}
-      accentColor={data.color}
+      label={data.label ?? t.nodes.pad.label}
     >
       <button
         className="nodrag nopan w-full rounded py-1"

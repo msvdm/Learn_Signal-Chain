@@ -112,7 +112,6 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
       typeKey="graphic-eq"
       icon={<Sliders size={16} />}
       label={data.label ?? t.nodes.graphicEq.label}
-      accentColor={data.color}
     >
       <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 12 }}>

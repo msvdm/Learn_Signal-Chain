@@ -6,7 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal } from '../../hooks/useSignalChain'
-import { getHealthStyle } from '../../hooks/useGainStaging'
+import { healthColor } from '../../hooks/useGainStaging'
 
 interface GraphRelayData extends Record<string, unknown> {
   color?: string
@@ -38,7 +38,7 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
       nodeId={id}
       typeKey="relay"
       icon={<GitBranch size={16} />}
-      label={data.label ?? t.nodes.relay?.label ?? 'Relay'}
+      label={data.label ?? t.nodes.relay.label}
     >
       {/* A / B input selector */}
       <div style={{ display: 'flex', gap: 4 }}>
@@ -74,7 +74,7 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
               </span>
               <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{
                 fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)',
-                color: active ? getHealthStyle(result?.health ?? 'too-quiet').color : 'var(--lsc-fg-dim)',
+                color: active ? healthColor(result?.health ?? 'too-quiet') : 'var(--lsc-fg-dim)',
               }}>
                 {isFinite(sig) ? sig.toFixed(1) : '−∞'}
               </StableText>

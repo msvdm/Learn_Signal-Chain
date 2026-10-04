@@ -3,7 +3,7 @@ import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import { getHealthStyle } from '../../hooks/useGainStaging'
+import { healthColor } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
@@ -57,7 +57,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         }, 0))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)
     const from = type === 'source' ? nodeId : connected[0].source
-    ringColor = getHealthStyle(getHealth(db, stages[from]?.domain)).color
+    ringColor = healthColor(getHealth(db, stages[from]?.domain))
   }
 
   const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&

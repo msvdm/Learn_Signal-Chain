@@ -109,12 +109,6 @@
     "clipping": "Clipping!"
   },
   "warnings": {
-    "preampTooQuiet": "Preamp output is too quiet. Increase gain to bring the signal into the green zone.",
-    "preampClipping": "Preamp is clipping! Reduce the gain — you are adding distortion before anything else can help.",
-    "eqClipping": "EQ is boosting the signal into clipping. Reduce EQ boost or lower preamp gain.",
-    "heavyCompression": "Heavy compression: {amount} dB of gain reduction. The signal may sound pumped or squashed.",
-    "masterClipping": "Master output is clipping. Lower the fader or master trim to prevent distortion.",
-    "masterTooQuiet": "Master output is too quiet. Increase gain earlier in the chain.",
     "domainMixedBus": "Cannot mix analog and digital signals — insert a DAC before this bus, or keep signals in the same domain.",
     "digitalToAmp": "Amp cannot amplify a digital signal. Insert a DAC before the amp to convert back to analog.",
     "digitalToSpeaker": "Speaker cannot receive a digital signal. Insert a DAC before the speaker.",

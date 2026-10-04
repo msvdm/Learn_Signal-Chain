@@ -175,7 +175,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
       nodeId={id}
       typeKey="limiter"
       icon={<ShieldAlert size={16} />}
-      label={data.label ?? t.nodes.limiter?.label ?? 'Limiter'}
+      label={data.label ?? t.nodes.limiter.label}
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
@@ -187,7 +187,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
             min={-20}
             max={0}
             step={0.5}
-            label={t.nodes.limiter?.ceiling ?? 'Ceiling'}
+            label={t.nodes.limiter.ceiling}
             formatValue={(v) => `${v} dB`}
             onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
             color="var(--signal-hot)"
@@ -199,7 +199,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
             min={0}
             max={20}
             step={0.5}
-            label={t.nodes.limiter?.makeupGain ?? 'Makeup'}
+            label={t.nodes.limiter.makeupGain}
             formatValue={(v) => `+${v} dB`}
             onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
             color="var(--signal-good)"

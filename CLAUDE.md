@@ -80,7 +80,7 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/store/signalStore.ts` | All mutable state: graph nodes/edges, complexity level, language, `theme`, `snapToGrid` and `paletteOpen` (all persisted), `overview` (zoomed out — set only by `SignalChain` from the zoom, not persisted; cards read this flag, never the zoom), `toolMode`, `leftTool` (Drag / Select / Remove), `selectedNodeIds`, `clipboard` (copied elements, not persisted), `chainName`, `chainOffer` (an opened chain waiting for Replace / Add beside), `loadChain` / `raiseLevel`, `capturing` (a picture is being taken), `notice` (bottom message), the autosave (`lsc-canvas`), `past` / `future` + `undo` / `redo` (history: every `nodes` / `edges` change is recorded by a store subscriber, wherever it comes from; changes less than 400ms apart — a knob being turned, cards sliding aside after a drop — make one step; a level change starts a new history, Reset can be undone), `wireSource` (lets cards highlight valid inputs while a wire is drawn), active help popover, `highlightEdgeIds` (chains lit up from the unplug list or a Matrix Bus row), all graph mutations incl. `setNodeStereo`, `replaceEdge` (a card dropped onto a wire, in one step), `removeNodes`, `addGroup` (pasted / duplicated elements) and `moveNodes` |
 | `src/hooks/useSignalChain.ts` | `useGraphSignal()` — pure BFS signal math over the graph, shared by all callers (computed once). No side effects. |
 | `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R when a stereo wire comes in / goes out (`stage.stereoIn` / `stereoOut`), plus `inPeak` (louder input side). |
-| `src/hooks/useGainStaging.ts` | `getHealthStyle(health)` — maps `SignalHealth` → CSS color, label, background; `formatDb()` — a level reading, real down to −99.9 dBu (a microphone sits at −60), `-∞` below. No logic. |
+| `src/hooks/useGainStaging.ts` | `healthColor(health)` — the CSS colour of a `SignalHealth` zone (`var(--signal-<health>)`); `formatDb()` — a level reading, real down to −99.9 dBu (a microphone sits at −60), `-∞` below. No logic. |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup). Returns `{ reshaping, setReshaping }`. |
 | `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
 | `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
@@ -100,9 +100,9 @@ Every slider change → updates `signalStore` → `useGraphSignal` recomputes �
 | `src/utils/nodeName.ts` | `nodeName()` — a node's display name (unplug list, Matrix Bus send rows); `sideLetter()` — 'L' / 'R' for a wire carrying one side. |
 | `src/utils/chainOrder.ts` | `chainOrder()` — nodes in signal-flow order, for the help popover's Previous / Next. |
 | `src/data/nodeRegistry.ts` | `NODE_REGISTRY` — single source of truth for every node type: port definitions, categories, default params, mono / stereo support. `canBypass()` (which types get On / Off). `getPorts(node, { nodes, edges })` gives a node's ports (a stereo Aux splits into L / R; a bus with a Main Fader shows one `mix` output; a Main Fader shows L / R; a `send` output below R while a Matrix send uses it — read from the wires, so pass the graph); `mixBusOf()` finds a Main Fader's bus; also `isNodeStereo` (the node's own Mono / Stereo setting), `portSide`, `helpKeyOf(node, stage)`, `MULTI_WIRE_TYPES`, `MATRIX_PORT`, `isMatrixSource()` (may this output feed a Matrix Bus), `sourceBusOf()` (the Master / Aux Bus whose mix leaves a card), `matrixSendKey()` / `matrixSendParam()` (one Matrix Bus send knob per bus). |
-| `src/data/levels.ts` | `buildDefaultGraph()` — always returns an empty graph (blank canvas). `BusType` type lives here. |
+| `src/data/levels.ts` | `ComplexityLevel` and `LEVELS` (easiest to hardest). No imports, so the registry and the save format can use it. |
 | `src/i18n/locales/en.json`, `bg.json` | All UI text and help-popover educational content (`theory` key). Edit copy here; add every new key to both files. |
-| `src/i18n/translations.ts` | The `Translations` type (add new keys here too), `fmt()` for `{placeholder}` strings and `withLevelNames()` (names that change with the level). |
+| `src/i18n/translations.ts` | The `Translations` type, derived from `en.json` (a new key there is typed automatically; `bg.json` must have every key — `satisfies LocaleStrings` in `locales/index.ts` fails the build otherwise, so no `?.` / English fallbacks are needed), `fmt()` for `{placeholder}` strings and `withLevelNames()` (names that change with the level). |
 | `src/App.tsx` | Header (see above), the `ConfirmDialog` for New / level change and the `NoticeToast`. `ReactFlowProvider` wraps the whole app: the File menu needs React Flow (card sizes, the picture). |
 | `src/hooks/useChainFile.ts` | `useChainFile()` — `saveFile`, `savePicture`, `copyShareLink`, `openChain` / `pickChain` / `readFile` (with notices), `skippedNotice`. |
 | `src/components/FileMenu.tsx` | The header's File menu, its name dialog (Save / picture) and the Ctrl/⌘+S / O keys. |
@@ -163,7 +163,7 @@ Every card uses `NodeWrapper` (the free-standing controls below use `FreeControl
 
 ### Level system
 
-The active complexity level is stored as `complexityLevel: ComplexityLevel` in `signalStore.ts`. The type is `'beginner' | 'intermediate' | 'advanced'`, persisted to `localStorage`.
+The active complexity level is stored as `complexityLevel` in `signalStore.ts`, persisted to `localStorage`. Its type `ComplexityLevel` (`'beginner' | 'intermediate' | 'advanced'`) and `LEVELS` live in `src/data/levels.ts`.
 
 Levels control **palette visibility only** — they do not auto-populate the graph:
 
@@ -173,7 +173,7 @@ Levels control **palette visibility only** — they do not auto-populate the gra
 | Intermediate | + hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay, pan (Pan / Balance), master-bus, aux-bus, audio-interface |
 | Advanced | + speaker, amp, graphic-eq, adc, dac, matrix-bus |
 
-`PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. A level can also change a card's layout, name and starting params: the EQ (`EQNode`) is the **Equalizer** in Intermediate — three knobs (Low / Mid / High, no curve), Low and High fixed as shelves (`initialParams()` in `nodeRegistry.ts`) — and the **Parametric Equalizer** in Advanced, with a draggable curve and a Bell / Shelf switch on Low and High. Level-dependent names live in the locales' `levelNames`; `useTranslation` applies them to `palette.items` and `nodes.<type>.label`. Switching level clears the canvas (with confirmation). `buildDefaultGraph` always returns `{ nodes: [], edges: [] }` — no level pre-places anything.
+`PALETTE_BY_LEVEL` in `ElementPalette.tsx` is the source of truth for this table. A level can also change a card's layout, name and starting params: the EQ (`EQNode`) is the **Equalizer** in Intermediate — three knobs (Low / Mid / High, no curve), Low and High fixed as shelves (`initialParams()` in `nodeRegistry.ts`) — and the **Parametric Equalizer** in Advanced, with a draggable curve and a Bell / Shelf switch on Low and High. Level-dependent names live in the locales' `levelNames`; `useTranslation` applies them to `palette.items` and `nodes.<type>.label`. Switching level clears the canvas (with confirmation); no level pre-places anything.
 
 ### Signal health zones
 
@@ -236,4 +236,4 @@ The math is intentionally simplified. It teaches the concept correctly without I
 
 ### Adding a new level
 
-Edit `src/data/levels.ts` — add a new branch to the `ComplexityLevel` union in `signalStore.ts`, update `PALETTE_BY_LEVEL` in `ElementPalette.tsx`. `buildDefaultGraph` does not need changes (always returns empty).
+Add it to `ComplexityLevel` and `LEVELS` in `src/data/levels.ts`, update `PALETTE_BY_LEVEL` in `ElementPalette.tsx`, and add its `levels.<id>` text to every locale.

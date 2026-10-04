@@ -5,7 +5,7 @@ import { MeterBar } from '../SignalMeter'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { getHealth } from '../../hooks/useSignalChain'
-import { getHealthStyle, formatDb } from '../../hooks/useGainStaging'
+import { healthColor, formatDb } from '../../hooks/useGainStaging'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
 
@@ -92,7 +92,6 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
   // The level leaving the card; a speaker's is the sound it plays (its stage result)
   const db     = Math.max(levels.out, hasOutput ? (levels.outR ?? -Infinity) : -Infinity)
   const state  = getHealth(db, levels.outDomain)
-  const style  = getHealthStyle(state)
   const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
   const healthWord = (
     <StableText
@@ -147,7 +146,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
       {/* Level leaving the card: meter, then reading + health word */}
       {showLevel && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
-        <MeterBar db={db} color={style.color} height={layout.meter} domain={levels.outDomain} />
+        <MeterBar db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain} />
         <div
           style={{
             marginTop: METER_GAP, height: layout.number,
