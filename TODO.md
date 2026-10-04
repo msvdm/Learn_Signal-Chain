@@ -208,11 +208,25 @@ link with and without cards; overview in and out (hysteresis, wire width), show 
 palette open / hidden / as a rail, a reload with an autosaved canvas. The reshape handle and menu
 behaviour was compared with HEAD running side by side.
 
+### ~~Dynamics graphs~~ — done
+
+`DynamicsCurve` / `LimiterCurve` / `GateCurve` are one `TransferCurve` (in `DynamicsLayout.tsx`),
+fed by the transfer functions the engine now exports (`compressor`, `noiseGate`, `limiter` in
+`signal/process.ts`, which `PROCESS` uses too): the curve and the dot come from the same maths as
+the sound. The Limiter's flat-top line (`ceilingDb`) and the state word (`badge`) are props.
+The leftover `tg?.… ?? 'English'` fallbacks on the Noise Gate are gone.
+
+Checked old (HEAD) against new by rendering both to markup, 4,000 random settings per card (levels
+including −∞, below −60, above 0 and exactly at the threshold): identical. Two differences, both
+in what is drawn:
+- The Limiter's LIMITING / PASS word is now drawn over the dot (as the Gate's word always was),
+  where they meet in the top right corner (output about +16 dB and up).
+- A bypassed Compressor fed above its threshold drew its dot at input + makeup, off the curve (it
+  used the stage's gain reduction, 0 while bypassed); the dot is now on the curve, like the
+  Limiter's and the Gate's always were when bypassed.
+
 ### Still to do
 
-- Dynamics graphs: `DynamicsCurve` / `LimiterCurve` / `GateCurve` (~100 lines each, same frame,
-  axes, grid, operating point) → one `<TransferCurve transfer={…}>`, fed by transfer functions
-  exported from the engine.
 - Card shells: `NodeWrapper` and `FreeControl` repeat seven store subscriptions, ports, the
   "{node} input" badge and the chain stripe → `useNodeChrome()` + `<PortStack>` +
   `<WireTargetBadge>`. The "only re-renders when its chains change" comment is false (the same

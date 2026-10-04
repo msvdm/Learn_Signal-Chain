@@ -50,6 +50,37 @@ export const SPEAKER_LEVEL_DB = 40
 /** A Gain (not a Preamp) or an Amplifier turned all the way down is switched off. */
 export const GAIN_OFF_DB = -60
 
+// ── Dynamics ─────────────────────────────────────────────────────────────────
+// What a compressor, noise gate or limiter does to a level: the level out and how far it turned the
+// signal down. The cards draw their curves from the same functions (TransferCurve).
+
+export interface Dynamics {
+  out: number
+  gainReductionDb: number
+}
+
+/** Level in (dBu / dBFS) → what leaves. */
+export type Transfer = (input: number) => Dynamics
+
+/** Above the threshold, every `ratio` dB in comes out as 1 dB; then the makeup gain lifts it all. */
+export const compressor = (thresholdDb: number, ratio: number, makeupGainDb: number): Transfer => (input) => {
+  const gainReductionDb = input > thresholdDb ? (input - thresholdDb) * (1 - 1 / ratio) : 0
+  return { out: input - gainReductionDb + makeupGainDb, gainReductionDb }
+}
+
+/**
+ * Closed (below the threshold): turned down by the Range (−80 dB ≈ silence). Hold, Attack and
+ * Release are shown on the card but are timings, not part of this level math.
+ */
+export const noiseGate = (thresholdDb: number, rangeDb: number): Transfer => (input) => {
+  const open = input >= thresholdDb
+  return { out: open ? input : input + rangeDb, gainReductionDb: open || !isFinite(input) ? 0 : -rangeDb }
+}
+
+/** Nothing gets above the ceiling; then the makeup gain lifts it all. */
+export const limiter = (ceilingDb: number, makeupGainDb: number): Transfer => (input) =>
+  ({ out: Math.min(input, ceilingDb) + makeupGainDb, gainReductionDb: Math.max(0, input - ceilingDb) })
+
 /** What one type does to one channel. */
 type Process = (node: SignalNode, input: number, ctx: SideContext) => SideResult
 
@@ -99,25 +130,18 @@ const PROCESS: Record<TypeKey, Process> = {
     })
     return pass(input + graphicEqLevelChange(gains), ctx)
   },
-  comp: (node, input, ctx) => {
-    const threshold = param(node, 'thresholdDb')
-    const ratio     = param(node, 'ratio')
-    const gainReductionDb = input > threshold ? (input - threshold) * (1 - 1 / ratio) : 0
-    return { out: input - gainReductionDb + param(node, 'makeupGainDb'), domain: ctx.domain, gainReductionDb }
-  },
-  'noise-gate': (node, input, ctx) => {
-    // Closed (below the threshold): turned down by the Range (−80 dB ≈ silence). Hold, Attack and
-    // Release are shown on the card but are timings, not part of this level math.
-    const range = param(node, 'rangeDb')
-    const open  = input >= param(node, 'thresholdDb')
-    const gainReductionDb = open || !isFinite(input) ? 0 : -range
-    return { out: open ? input : input + range, domain: ctx.domain, gainReductionDb }
-  },
-  limiter: (node, input, ctx) => {
-    const ceiling = param(node, 'thresholdDb')
-    const gainReductionDb = Math.max(0, input - ceiling)
-    return { out: Math.min(input, ceiling) + param(node, 'makeupGainDb'), domain: ctx.domain, gainReductionDb }
-  },
+  comp: (node, input, ctx) => ({
+    ...compressor(param(node, 'thresholdDb'), param(node, 'ratio'), param(node, 'makeupGainDb'))(input),
+    domain: ctx.domain,
+  }),
+  'noise-gate': (node, input, ctx) => ({
+    ...noiseGate(param(node, 'thresholdDb'), param(node, 'rangeDb'))(input),
+    domain: ctx.domain,
+  }),
+  limiter: (node, input, ctx) => ({
+    ...limiter(param(node, 'thresholdDb'), param(node, 'makeupGainDb'))(input),
+    domain: ctx.domain,
+  }),
   deesser: (node, input, ctx) => {
     // 8:1 ratio on sibilant frequencies — simplified to overall level reduction
     const gainReductionDb = Math.max(0, (input - param(node, 'thresholdDb')) * (1 - 1 / 8))
