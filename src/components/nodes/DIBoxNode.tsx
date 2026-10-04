@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -12,12 +12,7 @@ import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { twoColumns } from '../../utils/twoColumns'
 
-interface GraphDIBoxData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
+export function DIBoxNode({ id, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'di-box')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

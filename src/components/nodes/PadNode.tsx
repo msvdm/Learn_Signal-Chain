@@ -1,15 +1,10 @@
-import type { NodeProps, Node } from '@xyflow/react'
-import { InlineNode } from './InlineNode'
+import type { CardProps } from './cardProps'
+import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
-interface GraphPadData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
+export function PadNode({ id, data }: CardProps) {
   const p                = useParams(id, 'pad')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -17,10 +12,11 @@ export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
   const engaged = p('engaged')
 
   return (
-    <InlineNode
+    <NodeWrapper
       nodeId={id}
       typeKey="pad"
       label={data.label ?? t.nodes.pad.label}
+      align="center"
     >
       <button
         className="nodrag nopan w-full rounded py-1"
@@ -38,6 +34,6 @@ export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
       >
         {engaged ? '−20 dB' : 'OFF'}
       </button>
-    </InlineNode>
+    </NodeWrapper>
   )
 }

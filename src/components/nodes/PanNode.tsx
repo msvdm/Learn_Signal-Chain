@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
@@ -7,11 +7,6 @@ import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { ChannelRow } from '../SignalMeter'
-
-interface GraphPanData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
@@ -30,7 +25,7 @@ function positionLabel(pos: number): string {
  * Stereo wire in: Balance knob — turning only fades the opposite side.
  * Drawn as a bare knob (no card) with a slim L / R meter under it.
  */
-export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
+export function PanNode({ id, data }: CardProps) {
   const { stages }       = useGraphSignal()
   const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

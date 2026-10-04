@@ -142,11 +142,13 @@ Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `sig
 | `src/components/nodes/index.ts` | `NODE_COMPONENTS: Record<TypeKey, …>` — the card each type is drawn as (React Flow's `nodeTypes`). |
 | `src/components/nodes/nodeLook.ts` | `NODE_LOOK: Record<TypeKey, NodeLook>` — each type's icon (palette tile, card header — `NodeWrapper` draws it —, a source's or speaker's face), palette group (`PALETTE_GROUPS`), `headerSize` (header icon, default 16), `nameMax` (overview name, default 96). Its order is the palette's. Icons lucide lacks are in `icons.tsx`. |
 | `src/components/nodes/NodeWrapper.tsx` | The single card shell every node uses (see below). |
+| `src/hooks/useNodeChrome.ts` | `useNodeChrome(id, typeKey)` — what both shells (`NodeWrapper`, `FreeControl`) read: the node, its ports, its chain colours, selected (or help open), overview, and whether the wire being drawn can land on it. |
+| `src/components/nodes/NodeChrome.tsx` | `PortStack` (an element's input / output ports) and `WireTargetBadge` ("{Element} input" while a wire is drawn), shared by both shells. |
+| `src/components/nodes/cardProps.ts` | `CardProps` — the props every element's component takes (`NodeProps` with `data: CardData`, a name of its own from a saved chain). |
 | `src/components/nodes/OverviewFace.tsx` | The card's overview face (zoomed out): fitted name + output level meter, reading and health word. A layer over the hidden controls. |
 | `src/components/nodes/DynamicsLayout.tsx` | `KnobStack`, `TransferCurve` (level in → level out, drawn from the engine's `compressor` / `limiter` / `noiseGate`, with the dot where the signal is) and `ReductionReadout` ("Turning down −4.5 dB" bar) for the two-column dynamics cards (Compressor, Limiter, Noise Gate, De-esser). |
 | `src/components/nodes/NodePort.tsx` | One input / output port: health-coloured ring, valid-target pulse, a connected input turns into × on hover (click = unplug; 2+ wires open `UnplugMenu`), L / R letter on an output whose wire carries one side, "L+R" on a Matrix send. |
 | `src/components/nodes/FreeControl.tsx` | Shell of the free-standing controls (Gain, Pan, Fader, Switch — see below): ports, name + reading under the control, chain stripe, dashed outline on hover / selection. |
-| `src/components/nodes/InlineNode.tsx` | Thin wrapper over `NodeWrapper` for single-control nodes (centres one big reading / control). |
 | `src/components/nodes/ControlSlider.tsx` | `ControlSlider` primitive used by card nodes. |
 | `src/components/controls/KnobControl.tsx` | Rotary knob (drag up / down). `layout="side"` puts the value and label beside the knob (label may wrap to two lines) instead of under it; strokes grow with a big knob. |
 | `src/components/controls/StableText.tsx` | `StableText` — a reading that keeps the width of its widest value. Helpers `LEVEL_SAMPLE` / `widestFormat()` live in `src/utils/readout.ts`. |
@@ -251,9 +253,8 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
 
 1. `NODE_REGISTRY` (`src/data/nodeRegistry.ts`): ports, category, `stereo` (a processor gets `'follow'`: it passes on stereo by itself, and reads its meters through `useStereoLevels`), `defaultParams`, `minLevel` (the easiest level whose palette shows it), `bypass` (false where the control itself is the state). Flags when they apply: `bus`, `splits`, `linked`, `freeSize` (a bare control), `minSize`
 2. `PROCESS` in `src/signal/process.ts`: what it does to one channel (read settings with `param(node, key)`; add new keys to `ParamTypes`)
-3. Create `src/components/nodes/YourNode.tsx`:
-   - Node with several params / meters → use `NodeWrapper` directly
-   - Simple single-control node → use `InlineNode` (same shell, centred body)
+3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
+   - A card → use `NodeWrapper` (`align="center"` centres a single control)
    - A bare control, not a card (like Gain / Pan / Fader / Switch) → use `FreeControl`, and give it a `freeSize` in the registry
 4. `NODE_COMPONENTS` in `src/components/nodes/index.ts` (its card) and `NODE_LOOK` in `src/components/nodes/nodeLook.ts` (icon, palette group — its place in that table is its place in the palette)
 5. Its palette name (`palette.items`) and educational text (`theory`) in **both** `src/i18n/locales/en.json` and `bg.json` (the build fails without them)

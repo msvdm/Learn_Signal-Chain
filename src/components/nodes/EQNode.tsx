@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -26,11 +26,6 @@ const DEFAULT_BANDS = NODE_REGISTRY.eq.defaultParams.bands as EQBand[]
  */
 const BODY_W  = 640
 const GRAPH_H = 170
-
-interface GraphEQData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 /** One band as shown on this level. */
 interface BandSpec {
@@ -223,7 +218,7 @@ function BandCell({ spec, band, onChange }: {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
+export function EQNode({ id, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

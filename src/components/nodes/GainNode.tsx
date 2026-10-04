@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { FreeControl } from './FreeControl'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
@@ -8,11 +8,6 @@ import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { useTranslation } from '../../i18n/useTranslation'
 import { widestFormat } from '../../utils/readout'
-
-interface GraphGainData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
@@ -26,7 +21,7 @@ const formatGain   = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v > 0 ? '+
  * −∞…+20 dB, turning any signal up or down. Each mode keeps its own setting.
  * Drawn as a bare knob (no card).
  */
-export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
+export function GainNode({ id, data }: CardProps) {
   const p                = useParams(id, 'gain')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()

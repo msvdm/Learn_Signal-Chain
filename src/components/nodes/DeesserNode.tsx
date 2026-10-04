@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -11,12 +11,7 @@ import { useParams } from '../../hooks/useParams'
 import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
-interface GraphDeesserData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
+export function DeesserNode({ id, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'deesser')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

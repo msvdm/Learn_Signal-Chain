@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -12,12 +12,7 @@ import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { compressor } from '../../signal/process'
 
-interface GraphCompData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
+export function CompressorNode({ id, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'comp')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

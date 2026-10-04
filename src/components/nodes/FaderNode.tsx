@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { FreeControl } from './FreeControl'
 import { VerticalFader } from '../controls/VerticalFader'
 import type { FaderTaper } from '../controls/VerticalFader'
@@ -10,11 +10,6 @@ import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 import { FADER_MIN_DB, FADER_MAX_DB, FADER_MARKS, faderPosition, faderDbAt } from '../../utils/faderTaper'
-
-interface GraphFaderData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 // A free-standing fader, big enough to read zoomed out
 const FADER_H     = 440
@@ -32,7 +27,7 @@ const format = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}
  * the whole mix, with the bus's Left and Right outputs moved onto it (and L / R meters beside it).
  * Drawn as a bare fader (no card).
  */
-export function FaderNode({ id, data }: NodeProps<Node<GraphFaderData>>) {
+export function FaderNode({ id, data }: CardProps) {
   const p                = useParams(id, 'fader')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()

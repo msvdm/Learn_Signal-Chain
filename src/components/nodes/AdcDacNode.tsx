@@ -1,6 +1,6 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { InlineNode } from './InlineNode'
+import { NodeWrapper } from './NodeWrapper'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { levelOf } from '../../signal/engine'
@@ -10,12 +10,7 @@ import { LEVEL_SAMPLE } from '../../utils/readout'
 
 const levelText = (db: number) => (isFinite(db) ? db.toFixed(1) : '−∞')
 
-interface GraphAdcDacData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function AdcDacNode({ id, type, data }: NodeProps<Node<GraphAdcDacData>>) {
+export function AdcDacNode({ id, type, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const levels              = useStereoLevels(id)
   const { t }               = useTranslation()
@@ -36,10 +31,11 @@ export function AdcDacNode({ id, type, data }: NodeProps<Node<GraphAdcDacData>>)
   const hasWarning = Boolean(warning)
 
   return (
-    <InlineNode
+    <NodeWrapper
       nodeId={id}
       typeKey={typeKey}
       label={label}
+      align="center"
     >
       {/* Conversion label */}
       <div
@@ -116,6 +112,6 @@ export function AdcDacNode({ id, type, data }: NodeProps<Node<GraphAdcDacData>>)
           {domain === 'digital' ? '● Digital out' : '● Analog out'}
         </StableText>
       </div>
-    </InlineNode>
+    </NodeWrapper>
   )
 }

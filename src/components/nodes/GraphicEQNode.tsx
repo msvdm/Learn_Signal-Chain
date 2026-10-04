@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -28,11 +28,6 @@ const AXIS_DB_HALF = [6, 0, -6]
 
 type Side = 'l' | 'r'
 
-interface GraphGraphicEQData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
 const formatGain = (v: number) => (v > 0 ? `+${v} dB` : v < 0 ? `−${-v} dB` : '0 dB')
 /** Height of a gain along a slider `h` tall (0 = top) */
 const yOf = (db: number, h: number) => ((GEQ_RANGE - db) / (GEQ_RANGE * 2)) * h
@@ -47,7 +42,7 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
  * Fed a stereo wire it is a two-channel EQ: the sliders split into L (top) and R (bottom),
  * in the same space. The right side copies the left until it is first touched.
  */
-export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>) {
+export function GraphicEQNode({ id, data }: CardProps) {
   const { stages }       = useGraphSignal()
   const p                = useParams(id, 'graphic-eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

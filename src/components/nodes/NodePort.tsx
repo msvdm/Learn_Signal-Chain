@@ -3,7 +3,7 @@ import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
-import { getHealth, healthColor } from '../../signal/levels'
+import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
 import { levelOf } from '../../signal/engine'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
@@ -52,10 +52,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
     // An input holding several wires shows the health of their sum
     const db = type === 'source'
       ? levelOf(wires.get(`${nodeId}:${portId}`))
-      : 20 * Math.log10(connected.reduce((sum, e) => {
-          const wireDb = levelOf(wires.get(`${e.source}:${e.sourceHandle}`))
-          return sum + (isFinite(wireDb) ? Math.pow(10, wireDb / 20) : 0)
-        }, 0))
+      : sumSignalsToDb(connected.map((e) => levelOf(wires.get(`${e.source}:${e.sourceHandle}`))))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)
     const from = type === 'source' ? nodeId : connected[0].source
     ringColor = healthColor(getHealth(db, stages[from]?.domain))

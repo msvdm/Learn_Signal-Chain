@@ -1,15 +1,10 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { VolumeX } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
-
-interface GraphSpeakerData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 const NOTE_LINE = 1.25
 const Icon      = NODE_LOOK.speaker.icon
@@ -19,7 +14,7 @@ const Icon      = NODE_LOOK.speaker.icon
  * It has no amplifier inside — fed without an Amplifier before it, it stays silent,
  * and the card says so (crossed-out speaker + a note).
  */
-export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
+export function SpeakerNode({ id, data }: CardProps) {
   const { stages } = useGraphSignal()
   const { t }      = useTranslation()
   const needsAmp   = stages[id]?.condition === 'needsAmp'

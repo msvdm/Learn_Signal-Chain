@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
@@ -7,11 +7,6 @@ import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
-
-interface GraphActiveSpeakerData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
 
 const GAP = 16
 // Value and label under the knob
@@ -36,7 +31,7 @@ function BlownSpeakerIcon() {
  * it plays, at every zoom. Fed from an Amplifier it blows (condition 'blown'): the level goes red, the
  * icon cracks and smokes, and a note says why.
  */
-export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeakerData>>) {
+export function ActiveSpeakerNode({ id, data }: CardProps) {
   const p                = useParams(id, 'active-speaker')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()

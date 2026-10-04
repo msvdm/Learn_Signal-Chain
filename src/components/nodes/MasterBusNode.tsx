@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -17,18 +17,13 @@ import { TAPER_UNITY } from '../../signal/levels'
 import { chainSourcesOfEdge } from '../../utils/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
-interface BusData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
 /**
  * Master Bus and Matrix Bus (always stereo), Aux Bus (mono or stereo).
  * One input that accepts any number of wires; they are added together.
  * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
-export function MasterBusNode({ id, type, data }: NodeProps<Node<BusData>>) {
+export function MasterBusNode({ id, type, data }: CardProps) {
   const { stages } = useGraphSignal()
   const nodes         = useSignalStore((s) => s.nodes)
   const allEdges      = useSignalStore((s) => s.edges)

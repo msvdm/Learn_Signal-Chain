@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -12,12 +12,7 @@ import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { noiseGate } from '../../signal/process'
 
-interface GraphNoiseGateData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>) {
+export function NoiseGateNode({ id, data }: CardProps) {
   const { stages }       = useGraphSignal()
   const p                = useParams(id, 'noise-gate')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

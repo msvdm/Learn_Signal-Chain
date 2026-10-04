@@ -225,13 +225,24 @@ in what is drawn:
   used the stage's gain reduction, 0 while bypassed); the dot is now on the curve, like the
   Limiter's and the Gate's always were when bypassed.
 
+### ~~Card shells~~ — done
+
+`NodeWrapper` and `FreeControl` read the same things through `useNodeChrome(id, typeKey)` (node,
+ports, chain colours, selected or help open, overview, a wire that could land here) and draw
+`<PortStack>` and `<WireTargetBadge>` (`components/nodes/NodeChrome.tsx`). The chain colours are
+worked out in render, not in a selector joined into a string: the card re-renders on every graph
+change anyway (it reads the ports from the wires), so the comment saying otherwise is gone. The
+two stripes stay as they are drawn (a card's top edge; a bare control's bar under its name).
+`NodePort` adds a bus input's wires with `sumSignalsToDb`. The 21 `XData` interfaces are one
+`CardProps` (`components/nodes/cardProps.ts`); the canvas no longer hands cards a `color` nobody
+read. `InlineNode` is gone (Line In, Pad, ADC / DAC use `NodeWrapper`).
+
+Checked in the browser against HEAD running side by side: the same 27-element graph (every type,
+stereo and mono, bypassed, selected, help open, a wire being drawn) gives the same DOM for every
+element, zoomed out and in (meters caught mid-animation aside).
+
 ### Still to do
 
-- Card shells: `NodeWrapper` and `FreeControl` repeat seven store subscriptions, ports, the
-  "{node} input" badge and the chain stripe → `useNodeChrome()` + `<PortStack>` +
-  `<WireTargetBadge>`. The "only re-renders when its chains change" comment is false (the same
-  component subscribes to all `nodes` / `edges`). `NodePort` re-does the bus voltage sum.
-  23 identical `XData extends Record<string, unknown>` interfaces; `InlineNode` is a pass-through.
 - Geometry: four `Pt` types, three rect shapes (`FlowNode` + `measured`, `Placed`, `NodeInfo`),
   three overlap tests, two routers (`elbowSegments` in `wireValidation.ts` re-implements
   `orthogonalRoute`), three unmeasured-size defaults (`nodeDims` ≥ 280×210 vs 160×120 in

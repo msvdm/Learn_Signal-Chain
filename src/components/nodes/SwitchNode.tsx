@@ -1,19 +1,14 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
-interface GraphSwitchData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
 // A free-standing button, big enough to read zoomed out
 const BUTTON = 110
 
 /** On = the signal passes, Off = silence. Drawn as one big square On / Off button (no card). */
-export function SwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) {
+export function SwitchNode({ id, data }: CardProps) {
   const p                = useParams(id, 'switch')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()

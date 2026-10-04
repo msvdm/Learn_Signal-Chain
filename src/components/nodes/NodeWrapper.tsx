@@ -2,13 +2,11 @@ import type { ReactNode, CSSProperties } from 'react'
 import { Power } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
+import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
-import { getPorts } from '../../graph/queries'
-import { nodeAcceptsWire } from '../../utils/connectionRules'
-import { chainColorsOf } from '../../utils/chainColors'
 import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
-import { NodePort } from './NodePort'
+import { PortStack, WireTargetBadge } from './NodeChrome'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
@@ -51,28 +49,15 @@ export function NodeWrapper({
   overviewLevel = true,
   faceOnly = false,
 }: NodeWrapperProps) {
-  const activeTooltipId  = useSignalStore((s) => s.activeTooltipId)
-  const isSelected       = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
-  // Joined into a string so the card only re-renders when its chains change
-  const chainColors      = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
-  const wireSource       = useSignalStore((s) => s.wire?.source ?? null)
-  const edges            = useSignalStore((s) => s.edges)
-  const nodes            = useSignalStore((s) => s.nodes)
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
-  const overview         = useSignalStore((s) => s.overview)
-  const { t, fmt }       = useTranslation()
+  const { node, ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
+  const { t }            = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
   const look       = NODE_LOOK[typeKey]
   const canBypass  = NODE_REGISTRY[typeKey].bypass
-  const helpOpen   = activeTooltipId === nodeId
-  const selected   = isSelected || helpOpen
-
-  const ports      = getPorts(node ?? { typeKey, params: {} }, { nodes, edges })
   const canStereo  = NODE_REGISTRY[typeKey].stereo === 'optional'
-  const stripe     = chainColors ? chainColors.split(' ') : []
   const { inputs, outputs } = ports
 
   // Tall enough for the longest stack of ports
@@ -82,10 +67,6 @@ export function NodeWrapper({
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
-
-  // While a wire is being drawn, label this card if it can take the wire
-  const isWireTarget = wireSource !== null && node !== undefined &&
-    nodeAcceptsWire(node, wireSource, edges, nodes)
 
   const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
   // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
@@ -117,23 +98,10 @@ export function NodeWrapper({
         ...style,
       }}
     >
-      {/* "{Node} input" label while this card is a valid wire target */}
-      {isWireTarget && (
-        <span
-          style={{
-            position: 'absolute', left: -12, top: -30,
-            padding: '4px 8px', borderRadius: 6,
-            background: 'var(--lsc-accent)', color: '#fff',
-            fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-          }}
-        >
-          {fmt(t.connecting.input, { node: label })}
-        </span>
-      )}
+      {wireTarget && <WireTargetBadge label={label} />}
 
       {/* Chain colour stripe — one segment per source feeding this card */}
-      {stripe.length > 0 && (
+      {chains.length > 0 && (
         <div
           aria-hidden
           style={{
@@ -142,17 +110,11 @@ export function NodeWrapper({
             pointerEvents: 'none',
           }}
         >
-          {stripe.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
+          {chains.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
         </div>
       )}
 
-      {/* Ports */}
-      {inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
-      ))}
-      {outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
-      ))}
+      <PortStack nodeId={nodeId} ports={ports} />
 
       {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
       {!faceOnly && <>

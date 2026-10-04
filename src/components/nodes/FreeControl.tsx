@@ -1,12 +1,8 @@
 import type { ReactNode } from 'react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { useSignalStore } from '../../store/signalStore'
-import { useTranslation } from '../../i18n/useTranslation'
-import { getPorts } from '../../graph/queries'
-import { nodeAcceptsWire } from '../../utils/connectionRules'
-import { chainColorsOf } from '../../utils/chainColors'
+import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { PORT_TOP } from '../../utils/layoutHelpers'
-import { NodePort } from './NodePort'
+import { PortStack, WireTargetBadge } from './NodeChrome'
 
 // Room between a port ring (on the edge) and the control: the ring reaches 14px in, then a gap
 const SIDE = 26
@@ -36,20 +32,7 @@ interface FreeControlProps {
  * Grab the name or the space around the control to move it.
  */
 export function FreeControl({ nodeId, typeKey, label, value, portLine, children, footer }: FreeControlProps) {
-  const node           = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
-  const nodes          = useSignalStore((s) => s.nodes)
-  const edges          = useSignalStore((s) => s.edges)
-  const wireSource     = useSignalStore((s) => s.wire?.source ?? null)
-  const selected       = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.activeTooltipId === nodeId)
-  const overview       = useSignalStore((s) => s.overview)
-  // Joined into a string so the control only re-renders when its chains change
-  const chainColors    = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
-  const { t, fmt }     = useTranslation()
-
-  const ports  = getPorts(node ?? { typeKey, params: {} }, { nodes, edges })
-  const stripe = chainColors ? chainColors.split(' ') : []
-
-  const isWireTarget = wireSource !== null && node !== undefined && nodeAcceptsWire(node, wireSource, edges, nodes)
+  const { ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
 
   return (
     <div
@@ -78,26 +61,9 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
         }}
       />
 
-      {isWireTarget && (
-        <span
-          style={{
-            position: 'absolute', left: -12, top: -30,
-            padding: '4px 8px', borderRadius: 6,
-            background: 'var(--lsc-accent)', color: '#fff',
-            fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-          }}
-        >
-          {fmt(t.connecting.input, { node: label })}
-        </span>
-      )}
+      {wireTarget && <WireTargetBadge label={label} />}
 
-      {ports.inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
-      ))}
-      {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
-      ))}
+      <PortStack nodeId={nodeId} ports={ports} />
 
       {children}
 
@@ -120,7 +86,7 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
         )}
         {/* Which sources (chains) pass through it — the space is kept when there are none */}
         <div aria-hidden style={{ display: 'flex', width: 40, height: 4, borderRadius: 9999, overflow: 'hidden', marginTop: 2 }}>
-          {stripe.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
+          {chains.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
         </div>
       </div>
 

@@ -1,22 +1,16 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NodeWrapper } from './NodeWrapper'
-import { InlineNode } from './InlineNode'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
-interface GraphMicData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
 /**
  * Microphone and Instrument: a card with just a big icon and the level they send out, at every
  * zoom (nothing to set on them). Line Input keeps a full card: it has a Mono / Stereo switch.
  */
-export function MicNode({ id, type, data }: NodeProps<Node<GraphMicData>>) {
+export function MicNode({ id, type, data }: CardProps) {
   const { t } = useTranslation()
 
   const typeKey = type as TypeKey
@@ -31,13 +25,10 @@ export function MicNode({ id, type, data }: NodeProps<Node<GraphMicData>>) {
   }
 
   return (
-    <InlineNode
-      nodeId={id}
-      typeKey={typeKey}
-      label={label}
-      value={`${levelDb} dBu`}
-      align="start"
-      overviewArt={art}
-    />
+    <NodeWrapper nodeId={id} typeKey={typeKey} label={label} align="start" overviewArt={art}>
+      <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>
+        {levelDb} dBu
+      </span>
+    </NodeWrapper>
   )
 }

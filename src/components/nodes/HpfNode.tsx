@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { widestFormat } from '../../utils/readout'
@@ -97,12 +97,7 @@ function HPFGraph({ cutoffHz, bypassed }: { cutoffHz: number; bypassed: boolean 
 
 // ── Node component ────────────────────────────────────────────────────────────
 
-interface HpfData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
+export function HpfNode({ id, data }: CardProps) {
   const p                = useParams(id, 'hpf')
   const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

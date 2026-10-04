@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -9,12 +9,7 @@ import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { healthColor } from '../../signal/levels'
 
-interface GraphRelayData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
-export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
+export function RelayNode({ id, data }: CardProps) {
   const { stages, wires } = useGraphSignal()
   const p                = useParams(id, 'relay')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)

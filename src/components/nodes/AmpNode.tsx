@@ -1,4 +1,4 @@
-import type { NodeProps, Node } from '@xyflow/react'
+import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
@@ -10,15 +10,10 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 
-interface GraphAmpData extends Record<string, unknown> {
-  color?: string
-  label?: string
-}
-
 // The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
-export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
+export function AmpNode({ id, data }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                   = useParams(id, 'amp')
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
