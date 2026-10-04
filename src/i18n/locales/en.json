@@ -232,8 +232,7 @@
       "gainReduction": "Sibilance reduction"
     },
     "relay": {
-      "label": "Relay",
-      "input": "In {ch}"
+      "label": "Relay"
     },
     "pan": {
       "label": "Pan"
@@ -487,9 +486,9 @@
       "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy."
     },
     "relay": {
-      "what": "A relay is an electronic switch that routes your signal to one of two outputs. You choose Output A or Output B — the chosen path gets the signal; the other carries nothing. This is used for A/B routing: for example, sending a guitar to an amp (A) or directly to the interface (B) without unplugging cables.",
-      "why": "In live sound and recording, you often need to switch between two signal paths instantly — different monitor mixes, parallel processing chains, or backup routes. A relay does this cleanly without noise or clicks.",
-      "tip": "The active output is highlighted in green; the inactive one is grey. Try connecting Output A to a reverb bus and Output B to a dry speaker to instantly switch between wet and dry monitoring."
+      "what": "A relay is an electronic switch with two inputs and one output. You choose input A or input B — the chosen signal goes out; the other one is cut off. This is A/B switching: for example, a main microphone on A and a spare one on B, and you change between them without unplugging any cables.",
+      "why": "In live sound and recording you often need to swap between two sources instantly — a spare microphone when the main one fails, two instruments sharing one channel, or the same signal with and without an effect, to compare them. A relay does this cleanly, without noise or clicks.",
+      "tip": "The chosen input is lit in green; the other one is grey. Input A is the top connection point on the left, input B the one below it. Try wiring a source straight into A and the same source through an effect (an Equalizer or a Compressor) into B, then switch between A and B to hear what the effect does."
     },
     "pan": {
       "what": "Feed it a mono signal and this is a Pan knob: it spreads that one signal between Left and Right and sends both out on one stereo wire. Fully left, only the left side gets it; fully right, only the right side. At centre each side gets it 3 dB quieter, so the overall loudness stays the same. Feed it a stereo wire and it turns into a Balance knob on its own.",
