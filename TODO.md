@@ -33,9 +33,9 @@ a second change (they wait for the card to be measured), joined to the drop by t
 Found while testing, fixed after: switching a stereo Aux with a Main Fader and a Graphic EQ after
 it to Mono and back to Stereo moved the Matrix send onto the Graphic EQ (`attachMainFaders` turned
 the fader's `out` wire to the matrix into `out-l`, which then followed L / R to the EQ). The
-"L / R into a Matrix Bus = Matrix send" rule now runs before every takeover. Still open (old
-behaviour): a mono Aux → Graphic EQ / Amp → Matrix Bus switched to Stereo puts the send on the EQ /
-Amp, which `isMatrixSource` does not allow (no Main Fader there to keep it).
+"L / R into a Matrix Bus = Matrix send" rule now runs before every takeover. Also fixed: a mono
+Aux → Graphic EQ / Amp → Matrix Bus switched to Stereo left the send on the EQ / Amp (which
+`isMatrixSource` does not allow); it now goes back to the Aux, or its Main Fader.
 
 ## 3. `src/graph/` and `src/signal/`
 

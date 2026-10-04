@@ -1,7 +1,7 @@
 import type { SignalNode, SignalEdge, GraphView } from '../data/nodeRegistry'
 import {
   MATRIX_PORT, MIX_PORT, SPLIT_TYPES,
-  getPorts, isStereoBus, mixBusOf, mixSourceOf, portSide, splitsStereo,
+  getPorts, isMatrixSource, isStereoBus, mixBusOf, mixSourceOf, portSide, splitsStereo,
 } from '../data/nodeRegistry'
 
 // Taking over a stereo mix's Left / Right outputs.
@@ -39,6 +39,21 @@ function moveSource(e: SignalEdge, source: string, sourceHandle: string): Signal
 function holdsSides(node: SignalNode, graph: GraphView): boolean {
   return (isStereoBus(node) || SPLIT_TYPES.has(node.typeKey)) &&
     getPorts(node, graph).outputs.some((p) => portSide(p.id) !== null)
+}
+
+/**
+ * The card a Matrix send from `nodeId` belongs on: `nodeId` itself if it may feed a Matrix Bus
+ * (a bus or its Main Fader), else the first such card up the chain the mix came through.
+ */
+function sendHolder(nodeId: string, graph: GraphView): string | null {
+  const seen = new Set<string>()
+  let cur: string | null = nodeId
+  while (cur && !seen.has(cur)) {
+    if (isMatrixSource(cur, MATRIX_PORT, graph)) return cur
+    seen.add(cur)
+    cur = mixSourceOf(cur, graph)
+  }
+  return null
 }
 
 /**
@@ -117,7 +132,17 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
   }
 
   // (The tidy can move a one-output wire to L)
-  return dedupe(matrixSends(next))
+  next = matrixSends(next)
+
+  // A Graphic EQ or Amplifier that fed a Matrix Bus while its chain was mono (a mono Aux), then
+  // took the L / R over, may not keep the send: it goes back to the bus, or its Main Fader
+  const graph = { nodes, edges: next }
+  next = next.map((e) => {
+    if (e.sourceHandle !== MATRIX_PORT || byId.get(e.target)?.typeKey !== 'matrix-bus') return e
+    const holder = sendHolder(e.source, graph)
+    return holder && holder !== e.source ? moveSource(e, holder, MATRIX_PORT) : e
+  })
+  return dedupe(next)
 }
 
 /**
