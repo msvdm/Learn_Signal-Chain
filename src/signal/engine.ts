@@ -1,10 +1,10 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY, DI_DIRECT_PORT, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import { graphOf, drivingWire, fedBy, flowOrder } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
-import { getPorts, matrixSendKey, mixBusOf, outputKind, preampMicOf } from '../graph/queries'
+import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, preampSourceOf } from '../graph/queries'
 import type { SignalDomain, SignalHealth } from './levels'
-import { CLIP_DBU, TAPER_UNITY, getHealth, sumSignalsToDb, taperToDb } from './levels'
+import { CLIP_DBU, HUM_DBU, TAPER_UNITY, getHealth, sumSignalsToDb, taperToDb } from './levels'
 import type { SideResult, StageCondition } from './process'
 import { SPEAKER_LEVEL_DB, balanceSides, panSides, processSide } from './process'
 
@@ -49,7 +49,7 @@ function onPort(kind: WireKind, out: WireSignal): WireSignal {
 
 /** A card working as something more than its type: it changes its name and its help text. */
 export type StageRole =
-  | 'preamp'     // a Gain after a microphone: lifts it up to line level
+  | 'preamp'     // a Gain after a microphone or a DI Box's XLR Out: lifts it up to line level
   | 'main-fader' // a Fader on a bus's Mix output: controls the whole mix
   | 'balance'    // a Pan fed a stereo wire
 
@@ -69,6 +69,12 @@ export interface StageResult {
   gainReductionDb?: number
   condition?: StageCondition
   role?: StageRole
+  /**
+   * The level of the hum leaving it (dBu, dBFS after an ADC): a ground loop through a DI Box (its
+   * Direct Out on a Guitar Amp, its XLR Out on the desk, Ground Lift off) starts one at HUM_DBU on
+   * the XLR Out, and it rides along to the end of the chain. Undefined: no hum.
+   */
+  hum?: number
 }
 
 export interface GraphSignalResult {
@@ -76,6 +82,8 @@ export interface GraphSignalResult {
   stages: Record<string, StageResult>
   /** What each output sends, keyed `${nodeId}:${portId}`. */
   wires: Map<string, WireSignal>
+  /** The hum on each output that carries one (its level), keyed like `wires`. */
+  hums: Map<string, number>
 }
 
 // Every node card, port and edge reads the graph result. The store replaces the
@@ -96,6 +104,7 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
   const wires  = new Map<string, WireSignal>()
   const stages: Record<string, StageResult> = {}
   const wireOf = (e: SignalEdge) => wires.get(`${e.source}:${e.sourceHandle}`) ?? SILENT_WIRE
+  const hums   = new Map<string, number>()
 
   for (const node of flowOrder(graph)) {
     const incoming = graph.into(node.id)
@@ -114,8 +123,9 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
     const inputDomain  = relay ? (driving ? (stages[driving.source]?.domain ?? 'analog') : 'analog') : (domains[0] ?? 'analog')
     const mixedDomains = !relay && new Set(domains).size > 1
 
-    // The first Gain after a microphone works as its Preamp
-    const preamp = node.typeKey === 'gain' && preampMicOf(node.id, graph) !== null
+    // The first Gain after a microphone (or a DI Box's XLR Out) works as its Preamp
+    const preamp = node.typeKey === 'gain' && preampSourceOf(node.id, graph) !== null
+    const fed    = incoming.length > 0
     // Stereo: a bus (or Line In) set to Stereo, or a follow node fed a stereo wire.
     // Mono: everything else — one channel; a stereo wire arriving here is folded into one.
     const isStereo = node.typeKey !== 'pan' && (isNodeStereo(node) || (follows && followKind === 'stereo'))
@@ -138,8 +148,8 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
     /** One side (or the only channel) of this node. */
     const runSide = (side: 'l' | 'r' | null): SideResult => {
       const input = arriving(side)
-      if (node.bypassed && incoming.length > 0) return { out: input, domain: inputDomain }
-      return processSide(node, input, { domain: inputDomain, mixedDomains, side, preamp })
+      if (node.bypassed && fed) return { out: input, domain: inputDomain }
+      return processSide(node, input, { domain: inputDomain, mixedDomains, side, preamp, fed })
     }
 
     // `side` gives the stage its domain, gain reduction and condition
@@ -169,7 +179,7 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       outSig = stereo(spread.l, spread.r)
       side   = { out: levelOf(outSig), domain: inputDomain }
     } else if (def.category === 'source') {
-      // Line In set to Stereo sends the same level on both sides
+      // Line In set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
       side   = runSide(null)
       inSig  = SILENT_WIRE
       outSig = isStereo ? stereo(side.out, side.out) : mono(side.out)
@@ -178,7 +188,7 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       const l = arriving('l')
       const r = arriving('r')
       const detector = Math.max(l, r)
-      side = processSide(node, detector, { domain: inputDomain, mixedDomains, side: null, preamp: false })
+      side = processSide(node, detector, { domain: inputDomain, mixedDomains, side: null, preamp: false, fed })
       const gain = isFinite(detector) ? side.out - detector : -Infinity
       inSig  = stereo(l, r)
       outSig = stereo(isFinite(l) ? l + gain : -Infinity, isFinite(r) ? r + gain : -Infinity)
@@ -202,6 +212,23 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       outSig    = mono(Math.max(levelOf(outSig) + SPEAKER_LEVEL_DB, CLIP_DBU))
       condition = 'blown'
     }
+    // A guitar straight into a desk input: the level is fine, the high notes are lost
+    if (node.typeKey === 'instrument' && needsDi(node.id, graph)) condition = 'needsDi'
+
+    // A hum arrives with any wire it uses (the strongest one counts); a DI Box in a ground loop
+    // starts one on its XLR Out. It grows with every boost and never goes down — a cut, a mute or a
+    // fader pulled down leave it as it is; only a converter's change of scale (ADC / DAC) moves it
+    // both ways. Only Ground Lift on the DI takes it away.
+    const humsIn = used.flatMap((e) => hums.get(`${e.source}:${e.sourceHandle}`) ?? [])
+    const humIn  = humsIn.length > 0 ? Math.max(...humsIn) : undefined
+    const loop   = node.typeKey === 'di-box' && groundLoop(node.id, graph)
+    let hum = humIn
+    if (hum !== undefined) {
+      const change = levelOf(outSig) - levelOf(inSig)
+      const scale  = node.typeKey === 'adc' || node.typeKey === 'dac'
+      if (isFinite(change)) hum += scale ? change : Math.max(0, change)
+    }
+    if (loop) hum = Math.max(hum ?? -Infinity, HUM_DBU)
 
     const role: StageRole | undefined = preamp ? 'preamp'
       : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
@@ -218,11 +245,17 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       gainReductionDb: side.gainReductionDb,
       condition,
       role,
+      ...(hum !== undefined ? { hum } : {}),
     }
     for (const port of getPorts(node, graph).outputs) {
-      wires.set(`${node.id}:${port.id}`, onPort(outputKind(node.id, port.id, graph), outSig))
+      const key = `${node.id}:${port.id}`
+      // A DI Box's Direct Out passes on what arrives, at instrument level; the rest is its XLR Out
+      const direct = node.typeKey === 'di-box' && port.id === DI_DIRECT_PORT
+      wires.set(key, onPort(outputKind(node.id, port.id, graph), direct ? inSig : outSig))
+      const portHum = direct ? humIn : hum
+      if (portHum !== undefined) hums.set(key, portHum)
     }
   }
 
-  return { stages, wires }
+  return { stages, wires, hums }
 }

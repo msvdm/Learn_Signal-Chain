@@ -6,7 +6,7 @@ import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
 import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
-import { PortStack, WireTargetBadge } from './NodeChrome'
+import { HumTag, PortStack, WireTargetBadge } from './NodeChrome'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
@@ -115,6 +115,7 @@ export function NodeWrapper({
       )}
 
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
+      <HumTag nodeId={nodeId} overview={overview} />
 
       {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
       {!faceOnly && <>

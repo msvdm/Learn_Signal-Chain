@@ -1,7 +1,7 @@
-import type { NodePort, SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import {
-  NODE_REGISTRY, MIX_PORT, MATRIX_PORT,
-  canSplit, isMixBus, isNodeStereo, isStereoBus, passesThrough, portSide,
+  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT,
+  canSplit, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
@@ -186,13 +186,106 @@ export function matrixSendKey(wire: SignalEdge, view: GraphView): string {
 }
 
 /**
- * The microphone this Gain is the Preamp of — straight after it, or with effects such as
- * a Pad in between. Null when it is a plain gain stage.
+ * What this Gain is the Preamp of: a microphone, or a DI Box whose XLR Out brings an instrument down
+ * to mic level — straight after it, or with effects such as a Pad in between. Null when it is a
+ * plain gain stage.
  */
-export function preampMicOf(gainId: string, view: GraphView): string | null {
-  for (const { source } of walkPassthrough(gainId, view)) {
-    if (source.typeKey === 'mic') return source.id
+export function preampSourceOf(gainId: string, view: GraphView): string | null {
+  for (const { wire, source } of walkPassthrough(gainId, view)) {
+    if (source.typeKey === 'mic' || toMicLevel(source, wire.sourceHandle)) return source.id
     if (source.typeKey === 'gain') return null
   }
   return null
+}
+
+// ── Guitars: instrument level, the DI Box, the Guitar Amp ───────────────────────
+
+/**
+ * Where an instrument's signal goes into a mixing desk or PA: a Gain (the desk's preamp), a Fader,
+ * a bus, an ADC, a power amplifier or a speaker. Everything else in between counts as an effect
+ * pedal, which takes an instrument as it is.
+ */
+const DESK_INPUTS: ReadonlySet<TypeKey> = new Set<TypeKey>([
+  'gain', 'fader', 'master-bus', 'aux-bus', 'matrix-bus', 'adc', 'amp', 'active-speaker', 'speaker',
+])
+
+/** A DI Box output that brings the instrument down to mic level: its XLR Out, unless it is bypassed. */
+function toMicLevel(node: SignalNode, handleId: string): boolean {
+  return node.typeKey === 'di-box' && !node.bypassed && handleId !== DI_DIRECT_PORT
+}
+
+/** An effect a guitar's signal goes through as it is (a pedal): one input, and not a desk input. */
+function isPedal(typeKey: TypeKey): boolean {
+  return passesThrough(typeKey) && !DESK_INPUTS.has(typeKey)
+}
+
+/**
+ * The Instrument whose signal leaves this output still at instrument level: the Instrument itself,
+ * or through effect pedals and a DI Box's Direct Out. Null at a DI Box's XLR Out (mic level by then),
+ * a desk input, or anything that is not a guitar (a microphone, a line, a bus). A Guitar Amp takes
+ * only this.
+ */
+export function instrumentAt(nodeId: string, handleId: string, view: GraphView): string | null {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node) return null
+  if (node.typeKey === 'instrument') return node.id
+  if (toMicLevel(node, handleId) || !isPedal(node.typeKey)) return null
+  for (const { wire, source } of walkPassthrough(nodeId, graph)) {
+    if (source.typeKey === 'instrument') return source.id
+    if (toMicLevel(source, wire.sourceHandle) || !isPedal(source.typeKey)) return null
+  }
+  return null
+}
+
+/**
+ * Every card reached from these wires, following them on through effect pedals (and whatever
+ * `onward` lets through); `found` stops the walk with true.
+ */
+function reaches(
+  start: readonly SignalEdge[],
+  view: GraphView,
+  found: (node: SignalNode) => boolean,
+  onward: (node: SignalNode) => readonly SignalEdge[] | null,
+): boolean {
+  const graph = graphOf(view)
+  const seen  = new Set<string>()
+  const queue = [...start]
+  while (queue.length > 0) {
+    const node = graph.node(queue.shift()!.target)
+    if (!node || seen.has(node.id)) continue
+    seen.add(node.id)
+    if (found(node)) return true
+    queue.push(...(onward(node) ?? []))
+  }
+  return false
+}
+
+/**
+ * True when this Instrument's signal goes into a desk or PA input still at instrument level —
+ * straight, through effect pedals, or through a DI Box's Direct Out (a thru, still instrument
+ * level): the high notes get lost on the way. Fine: into a Guitar Amp, or through a DI Box's XLR Out.
+ */
+export function needsDi(instrumentId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  return reaches(graph.from(instrumentId), graph, (n) => DESK_INPUTS.has(n.typeKey), (n) => {
+    if (n.typeKey === 'guitar-amp' || n.typeKey === 'mic') return null
+    // Through a DI Box only its Direct Out stays at instrument level (all of it when bypassed)
+    return graph.from(n.id).filter((e) => !toMicLevel(n, e.sourceHandle))
+  })
+}
+
+/**
+ * A ground loop through this DI Box: its Direct Out feeds a Guitar Amp (plugged into the mains on
+ * stage) while its XLR Out goes to the desk (plugged in too), and Ground Lift is off — the two
+ * grounds meet through the box and the desk picks up a hum.
+ */
+export function groundLoop(diId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const di    = graph.node(diId)
+  if (!di || di.typeKey !== 'di-box' || di.bypassed || param(di, 'groundLift')) return false
+  const out = graph.from(diId)
+  if (!out.some((e) => e.sourceHandle !== DI_DIRECT_PORT)) return false
+  const direct = out.filter((e) => e.sourceHandle === DI_DIRECT_PORT)
+  return reaches(direct, graph, (n) => n.typeKey === 'guitar-amp', (n) => (isPedal(n.typeKey) ? graph.from(n.id) : null))
 }

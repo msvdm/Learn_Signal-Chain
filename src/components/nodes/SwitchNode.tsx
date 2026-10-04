@@ -8,7 +8,7 @@ import { useParams } from '../../hooks/useParams'
 // A free-standing button, big enough to read zoomed out
 const BUTTON = 110
 
-/** On = the signal passes, Off = silence. Drawn as one big square On / Off button (no card). */
+/** On = the signal passes, Off = silence. Drawn as one big square On / Off button (no card, no name: the button says it all). */
 export function SwitchNode({ id }: CardProps) {
   const p                = useParams(id, 'switch')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -17,7 +17,7 @@ export function SwitchNode({ id }: CardProps) {
   const isOn = p('on')
 
   return (
-    <FreeControl nodeId={id} typeKey="switch" label={useNodeName(id, 'switch')} portLine={BUTTON / 2}>
+    <FreeControl nodeId={id} typeKey="switch" label={useNodeName(id, 'switch')} showName={false} portLine={BUTTON / 2}>
       <button
         className="nodrag nopan"
         aria-pressed={isOn}

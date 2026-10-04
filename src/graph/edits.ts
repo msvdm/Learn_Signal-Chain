@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT } from '../data/nodeRegistry'
+import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { getPorts } from './queries'
 import { pickChainColor } from '../utils/chainColors'
@@ -37,13 +37,15 @@ export function withoutNodes(graph: GraphView, nodeIds: Iterable<string>): Graph
 /**
  * The graph without one element: if it had exactly one wire in and one out, they are joined, so the
  * chain stays connected — unless that wire would go from a card back into itself (the element sat in
- * a loop of two cards, A → it → A).
+ * a loop of two cards, A → it → A), or one of them is sound in the air (a Guitar Amp or the Mic in
+ * front of it removed: a guitar can't go into a Mic, nor the amp's sound into a Preamp).
  */
 export function withoutNode(graph: GraphView, nodeId: string): GraphView {
   const next = withoutNodes(graph, [nodeId])
   const into = graph.edges.filter((e) => e.target === nodeId)
   const out  = graph.edges.filter((e) => e.source === nodeId)
   if (into.length !== 1 || out.length !== 1 || into[0].source === out[0].target) return next
+  if (into[0].sourceHandle === SOUND_PORT || out[0].sourceHandle === SOUND_PORT) return next
   const bridge = newEdge({
     source: into[0].source, sourceHandle: into[0].sourceHandle,
     target: out[0].target,  targetHandle: out[0].targetHandle,

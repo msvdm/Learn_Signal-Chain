@@ -4,21 +4,22 @@ import { VolumeX } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
+import { FaceNote, WithNote } from './FaceNote'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
-const NOTE_LINE = 1.25
-const Icon      = NODE_LOOK.speaker.icon
+const Icon = NODE_LOOK.speaker.icon
 
 /**
  * Passive speaker: a card with a big icon and the level it plays, at every zoom.
  * It has no amplifier inside — fed without an Amplifier before it, it stays silent,
- * and the card says so (crossed-out speaker + a note).
+ * and the card says so (crossed-out speaker + a note). A hum from a DI Box ground loop shows too.
  */
 export function SpeakerNode({ id }: CardProps) {
   const { stages } = useGraphSignal()
   const { t }      = useTranslation()
   const needsAmp   = stages[id]?.condition === 'needsAmp'
+  const hum        = stages[id]?.hum !== undefined
 
   return (
     <NodeWrapper
@@ -27,23 +28,25 @@ export function SpeakerNode({ id }: CardProps) {
       label={useNodeName(id, 'speaker')}
       faceOnly
       overviewArt={(box) => {
-        if (!needsAmp) return <OverviewIcon icon={<Icon />} box={box} />
-        // Room for a two-line note under the icon
-        const note = Math.max(13, Math.min(18, Math.round(box.w * 0.065)))
-        const noteH = note * NOTE_LINE * 2 + 6
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h: box.h - noteH }} color="var(--signal-hot-text)" />
-            <span
-              style={{
-                fontSize: note, fontWeight: 700, lineHeight: NOTE_LINE, textAlign: 'center',
-                color: 'var(--signal-hot-text)', maxWidth: box.w,
-              }}
-            >
-              {t.nodes.speaker.needsAmp}
-            </span>
-          </div>
-        )
+        if (needsAmp) {
+          return (
+            <WithNote
+              box={box} lines={2}
+              face={(h) => <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h }} color="var(--signal-hot-text)" />}
+              note={<FaceNote box={box} color="var(--signal-hot-text)">{t.nodes.speaker.needsAmp}</FaceNote>}
+            />
+          )
+        }
+        if (hum) {
+          return (
+            <WithNote
+              box={box} lines={1}
+              face={(h) => <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />}
+              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes.speaker.hum}</FaceNote>}
+            />
+          )
+        }
+        return <OverviewIcon icon={<Icon />} box={box} />
       }}
     />
   )

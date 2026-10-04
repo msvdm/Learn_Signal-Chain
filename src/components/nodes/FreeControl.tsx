@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { PORT_TOP } from '../../utils/layoutHelpers'
-import { PortStack, WireTargetBadge } from './NodeChrome'
+import { HumTag, PortStack, WireTargetBadge } from './NodeChrome'
 
 // Room between a port ring (on the edge) and the control: the ring reaches 14px in, then a gap
 const SIDE = 26
@@ -12,6 +12,8 @@ interface FreeControlProps {
   typeKey: TypeKey
   /** Name under the control (follows the wiring: Preamp / Gain, Pan / Balance, Main Fader). */
   label: string
+  /** false = no name under the control, when the control says it all (the Switch's On / Off) */
+  showName?: boolean
   /** Reading under the name. Keep it in a StableText so the control never changes size. */
   value?: ReactNode
   /**
@@ -31,12 +33,14 @@ interface FreeControlProps {
  * enough to read zoomed out. Help and Remove are in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.
  */
-export function FreeControl({ nodeId, typeKey, label, value, portLine, children, footer }: FreeControlProps) {
+export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer }: FreeControlProps) {
   const { ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
 
   return (
     <div
       className={`lsc-free-control select-none ${selected ? 'lsc-selected' : ''}`}
+      // Without its name under it, the name shows on hover
+      title={showName ? undefined : label}
       style={{
         position: 'relative',
         width: 'max-content',
@@ -64,21 +68,24 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
       {wireTarget && <WireTargetBadge label={label} />}
 
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
+      <HumTag nodeId={nodeId} overview={overview} />
 
       {children}
 
       {/* Name and reading, like the print under a desk's control */}
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        <span
-          style={{
-            fontSize: 15, fontWeight: 700, lineHeight: 1.15, letterSpacing: '0.06em',
-            textTransform: 'uppercase', color: 'var(--lsc-fg-muted)',
-            // Long names (Bulgarian "Switch / Mute") wrap instead of widening the control
-            maxWidth: 200, textAlign: 'center',
-          }}
-        >
-          {label}
-        </span>
+        {showName && (
+          <span
+            style={{
+              fontSize: 15, fontWeight: 700, lineHeight: 1.15, letterSpacing: '0.06em',
+              textTransform: 'uppercase', color: 'var(--lsc-fg-muted)',
+              // Long names wrap instead of widening the control
+              maxWidth: 200, textAlign: 'center',
+            }}
+          >
+            {label}
+          </span>
+        )}
         {value !== undefined && (
           <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 22, fontWeight: 700, lineHeight: 1.1 }}>
             {value}

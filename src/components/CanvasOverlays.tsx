@@ -7,6 +7,7 @@ import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
 import { buildWirePath } from '../utils/wirePath'
+import { SOUND_PORT } from '../data/nodeRegistry'
 
 /**
  * What is drawn over the canvas, in flow coordinates: the drag handles on wires' corners, the
@@ -118,14 +119,16 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
 
   const path  = buildWirePath([wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos])
   const color = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
-  // A wire drawn from a stereo output previews as a twin line, like the wire it will become
+  // A wire drawn from a stereo output previews as a twin line, like the wire it will become;
+  // a Guitar Amp's sound as dots
   const stereo = wires.get(`${wire.source.nodeId}:${wire.source.handleId}`)?.kind === 'stereo'
+  const sound  = wire.source.handleId === SOUND_PORT
 
   return (
     <ViewportLayer zIndex={100}>
       {(zoom) => {
-        const sw   = 2.5 / zoom
-        const dash = `${6 / zoom} ${4 / zoom}`
+        const sw   = (sound ? 4 : 2.5) / zoom
+        const dash = sound ? `0 ${8 / zoom}` : `${6 / zoom} ${4 / zoom}`
         return (
           <>
             <path

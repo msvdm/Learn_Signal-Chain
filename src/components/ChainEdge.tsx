@@ -10,6 +10,10 @@ export interface ChainEdgeData extends Record<string, unknown> {
   stereo?: boolean
   /** Zoomed out: drawn thicker, with longer dashes */
   overview?: boolean
+  /** A Guitar Amp's sound into a microphone (through the air, not a cable): drawn as dots */
+  sound?: boolean
+  /** Carries a DI Box ground-loop hum, this strong (0 … 1, humStrength): a red glow under it, wider as it grows */
+  hum?: number
 }
 
 export function ChainEdge({
@@ -31,13 +35,26 @@ export function ChainEdge({
   const width = Number(style?.strokeWidth ?? 3)
   const thick = d.overview ?? false
   const dash  = thick ? { strokeDasharray: '16 8' } : {}
+  // Round dots, 8px apart (12px zoomed out): periods that divide the 24px flow animation
+  const dots  = { strokeDasharray: thick ? '0 12' : '0 8', strokeLinecap: 'round' as const, strokeWidth: width * 1.6 }
 
   const edgeStyle = routingWarn
     ? { ...style, stroke: 'var(--signal-hot)', strokeDasharray: thick ? '16 8' : '6 4' }
+    : d.sound ? { ...style, ...dots }
     : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
 
   return (
     <>
+      {d.hum !== undefined && (
+        <path
+          d={edgePath}
+          fill="none"
+          style={{
+            stroke: 'var(--signal-clipping)', strokeWidth: width * (2.5 + 4 * d.hum), strokeLinecap: 'round',
+            opacity: 0.35 * Number(style?.opacity ?? 1), transition: style?.transition, pointerEvents: 'none',
+          }}
+        />
+      )}
       <BaseEdge
         id={id}
         path={edgePath}

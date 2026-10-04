@@ -3,7 +3,8 @@ import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { getPorts } from '../graph/queries'
-import { getHealth, healthColor } from '../signal/levels'
+import { getHealth, healthColor, humStrength } from '../signal/levels'
+import { SOUND_PORT } from '../data/nodeRegistry'
 import { levelOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
@@ -35,7 +36,7 @@ export function useFlowElements() {
   const selectedNodeIds  = useSignalStore((s) => s.selectedNodeIds)
   const highlightEdgeIds = useSignalStore((s) => s.highlightEdgeIds)
   const overview         = useSignalStore((s) => s.overview)
-  const { stages, wires } = useGraphSignal()
+  const { stages, wires, hums } = useGraphSignal()
   // React Flow's measured card sizes, handed back with the nodes
   const [measuredSizes, setMeasuredSizes] = useState<Record<string, MeasuredSize>>({})
 
@@ -113,10 +114,14 @@ export function useFlowElements() {
       const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
-      const routingWarning = crossesCard(edge)
+      // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine
+      const sound          = edge.sourceHandle === SOUND_PORT
+      const humDb          = hums.get(key)
+      const routingWarning = !sound && crossesCard(edge)
 
       const data: ChainEdgeData = {
-        waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview,
+        waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview, sound,
+        hum: humDb === undefined ? undefined : humStrength(humDb),
       }
       // A send into a Matrix Bus has its own colour
       const toMatrix = graphNodes.find((n) => n.id === edge.target)?.typeKey === 'matrix-bus'
@@ -130,7 +135,7 @@ export function useFlowElements() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: toMatrix ? 'var(--lsc-matrix-send)' : color,
+          stroke: sound ? 'var(--lsc-fg-muted)' : toMatrix ? 'var(--lsc-matrix-send)' : color,
           strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',
@@ -138,7 +143,7 @@ export function useFlowElements() {
         data,
       }
     })
-  }, [graphEdges, stages, wires, graphNodes, highlight, overview, measuredSizes])
+  }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes])
 
   return { nodes, edges, keepSizes }
 }

@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
-import { getHealth } from '../../signal/levels'
+import { formatDb, getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
@@ -11,18 +11,43 @@ import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
+import { DI_DIRECT_PORT } from '../../data/nodeRegistry'
 import { twoColumns } from '../../utils/twoColumns'
 
+/**
+ * DI Box: its XLR Out brings a guitar down to mic level for a Preamp, its Direct Out passes it on
+ * unchanged for a guitar amp. In a ground loop (Direct Out on a Guitar Amp, XLR Out on the desk,
+ * Ground Lift off) it says "Hum!" where its description was, and the Ground Lift button lights up.
+ */
 export function DIBoxNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
-  const p                = useParams(id, 'di-box')
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { t }            = useTranslation()
+  const { stages, wires } = useGraphSignal()
+  const p                 = useParams(id, 'di-box')
+  const updateNodeParams  = useSignalStore((s) => s.updateNodeParams)
+  const { t }             = useTranslation()
 
-  const result       = stages[id]
-  const out          = levelOf(result?.out)
-  const levels       = useStereoLevels(id)
-  const groundLift   = p('groundLift')
+  const text       = t.nodes['di-box']
+  const levels     = useStereoLevels(id)
+  const groundLift = p('groundLift')
+  const hum        = stages[id]?.hum !== undefined
+  const xlr        = levelOf(wires.get(`${id}:out`))
+  const direct     = levelOf(wires.get(`${id}:${DI_DIRECT_PORT}`))
+
+  const output = (name: string, db: number, what: string, main: boolean) => (
+    <div style={{ gridColumn: '1 / -1' }}>
+      <div className="flex items-center justify-between">
+        <span
+          className="text-[var(--node-text-xs)] uppercase tracking-wide"
+          style={{ color: main ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)', fontWeight: 700 }}
+        >
+          {name}
+        </span>
+        <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
+          {formatDb(db, 'analog')}
+        </StableText>
+      </div>
+      <div className="text-[var(--node-text-xs)]" style={{ color: 'var(--lsc-fg-muted)' }}>{what}</div>
+    </div>
+  )
 
   return (
     <NodeWrapper
@@ -31,7 +56,6 @@ export function DIBoxNode({ id }: CardProps) {
       label={useNodeName(id, 'di-box')}
     >
       <div style={twoColumns}>
-        {/* Signal flow */}
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
@@ -40,10 +64,10 @@ export function DIBoxNode({ id }: CardProps) {
           label={t.meters.input}
         />
 
-        {/* Ground lift toggle */}
+        {/* Ground lift: lights up while there is a hum to fix */}
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
           <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
-            {t.nodes['di-box'].groundLift}
+            {text.groundLift}
           </span>
           <button
             className="nodrag nopan"
@@ -52,9 +76,9 @@ export function DIBoxNode({ id }: CardProps) {
               fontSize: 'var(--node-text-xs)', fontWeight: 700,
               padding: '2px 6px',
               borderRadius: 'var(--lsc-radius-sm)',
-              border: `1px solid ${groundLift ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-              background: groundLift ? 'var(--lsc-accent-bg)' : 'transparent',
-              color: groundLift ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg)',
+              border: `${hum ? 2 : 1}px solid ${hum ? 'var(--signal-clipping)' : groundLift ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+              background: hum ? 'var(--signal-clipping-bg)' : groundLift ? 'var(--lsc-accent-bg)' : 'transparent',
+              color: hum ? 'var(--signal-clipping-text)' : groundLift ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg)',
               cursor: 'pointer',
             }}
           >
@@ -64,35 +88,23 @@ export function DIBoxNode({ id }: CardProps) {
           </button>
         </div>
 
-        {/* Two outputs — both carry the same signal level */}
-        <div className="space-y-1" style={{ gridColumn: '1 / -1' }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-accent)', fontWeight: 700 }}>
-              {t.nodes['di-box'].xlrOut}
-            </span>
-            <StableText reserve={[`${LEVEL_SAMPLE} dBFS`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
-              {isFinite(out)
-                ? `${out.toFixed(1)} ${result?.domain === 'digital' ? 'dBFS' : 'dBu'}`
-                : '−∞'}
-            </StableText>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--node-text-xs)] uppercase tracking-wide" style={{ color: 'var(--lsc-fg-muted)', fontWeight: 600 }}>
-              {t.nodes['di-box'].directOut}
-            </span>
-            <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
-              {isFinite(out)
-                ? `${out.toFixed(1)} dBu`
-                : '−∞'}
-            </StableText>
-          </div>
-        </div>
+        {output(text.xlrOut, xlr, text.micLevel, true)}
+        {output(text.directOut, direct, text.instrumentLevel, false)}
 
-        <div
-          className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
-          style={{ gridColumn: '1 / -1', color: 'var(--lsc-fg-muted)', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}
-        >
-          {t.nodes['di-box'].description}
+        {/* The description, or the hum note in its place: both keep their space, so the card never resizes */}
+        <div style={{ gridColumn: '1 / -1', display: 'grid', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}>
+          <div
+            className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
+            style={{ gridArea: '1 / 1', color: 'var(--lsc-fg-muted)', visibility: hum ? 'hidden' : 'visible' }}
+          >
+            {text.description}
+          </div>
+          <div
+            className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
+            style={{ gridArea: '1 / 1', color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
+          >
+            {text.hum}
+          </div>
         </div>
       </div>
     </NodeWrapper>

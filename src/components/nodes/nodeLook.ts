@@ -1,14 +1,14 @@
 import type { ComponentType } from 'react'
 import {
   Mic, Guitar, Plug,
-  Zap, Activity, Box, ToggleLeft, Radio, Sliders,
-  AudioWaveform, ShieldAlert, DoorClosed, Minus,
+  Activity, ToggleLeft, Radio, Sliders,
+  AudioWaveform, Minus,
   Merge, Volume2,
   SlidersHorizontal, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { HighPassIcon, JackPlugIcon } from './icons'
+import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -36,16 +36,17 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'line-in':         { icon: JackPlugIcon,      group: 'source', headerSize: 20 },
   instrument:        { icon: Guitar,            group: 'source' },
   'di-box':          { icon: Plug,              group: 'source' },
+  'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
   // Processing
-  gain:              { icon: Zap,               group: 'processing' },
+  gain:              { icon: KnobIcon,          group: 'processing' },
   // "HPF" in capitals looks much bigger than mixed-case names at the same size
   hpf:               { icon: HighPassIcon,      group: 'processing', nameMax: 70 },
   eq:                { icon: Activity,          group: 'processing' },
-  comp:              { icon: Box,               group: 'processing' },
+  comp:              { icon: CompressorIcon,    group: 'processing' },
   pad:               { icon: Minus,             group: 'processing', headerSize: 18 },
   deesser:           { icon: AudioWaveform,     group: 'processing' },
-  'noise-gate':      { icon: DoorClosed,        group: 'processing' },
-  limiter:           { icon: ShieldAlert,       group: 'processing' },
+  'noise-gate':      { icon: GateIcon,          group: 'processing' },
+  limiter:           { icon: LimiterIcon,       group: 'processing' },
   amp:               { icon: Radio,             group: 'processing' },
   'graphic-eq':      { icon: Sliders,           group: 'processing' },
   // Routing — level controls, switches, panning, conversion, buses

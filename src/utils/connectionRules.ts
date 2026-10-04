@@ -1,7 +1,7 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { MATRIX_PORT, NODE_REGISTRY, isBus } from '../data/nodeRegistry'
+import { MATRIX_PORT, NODE_REGISTRY, SOUND_PORT, isBus } from '../data/nodeRegistry'
 import type { GraphView } from '../graph/graph'
-import { getPorts, isMatrixSource } from '../graph/queries'
+import { getPorts, instrumentAt, isMatrixSource } from '../graph/queries'
 import type { WireSource } from '../store/signalStore'
 
 type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
@@ -28,6 +28,8 @@ export function portAcceptsWire(
 /**
  * True when a wire from `source` may end on at least one input of `targetNode`.
  * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a Matrix send feeds only Matrix Buses.
+ * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
+ * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
  */
 export function nodeAcceptsWire(
   targetNode: TargetNode,
@@ -36,6 +38,8 @@ export function nodeAcceptsWire(
   nodes: SignalNode[],
 ): boolean {
   if (targetNode.id === source.nodeId) return false
+  if ((targetNode.typeKey === 'mic') !== (source.handleId === SOUND_PORT)) return false
+  if (targetNode.typeKey === 'guitar-amp' && instrumentAt(source.nodeId, source.handleId, { nodes, edges }) === null) return false
   const toMatrix = targetNode.typeKey === 'matrix-bus'
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
   if (!toMatrix && source.handleId === MATRIX_PORT) return false

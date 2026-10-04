@@ -8,11 +8,11 @@ import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
+import { FaceNote, WithNote } from './FaceNote'
 
 const GAP = 16
 // Value and label under the knob
 const READOUT_H = 34
-const NOTE_LINE = 1.25
 const Icon      = NODE_LOOK['active-speaker'].icon
 
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
@@ -30,7 +30,7 @@ function BlownSpeakerIcon() {
 /**
  * Active speaker (amplifier built in): a card with a big icon, its Volume knob and the level
  * it plays, at every zoom. Fed from an Amplifier it blows (condition 'blown'): the level goes red, the
- * icon cracks and smokes, and a note says why.
+ * icon cracks and smokes, and a note says why. A hum from a DI Box ground loop shows under it.
  */
 export function ActiveSpeakerNode({ id }: CardProps) {
   const p                = useParams(id, 'active-speaker')
@@ -40,6 +40,7 @@ export function ActiveSpeakerNode({ id }: CardProps) {
 
   const volumeDb = p('volumeDb')
   const blown    = stages[id]?.condition === 'blown'
+  const hum      = stages[id]?.hum !== undefined
 
   return (
     <NodeWrapper
@@ -49,43 +50,44 @@ export function ActiveSpeakerNode({ id }: CardProps) {
       faceOnly
       overviewArt={(box) => {
         if (blown) {
-          // Room for a two-line note under the icon
-          const note  = Math.max(13, Math.min(18, Math.round(box.w * 0.065)))
-          const noteH = note * NOTE_LINE * 2 + 6
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <OverviewIcon icon={<BlownSpeakerIcon />} box={{ w: box.w, h: box.h - noteH }} color="var(--signal-clipping-text)" />
-              <span
-                style={{
-                  fontSize: note, fontWeight: 700, lineHeight: NOTE_LINE, textAlign: 'center',
-                  color: 'var(--signal-clipping-text)', maxWidth: box.w,
-                }}
-              >
-                {t.nodes['active-speaker'].blown}
-              </span>
+            <WithNote
+              box={box} lines={2}
+              face={(h) => <OverviewIcon icon={<BlownSpeakerIcon />} box={{ w: box.w, h }} color="var(--signal-clipping-text)" />}
+              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes['active-speaker'].blown}</FaceNote>}
+            />
+          )
+        }
+        // The icon and the Volume knob, side by side, in the height they are given
+        const face = (h: number) => {
+          const knob = Math.max(40, Math.min(72, Math.round(h - READOUT_H)))
+          const icon = Math.min(h, box.w - knob - GAP)
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
+              <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
+              {/* The face ignores the pointer; the knob takes it back */}
+              <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
+                <KnobControl
+                  value={volumeDb}
+                  min={-20}
+                  max={10}
+                  step={0.5}
+                  label={t.nodes['active-speaker'].volume}
+                  formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
+                  onChange={(v) => updateNodeParams(id, { volumeDb: v })}
+                  color="var(--signal-good)"
+                  size={knob}
+                />
+              </div>
             </div>
           )
         }
-        const knob = Math.max(40, Math.min(72, Math.round(box.h - READOUT_H)))
-        const icon = Math.min(box.h, box.w - knob - GAP)
+        if (!hum) return face(box.h)
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
-            <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
-            {/* The face ignores the pointer; the knob takes it back */}
-            <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
-              <KnobControl
-                value={volumeDb}
-                min={-20}
-                max={10}
-                step={0.5}
-                label={t.nodes['active-speaker'].volume}
-                formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
-                onChange={(v) => updateNodeParams(id, { volumeDb: v })}
-                color="var(--signal-good)"
-                size={knob}
-              />
-            </div>
-          </div>
+          <WithNote
+            box={box} lines={1} face={face}
+            note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes.speaker.hum}</FaceNote>}
+          />
         )
       }}
     />

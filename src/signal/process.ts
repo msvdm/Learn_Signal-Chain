@@ -8,8 +8,9 @@ import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from
 // side in stereo). Simplified on purpose: it teaches the idea, not the filter maths.
 
 /**
- * Why a card sends nothing out (or, for `blown`, far too much). The names are the locale keys of
- * the note the card shows (`warnings.*`, `nodes.speaker.needsAmp`, `nodes.active-speaker.blown`).
+ * Why a card sends nothing out, or what is wrong with what it sends (`blown`: far too much,
+ * `needsDi`: a guitar losing its high notes). The names are the locale keys of the note the card
+ * shows (`warnings.*`, `nodes.speaker.needsAmp`, `nodes.active-speaker.blown`, `nodes.instrument.needsDi`).
  */
 export type StageCondition =
   | 'domainMixedBus'    // a bus fed analog and digital signals at once
@@ -19,6 +20,7 @@ export type StageCondition =
   | 'dacExpectsDigital' // a DAC fed an analog signal
   | 'needsAmp'          // a passive speaker with no amplifier before it: silent
   | 'blown'             // an active speaker fed from an amplifier: far too strong, it breaks
+  | 'needsDi'           // an instrument going into a desk input without a DI Box: levels fine, high notes lost
 
 /** One channel through a card. */
 export interface SideResult {
@@ -37,8 +39,10 @@ export interface SideContext {
   mixedDomains: boolean
   /** Which side of a stereo signal this is (null: the only channel) */
   side: 'l' | 'r' | null
-  /** This Gain is a microphone's Preamp */
+  /** This Gain is a Preamp (after a microphone or a DI Box's XLR Out) */
   preamp: boolean
+  /** Something is plugged in (a microphone hearing a Guitar Amp) */
+  fed: boolean
 }
 
 /**
@@ -49,6 +53,15 @@ export const SPEAKER_LEVEL_DB = 40
 
 /** A Gain (not a Preamp) or an Amplifier turned all the way down is switched off. */
 export const GAIN_OFF_DB = -60
+
+/** How far a DI Box's XLR Out brings an instrument down: to mic level, like a passive DI's transformer. */
+export const DI_DROP_DB = 20
+
+/**
+ * A Guitar Amp playing at this level (a guitar at its usual level, Volume at 0 dB) gives a
+ * microphone in front of it its usual level (its sensitivityDb); louder or quieter, the mic follows.
+ */
+export const GUITAR_REF_DB = -30
 
 // ── Dynamics ─────────────────────────────────────────────────────────────────
 // What a compressor, noise gate or limiter does to a level: the level out and how far it turned the
@@ -102,11 +115,20 @@ const sourceLevel: Process = (node) => ({ out: param(node, 'levelDb'), domain: '
 
 /** What each type does to one channel (every type has one: a new type without it does not compile). */
 const PROCESS: Record<TypeKey, Process> = {
-  mic:          (node) => ({ out: param(node, 'sensitivityDb'), domain: 'analog' }),
+  // On its own it picks up a voice or an instrument at its usual level; in front of a Guitar Amp,
+  // it follows how loud the amp plays (silent when the amp is)
+  mic: (node, input, ctx) => {
+    const usual = param(node, 'sensitivityDb')
+    if (!ctx.fed) return { out: usual, domain: 'analog' }
+    return { out: isFinite(input) ? usual + input - GUITAR_REF_DB : -Infinity, domain: 'analog' }
+  },
   'line-in':    sourceLevel,
   instrument:   sourceLevel,
-  // Passive DI: impedance conversion only, no level change. Both outputs carry same signal.
-  'di-box':     (_, input) => ({ out: input, domain: 'analog' }),
+  // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
+  'di-box':     (_, input) => ({ out: isFinite(input) ? input - DI_DROP_DB : -Infinity, domain: 'analog' }),
+  // What it plays: the guitar turned up or down by its Volume
+  'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) =>
+    pass(isFinite(input) ? input + param(node, 'volumeDb') : -Infinity, ctx)),
   gain: (node, input, ctx) => {
     // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
     if (ctx.preamp) return pass(Math.min(input + param(node, 'preampDb'), CLIP_DBU), ctx)

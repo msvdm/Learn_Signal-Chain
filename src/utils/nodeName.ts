@@ -14,7 +14,7 @@ export function helpKeyOf(node: Pick<SignalNode, 'typeKey'>, stage?: Pick<StageR
 
 /**
  * The name of a role or type as a card shows it: its card name (`nodes.<key>.label`: "HPF",
- * "Pad"), else its palette name ("Line Input", "Switch / Mute").
+ * "Pad"), else its palette name ("Line Input", "On Off Switch").
  */
 export function titleOf(t: Translations, key: string): string {
   return (t.nodes as Record<string, { label?: string } | undefined>)[key]?.label ?? t.palette.items[key] ?? key

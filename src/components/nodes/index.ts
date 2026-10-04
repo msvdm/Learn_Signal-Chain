@@ -7,6 +7,7 @@ import { MasterBusNode }      from './MasterBusNode'
 import { AmpNode }            from './AmpNode'
 import { SpeakerNode }        from './SpeakerNode'
 import { ActiveSpeakerNode }  from './ActiveSpeakerNode'
+import { GuitarAmpNode }      from './GuitarAmpNode'
 import { SwitchNode }         from './SwitchNode'
 import { CompressorNode }     from './CompressorNode'
 import { HpfNode }            from './HpfNode'
@@ -30,6 +31,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'line-in':         MicNode,
   instrument:        MicNode,
   'di-box':          DIBoxNode,
+  'guitar-amp':      GuitarAmpNode,
   gain:              GainNode,
   amp:               AmpNode,
   fader:             FaderNode,

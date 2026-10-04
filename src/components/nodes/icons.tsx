@@ -25,3 +25,63 @@ export function HighPassIcon({ size = 24 }: { size?: number }) {
     </svg>
   )
 }
+
+/**
+ * A dynamics card's transfer curve (level in → level out) in a rounded frame, the way the
+ * graphs on the cards and in manuals draw it: `d` is the curve, from the bottom edge to the right.
+ */
+function TransferIcon({ size = 24, d }: { size?: number; d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="18" rx="3" />
+      <path d={d} />
+    </svg>
+  )
+}
+
+/** Noise Gate: nothing below the threshold (a straight drop), then the signal passes. */
+export function GateIcon({ size }: { size?: number }) {
+  return <TransferIcon size={size} d="M10 21V12L22 6.5" />
+}
+
+/** Compressor: one-to-one up to the threshold, then a gentler slope. */
+export function CompressorIcon({ size }: { size?: number }) {
+  return <TransferIcon size={size} d="M2.9 20.1L12 10L22 6.5" />
+}
+
+/** Limiter: one-to-one up to the ceiling, then flat — nothing gets past it. */
+export function LimiterIcon({ size }: { size?: number }) {
+  return <TransferIcon size={size} d="M2.9 20.1L12 10H22" />
+}
+
+/** A rotary knob (Gain): one circle and its pointer, a line from the centre. */
+export function KnobIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 12L17.3 6.7" />
+    </svg>
+  )
+}
+
+/** A guitar amp (combo): a cabinet with a row of knobs on top and one round speaker. */
+export function GuitarAmpIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 8h18" />
+      <path d="M6.5 5.5h.01M9.5 5.5h.01M12.5 5.5h.01" />
+      <circle cx="12" cy="14.5" r="4" />
+      <circle cx="12" cy="14.5" r="1" />
+    </svg>
+  )
+}
+
+/** A dull tone: flat, then the high notes falling away (an instrument without a DI Box). Wider than tall. */
+export function DullToneIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M2 3 L12 3 C17 3 19 8 22 12" />
+    </svg>
+  )
+}

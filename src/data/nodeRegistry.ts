@@ -31,7 +31,7 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 
 /** Every kind of element on the canvas. */
 export type TypeKey =
-  | 'mic' | 'line-in' | 'instrument'
+  | 'mic' | 'line-in' | 'instrument' | 'guitar-amp'
   | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
@@ -104,6 +104,12 @@ export type SignalEdge = {
   waypoints?: { x: number; y: number }[]
 }
 
+/** A DI Box's Direct Out: the instrument passed on unchanged, for a guitar amp (its XLR Out is 'out'). */
+export const DI_DIRECT_PORT = 'direct'
+
+/** A Guitar Amp's sound in the room: a dotted wire that only a microphone can take. */
+export const SOUND_PORT = 'sound'
+
 const IN: NodePort[]    = [{ id: 'in' }]
 const OUT: NodePort[]   = [{ id: 'out' }]
 const SIDES: NodePort[] = [
@@ -115,7 +121,8 @@ const BUS_SIZE: Size = { w: 398, h: 298 }
 
 export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   mic: {
-    category: 'source', inputs: [], outputs: OUT, stereo: 'never',
+    // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
+    category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
     minLevel: 'beginner', bypass: false,
     defaultParams: { sensitivityDb: -60 },
   },
@@ -187,13 +194,21 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { engaged: true },
   },
   'di-box': {
+    // XLR Out ('out') brings an instrument down to mic level, for a Preamp; Direct Out passes it on
+    // unchanged, for a guitar amp (signal/process.ts DI_DROP_DB, graph/queries.ts)
     category: 'processor', inputs: IN, stereo: 'follow',
     outputs: [
       { id: 'out' },
-      { id: 'direct' },
+      { id: DI_DIRECT_PORT },
     ],
     minLevel: 'beginner', bypass: true,
     defaultParams: { groundLift: false },
+  },
+  'guitar-amp': {
+    // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
+    category: 'processor', inputs: IN, outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    minLevel: 'intermediate', bypass: false,
+    defaultParams: { volumeDb: 0 },
   },
   amp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -207,10 +222,11 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   switch: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 175, h: 188 },
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 162, h: 167 },
     defaultParams: { on: true },
   },
   relay: {
+    // The Pre / Post switch of an aux send: in-a = PRE (from before the fader), in-b = POST (after it)
     category: 'processor', stereo: 'follow',
     inputs: [
       { id: 'in-a' },

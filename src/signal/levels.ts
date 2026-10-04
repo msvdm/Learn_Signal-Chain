@@ -11,6 +11,14 @@ export const CLIP_DBU = 20
 /** Converters line up unity with this digital level (0 dBu = −18 dBFS, so 0 dBFS = +18 dBu). */
 export const ALIGNMENT_DB = 18
 
+/** Where a ground-loop hum starts: on a DI Box's XLR Out, 30 dB under a guitar at mic level. */
+export const HUM_DBU = -80
+
+/** How strong a hum has grown: 0 where it starts … 1 at 60 dB louder. Its tag and the wires' glow grow with it. */
+export function humStrength(db: number): number {
+  return Math.min(1, Math.max(0, (db - HUM_DBU) / 60))
+}
+
 /**
  * Analog (dBu): too quiet below −40, good up to unity (0 dBu), hot above it, clipping at the clip
  * level (+20 dBu). Digital (dBFS): the same zones moved down by the converter alignment — good up

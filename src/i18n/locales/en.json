@@ -117,6 +117,10 @@
     "adcExpectsAnalog": "ADC expects an analog input. Connect it after analog gear, not after another ADC or digital node.",
     "dacExpectsDigital": "DAC expects a digital input. Connect it after an ADC or other digital node."
   },
+  "hum": {
+    "tag": "Hum",
+    "tip": "A hum from the DI Box's ground loop rides along with the signal. Every boost after it makes the hum louder, and nothing later in the chain takes it away — only Ground Lift on the DI Box does."
+  },
   "tooltip": {
     "whatIsThis": "What is this?",
     "whyIsItHere": "Why is it here?",
@@ -191,7 +195,8 @@
     },
     "speaker": {
       "label": "Speaker / Monitor",
-      "needsAmp": "Silent — needs an Amplifier before it"
+      "needsAmp": "Silent — needs an Amplifier before it",
+      "hum": "You hear a hum"
     },
     "active-speaker": {
       "label": "Active Speaker",
@@ -203,7 +208,16 @@
       "groundLift": "Ground Lift",
       "xlrOut": "XLR Out",
       "directOut": "Direct Out",
-      "description": "Converts high-impedance instrument signal to balanced mic-level XLR."
+      "description": "Turns a guitar or keyboard into a mic-level signal the desk can take: no high notes lost, no noise on a long cable.",
+      "micLevel": "mic level · to the desk's Preamp",
+      "instrumentLevel": "instrument level · to a guitar amp",
+      "hum": "Hum! The guitar amp and the desk are both grounded through this box. Turn Ground Lift on."
+    },
+    "guitar-amp": {
+      "volume": "Volume"
+    },
+    "instrument": {
+      "needsDi": "No DI Box: the high notes get lost"
     },
     "noise-gate": {
       "label": "Noise Gate",
@@ -232,7 +246,9 @@
       "gainReduction": "Sibilance reduction"
     },
     "relay": {
-      "label": "Relay"
+      "label": "Pre / Post switch",
+      "pre": "PRE",
+      "post": "POST"
     },
     "pan": {
       "label": "Pan"
@@ -298,12 +314,19 @@
     "send": "Matrix send (L + R, after the fader)",
     "byType": {
       "di-box": {
-        "out": "XLR Out",
-        "direct": "Direct Out"
+        "out": "XLR Out — mic level, to the desk",
+        "direct": "Direct Out — the guitar as it is, to a guitar amp"
+      },
+      "guitar-amp": {
+        "in": "Guitar in — from an Instrument or a DI Box's Direct Out",
+        "sound": "Sound — put a Microphone in front of it"
+      },
+      "mic": {
+        "in": "Sound in — the Guitar Amp this microphone is in front of"
       },
       "relay": {
-        "in-a": "Input A",
-        "in-b": "Input B"
+        "in-a": "PRE — wire in the signal from before the fader",
+        "in-b": "POST — wire in the signal from after the fader"
       },
       "adc": {
         "in": "Analog In",
@@ -341,6 +364,7 @@
       "line-in": "Line Input",
       "instrument": "Instrument",
       "di-box": "DI Box",
+      "guitar-amp": "Guitar Amp",
       "gain": "Gain",
       "hpf": "High-Pass Filter",
       "eq": "Parametric Equalizer",
@@ -352,8 +376,8 @@
       "amp": "Amplifier",
       "graphic-eq": "Graphic EQ",
       "fader": "Fader",
-      "switch": "Switch / Mute",
-      "relay": "Relay",
+      "switch": "On Off Switch",
+      "relay": "Pre / Post switch",
       "pan": "Pan / Balance",
       "adc": "ADC",
       "dac": "DAC",
@@ -368,7 +392,7 @@
     "mic": {
       "what": "The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.",
       "why": "Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.",
-      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that."
+      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone."
     },
     "line-in": {
       "what": "A line input accepts signals that are already at \"line level\" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.",
@@ -376,9 +400,9 @@
       "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire."
     },
     "instrument": {
-      "what": "An instrument input (also called \"Hi-Z\" or high impedance) is designed for direct connection of guitars, basses, and similar passive pickups. The signal is louder than a microphone but still below true line level — typically -30 to -10 dBu.",
-      "why": "Guitar pickups have a high output impedance. Connecting them to a standard line input or mic input causes tone loss (the high frequencies get loaded down). An instrument input has the correct impedance — 1 MΩ or more — to let the signal pass without colouring it.",
-      "tip": "Going direct (DI) from an instrument bypasses the amp entirely. This is common in recording and live sound. A DI box can also be used to convert the high-impedance signal to a low-impedance balanced mic-level signal, which travels well over long cables."
+      "what": "An electric guitar, bass or keyboard. Its signal is stronger than a microphone's (about −30 dBu) but still well below line level.",
+      "why": "It only sounds right into the right kind of input: a guitar amp, or a DI Box. Plugged straight into a desk input, the high notes get lost and a long cable picks up noise — the card warns you when that happens.",
+      "tip": "Two ways to the audience: Instrument → DI Box → Preamp, or Instrument → Guitar Amp with a Microphone in front of it. Many engineers do both at once, feeding the amp from the DI Box's Direct Out."
     },
     "gain": {
       "what": "A gain stage turns a signal up or down by a set amount: right of 0 dB makes it louder, left of 0 dB quieter, and all the way left switches it off. Placed right after a microphone, this same card becomes a Preamp.",
@@ -386,7 +410,7 @@
       "tip": "Start at 0 dB (no change) and move it only until the meter after it sits in the green (−40 to 0 dBu). Turning up raises the noise along with the signal; turning down too far leaves the next stage too little to work with."
     },
     "preamp": {
-      "what": "The preamplifier (preamp) boosts the weak microphone-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB. It is what the Gain card becomes when you place it right after a microphone.",
+      "what": "The preamplifier (preamp) boosts a weak mic-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB. It is what the Gain card becomes when you place it right after a microphone, or after a DI Box's XLR Out.",
       "why": "Without enough gain here, all downstream processors — EQ, compressor, fader — work with a weak signal and introduce more noise. Too much gain causes distortion before anything else can help.",
       "tip": "Aim for the output to land in the green zone (-40 to 0 dBu). This is called gain staging, and it starts right here at the preamp."
     },
@@ -461,9 +485,14 @@
       "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. Never plug it into an Amplifier's output: that signal is already strong enough to drive a passive speaker, far too much for the line input of a speaker with its own amp inside — it blows."
     },
     "di-box": {
-      "what": "A DI box (Direct Injection) converts a high-impedance unbalanced instrument signal — like a guitar or keyboard — into a low-impedance balanced signal that travels cleanly over long cables to a mixing desk. It has two outputs: an XLR output (balanced, for the preamp) and a Direct Output (instrument-level thru, for connecting to an amplifier at the same time).",
-      "why": "Guitar pickups and keyboards have a high output impedance. Running them directly into a mixer causes high-frequency tone loss and picks up interference over long cables. The DI box solves both: it presents the correct high-impedance load to the instrument and converts the signal to a noise-resistant balanced format.",
-      "tip": "The Ground Lift switch disconnects the cable screen at the DI box end, which breaks ground loops — a common cause of low-frequency hum. If you hear a 50 or 60 Hz buzz, try switching ground lift on."
+      "what": "A DI box (Direct Injection) takes a guitar, bass or keyboard and turns it into a mic-level signal for the desk: its XLR Out is about 20 dB quieter than what goes in, so a Gain after it works as a Preamp, just like after a microphone. Its Direct Out passes the instrument on unchanged, for a guitar amp on stage.",
+      "why": "Plugged straight into a desk input, a guitar loses its high notes and its long cable picks up noise. The DI box gives the instrument the input it needs and sends a strong, clean signal down the long cable to the desk.",
+      "tip": "Wire Direct Out to a Guitar Amp and XLR Out to the desk at the same time and you may get a hum: both are plugged into the mains, and their grounds meet through the box. Turn Ground Lift on to break that loop — the hum goes away."
+    },
+    "guitar-amp": {
+      "what": "A guitar amplifier with its own speaker: it takes a guitar straight in and plays it out loud on stage. Its sound is what a microphone in front of it picks up.",
+      "why": "Guitarists shape much of their sound with their amp. To get it to the audience, put a Microphone in front of it (a dotted line: sound through the air, not a cable) and send the microphone to a Preamp like any other.",
+      "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too."
     },
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",
@@ -486,9 +515,9 @@
       "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy."
     },
     "relay": {
-      "what": "A relay is an electronic switch with two inputs and one output. You choose input A or input B — the chosen signal goes out; the other one is cut off. This is A/B switching: for example, a main microphone on A and a spare one on B, and you change between them without unplugging any cables.",
-      "why": "In live sound and recording you often need to swap between two sources instantly — a spare microphone when the main one fails, two instruments sharing one channel, or the same signal with and without an effect, to compare them. A relay does this cleanly, without noise or clicks.",
-      "tip": "The chosen input is lit in green; the other one is grey. Input A is the top connection point on the left, input B the one below it. Try wiring a source straight into A and the same source through an effect (an Equalizer or a Compressor) into B, then switch between A and B to hear what the effect does."
+      "what": "A relay switch: two inputs, one output. Press a button and the signal comes from that input; the other one is cut off.",
+      "why": "It picks the point a signal is taken from with one press, without re-wiring: before or after a fader (PRE / POST), or before or after a group of elements — so it can skip several of them at once.",
+      "tip": "PRE is the top input, POST the one below; the chosen button is lit green. To skip elements, wire the signal from before them into one input and their output into the other."
     },
     "pan": {
       "what": "Feed it a mono signal and this is a Pan knob: it spreads that one signal between Left and Right and sends both out on one stereo wire. Fully left, only the left side gets it; fully right, only the right side. At centre each side gets it 3 dB quieter, so the overall loudness stays the same. Feed it a stereo wire and it turns into a Balance knob on its own.",
