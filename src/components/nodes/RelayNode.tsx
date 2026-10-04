@@ -1,7 +1,7 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
-import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -9,12 +9,11 @@ import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { healthColor } from '../../signal/levels'
 
-export function RelayNode({ id, data }: CardProps) {
+export function RelayNode({ id }: CardProps) {
   const { stages, wires } = useGraphSignal()
   const p                = useParams(id, 'relay')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const allEdges         = useSignalStore((s) => s.edges)
-  const { t }            = useTranslation()
 
   const selected = p('selectedInput')
   const result   = stages[id]
@@ -33,7 +32,7 @@ export function RelayNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="relay"
-      label={data.label ?? t.nodes.relay.label}
+      label={useNodeName(id, 'relay')}
     >
       {/* A / B input selector */}
       <div style={{ display: 'flex', gap: 4 }}>

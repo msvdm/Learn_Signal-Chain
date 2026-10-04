@@ -10,7 +10,6 @@ import type { Box } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { chainOfEdge } from '../utils/chainColors'
 import type { ChainEdgeData } from '../components/ChainEdge'
-import type { CardData } from '../components/nodes/cardProps'
 import { useGraphSignal } from './useGraphSignal'
 
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
@@ -81,7 +80,7 @@ export function useFlowElements() {
             : undefined,
           selected:  selectedNodeIds.includes(node.id),
           className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
-          data:      { label: node.label } satisfies CardData,
+          data:      {},
         }
       }),
     [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes]

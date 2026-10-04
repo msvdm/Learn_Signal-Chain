@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -12,7 +13,7 @@ import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { twoColumns } from '../../utils/twoColumns'
 
-export function DIBoxNode({ id, data }: CardProps) {
+export function DIBoxNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'di-box')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -27,7 +28,7 @@ export function DIBoxNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="di-box"
-      label={data.label ?? t.nodes['di-box'].label}
+      label={useNodeName(id, 'di-box')}
     >
       <div style={twoColumns}>
         {/* Signal flow */}

@@ -9,7 +9,7 @@ import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from
 
 /**
  * Why a card sends nothing out (or, for `blown`, far too much). The names are the locale keys of
- * the note the card shows (`warnings.*`, `nodes.speaker.needsAmp`, `nodes.activeSpeaker.blown`).
+ * the note the card shows (`warnings.*`, `nodes.speaker.needsAmp`, `nodes.active-speaker.blown`).
  */
 export type StageCondition =
   | 'domainMixedBus'    // a bus fed analog and digital signals at once

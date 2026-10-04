@@ -4,9 +4,8 @@ import { useInternalNode, useReactFlow, useStore, useViewport } from '@xyflow/re
 import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import type { Translations } from '../i18n/translations'
 import { chainOrder } from '../graph/graph'
-import { helpKeyOf } from '../utils/nodeName'
+import { helpKeyOf, titleOf } from '../utils/nodeName'
 import { nodeDims } from '../utils/layoutHelpers'
 import { useGraphSignal } from '../hooks/useGraphSignal'
 
@@ -14,12 +13,6 @@ const WIDTH  = 380
 const ARROW  = 12
 const MARGIN = 8
 const TOOLBAR_CLEARANCE = 72  // keep the anchored node below the floating toolbar
-
-/** Display name for a node type in the help popover. */
-function helpTitle(t: Translations, typeKey: string): string {
-  const fromNodes = (t.nodes as Record<string, { label?: string } | undefined>)[typeKey]?.label
-  return fromNodes ?? t.palette.items[typeKey] ?? typeKey
-}
 
 /**
  * Help popover anchored under the node whose "?" was clicked.
@@ -111,6 +104,9 @@ export function HelpPopover() {
   const maxHeight = placeAbove ? undefined : Math.max(180, paneH - MARGIN - below)
   const arrowLeft = Math.max(16, Math.min(width - 28, centerX - left - 6))
 
+  /** As its card names it: its own name, else that of the role or type whose text is shown */
+  const nameOf = (id: string, key: string) => nodes.find((n) => n.id === id)?.label ?? titleOf(t, key)
+
   function goTo(id: string, key: string) {
     setHelp({ nodeId: id, key })
     setSelected(id)
@@ -152,7 +148,7 @@ export function HelpPopover() {
           }}
         >
           <h3 id="lsc-help-title" style={{ flex: 1, margin: 0, fontSize: 15, fontWeight: 700 }}>
-            {helpTitle(t, helpKey)}
+            {nameOf(activeId, helpKey)}
           </h3>
           {idx >= 0 && (
             <span style={{ fontSize: 12, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
@@ -217,7 +213,7 @@ export function HelpPopover() {
               maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
-            {next ? fmt(t.tooltip.nextNode, { name: helpTitle(t, next.helpKey) }) : t.tooltip.finishTour}
+            {next ? fmt(t.tooltip.nextNode, { name: nameOf(next.id, next.helpKey) }) : t.tooltip.finishTour}
           </button>
         </div>
       </div>

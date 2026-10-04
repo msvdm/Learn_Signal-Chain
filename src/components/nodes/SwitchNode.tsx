@@ -1,22 +1,21 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useTranslation } from '../../i18n/useTranslation'
 
 // A free-standing button, big enough to read zoomed out
 const BUTTON = 110
 
 /** On = the signal passes, Off = silence. Drawn as one big square On / Off button (no card). */
-export function SwitchNode({ id, data }: CardProps) {
+export function SwitchNode({ id }: CardProps) {
   const p                = useParams(id, 'switch')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { t }            = useTranslation()
 
   const isOn = p('on')
 
   return (
-    <FreeControl nodeId={id} typeKey="switch" label={data.label ?? t.palette.items['switch']} portLine={BUTTON / 2}>
+    <FreeControl nodeId={id} typeKey="switch" label={useNodeName(id, 'switch')} portLine={BUTTON / 2}>
       <button
         className="nodrag nopan"
         aria-pressed={isOn}

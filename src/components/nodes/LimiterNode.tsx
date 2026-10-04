@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -12,7 +13,7 @@ import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { limiter } from '../../signal/process'
 
-export function LimiterNode({ id, data }: CardProps) {
+export function LimiterNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'limiter')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -29,7 +30,7 @@ export function LimiterNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="limiter"
-      label={data.label ?? t.nodes.limiter.label}
+      label={useNodeName(id, 'limiter')}
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />

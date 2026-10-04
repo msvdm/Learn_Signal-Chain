@@ -294,9 +294,26 @@ corners never gets the warning once committed (the preview still warns while dra
   sideways (stays on its band), an EQ dot (and its cursor after release), a right-click on a knob;
   each popup closing on an outside press / Esc; the File menu closing on a canvas press, as in HEAD.
 - ~~`ChainEdge` infers overview from `strokeWidth > 3` — pass it in `data`.~~ — done (step 5)
-- Display names: `nodeName()` (palette name first) and `helpTitle()` in `Tooltip.tsx` (card
+- ~~Display names: `nodeName()` (palette name first) and `helpTitle()` in `Tooltip.tsx` (card
   label first) disagree; `nodes` locale keys mix `activeSpeaker` / `graphicEq` / `master` with
-  type keys.
+  type keys.~~ — done. One rule, `nodeName()`: its own label, else `titleOf(role or type)` = the
+  card name, else the palette name. The cards take their names from it (`useNodeName`; each
+  card's own expression is gone, and so is React Flow's `data`), and so do the help popover
+  (title, "Next: …"), the unplug list and the Matrix Bus rows. `nodes` is keyed by help key: type
+  keys plus `preamp`, `main-fader`, `balance` (`graphicEq` → `graphic-eq`, `activeSpeaker` →
+  `active-speaker`, `master` → `master-bus`). Gone, unused: `theory.master` (an older Master Bus
+  text; help opens `master-bus`), `pan.balanceLabel` (= `balance.label`), `mic.sensitivity` /
+  `micInfo`, `eq.curvePreview` / `openCurve`, `fader.unity`, the Master Bus and Speaker status
+  texts, `balance.left / right / centerLabel`, `app.settings`, `palette.elements`.
+  Checked: the old per-card expressions against the new rule for every type and role, in both
+  languages at every level — the same everywhere but one fix: bg "Активен Говорител" →
+  "Активен говорител" (like its palette name). What changed is what the lists say, now as on the
+  cards: en "High-Pass Filter" → "HPF", "Pad (−20 dB)" → "Pad", "Pan / Balance" → "Pan",
+  "Speaker (passive)" → "Speaker / Monitor" (bg likewise, and "Графичен еквалайзер/ GEQ" →
+  "Графичен еквалайзер", also in the popover's title).
+  Found, not changed: the engine sets `digitalToAmp` / `digitalToSpeaker` (a digital signal into
+  an Amplifier or speaker: silent), and `warnings.*` has their texts, but no card shows them — the
+  Amplifier and the speakers just go quiet. The ADC / DAC and the buses do show theirs.
 - English shown to Bulgarian users (a separate suggestion may cover it — check `git log`):
   hard-coded — the Aux Bus's English plural `s` param, "LIMITING" / "PASS", the curves'
   "0 dB in", port tooltips taken from the registry's English port labels; and bg.json values that were never translated — the `warnings.*` domain

@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -11,7 +12,7 @@ import { useParams } from '../../hooks/useParams'
 import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
-export function DeesserNode({ id, data }: CardProps) {
+export function DeesserNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'deesser')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -33,7 +34,7 @@ export function DeesserNode({ id, data }: CardProps) {
       nodeId={id}
       typeKey="deesser"
       style={twoColumnCard}
-      label={data.label ?? t.nodes.deesser.label}
+      label={useNodeName(id, 'deesser')}
     >
       <div style={twoColumns}>
         <SignalMeter

@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { VolumeX } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
@@ -14,7 +15,7 @@ const Icon      = NODE_LOOK.speaker.icon
  * It has no amplifier inside — fed without an Amplifier before it, it stays silent,
  * and the card says so (crossed-out speaker + a note).
  */
-export function SpeakerNode({ id, data }: CardProps) {
+export function SpeakerNode({ id }: CardProps) {
   const { stages } = useGraphSignal()
   const { t }      = useTranslation()
   const needsAmp   = stages[id]?.condition === 'needsAmp'
@@ -23,7 +24,7 @@ export function SpeakerNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="speaker"
-      label={data.label ?? t.nodes.speaker.label}
+      label={useNodeName(id, 'speaker')}
       faceOnly
       overviewArt={(box) => {
         if (!needsAmp) return <OverviewIcon icon={<Icon />} box={box} />

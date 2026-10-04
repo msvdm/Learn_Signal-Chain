@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { VerticalFader } from '../controls/VerticalFader'
 import type { FaderTaper } from '../controls/VerticalFader'
@@ -8,7 +9,6 @@ import { useSignalStore } from '../../store/signalStore'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
-import { useTranslation } from '../../i18n/useTranslation'
 import { FADER_MIN_DB, FADER_MAX_DB, FADER_MARKS, faderPosition, faderDbAt } from '../../utils/faderTaper'
 
 // A free-standing fader, big enough to read zoomed out
@@ -27,12 +27,11 @@ const format = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}
  * the whole mix, with the bus's Left and Right outputs moved onto it (and L / R meters beside it).
  * Drawn as a bare fader (no card).
  */
-export function FaderNode({ id, data }: CardProps) {
+export function FaderNode({ id }: CardProps) {
   const p                = useParams(id, 'fader')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
   const levels           = useStereoLevels(id)
-  const { t }            = useTranslation()
 
   const faderDb = p('faderDb')
   const main    = stages[id]?.role === 'main-fader'
@@ -41,7 +40,7 @@ export function FaderNode({ id, data }: CardProps) {
     <FreeControl
       nodeId={id}
       typeKey="fader"
-      label={data.label ?? (main ? t.nodes['main-fader'].label : t.nodes.fader.label)}
+      label={useNodeName(id, 'fader')}
       portLine={PORT_LINE}
       value={<StableText reserve={['−00.5 dB', '−100 dB']} align="center">{format(faderDb)}</StableText>}
     >

@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
@@ -13,7 +14,7 @@ import { useParams } from '../../hooks/useParams'
 // The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
-export function AmpNode({ id, data }: CardProps) {
+export function AmpNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                   = useParams(id, 'amp')
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
@@ -30,7 +31,7 @@ export function AmpNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="amp"
-      label={data.label ?? t.palette.items['amp']}
+      label={useNodeName(id, 'amp')}
     >
       <div className="space-y-3">
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />

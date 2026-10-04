@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { widestFormat } from '../../utils/readout'
@@ -97,7 +98,7 @@ function HPFGraph({ cutoffHz, bypassed }: { cutoffHz: number; bypassed: boolean 
 
 // ── Node component ────────────────────────────────────────────────────────────
 
-export function HpfNode({ id, data }: CardProps) {
+export function HpfNode({ id }: CardProps) {
   const p                = useParams(id, 'hpf')
   const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -115,7 +116,7 @@ export function HpfNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="hpf"
-      label={data.label ?? t.nodes.hpf.label}
+      label={useNodeName(id, 'hpf')}
     >
       <div className="space-y-2">
         <HPFGraph cutoffHz={cutoffHz} bypassed={bypassed} />

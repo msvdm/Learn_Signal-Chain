@@ -1,13 +1,12 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useTranslation } from '../../i18n/useTranslation'
 
-export function PadNode({ id, data }: CardProps) {
+export function PadNode({ id }: CardProps) {
   const p                = useParams(id, 'pad')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { t }            = useTranslation()
 
   const engaged = p('engaged')
 
@@ -15,7 +14,7 @@ export function PadNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="pad"
-      label={data.label ?? t.nodes.pad.label}
+      label={useNodeName(id, 'pad')}
       align="center"
     >
       <button

@@ -1,8 +1,8 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useTranslation } from '../../i18n/useTranslation'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
@@ -25,19 +25,15 @@ function positionLabel(pos: number): string {
  * Stereo wire in: Balance knob — turning only fades the opposite side.
  * Drawn as a bare knob (no card) with a slim L / R meter under it.
  */
-export function PanNode({ id, data }: CardProps) {
+export function PanNode({ id }: CardProps) {
   const { stages }       = useGraphSignal()
   const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { t }            = useTranslation()
 
   const stage       = stages[id]
-  const balance     = stage?.role === 'balance'
   const panPosition = p('panPosition')
 
-  const label = data.label ?? (balance
-    ? t.nodes.pan.balanceLabel
-    : t.nodes.pan.label)
+  const label = useNodeName(id, 'pan')
 
   return (
     <FreeControl

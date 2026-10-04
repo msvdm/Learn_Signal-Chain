@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -42,7 +43,7 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
  * Fed a stereo wire it is a two-channel EQ: the sliders split into L (top) and R (bottom),
  * in the same space. The right side copies the left until it is first touched.
  */
-export function GraphicEQNode({ id, data }: CardProps) {
+export function GraphicEQNode({ id }: CardProps) {
   const { stages }       = useGraphSignal()
   const p                = useParams(id, 'graphic-eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -89,7 +90,7 @@ export function GraphicEQNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="graphic-eq"
-      label={data.label ?? t.nodes.graphicEq.label}
+      label={useNodeName(id, 'graphic-eq')}
     >
       <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 12 }}>
@@ -109,7 +110,7 @@ export function GraphicEQNode({ id, data }: CardProps) {
               color: active === null ? 'var(--lsc-fg-dim)' : 'var(--lsc-fg)',
             }}
           >
-            {active === null ? t.nodes.graphicEq.hint : (
+            {active === null ? t.nodes['graphic-eq'].hint : (
               <>
                 <span style={{ fontWeight: 700 }}>{geqLongLabel(GEQ_CENTERS[active.band])}</span>
                 {stereo && <span style={{ fontWeight: 700, marginLeft: 10, color: 'var(--lsc-fg-muted)' }}>{active.side.toUpperCase()}</span>}
@@ -121,7 +122,7 @@ export function GraphicEQNode({ id, data }: CardProps) {
           </span>
           <button
             className="nodrag nopan lsc-btn-outline"
-            title={t.nodes.graphicEq.flatHint}
+            title={t.nodes['graphic-eq'].flatHint}
             disabled={isFlat}
             onClick={flat}
             style={{
@@ -131,7 +132,7 @@ export function GraphicEQNode({ id, data }: CardProps) {
               fontSize: 12, fontWeight: 600, cursor: isFlat ? 'default' : 'pointer',
             }}
           >
-            {t.nodes.graphicEq.flat}
+            {t.nodes['graphic-eq'].flat}
           </button>
         </div>
 

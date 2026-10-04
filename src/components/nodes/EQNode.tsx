@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -218,7 +219,7 @@ function BandCell({ spec, band, onChange }: {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-export function EQNode({ id, data }: CardProps) {
+export function EQNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -247,7 +248,7 @@ export function EQNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="eq"
-      label={data.label ?? t.nodes.eq.label}
+      label={useNodeName(id, 'eq')}
       style={advanced ? undefined : twoColumnCard}
     >
       {advanced ? (

@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NodeWrapper } from './NodeWrapper'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -10,7 +11,7 @@ import { LEVEL_SAMPLE } from '../../utils/readout'
 
 const levelText = (db: number) => (isFinite(db) ? db.toFixed(1) : '−∞')
 
-export function AdcDacNode({ id, type, data }: CardProps) {
+export function AdcDacNode({ id, type }: CardProps) {
   const { stages }          = useGraphSignal()
   const levels              = useStereoLevels(id)
   const { t }               = useTranslation()
@@ -24,9 +25,7 @@ export function AdcDacNode({ id, type, data }: CardProps) {
   const inputUnit  = isAdc ? 'dBu' : 'dBFS'
   const outputUnit = isAdc ? 'dBFS' : 'dBu'
 
-  const label = data.label ?? (isAdc
-    ? t.nodes.adc.label
-    : t.nodes.dac.label)
+  const label = useNodeName(id, typeKey)
 
   const hasWarning = Boolean(warning)
 

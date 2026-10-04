@@ -2,7 +2,6 @@
   "app": {
     "title": "Learn Signal Chain",
     "tagline": "From microphone to speaker",
-    "settings": "Settings",
     "language": "Language",
     "level": "Difficulty level",
     "theme": {
@@ -132,9 +131,7 @@
   },
   "nodes": {
     "mic": {
-      "label": "Microphone",
-      "sensitivity": "Sensitivity",
-      "micInfo": "Dynamic mic output: approx. -60 dBu"
+      "label": "Microphone"
     },
     "preamp": {
       "label": "Preamp",
@@ -151,8 +148,6 @@
     },
     "eq": {
       "label": "Parametric Equalizer",
-      "curvePreview": "EQ curve preview",
-      "openCurve": "Open EQ Curve",
       "bandLow": "Low",
       "bandMid": "Mid",
       "bandHigh": "High",
@@ -166,7 +161,7 @@
       "graphHint": "Drag a coloured dot up to make that range louder, down to make it quieter, or sideways to move it to lower or higher sounds. Double-click a dot to set it back to 0 dB (no change).",
       "graphHintWidth": "Scroll over a dot to make its band wider or narrower."
     },
-    "graphicEq": {
+    "graphic-eq": {
       "label": "Graphic EQ",
       "hint": "Drag a slider up to boost that frequency, down to cut it. Double-click = 0 dB.",
       "flat": "Flat",
@@ -183,30 +178,19 @@
       "release": "Release"
     },
     "fader": {
-      "label": "Fader",
-      "unity": "Unity"
+      "label": "Fader"
     },
     "main-fader": {
       "label": "Main Fader"
     },
-    "master": {
-      "label": "Master Bus",
-      "outputTrim": "Output trim",
-      "statusGood": "Gain staging: Good",
-      "statusHot": "Signal is hot — watch headroom",
-      "statusClipping": "CLIPPING — reduce gain!",
-      "statusQuiet": "Too quiet — increase gain"
+    "master-bus": {
+      "label": "Master Bus"
     },
     "speaker": {
       "label": "Speaker / Monitor",
-      "signalIn": "Signal in",
-      "statusGood": "Clean output",
-      "statusHot": "Loud — near limit",
-      "statusClipping": "Distortion! Signal clipping",
-      "statusQuiet": "Too quiet — noise audible",
       "needsAmp": "Silent — needs an Amplifier before it"
     },
-    "activeSpeaker": {
+    "active-speaker": {
       "label": "Active Speaker",
       "volume": "Volume",
       "blown": "Blown! An amplifier's output is far too strong for it."
@@ -247,8 +231,7 @@
       "label": "Relay"
     },
     "pan": {
-      "label": "Pan",
-      "balanceLabel": "Balance"
+      "label": "Pan"
     },
     "adc": {
       "label": "ADC"
@@ -267,10 +250,7 @@
       "sendHint": "How much of this bus goes in. Point here to light up where it comes from."
     },
     "balance": {
-      "label": "Balance",
-      "leftLabel": "L",
-      "rightLabel": "R",
-      "centerLabel": "C"
+      "label": "Balance"
     }
   },
   "eqCurve": {
@@ -315,7 +295,6 @@
     "hint": "Point at a wire to light up its chain"
   },
   "palette": {
-    "elements": "Elements",
     "search": "Search elements",
     "all": "All",
     "startHere": "Start here",
@@ -442,11 +421,6 @@
       "what": "The master bus is the final mixing point where every channel is added together before the sound leaves the system. Its one input takes as many wires as you like; the mix leaves on two wires, L and R — one for each speaker. A stereo wire keeps its left and right. A wire from another bus's L or R output stays on its side. A mono wire lands on both sides at full level — put a Pan knob in front to place it. Wire a Fader to its L or R output and it becomes the Main Fader: the L and R outputs move onto the fader.",
       "why": "The master bus controls the overall output level. It is also the place for final mix bus processing — subtle compression or limiting to control peaks and add cohesion.",
       "tip": "Leave headroom on the master bus — keep it in the green, at or below 0 dBu (unity). Above that it turns yellow (hot): there is less room left before it clips at +20 dBu, and a limiter or the next device has less to work with."
-    },
-    "master": {
-      "what": "The master bus receives all channel signals mixed together. It is the final stage before the signal leaves the system. A small trim here adjusts the overall output level.",
-      "why": "The master bus is where your final mix level is controlled. It also applies any final processing — in professional studios, subtle compression and limiting are applied here to glue the mix.",
-      "tip": "Leave some headroom on the master bus — ideally peaks should not exceed -6 dBu. This leaves room for a mastering engineer (or limiter) to do their job without distortion."
     },
     "speaker": {
       "what": "A passive speaker converts electrical signal back into sound, but it has no built-in amplifier. It needs a separate power amplifier (Amp node) to drive it — connecting one directly to line level will produce no sound.",

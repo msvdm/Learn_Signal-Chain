@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
@@ -6,7 +7,6 @@ import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { GAIN_OFF_DB } from '../../signal/process'
-import { useTranslation } from '../../i18n/useTranslation'
 import { widestFormat } from '../../utils/readout'
 
 // A free-standing knob, big enough to read zoomed out
@@ -21,14 +21,13 @@ const formatGain   = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v > 0 ? '+
  * −∞…+20 dB, turning any signal up or down. Each mode keeps its own setting.
  * Drawn as a bare knob (no card).
  */
-export function GainNode({ id, data }: CardProps) {
+export function GainNode({ id }: CardProps) {
   const p                = useParams(id, 'gain')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
-  const { t }            = useTranslation()
 
   const preamp = stages[id]?.role === 'preamp'
-  const label  = data.label ?? (preamp ? t.nodes.preamp.label : t.palette.items.gain)
+  const label  = useNodeName(id, 'gain')
 
   const knob = preamp
     ? { param: 'preampDb', value: p('preampDb'), min: 0, max: 60, format: formatPreamp }

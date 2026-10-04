@@ -1,7 +1,7 @@
-import type { Node, NodeProps } from '@xyflow/react'
+import type { NodeProps } from '@xyflow/react'
 
-/** What the canvas hands every element (useFlowElements): a name of its own, from a saved chain. */
-export type CardData = { label?: string }
-
-/** The props of every element's component (NODE_COMPONENTS): its id, type and data. */
-export type CardProps = NodeProps<Node<CardData>>
+/**
+ * The props of every element's component (NODE_COMPONENTS): its id and type. Its name, settings
+ * and signal come from the store (useNodeName, useParams, useGraphSignal), not React Flow's `data`.
+ */
+export type CardProps = NodeProps

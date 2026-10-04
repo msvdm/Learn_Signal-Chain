@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -12,7 +13,7 @@ import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { compressor } from '../../signal/process'
 
-export function CompressorNode({ id, data }: CardProps) {
+export function CompressorNode({ id }: CardProps) {
   const { stages }          = useGraphSignal()
   const p                = useParams(id, 'comp')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -32,7 +33,7 @@ export function CompressorNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="comp"
-      label={data.label ?? t.nodes.comp.label}
+      label={useNodeName(id, 'comp')}
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />

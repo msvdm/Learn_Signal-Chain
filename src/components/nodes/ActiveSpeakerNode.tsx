@@ -1,4 +1,5 @@
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
@@ -31,7 +32,7 @@ function BlownSpeakerIcon() {
  * it plays, at every zoom. Fed from an Amplifier it blows (condition 'blown'): the level goes red, the
  * icon cracks and smokes, and a note says why.
  */
-export function ActiveSpeakerNode({ id, data }: CardProps) {
+export function ActiveSpeakerNode({ id }: CardProps) {
   const p                = useParams(id, 'active-speaker')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
@@ -44,7 +45,7 @@ export function ActiveSpeakerNode({ id, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="active-speaker"
-      label={data.label ?? t.nodes.activeSpeaker.label}
+      label={useNodeName(id, 'active-speaker')}
       faceOnly
       overviewArt={(box) => {
         if (blown) {
@@ -60,7 +61,7 @@ export function ActiveSpeakerNode({ id, data }: CardProps) {
                   color: 'var(--signal-clipping-text)', maxWidth: box.w,
                 }}
               >
-                {t.nodes.activeSpeaker.blown}
+                {t.nodes['active-speaker'].blown}
               </span>
             </div>
           )
@@ -77,7 +78,7 @@ export function ActiveSpeakerNode({ id, data }: CardProps) {
                 min={-20}
                 max={10}
                 step={0.5}
-                label={t.nodes.activeSpeaker.volume}
+                label={t.nodes['active-speaker'].volume}
                 formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
                 onChange={(v) => updateNodeParams(id, { volumeDb: v })}
                 color="var(--signal-good)"

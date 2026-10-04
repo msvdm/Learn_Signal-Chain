@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -23,7 +24,7 @@ import { nodeName } from '../../utils/nodeName'
  * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
-export function MasterBusNode({ id, type, data }: CardProps) {
+export function MasterBusNode({ id, type }: CardProps) {
   const { stages } = useGraphSignal()
   const nodes         = useSignalStore((s) => s.nodes)
   const allEdges      = useSignalStore((s) => s.edges)
@@ -45,10 +46,6 @@ export function MasterBusNode({ id, type, data }: CardProps) {
   const domainWarning = result?.condition === 'domainMixedBus'
   const tm       = t.nodes['matrix-bus']
 
-  const defaultLabel = isMatrix ? tm.label
-    : isAux ? t.nodes['aux-bus'].label
-    : t.nodes.master.label
-
   const n = incomingEdges.length
 
   // Matrix Bus: the wires grouped by the bus they come from — one knob per bus
@@ -66,7 +63,7 @@ export function MasterBusNode({ id, type, data }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey={typeKey}
-      label={data.label ?? defaultLabel}
+      label={useNodeName(id, typeKey)}
     >
       {isMatrix && (n > 0 ? (
         // One row per bus plugged in: its name, and its send knob
