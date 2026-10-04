@@ -55,6 +55,7 @@ import { useChainFile }       from '../hooks/useChainFile'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 import { NODE_REGISTRY, getPorts, initialParams, isMatrixSource } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import { newEdge } from '../graph/edits'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
   GRID, MIN_NODE_GAP, PORT_TOP,
@@ -189,11 +190,11 @@ export function SignalChain() {
   const addNode               = useSignalStore((s) => s.addNode)
   const addEdge               = useSignalStore((s) => s.addEdge)
   const removeEdge            = useSignalStore((s) => s.removeEdge)
-  const replaceEdge           = useSignalStore((s) => s.replaceEdge)
+  const insertOnWire          = useSignalStore((s) => s.insertOnWire)
   const highlightEdgeIds      = useSignalStore((s) => s.highlightEdgeIds)
   const overview              = useSignalStore((s) => s.overview)
   const setOverview           = useSignalStore((s) => s.setOverview)
-  const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
+  const setPositions          = useSignalStore((s) => s.setPositions)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
   const capturing             = useSignalStore((s) => s.capturing)
   const chainOffer            = useSignalStore((s) => s.chainOffer)
@@ -448,15 +449,14 @@ export function SignalChain() {
           return
         }
 
-        addEdge({
-          id:           `e-${d.sourceNodeId}-${targetNodeId}-${Date.now()}`,
+        addEdge(newEdge({
           source:       d.sourceNodeId,
           sourceHandle: d.sourceHandleId,
           target:       targetNodeId,
           targetHandle: targetHandleId,
           waypoints:    d.waypoints.length > 0 ? d.waypoints : undefined,
-        })
-        enforceGap(d.sourceNodeId, targetNodeId, measuredNodes(), edgesRef.current, updateNodePosition)
+        }))
+        setPositions(enforceGap(d.sourceNodeId, targetNodeId, measuredNodes(), edgesRef.current))
         cancelWire()
         return
       }
@@ -508,7 +508,7 @@ export function SignalChain() {
     }
   // measuredNodes reads React Flow's live state each call
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screenToFlowPosition, addEdge, removeNode, removeEdge, updateNodePosition, setReshaping])
+  }, [screenToFlowPosition, addEdge, removeNode, removeEdge, setPositions, setReshaping])
 
   // ── Selection, copy and paste ───────────────────────────────────────────────
 
@@ -762,16 +762,9 @@ export function SignalChain() {
     // ── Smart edge insertion ───────────────────────────────────────────────────
     const slot = insertSlot(raw, typeKey)
     if (slot) {
-      const { edge } = slot
-      addNode({ id: newId, typeKey, position: slot.pos, params, bypassed: false })
-      const ts = Date.now()
-      const ports = getPorts({ typeKey, params })
       // One step: a Fader dropped on a bus's L / R wire becomes the Main Fader, and a card
       // dropped on a Mix wire sits between the bus and its Main Fader without unplugging it
-      replaceEdge(edge.id, [
-        { id: `e-${edge.source}-${newId}-${ts}`,     source: edge.source, sourceHandle: edge.sourceHandle, target: newId,       targetHandle: ports.inputs[0].id },
-        { id: `e-${newId}-${edge.target}-${ts + 1}`, source: newId,       sourceHandle: ports.outputs[0].id, target: edge.target, targetHandle: edge.targetHandle },
-      ])
+      insertOnWire({ id: newId, typeKey, position: slot.pos, params, bypassed: false }, slot.edge.id)
       // The cards around it move once React Flow has measured it (onNodesChange): a type not
       // dropped before has no known size yet. The card stays hidden until then, so no overlap shows.
       pendingInsertRef.current = newId
@@ -788,7 +781,7 @@ export function SignalChain() {
   function makeRoomForInserted(nodeId: string, size: { width: number; height: number }) {
     const { nodes, edges } = useSignalStore.getState()
     const placed = layoutNodes(nodes).map((n) => (n.id === nodeId ? { ...n, measured: size } : n))
-    for (const [id, pos] of makeRoomForInsert(nodeId, placed, edges)) updateNodePosition(id, pos)
+    setPositions(makeRoomForInsert(nodeId, placed, edges))
     setTimeout(() => fitView({ ...fitViewOptions, duration: 400 }), 50)
   }
 
@@ -824,7 +817,7 @@ export function SignalChain() {
     const measured = getInternalNode(node.id)?.measured
     const { w, h } = nodeDims(node.type ?? '', measured?.width, measured?.height)
     const resolved = resolveOverlap(snap(node.position), w, h, measuredNodes(), node.id)
-    updateNodePosition(node.id, resolved)
+    setPositions(new Map([[node.id, resolved]]))
   }
 
   // Selection + size bookkeeping. Positions stay owned by the store (drag commits on stop).

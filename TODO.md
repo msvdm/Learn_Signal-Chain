@@ -15,29 +15,25 @@ the `?.` / English fallbacks are gone, and so are: the engine's unused warnings 
 registry's type labels and port `side`, the unused health-style fields (`healthColor()`), and
 bg.json's stale `bus` keys.
 
-## 2. One way into the graph: `commitGraph` + atomic layout actions
+## ~~2. One way into the graph: `commitGraph` + atomic layout actions~~ — done
 
-- Every store graph action picks its own normalisation: `addEdge` / `addGroup` / `setNodeStereo`
-  call `attachMainFaders`, `removeNode` / `removeNodes` / `removeEdge` / `replaceEdge` call
-  `reconcileMainFaders`, `updateNodeParams` calls neither (but a Relay's `selectedInput` changes
-  `outputKind` → `splitsStereo` of a Graphic EQ / Amp after it → stale `out-l` / `out-r` wires).
-  Add one `commitGraph(prev, nodes, edges)` in `signalStore.ts` that runs
-  `reconcileMainFaders(prev, next)` (it ends with `attachMainFaders`) and prunes references to
-  removed nodes. Every graph action goes through it.
-- Pruning stale references is hand-written in six places with different field lists
-  (`removeNode`, `removeNodes`, `restore`, `loadChain`, `resetAll`, `setComplexityLevel`):
-  `resetAll` keeps `highlightEdgeIds`; a level change keeps `highlightEdgeIds`, `chainOffer`,
-  `clipboard`. One helper.
-- Move the action bodies that are graph logic (`setNodeStereo`'s port remap, `removeNode`'s
-  bridge wire) into pure functions (they become the start of `src/graph/`, step 3).
-- Not atomic, held together only by the 400 ms history merge: `enforceGap` and
-  `makeRoomForInserted` call `updateNodePosition` once per card; a drop onto a wire is `addNode`
-  then `replaceEdge` (`SignalChain.tsx` `onDrop`). Add `setPositions(map)` and
-  `insertOnWire(node, edge, replacements)`.
-- Wire ids are built 5 ways (`e-a-b`, `e-a-b-${Date.now()}`, `ts + 1`, `-${stamp}-${i}`,
-  `-out${i}`); `removeNode`'s bridge id has no timestamp and can collide. One `newEdge()` factory.
-- Note: a separate session may have been started from the "Fix stale L/R wires when the Relay
-  switches input" suggestion — check `git log` first.
+Every store graph action goes through `commitGraph(s, graph)`: `reconcileMainFaders` (now also
+skips handing L / R back to a bus switched to Mono, so `setNodeStereo` behaves as before) and
+`pruneRefs` (selection, help, highlighted wires, a wire being drawn). A new canvas (New, level
+change, `loadChain`) commits `{ newCanvas: true }`; undo / redo only prune. `updateNodeParams`
+now settles too — fixes the Relay → Graphic EQ / Amp stale `out-l` / `out-r` wires. Pure edits
+live in `src/graph/edits.ts` (`newEdge`, `withNodes`, `withoutNode(s)`, `withNodeOnWire`,
+`withPositions`, `withStereo`); `replaceEdge` / `updateNodePosition` are gone (`insertOnWire`,
+`setPositions`), `enforceGap` returns its moves, `attachMainFaders` is internal.
+
+Left as it was, on purpose: a level change keeps the clipboard (it is a snapshot, and the only way
+to carry elements to another level). The cards that slide aside after a drop onto a wire are still
+a second change (they wait for the card to be measured), joined to the drop by the 400 ms merge.
+
+Found while testing, not fixed (old behaviour): switching a stereo Aux with a Main Fader and a
+Graphic EQ after it to Mono and back to Stereo moves the Matrix send from the Main Fader onto the
+Graphic EQ (`attachMainFaders` turns the fader's `out` wire to the matrix into `out-l`, which then
+follows the L / R to the EQ).
 
 ## 3. `src/graph/` and `src/signal/`
 

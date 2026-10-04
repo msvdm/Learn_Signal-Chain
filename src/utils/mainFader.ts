@@ -61,7 +61,7 @@ function takeovers(graph: GraphView): Map<string, string> {
  * Also tidies cards whose layout changed: one that no longer splits folds its L / R / Mix wires
  * back onto its one output; one that now splits moves its one-output wires to L.
  */
-export function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[] {
+function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[] {
   const byId = new Map(nodes.map((n) => [n.id, n]))
   let next = edges
 
@@ -117,16 +117,17 @@ export function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): Sign
 }
 
 /**
- * After wires or cards were removed: a card left without anything taking over its mix gets
- * its L / R wires back from the card that had them (even if that card was deleted). Other wires
- * on its Mix output fall back to its L output — one side cannot carry the whole mix.
+ * After any change to the graph: a card left without anything taking over its mix gets its L / R
+ * wires back from the card that had them (even if that card was deleted) — unless it can no longer
+ * split its mix (a bus switched to Mono). Other wires on its Mix output fall back to its L output —
+ * one side cannot carry the whole mix. Ends with attachMainFaders.
  */
 export function reconcileMainFaders(prev: GraphView, next: GraphView): SignalEdge[] {
   const before = takeovers(prev)
   const after  = takeovers(next)
   const kept   = new Set(after.values())
-  const lost   = [...before].filter(([card, holder]) =>
-    !after.has(card) && !kept.has(holder) && next.nodes.some((n) => n.id === holder))
+  const canHold = (id: string) => next.nodes.some((n) => n.id === id && (isStereoBus(n) || SPLIT_TYPES.has(n.typeKey)))
+  const lost   = [...before].filter(([card, holder]) => !after.has(card) && !kept.has(holder) && canHold(holder))
   if (lost.length === 0) return attachMainFaders(next.nodes, next.edges)
 
   const holderOf   = new Map(lost)

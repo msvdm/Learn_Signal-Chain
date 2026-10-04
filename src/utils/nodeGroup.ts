@@ -1,6 +1,7 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, matrixSendParam } from '../data/nodeRegistry'
 import { nodeAcceptsWire, portAcceptsWire } from './connectionRules'
+import { newEdge } from '../graph/edits'
 import { GRID, MIN_NODE_GAP } from './layoutHelpers'
 import type { Pt } from './layoutHelpers'
 
@@ -140,27 +141,25 @@ export function cloneGroup(
     color:    NODE_REGISTRY[n.typeKey]?.category === 'source' ? undefined : n.color,
   }))
 
-  const edges: SignalEdge[] = group.edges.map((e, i) => ({
+  const edges: SignalEdge[] = group.edges.map((e) => newEdge({
     ...e,
-    id:        `e-${ids.get(e.source)}-${ids.get(e.target)}-${stamp}-${i}`,
     source:    ids.get(e.source)!,
     target:    ids.get(e.target)!,
     waypoints: e.waypoints?.map(move),
   }))
 
   const allNodes = [...graph.nodes, ...nodes]
-  group.outEdges.forEach((e, i) => {
+  for (const e of group.outEdges) {
     const target = graph.nodes.find((n) => n.id === e.target)
     const source = { nodeId: ids.get(e.source)!, handleId: e.sourceHandle }
     const all    = [...graph.edges, ...edges]
     if (!target || !nodeAcceptsWire(target, source, all, allNodes) ||
-        !portAcceptsWire(target, e.targetHandle, all, source)) return
-    edges.push({
-      id: `e-${source.nodeId}-${e.target}-${stamp}-out${i}`,
+        !portAcceptsWire(target, e.targetHandle, all, source)) continue
+    edges.push(newEdge({
       source: source.nodeId, sourceHandle: e.sourceHandle,
       target: e.target, targetHandle: e.targetHandle,
-    })
-  })
+    }))
+  }
 
   return { nodes, edges }
 }

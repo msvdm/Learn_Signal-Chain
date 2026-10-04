@@ -3,12 +3,14 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
-import type { NodeParamValue, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, getPorts } from '../data/nodeRegistry'
-import { pickChainColor } from '../utils/chainColors'
-import { attachMainFaders, reconcileMainFaders } from '../utils/mainFader'
+import type { NodeParamValue, SignalNode, SignalEdge, GraphView } from '../data/nodeRegistry'
+import { reconcileMainFaders } from '../utils/mainFader'
+import {
+  withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,
+} from '../graph/edits'
 import type { ToolMode, LeftTool } from '../types'
 import type { NodeGroup } from '../utils/nodeGroup'
+import type { Pt } from '../utils/layoutHelpers'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
 import { parseChainFile, toChainFile } from '../utils/chainFile'
 
@@ -18,10 +20,9 @@ export type { ToolMode, LeftTool } from '../types'
 export type Theme = 'dark' | 'light'
 
 /** The whole graph, as one undo step remembers it. */
-interface GraphSnapshot {
-  nodes: import('../data/nodeRegistry').SignalNode[]
-  edges: import('../data/nodeRegistry').SignalEdge[]
-}
+type GraphSnapshot = GraphView
+
+const EMPTY_GRAPH: GraphSnapshot = { nodes: [], edges: [] }
 
 /** The output port a wire is currently being drawn from (null when idle). */
 export interface WireSource {
@@ -107,8 +108,8 @@ interface SignalChainStore {
   /** A short message at the bottom of the screen ("Link copied"); `id` restarts its timer */
   notice: { text: string; error: boolean; id: number } | null
 
-  nodes: import('../data/nodeRegistry').SignalNode[]
-  edges: import('../data/nodeRegistry').SignalEdge[]
+  nodes: SignalNode[]
+  edges: SignalEdge[]
 
   setLanguage: (lang: Lang) => void
   setTheme: (theme: Theme) => void
@@ -137,23 +138,25 @@ interface SignalChainStore {
   clearNotice: () => void
   resetAll: () => void
 
-  addNode: (node: import('../data/nodeRegistry').SignalNode) => void
+  addNode: (node: SignalNode) => void
+  /** Remove one element; if it had one wire in and one out, they are joined */
   removeNode: (nodeId: string) => void
   /** Remove several elements at once (no bridging wire, unlike removing one) */
   removeNodes: (nodeIds: string[]) => void
   /** Add pasted / duplicated elements with their wires, and select them */
-  addGroup: (nodes: import('../data/nodeRegistry').SignalNode[], edges: import('../data/nodeRegistry').SignalEdge[]) => void
+  addGroup: (nodes: SignalNode[], edges: SignalEdge[]) => void
+  /** Add an element in the middle of a wire, in one step (a card dropped onto a wire) */
+  insertOnWire: (node: SignalNode, edgeId: string) => void
   updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
   toggleBypassNode: (nodeId: string) => void
   setNodeStereo: (nodeId: string, on: boolean) => void
-  addEdge: (edge: import('../data/nodeRegistry').SignalEdge) => void
+  addEdge: (edge: SignalEdge) => void
   removeEdge: (edgeId: string) => void
-  /** Swap one wire for others in one step (a card dropped onto a wire). */
-  replaceEdge: (edgeId: string, replacements: import('../data/nodeRegistry').SignalEdge[]) => void
-  updateEdgeWaypoints: (edgeId: string, waypoints: { x: number; y: number }[]) => void
-  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
+  updateEdgeWaypoints: (edgeId: string, waypoints: Pt[]) => void
+  /** Move elements to new positions, in one step (cards making room for a new wire or card) */
+  setPositions: (moves: Map<string, Pt>) => void
   /** Move several elements by the same distance; wires between them take their bends along */
-  moveNodes: (nodeIds: string[], delta: { x: number; y: number }) => void
+  moveNodes: (nodeIds: string[], delta: Pt) => void
 }
 
 const initialTheme = getInitialTheme()
@@ -238,11 +241,10 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   setComplexityLevel: (level) => {
     localStorage.setItem('lsc-complexity-level', level)
     // A new level starts a new history: its palette has other elements
-    withoutHistory(() => set({
-      complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
-      selectedNodeIds: [], toolMode: 'select', wireSource: null, past: [], future: [], chainName: '',
-      nodes: [], edges: [],
-    }))
+    withoutHistory(() => set((s) => ({
+      ...commitGraph(s, EMPTY_GRAPH, { newCanvas: true }),
+      complexityLevel: level, past: [], future: [], chainName: '',
+    })))
   },
 
   setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wireSource: null } : { toolMode: mode }),
@@ -260,11 +262,10 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   offerChain: (offer) => set({ chainOffer: offer }),
 
   loadChain: (chain) => {
-    const apply = () => set({
-      nodes: chain.nodes, edges: chain.edges, chainName: chain.name, complexityLevel: chain.level,
-      chainOffer: null, activeTooltipId: null, activeTooltipTypeKey: null, selectedNodeIds: [],
-      highlightEdgeIds: [], toolMode: 'select', wireSource: null,
-    })
+    const apply = () => set((s) => ({
+      ...commitGraph(s, chain, { newCanvas: true }),
+      chainName: chain.name, complexityLevel: chain.level, chainOffer: null,
+    }))
     if (chain.level === get().complexityLevel) { apply(); return }   // one undo step
     // Another level starts a new history, like switching level in the header
     localStorage.setItem('lsc-complexity-level', chain.level)
@@ -282,178 +283,118 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   clearNotice: () => set({ notice: null }),
 
   resetAll: () =>
-    set({
-      activeTooltipId: null,
-      activeTooltipTypeKey: null,
-      selectedNodeIds: [],
-      toolMode: 'select',
-      wireSource: null,
-      chainName: '',
-      nodes: [], edges: [],
-    }),
+    set((s) => ({ ...commitGraph(s, EMPTY_GRAPH, { newCanvas: true }), chainName: '' })),
 
   // ── Graph mutations ───────────────────────────────────────────────────────
+  // Every one goes through commitGraph (below)
 
-  addNode: (node) =>
-    set((s) => {
-      // Each source starts a chain — tag it with its own colour
-      const isSource = NODE_REGISTRY[node.typeKey]?.category === 'source'
-      const tagged   = isSource && !node.color ? { ...node, color: pickChainColor(s.nodes) } : node
-      return { nodes: [...s.nodes, tagged] }
-    }),
+  // Each source starts a chain — tagged with its own colour
+  addNode: (node) => set((s) => commitGraph(s, withNodes(s, [node]))),
 
-  removeNode: (nodeId) =>
-    set((s) => {
-      const nodes    = s.nodes.filter((n) => n.id !== nodeId)
-      const inEdges  = s.edges.filter((e) => e.target === nodeId)
-      const outEdges = s.edges.filter((e) => e.source === nodeId)
-      const filteredEdges = s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
-      // Removing a Main Fader (or what fed it) hands the L / R wires back to the bus
-      const settle = (edges: SignalEdge[]) => reconcileMainFaders(s, { nodes, edges })
+  // Removing a Main Fader (or what fed it) hands the L / R wires back to the bus
+  removeNode: (nodeId) => set((s) => commitGraph(s, withoutNode(s, nodeId))),
 
-      // Drop help / selection that pointed at the removed node
-      const cleared = {
-        ...(s.activeTooltipId === nodeId ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
-        ...(s.selectedNodeIds.includes(nodeId) ? { selectedNodeIds: s.selectedNodeIds.filter((id) => id !== nodeId) } : {}),
-      }
+  removeNodes: (nodeIds) => set((s) => commitGraph(s, withoutNodes(s, nodeIds))),
 
-      // Bridge: if exactly one in and one out, reconnect them directly
-      if (inEdges.length === 1 && outEdges.length === 1) {
-        const bridge = {
-          id: `e-${inEdges[0].source}-${outEdges[0].target}`,
-          source: inEdges[0].source,
-          sourceHandle: inEdges[0].sourceHandle,
-          target: outEdges[0].target,
-          targetHandle: outEdges[0].targetHandle,
-        }
-        return { ...cleared, nodes, edges: settle([...filteredEdges, bridge]) }
-      }
-
-      return { ...cleared, nodes, edges: settle(filteredEdges) }
-    }),
-
-  removeNodes: (nodeIds) =>
-    set((s) => {
-      const gone  = new Set(nodeIds)
-      const nodes = s.nodes.filter((n) => !gone.has(n.id))
-      const edges = s.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target))
-      return {
-        nodes,
-        edges: reconcileMainFaders(s, { nodes, edges }),
-        selectedNodeIds: s.selectedNodeIds.filter((id) => !gone.has(id)),
-        highlightEdgeIds: [],
-        ...(s.activeTooltipId && gone.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
-      }
-    }),
-
+  // Each copied source starts a chain of its own colour
   addGroup: (added, addedEdges) =>
-    set((s) => {
-      // Each copied source starts a chain of its own colour
-      let nodes = s.nodes
-      for (const n of added) {
-        const isSource = NODE_REGISTRY[n.typeKey]?.category === 'source'
-        nodes = [...nodes, isSource && !n.color ? { ...n, color: pickChainColor(nodes) } : n]
-      }
-      return {
-        nodes,
-        edges: attachMainFaders(nodes, [...s.edges, ...addedEdges]),
-        selectedNodeIds: added.map((n) => n.id),
-      }
-    }),
+    set((s) => ({ ...commitGraph(s, withNodes(s, added, addedEdges)), selectedNodeIds: added.map((n) => n.id) })),
 
+  // One step, so a card dropped onto a Mix wire does not unplug the Main Fader on the way
+  insertOnWire: (node, edgeId) => set((s) => commitGraph(s, withNodeOnWire(s, node, edgeId))),
+
+  // A Relay switching input can change what reaches a Graphic EQ / Amplifier after it (Mono ↔ Stereo)
   updateNodeParams: (nodeId, patch) =>
-    set((s) => ({
-      nodes: s.nodes.map((n) =>
-        n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n
-      ),
+    set((s) => commitGraph(s, {
+      nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n)),
+      edges: s.edges,
     })),
 
   toggleBypassNode: (nodeId) =>
-    set((s) => ({
-      nodes: s.nodes.map((n) =>
-        n.id === nodeId ? { ...n, bypassed: !n.bypassed } : n
-      ),
+    set((s) => commitGraph(s, {
+      nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, bypassed: !n.bypassed } : n)),
+      edges: s.edges,
     })),
 
+  // A fader on the new L output becomes the Main Fader; one that lost its Mix wire is plain again
   setNodeStereo: (nodeId, on) =>
     set((s) => {
-      const node = s.nodes.find((n) => n.id === nodeId)
-      if (!node || NODE_REGISTRY[node.typeKey]?.stereo !== 'optional') return {}
-      if ((node.params.stereo === true) === on) return {}
-
-      const updated = { ...node, params: { ...node.params, stereo: on } }
-      const outIds  = new Set(getPorts(updated).outputs.map((p) => p.id))
-
-      // Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l'
-      // (into a Matrix Bus it then becomes the Matrix send); Stereo → Mono moves 'out-l', 'out-r',
-      // the Matrix send and a Main Fader's 'mix' back to 'out'.
-      function remap(portId: string): string | null {
-        if (outIds.has(portId)) return portId
-        if (on) return outIds.has(`${portId}-l`) ? `${portId}-l` : null
-        const base = portId === MIX_PORT || portId === MATRIX_PORT ? 'out' : portId.replace(/-[lr]$/, '')
-        return outIds.has(base) ? base : null
-      }
-
-      const edges: SignalEdge[] = []
-      for (const e of s.edges) {
-        let next = e
-        if (e.source === nodeId) {
-          const h = remap(e.sourceHandle)
-          if (!h) continue
-          next = { ...next, sourceHandle: h }
-        }
-        // Left and right wires to the same input collapse into one — keep one
-        const dup = edges.some((x) =>
-          x.source === next.source && x.sourceHandle === next.sourceHandle &&
-          x.target === next.target && x.targetHandle === next.targetHandle)
-        if (!dup) edges.push(next)
-      }
-
-      // A fader on the new L output becomes the Main Fader; one that lost its Mix wire is plain again
-      const nodes = s.nodes.map((n) => (n.id === nodeId ? updated : n))
-      return { nodes, edges: attachMainFaders(nodes, edges) }
+      const next = withStereo(s, nodeId, on)
+      return next ? commitGraph(s, next) : {}
     }),
 
   // A Fader wired to a stereo bus's L or R becomes its Main Fader (see utils/mainFader.ts)
-  addEdge: (edge) =>
-    set((s) => ({ edges: attachMainFaders(s.nodes, [...s.edges, edge]) })),
+  addEdge: (edge) => set((s) => commitGraph(s, { nodes: s.nodes, edges: [...s.edges, edge] })),
 
   // Unplugging a Main Fader hands the bus's L / R wires back to the bus
   removeEdge: (edgeId) =>
-    set((s) => ({
-      edges: reconcileMainFaders(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) }),
-      ...(s.highlightEdgeIds.includes(edgeId) ? { highlightEdgeIds: [] } : {}),
-    })),
-
-  // One step, so a card dropped onto a Mix wire does not unplug the Main Fader on the way
-  replaceEdge: (edgeId, replacements) =>
-    set((s) => ({
-      edges: reconcileMainFaders(s, { nodes: s.nodes, edges: [...s.edges.filter((e) => e.id !== edgeId), ...replacements] }),
-      ...(s.highlightEdgeIds.includes(edgeId) ? { highlightEdgeIds: [] } : {}),
-    })),
+    set((s) => commitGraph(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) })),
 
   updateEdgeWaypoints: (edgeId, waypoints) =>
-    set((s) => ({
-      edges: s.edges.map((e) => e.id === edgeId ? { ...e, waypoints } : e),
+    set((s) => commitGraph(s, {
+      nodes: s.nodes,
+      edges: s.edges.map((e) => (e.id === edgeId ? { ...e, waypoints } : e)),
     })),
 
-  updateNodePosition: (nodeId, position) =>
-    set((s) => ({
-      nodes: s.nodes.map((n) => n.id === nodeId ? { ...n, position } : n),
-    })),
+  setPositions: (moves) => set((s) => (moves.size === 0 ? {} : commitGraph(s, withPositions(s, moves)))),
 
   moveNodes: (nodeIds, delta) =>
     set((s) => {
       const moving = new Set(nodeIds)
-      const move   = (p: { x: number; y: number }) => ({ x: p.x + delta.x, y: p.y + delta.y })
-      return {
+      const move   = (p: Pt) => ({ x: p.x + delta.x, y: p.y + delta.y })
+      return commitGraph(s, {
         nodes: s.nodes.map((n) => (moving.has(n.id) ? { ...n, position: move(n.position) } : n)),
         edges: s.edges.map((e) => (moving.has(e.source) && moving.has(e.target) && e.waypoints
           ? { ...e, waypoints: e.waypoints.map(move) }
           : e)),
-      }
+      })
     }),
 }))
+
+// ── One way into the graph ──────────────────────────────────────────────────
+
+/** No wire is being drawn (a new canvas, undo / redo: the wire's start may be gone or have moved). */
+const NO_WIRE = { toolMode: 'select', wireSource: null } as const
+
+/**
+ * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
+ * plugging or unplugging a wire, removing an element, switching a bus to Mono or a Relay to its
+ * other input can each change it (utils/mainFader.ts) — and drops what pointed at elements or
+ * wires that are gone. A new canvas (New, a level change, an opened chain) comes from nothing:
+ * nothing is handed back to it, and nothing that pointed at the old canvas is kept, even where
+ * the new one reuses its ids.
+ */
+function commitGraph(
+  s: SignalChainStore,
+  graph: GraphView,
+  { newCanvas = false } = {},
+): Partial<SignalChainStore> {
+  const prev    = newCanvas ? EMPTY_GRAPH : s
+  const settled = reconcileMainFaders(prev, graph)
+  // Unchanged wires keep the same array, so what watches only the wires does not re-render
+  const edges   = settled.length === graph.edges.length && settled.every((e, i) => e === graph.edges[i])
+    ? graph.edges
+    : settled
+  const next = { nodes: graph.nodes, edges }
+  return { ...next, ...pruneRefs(s, newCanvas ? EMPTY_GRAPH : next), ...(newCanvas ? NO_WIRE : {}) }
+}
+
+/**
+ * The selection, the help popover, highlighted wires and a wire being drawn, kept only where
+ * they still point at an element or wire of `graph`. Only what changes is returned.
+ */
+function pruneRefs(s: SignalChainStore, graph: GraphView): Partial<SignalChainStore> {
+  const nodeIds   = new Set(graph.nodes.map((n) => n.id))
+  const edgeIds   = new Set(graph.edges.map((e) => e.id))
+  const selected  = s.selectedNodeIds.filter((id) => nodeIds.has(id))
+  const highlight = s.highlightEdgeIds.filter((id) => edgeIds.has(id))
+  return {
+    ...(selected.length < s.selectedNodeIds.length ? { selectedNodeIds: selected } : {}),
+    ...(highlight.length < s.highlightEdgeIds.length ? { highlightEdgeIds: highlight } : {}),
+    ...(s.activeTooltipId && !nodeIds.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
+    ...(s.wireSource && !nodeIds.has(s.wireSource.nodeId) ? NO_WIRE : {}),
+  }
+}
 
 // ── History (undo / redo) ───────────────────────────────────────────────────
 // Every change to the graph is remembered, wherever it comes from. Changes that follow each
@@ -473,19 +414,13 @@ function withoutHistory(fn: () => void) {
   inStep = false
 }
 
-/** The graph back as it was in `step`; selection and help that point at missing elements are dropped. */
+/**
+ * The graph back as it was in `step`; what pointed at missing elements is dropped. Not through
+ * commitGraph: a step was settled when it was made, and the takeover rules would hand wires back
+ * across the jump.
+ */
 function restore(s: SignalChainStore, step: GraphSnapshot): Partial<SignalChainStore> {
-  const ids = new Set(step.nodes.map((n) => n.id))
-  return {
-    nodes: step.nodes,
-    edges: step.edges,
-    selectedNodeIds: s.selectedNodeIds.filter((id) => ids.has(id)),
-    highlightEdgeIds: [],
-    // A wire being drawn may start from an element that is gone
-    toolMode: 'select',
-    wireSource: null,
-    ...(s.activeTooltipId && !ids.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
-  }
+  return { nodes: step.nodes, edges: step.edges, ...pruneRefs(s, step), ...NO_WIRE }
 }
 
 useSignalStore.subscribe((s, prev) => {

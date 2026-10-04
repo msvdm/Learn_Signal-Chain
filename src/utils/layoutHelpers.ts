@@ -165,17 +165,11 @@ function gapMoves(srcId: string, tgtIds: string[], nodes: FlowNode[], edges: Sig
 }
 
 /**
- * Ensure a new src→tgt wire has room: tgt starts at least MIN_NODE_GAP right of src (see gapMoves).
- * `edges` are the wires before this one.
+ * New positions that give a new src→tgt wire room: tgt starts at least MIN_NODE_GAP right of src
+ * (see gapMoves). `edges` are the wires before this one.
  */
-export function enforceGap(
-  srcId: string,
-  tgtId: string,
-  nodes: FlowNode[],
-  edges: SignalEdge[],
-  updatePos: (id: string, pos: Pt) => void,
-) {
-  for (const [id, pos] of gapMoves(srcId, [tgtId], nodes, edges)) updatePos(id, pos)
+export function enforceGap(srcId: string, tgtId: string, nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+  return gapMoves(srcId, [tgtId], nodes, edges)
 }
 
 /**
