@@ -62,7 +62,8 @@ function ReshapeHandles() {
       if (e.button !== 0) return
       setReshaping({ edgeId, ...handle, livePos: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
     },
-    onMouseDown: (e: React.MouseEvent) => { if (e.button === 0) e.stopPropagation() },
+    // (No text selection while dragging, e.g. React Flow's attribution under the pointer)
+    onMouseDown: (e: React.MouseEvent) => { if (e.button === 0) { e.stopPropagation(); e.preventDefault() } },
   })
 
   return (

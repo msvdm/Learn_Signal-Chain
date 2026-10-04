@@ -41,7 +41,10 @@ export function useCanvasShortcuts(wrapperRef: RefObject<HTMLDivElement | null>,
         else store.setSelection([])
         return
       }
-      if (pressedInside(e, '[role="menu"], [role="dialog"]')) return
+      // Not in a menu or dialog (they have keys of their own), nor while a modal dialog is open
+      // (New, a level change, an opened chain: the focus may be anywhere in it, even on the page)
+      if (pressedInside(e, '[role="menu"], [role="dialog"], [role="alertdialog"]')) return
+      if (document.querySelector('[aria-modal="true"]')) return
       const a   = actionsRef.current
       const ids = store.selectedNodeIds
       if (e.key === 'Delete' || e.key === 'Backspace') {

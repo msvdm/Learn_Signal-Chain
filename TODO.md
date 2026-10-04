@@ -190,11 +190,17 @@ Kept on purpose:
     above, or its bus removed).
   A decision for later: refusing them is probably right (the card is then placed freely).
 
-Found while testing, not fixed (the same in HEAD, checked side by side):
-- The canvas keys (Delete, Ctrl+Z …) act while a confirm dialog has the focus — New, a level change,
-  the open dialog: they are `role="alertdialog"`, which the guard does not list. Delete with
-  "Start over?" open removes the selection.
-- Dragging a reshape handle selects the "React Flow" attribution text (no `preventDefault`).
+Found while testing, fixed after (both the same in HEAD, checked side by side):
+- ~~The canvas keys (Delete, Ctrl+Z …) act while a confirm dialog has the focus — New, a level
+  change, the open dialog: they are `role="alertdialog"`, which the guard does not list. Delete
+  with "Start over?" open removes the selection.~~ The canvas keys now wait while a modal dialog
+  is open (`aria-modal`), wherever the focus is. Checked with real keys: Delete and Ctrl+A do
+  nothing with New's dialog open, Esc closes it keeping the selection, Delete works afterwards.
+  (Ctrl+A on the dialog's buttons is now the browser's own select-all.)
+- ~~Dragging a reshape handle selects the "React Flow" attribution text (no `preventDefault`).~~
+  The handle's left `mousedown` is also `preventDefault`ed (not its `pointerdown`: that would stop
+  the mouse events the drag follows). Checked: a corner dragged across the header and the
+  attribution moves, and nothing is selected.
 
 Checked in the browser with real clicks: wiring with corners, the snap ring, Esc / right-click
 cancel, Ctrl+Z while drawing, the Select ↔ Connect switch, unplugging; dragging corners and
