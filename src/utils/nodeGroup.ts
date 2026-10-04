@@ -83,6 +83,30 @@ export function duplicateOffset(group: NodeGroup, dir: Direction, others: Placed
   return clearOffset(group, { x: step.x * dx, y: step.y * dy }, dir, others)
 }
 
+/**
+ * How far a group from somewhere else (an opened file) moves to sit beside everything on the
+ * canvas in `dir`: lined up with the canvas's top (left / right) or left edge (up / down),
+ * MIN_NODE_GAP away, clear of every element.
+ */
+export function besideOffset(group: NodeGroup, dir: Direction, others: Placed[]): Pt {
+  if (others.length === 0) return { x: 0, y: 0 }
+  const box = groupBox(group)
+  const all = {
+    left:   Math.min(...others.map((o) => o.position.x)),
+    top:    Math.min(...others.map((o) => o.position.y)),
+    right:  Math.max(...others.map((o) => o.position.x + o.size.w)),
+    bottom: Math.max(...others.map((o) => o.position.y + o.size.h)),
+  }
+  const x = { left: all.left - MIN_NODE_GAP - box.right, right: all.right + MIN_NODE_GAP - box.left }
+  const y = { up: all.top - MIN_NODE_GAP - box.bottom, down: all.bottom + MIN_NODE_GAP - box.top }
+  // Whole grid steps away from the canvas, so grid-snapped elements stay snapped
+  const away  = (v: number, sign: number) => sign * toGrid(sign * v)
+  const start = dir === 'left' || dir === 'right'
+    ? { x: away(x[dir], STEP[dir].x), y: Math.round((all.top - box.top) / GRID) * GRID }
+    : { x: Math.round((all.left - box.left) / GRID) * GRID, y: away(y[dir], STEP[dir].y) }
+  return clearOffset(group, start, dir, others)
+}
+
 /** How far a pasted group moves so its top-left corner lands at `at`, clear of every element. */
 export function pasteOffset(group: NodeGroup, at: Pt, others: Placed[]): Pt {
   const box = groupBox(group)

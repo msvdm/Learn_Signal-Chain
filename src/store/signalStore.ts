@@ -8,11 +8,15 @@ import { pickChainColor } from '../utils/chainColors'
 import { attachMainFaders, reconcileMainFaders } from '../utils/mainFader'
 import type { ToolMode, LeftTool } from '../types'
 import type { NodeGroup } from '../utils/nodeGroup'
+import type { ChainFile, ParsedChain } from '../utils/chainFile'
+import { parseChainFile, toChainFile } from '../utils/chainFile'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 export type { ToolMode, LeftTool } from '../types'
 
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
+/** The levels from easiest to hardest */
+export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
 export type Theme = 'dark' | 'light'
 
 /** The whole graph, as one undo step remembers it. */
@@ -59,6 +63,21 @@ function getInitialComplexityLevel(): ComplexityLevel {
   return 'beginner'
 }
 
+/** The autosaved canvas (see the autosave section at the bottom) */
+const CANVAS_KEY = 'lsc-canvas'
+
+/** The canvas as it was left, at the level it was made at (blank when there is none). */
+function getInitialCanvas() {
+  try {
+    const saved = parseChainFile(JSON.parse(localStorage.getItem(CANVAS_KEY) ?? 'null'))
+    if (saved && saved.chain.nodes.length > 0) {
+      const { nodes, edges, name, level } = saved.chain
+      return { nodes, edges, chainName: name, complexityLevel: level }
+    }
+  } catch { /* a broken save: start blank */ }
+  return { ...buildDefaultGraph(), chainName: '', complexityLevel: getInitialComplexityLevel() }
+}
+
 interface SignalChainStore {
   language: Lang
   theme: Theme
@@ -83,6 +102,14 @@ interface SignalChainStore {
   highlightEdgeIds: string[]
   /** Zoomed out far enough that cards show only their name and output level (set by SignalChain, not persisted). */
   overview: boolean
+  /** A picture of the canvas is being taken: cards show their controls whatever the zoom */
+  capturing: boolean
+  /** The name the chain was last saved or opened as (autosaved; suggested when saving) */
+  chainName: string
+  /** An opened chain waiting for the learner to choose: replace the canvas or add it beside */
+  chainOffer: ParsedChain | null
+  /** A short message at the bottom of the screen ("Link copied"); `id` restarts its timer */
+  notice: { text: string; error: boolean; id: number } | null
 
   nodes: import('../data/nodeRegistry').SignalNode[]
   edges: import('../data/nodeRegistry').SignalEdge[]
@@ -103,6 +130,15 @@ interface SignalChainStore {
   setWireSource: (source: WireSource | null) => void
   setHighlightEdges: (edgeIds: string[]) => void
   setOverview: (on: boolean) => void
+  setCapturing: (on: boolean) => void
+  setChainName: (name: string) => void
+  offerChain: (offer: ParsedChain | null) => void
+  /** Replace the canvas with a chain, at the level it was made at */
+  loadChain: (chain: ChainFile) => void
+  /** Go up to `level` if it is harder than the current one, keeping the canvas (a chain added from a file) */
+  raiseLevel: (level: ComplexityLevel) => void
+  showNotice: (text: string, error?: boolean) => void
+  clearNotice: () => void
   resetAll: () => void
 
   addNode: (node: import('../data/nodeRegistry').SignalNode) => void
@@ -126,13 +162,13 @@ interface SignalChainStore {
 
 const initialTheme = getInitialTheme()
 applyTheme(initialTheme)
+const initialCanvas = getInitialCanvas()
 
 export const useSignalStore = create<SignalChainStore>((set, get) => ({
   language: getInitialLanguage(),
   theme: initialTheme,
   snapToGrid: getInitialSnapToGrid(),
   paletteOpen: getInitialPaletteOpen(),
-  complexityLevel: getInitialComplexityLevel(),
   activeTooltipId: null,
   activeTooltipTypeKey: null,
   selectedNodeIds: [],
@@ -144,8 +180,11 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   wireSource: null,
   highlightEdgeIds: [],
   overview: false,
+  capturing: false,
+  chainOffer: null,
+  notice: null,
 
-  ...buildDefaultGraph(),
+  ...initialCanvas,
 
   setLanguage: (lang) => {
     localStorage.setItem('lsc-language', lang)
@@ -205,7 +244,8 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     // A new level starts a new history: its palette has other elements
     withoutHistory(() => set({
       complexityLevel: level, activeTooltipId: null, activeTooltipTypeKey: null,
-      selectedNodeIds: [], toolMode: 'select', wireSource: null, past: [], future: [], ...buildDefaultGraph(),
+      selectedNodeIds: [], toolMode: 'select', wireSource: null, past: [], future: [], chainName: '',
+      ...buildDefaultGraph(),
     }))
   },
 
@@ -217,6 +257,34 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
   setOverview: (on) => set({ overview: on }),
 
+  setCapturing: (on) => set(on ? { capturing: true, overview: false } : { capturing: false }),
+
+  setChainName: (name) => set({ chainName: name }),
+
+  offerChain: (offer) => set({ chainOffer: offer }),
+
+  loadChain: (chain) => {
+    const apply = () => set({
+      nodes: chain.nodes, edges: chain.edges, chainName: chain.name, complexityLevel: chain.level,
+      chainOffer: null, activeTooltipId: null, activeTooltipTypeKey: null, selectedNodeIds: [],
+      highlightEdgeIds: [], toolMode: 'select', wireSource: null,
+    })
+    if (chain.level === get().complexityLevel) { apply(); return }   // one undo step
+    // Another level starts a new history, like switching level in the header
+    localStorage.setItem('lsc-complexity-level', chain.level)
+    withoutHistory(() => { apply(); set({ past: [], future: [] }) })
+  },
+
+  raiseLevel: (level) => {
+    if (LEVELS.indexOf(level) <= LEVELS.indexOf(get().complexityLevel)) return
+    localStorage.setItem('lsc-complexity-level', level)
+    set({ complexityLevel: level })
+  },
+
+  showNotice: (text, error = false) => set({ notice: { text, error, id: Date.now() } }),
+
+  clearNotice: () => set({ notice: null }),
+
   resetAll: () =>
     set((s) => ({
       activeTooltipId: null,
@@ -225,6 +293,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
       complexityLevel: s.complexityLevel,
       toolMode: 'select',
       wireSource: null,
+      chainName: '',
       ...buildDefaultGraph(),
     })),
 
@@ -436,3 +505,27 @@ useSignalStore.subscribe((s, prev) => {
     future: [],
   })
 })
+
+// ── Autosave ────────────────────────────────────────────────────────────────
+// The canvas is kept in the browser, so a refresh or reopening the tab brings it back. Written
+// shortly after the last change (a knob being turned writes once), and when the page is left.
+
+const SAVE_QUIET_MS = 300
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+
+function saveCanvas() {
+  clearTimeout(saveTimer)
+  saveTimer = undefined
+  const { nodes, edges, chainName, complexityLevel } = useSignalStore.getState()
+  const chain = toChainFile({ nodes, edges, outEdges: [], sizes: {} }, chainName, complexityLevel)
+  try { localStorage.setItem(CANVAS_KEY, JSON.stringify(chain)) } catch { /* storage full or blocked */ }
+}
+
+useSignalStore.subscribe((s, prev) => {
+  if (s.nodes === prev.nodes && s.edges === prev.edges &&
+      s.chainName === prev.chainName && s.complexityLevel === prev.complexityLevel) return
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(saveCanvas, SAVE_QUIET_MS)
+})
+
+window.addEventListener('pagehide', () => { if (saveTimer) saveCanvas() })

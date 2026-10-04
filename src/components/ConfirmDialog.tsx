@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ConfirmDialogProps {
@@ -8,14 +9,18 @@ interface ConfirmDialogProps {
   cancelLabel: string
   onConfirm: () => void
   onCancel: () => void
+  /** More content under the body (a name field, other choices) */
+  children?: ReactNode
 }
 
 /** In-app replacement for window.confirm. Enter confirms, Escape / backdrop cancels. */
-export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfirm, onCancel, children }: ConfirmDialogProps) {
+  const dialogRef  = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    confirmRef.current?.focus()
+    // A field in `children` that took the focus (autoFocus) keeps it
+    if (!dialogRef.current?.contains(document.activeElement)) confirmRef.current?.focus()
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -37,6 +42,7 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfir
       }}
     >
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="lsc-dialog-title"
@@ -52,6 +58,7 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfir
           <p id="lsc-dialog-body" style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--lsc-fg-muted)' }}>
             {body}
           </p>
+          {children}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: 16 }}>
           <button

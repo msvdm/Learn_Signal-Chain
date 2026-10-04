@@ -12,8 +12,11 @@ export function useMediaQuery(query: string): boolean {
   )
 }
 
-/** Tablet layout: palette collapses to an icon rail, header drops the tagline. */
+/** Tablet layout: palette collapses to an icon rail. */
 export const TABLET_QUERY = '(max-width: 1024px)'
 
-/** Wide enough for every header button to show its text label (the longest is Bulgarian). */
-export const WIDE_HEADER_QUERY = '(min-width: 1200px)'
+/**
+ * Wide enough for the header's tagline and every button's text label (the longest is Bulgarian,
+ * about 1250px). Narrower, the tagline goes and Snap to grid / Light-Dark show only their icons.
+ */
+export const WIDE_HEADER_QUERY = '(min-width: 1280px)'

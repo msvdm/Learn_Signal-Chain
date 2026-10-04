@@ -41,13 +41,16 @@ import { ConnectingToast }     from './ConnectingToast'
 import { HelpPopover }         from './Tooltip'
 import { NodeMenu, CanvasMenu } from './NodeMenu'
 import { CanvasTools }         from './CanvasTools'
+import { ConfirmDialog }       from './ConfirmDialog'
+import { DirectionArrows }     from './DirectionArrows'
 
-import { useSignalStore }     from '../store/signalStore'
+import { useSignalStore, LEVELS } from '../store/signalStore'
 import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
 import { getHealthStyle }     from '../hooks/useGainStaging'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
+import { useChainFile }       from '../hooks/useChainFile'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 import { NODE_REGISTRY, getPorts, initialParams, isMatrixSource } from '../data/nodeRegistry'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
@@ -63,8 +66,10 @@ import { wirePassesThroughNode } from '../utils/wireValidation'
 import { chainOfEdge } from '../utils/chainColors'
 import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
 import { useTranslation } from '../i18n/useTranslation'
-import { takeGroup, cloneGroup, groupBox, duplicateOffset, pasteOffset } from '../utils/nodeGroup'
-import type { Direction, Placed } from '../utils/nodeGroup'
+import { takeGroup, cloneGroup, groupBox, duplicateOffset, pasteOffset, besideOffset } from '../utils/nodeGroup'
+import type { Direction, NodeGroup, Placed } from '../utils/nodeGroup'
+import { chainToGroup, readLink, LINK_PREFIX } from '../utils/chainFile'
+import type { ParsedChain } from '../utils/chainFile'
 
 // nodeTypes must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
@@ -189,8 +194,16 @@ export function SignalChain() {
   const setOverview           = useSignalStore((s) => s.setOverview)
   const updateNodePosition    = useSignalStore((s) => s.updateNodePosition)
   const updateEdgeWaypoints   = useSignalStore((s) => s.updateEdgeWaypoints)
+  const capturing             = useSignalStore((s) => s.capturing)
+  const chainOffer            = useSignalStore((s) => s.chainOffer)
+  const offerChain            = useSignalStore((s) => s.offerChain)
+  const loadChain             = useSignalStore((s) => s.loadChain)
+  const raiseLevel            = useSignalStore((s) => s.raiseLevel)
   const { stages, portSignal, wires } = useGraphSignal()
-  const { t }                 = useTranslation()
+  const { t, fmt }            = useTranslation()
+  const chainFile             = useChainFile()
+  // An autosaved canvas is brought on screen once it is measured (a blank one stays at 100%)
+  const [startsFilled]        = useState(() => useSignalStore.getState().nodes.length > 0)
   const chainEmpty            = useChainEmpty()
   const { screenToFlowPosition, flowToScreenPosition, getNodes, getInternalNode, fitView, setViewport } = useReactFlow()
   const flowStore             = useStoreApi()
@@ -541,11 +554,18 @@ export function SignalChain() {
     return takeGroup(ids, nodes, edges, sizeOf)
   }
 
-  /** Add a copy of `group` moved by `offset`, select it and bring it on screen. */
-  function placeCopy(group: ReturnType<typeof groupOf>, offset: Pt) {
+  /**
+   * Add a copy of `group` moved by `offset`, select it and bring it on screen (`showAll`: the
+   * whole canvas, for a chain added beside everything).
+   */
+  function placeCopy(group: NodeGroup, offset: Pt, showAll = false) {
     const { nodes, edges } = useSignalStore.getState()
     const copy = cloneGroup(group, offset, { nodes, edges })
     addGroup(copy.nodes, copy.edges)
+    if (showAll) {
+      setTimeout(() => fitView({ ...fitViewOptions, maxZoom: Math.min(1, vpZoomRef.current) }), 50)
+      return
+    }
     // Only move the camera when the copy is (partly) off screen; never zoom in
     const box    = groupBox(group)
     const tl     = flowToScreenPosition({ x: box.left + offset.x, y: box.top + offset.y })
@@ -585,6 +605,54 @@ export function SignalChain() {
     const box = groupBox(clip)
     placeCopy(clip, pasteOffset(clip, snap(at ?? { x: box.left + 2 * GRID, y: box.top + 2 * GRID }), placedNodes()))
   }
+
+  // ── Opened chains (File menu, share link, a file dropped on the canvas) ─────
+
+  /** The canvas becomes the chain (at the level it was made at). */
+  function replaceWithChain(read: ParsedChain) {
+    loadChain(read.chain)
+    setTimeout(() => fitView(fitViewOptions), 50)
+  }
+
+  /** The chain's elements join the canvas with new ids and chain colours, moved by `offsetOf`. */
+  function addChain(read: ParsedChain, offsetOf: (group: NodeGroup) => Pt, showAll = false) {
+    offerChain(null)
+    raiseLevel(read.chain.level)
+    const group = chainToGroup(read.chain)
+    placeCopy(group, offsetOf(group), showAll)
+  }
+
+  /** Right-click → Insert a saved chain here, or a file dropped at `at`: no question asked. */
+  function insertChainAt(read: ParsedChain, at: Pt) {
+    addChain(read, (group) => pasteOffset(group, snap(at), placedNodes()))
+    chainFile.skippedNotice(read)
+  }
+
+  // Onto an empty canvas an opened chain just loads; otherwise the open dialog asks
+  const chainActionsRef = useLatestRef({ replaceWithChain, skippedNotice: chainFile.skippedNotice })
+  useEffect(() => {
+    if (!chainOffer || !chainEmpty) return
+    chainActionsRef.current.replaceWithChain(chainOffer)
+    chainActionsRef.current.skippedNotice(chainOffer)
+  }, [chainOffer, chainEmpty, chainActionsRef])
+
+  // A share link (#chain=…) opens its chain. The address is cleaned first, so a refresh does not
+  // open it again.
+  const linkBrokenRef = useLatestRef(t.file.linkBroken)
+  useEffect(() => {
+    function openLink() {
+      const { hash, pathname, search } = window.location
+      if (!hash.startsWith(LINK_PREFIX)) return
+      history.replaceState(null, '', pathname + search)
+      readLink(hash).then((read) => {
+        if (read === 'broken') useSignalStore.getState().showNotice(linkBrokenRef.current, true)
+        else if (read) useSignalStore.getState().offerChain(read)
+      })
+    }
+    openLink()
+    window.addEventListener('hashchange', openLink)
+    return () => window.removeEventListener('hashchange', openLink)
+  }, [linkBrokenRef])
 
   // Keyboard: Ctrl / ⌘ + C, X, V, D (duplicate to the right), A (select everything), Z (undo),
   // Shift+Z or Y (redo); Delete removes
@@ -628,10 +696,12 @@ export function SignalChain() {
   }, [chainEmpty, setViewport])
 
   // Cards read only this flag, never the zoom itself, so a wheel tick does not re-render them all
+  // (Not while a picture is taken: it shows the cards' controls whatever the zoom)
   useEffect(() => {
+    if (capturing) return
     if (!overview && vpZoom < OVERVIEW_ENTER_ZOOM) setOverview(true)
     else if (overview && vpZoom > OVERVIEW_LEAVE_ZOOM) setOverview(false)
-  }, [vpZoom, overview, setOverview])
+  }, [vpZoom, overview, setOverview, capturing])
 
   // ── Drag & drop from the palette ────────────────────────────────────────────
 
@@ -673,6 +743,13 @@ export function SignalChain() {
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
     setDropPreview(null)
+    // A saved chain (.json or picture) dropped from the computer goes where it is dropped
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      const at = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      chainFile.readFile(file).then((read) => { if (read) insertChainAt(read, at) })
+      return
+    }
     const typeKey = e.dataTransfer.getData('application/lsc-node-type')
     if (!typeKey) return
     const def = NODE_REGISTRY[typeKey]
@@ -863,6 +940,14 @@ export function SignalChain() {
   const previewStereo = drawing.active &&
     wires.get(`${drawing.sourceNodeId}:${drawing.sourceHandleId}`)?.kind === 'stereo'
 
+  /** What opening a chain made at another level does to the level. */
+  function levelNote({ chain }: ParsedChain): string {
+    if (chain.level === complexityLevel) return ''
+    const level = t.levels[chain.level].title
+    const up    = LEVELS.indexOf(chain.level) > LEVELS.indexOf(complexityLevel)
+    return fmt(up ? t.file.levelAdd : t.file.levelReplace, { level })
+  }
+
   const wireSourceLabel = (() => {
     if (!drawing.active) return ''
     const src = graphNodes.find((n) => n.id === drawing.sourceNodeId)
@@ -910,6 +995,8 @@ export function SignalChain() {
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={null}
         nodeOrigin={[0, 0]}
+        fitView={startsFilled}
+        fitViewOptions={fitViewOptions}
         minZoom={0.15}
         maxZoom={2}
         proOptions={{ hideAttribution: false }}
@@ -1125,8 +1212,35 @@ export function SignalChain() {
           canSelectAll={graphNodes.length > 0}
           onPaste={() => pasteAt(canvasMenu.at)}
           onSelectAll={() => setSelection(graphNodes.map((n) => n.id))}
+          onInsertChain={() => {
+            const { at } = canvasMenu
+            chainFile.pickChain().then((read) => { if (read) insertChainAt(read, at) })
+          }}
           onClose={() => setCanvasMenu(null)}
         />
+      )}
+      {chainOffer && !chainEmpty && (
+        <ConfirmDialog
+          title={chainOffer.chain.name ? fmt(t.file.openTitle, { name: chainOffer.chain.name }) : t.file.openTitleUnnamed}
+          body={[
+            t.file.openBody,
+            levelNote(chainOffer),
+            chainOffer.skipped > 0 ? fmt(t.file.skipped, { count: String(chainOffer.skipped) }) : '',
+          ].filter(Boolean).join(' ')}
+          confirmLabel={t.file.replace}
+          cancelLabel={t.dialog.cancel}
+          onConfirm={() => replaceWithChain(chainOffer)}
+          onCancel={() => offerChain(null)}
+        >
+          {/* Or beside what is there — the arrows Duplicate uses */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{t.file.addBeside}</span>
+            <DirectionArrows
+              labels={{ left: t.file.addLeft, right: t.file.addRight, up: t.file.addUp, down: t.file.addDown }}
+              onPick={(dir) => addChain(chainOffer, (group) => besideOffset(group, dir, placedNodes()), true)}
+            />
+          </div>
+        </ConfirmDialog>
       )}
       {drawing.active && <ConnectingToast sourceLabel={wireSourceLabel} />}
     </div>

@@ -10,9 +10,7 @@ export interface Translations {
   app: {
     title: string
     tagline: string
-    resetButton: string
     settings: string
-    reset: string
     language: string
     level: string
     theme: { toggle: string; light: string; dark: string }
@@ -25,6 +23,47 @@ export interface Translations {
     switchTitle: string
     switchConfirm: string
     switchBody: string
+  }
+  /** Save / Open: the File menu in the header, the open dialog and their notices */
+  file: {
+    menu: string
+    menuHint: string
+    new: string
+    open: string
+    save: string
+    shareLink: string
+    picture: string
+    defaultName: string
+    nameLabel: string
+    saveTitle: string
+    saveBody: string
+    saveConfirm: string
+    pictureTitle: string
+    pictureBody: string
+    pictureConfirm: string
+    /** 'Open "{name}"?' */
+    openTitle: string
+    openTitleUnnamed: string
+    openBody: string
+    replace: string
+    addBeside: string
+    addLeft: string
+    addRight: string
+    addUp: string
+    addDown: string
+    /** Opened chain made at another level: "{level}" */
+    levelReplace: string
+    levelAdd: string
+    /** "{count}" elements of types this version does not know */
+    skipped: string
+    linkCopied: string
+    linkLong: string
+    linkFailed: string
+    linkBroken: string
+    pictureSaved: string
+    pictureFailed: string
+    notChain: string
+    noChainInPicture: string
   }
   toolbar: {
     snap: string
@@ -185,6 +224,7 @@ export interface Translations {
     duplicateUp: string
     duplicateDown: string
     selectAll: string
+    insertChain: string
     /** "{count} elements selected" */
     selected: string
     /** "Remove {count} elements" */

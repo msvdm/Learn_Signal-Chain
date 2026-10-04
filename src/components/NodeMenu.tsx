@@ -2,8 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  HelpCircle, Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect,
-  ArrowLeft, ArrowRight, ArrowUp, ArrowDown,
+  HelpCircle, Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
@@ -12,6 +11,7 @@ import { canBypass, helpKeyOf } from '../data/nodeRegistry'
 import { useLatestRef } from '../hooks/useLatestRef'
 import { MOD } from '../utils/shortcut'
 import type { Direction } from '../utils/nodeGroup'
+import { DirectionArrows } from './DirectionArrows'
 
 const MARGIN = 8
 
@@ -58,13 +58,6 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
 
   const act = (fn: () => void) => () => { fn(); onClose() }
 
-  const arrows: { dir: Direction; icon: ReactNode; label: string }[] = [
-    { dir: 'left',  icon: <ArrowLeft size={15} />,  label: t.nodeMenu.duplicateLeft },
-    { dir: 'right', icon: <ArrowRight size={15} />, label: t.nodeMenu.duplicateRight },
-    { dir: 'up',    icon: <ArrowUp size={15} />,    label: t.nodeMenu.duplicateUp },
-    { dir: 'down',  icon: <ArrowDown size={15} />,  label: t.nodeMenu.duplicateDown },
-  ]
-
   return (
     <ContextMenu x={x} y={y} onClose={onClose}>
       {many && (
@@ -92,23 +85,14 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
       {/* Duplicate: one row, an arrow per side the copy can go */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 4px 4px 10px' }}>
         <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{t.nodeMenu.duplicate}</span>
-        {arrows.map((a) => (
-          <button
-            key={a.dir}
-            role="menuitem"
-            title={a.label}
-            aria-label={a.label}
-            onClick={act(() => onDuplicate(a.dir))}
-            className="lsc-menu-item"
-            style={{
-              width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 'var(--lsc-radius-sm)', border: '1px solid var(--lsc-border)',
-              background: 'transparent', color: 'var(--lsc-fg)', cursor: 'pointer', padding: 0,
-            }}
-          >
-            {a.icon}
-          </button>
-        ))}
+        <DirectionArrows
+          role="menuitem"
+          labels={{
+            left: t.nodeMenu.duplicateLeft, right: t.nodeMenu.duplicateRight,
+            up: t.nodeMenu.duplicateUp, down: t.nodeMenu.duplicateDown,
+          }}
+          onPick={(dir) => { onDuplicate(dir); onClose() }}
+        />
       </div>
       <MenuDivider />
       <MenuItem
@@ -122,14 +106,15 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
   )
 }
 
-/** Right-click menu of the empty canvas: Paste here, Select everything. */
-export function CanvasMenu({ x, y, canPaste, canSelectAll, onPaste, onSelectAll, onClose }: {
+/** Right-click menu of the empty canvas: Paste here, Select everything, Insert a saved chain here. */
+export function CanvasMenu({ x, y, canPaste, canSelectAll, onPaste, onSelectAll, onInsertChain, onClose }: {
   x: number
   y: number
   canPaste: boolean
   canSelectAll: boolean
   onPaste: () => void
   onSelectAll: () => void
+  onInsertChain: () => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -150,6 +135,8 @@ export function CanvasMenu({ x, y, canPaste, canSelectAll, onPaste, onSelectAll,
         disabled={!canSelectAll}
         onClick={act(onSelectAll)}
       />
+      <MenuDivider />
+      <MenuItem icon={<FolderInput size={15} />} label={t.nodeMenu.insertChain} onClick={act(onInsertChain)} />
     </ContextMenu>
   )
 }
@@ -227,11 +214,11 @@ function ContextMenu({ x, y, onClose, children }: { x: number; y: number; onClos
   )
 }
 
-function MenuDivider() {
+export function MenuDivider() {
   return <div role="separator" style={{ height: 1, margin: '4px 6px', background: 'var(--lsc-border)' }} />
 }
 
-function MenuItem({ icon, label, hint, onClick, danger = false, disabled = false }: {
+export function MenuItem({ icon, label, hint, onClick, danger = false, disabled = false }: {
   icon: ReactNode
   label: string
   /** Keyboard shortcut shown on the right */
