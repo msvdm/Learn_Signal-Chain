@@ -6,6 +6,9 @@ the browser (see the dev-environment notes in memory), commit, then tick the ste
 
 Line numbers are from the review and will drift — search for the names.
 
+**All steps and smaller items are done (2026-10-04).** What was found along the way and left for
+a decision is collected at the end: *Left open*.
+
 ## ~~1. Delete dead code, derive `Translations` from en.json~~ — done
 
 `Translations` is now typed from `en.json` (`bg.json` is checked with `satisfies LocaleStrings`),
@@ -126,7 +129,7 @@ change again; `portLayoutKey` reads outputs only). A saved chain that has one op
 the usual notice ("… elements were left out: this version of the app does not have them" — it
 used to say they came from a newer version).
 
-## 5. Break up the big components — first half done
+## ~~5. Break up the big components~~ — done
 
 ### ~~`SignalChain.tsx`~~ — done
 
@@ -273,10 +276,7 @@ wire with one corner was never checked. It now tests the wire as it is drawn, po
 port, against the real sizes: the same test as while it was being drawn. Kept: a wire without
 corners never gets the warning once committed (the preview still warns while drawing it).
 
-### Still to do
-
-
-## Smaller items (fit into any step)
+## ~~Smaller items~~ — done
 
 - ~~Persistence: six setters each `localStorage.setItem('lsc-…')`; the level key is written in
   three places and also in the autosave → one persist subscriber with a key map.~~ — done:
@@ -337,3 +337,20 @@ corners never gets the warning once committed (the preview still warns while dra
   Found, not changed: the Relay's help text (`theory.relay`, both languages) describes one input
   switched between two outputs ("Output A or Output B"); the card picks one of two inputs and has
   one output. It needs rewriting, which is a teaching decision.
+
+## Left open — decisions, not refactors
+
+Found during the steps above and kept as they were, because each changes what the learner sees
+or is taught:
+- **Dropping a card onto a wire** accepts a few drops that wiring by hand refuses (onto a Matrix
+  send, a Relay or a Matrix Bus between a mono Aux and a Matrix Bus …; step 5). Refusing them is
+  probably right: the card is then placed freely.
+- **A Fader fed one side of a two-channel Amplifier through an effect** counts as a Main Fader
+  (step 3).
+- **A committed wire without corners** never shows the crossing warning, though its preview does
+  while it is drawn (Geometry).
+- **A digital signal into an Amplifier or a speaker** silences it with no note on the card: the
+  engine sets `digitalToAmp` / `digitalToSpeaker` and the texts exist (`warnings.*`), but only the
+  ADC / DAC and the buses show theirs (Display names).
+- **The Relay's help text** (both languages) describes one input switched between two outputs;
+  the card picks one of two inputs (English shown to Bulgarian users).
