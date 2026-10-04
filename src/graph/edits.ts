@@ -34,12 +34,16 @@ export function withoutNodes(graph: GraphView, nodeIds: Iterable<string>): Graph
   }
 }
 
-/** The graph without one element: if it had exactly one wire in and one out, they are joined, so the chain stays connected. */
+/**
+ * The graph without one element: if it had exactly one wire in and one out, they are joined, so the
+ * chain stays connected — unless that wire would go from a card back into itself (the element sat in
+ * a loop of two cards, A → it → A).
+ */
 export function withoutNode(graph: GraphView, nodeId: string): GraphView {
   const next = withoutNodes(graph, [nodeId])
   const into = graph.edges.filter((e) => e.target === nodeId)
   const out  = graph.edges.filter((e) => e.source === nodeId)
-  if (into.length !== 1 || out.length !== 1) return next
+  if (into.length !== 1 || out.length !== 1 || into[0].source === out[0].target) return next
   const bridge = newEdge({
     source: into[0].source, sourceHandle: into[0].sourceHandle,
     target: out[0].target,  targetHandle: out[0].targetHandle,

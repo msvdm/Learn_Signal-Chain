@@ -69,9 +69,11 @@ both in what a wire is labelled as, where the old engine disagreed with the port
   as a Main Fader (`mixSourceOf` walks through side wires) and shows L / R. Its L output used to be
   labelled R (both outputs carried the side it was fed); now L is L.
 
-Found while testing, not fixed (behaviour kept): removing a card in a two-card loop (A → B → A)
-makes `withoutNode` join its wires into a wire from A to itself — A goes silent, and removing A
-later leaves a wire to a card that is gone. Also the Main Fader-through-a-side-wire case above.
+Found while testing, not fixed (behaviour kept): the Main Fader-through-a-side-wire case above.
+
+Found while testing, fixed after: removing a card in a two-card loop (A → B → A) made `withoutNode`
+join its wires into a wire from A to itself — A went silent, and removing A later left a wire to a
+card that was gone. `withoutNode` no longer joins wires that would start and end on the same card.
 
 ## 4. Each node type described once
 
