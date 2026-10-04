@@ -9,6 +9,7 @@ import { setActiveDragTypeKey } from '../utils/dragState'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
+import { PALETTE_WIDTH, PALETTE_RAIL_WIDTH } from '../hooks/usePaletteWidth'
 
 type Tab = 'all' | PaletteGroup
 
@@ -46,7 +47,7 @@ export function ElementPalette() {
     return (
       <aside
         style={{
-          width: 64, flexShrink: 0, height: '100%',
+          width: PALETTE_RAIL_WIDTH, flexShrink: 0, height: '100%',
           background: 'var(--lsc-header)', borderRight: '1px solid var(--lsc-border)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
           padding: '12px 0', overflowY: 'auto', userSelect: 'none',
@@ -95,7 +96,7 @@ export function ElementPalette() {
   return (
     <aside
       style={{
-        width: 240, flexShrink: 0, height: '100%',
+        width: PALETTE_WIDTH, flexShrink: 0, height: '100%',
         background: 'var(--lsc-header)', borderRight: '1px solid var(--lsc-border)',
         display: 'flex', flexDirection: 'column', gap: 12,
         padding: '14px 12px', overflowY: 'auto', overflowX: 'hidden',

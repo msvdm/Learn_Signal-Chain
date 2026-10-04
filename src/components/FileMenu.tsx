@@ -6,7 +6,7 @@ import { useTranslation } from '../i18n/useTranslation'
 import { useChainFile } from '../hooks/useChainFile'
 import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useLatestRef } from '../hooks/useLatestRef'
-import { MOD } from '../utils/shortcut'
+import { MOD, pressedInside } from '../utils/shortcut'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MenuItem, MenuDivider } from './NodeMenu'
 
@@ -60,7 +60,8 @@ export function FileMenu({ onNew, buttonStyle }: {
       const key = e.key.toLowerCase()
       if (key !== 's' && key !== 'o') return
       e.preventDefault()
-      if (e.target instanceof Element && e.target.closest('[role="dialog"], [role="alertdialog"]')) return
+      // (Even while typing: Ctrl / ⌘ + S in the palette search saves too)
+      if (pressedInside(e, '[role="dialog"], [role="alertdialog"]')) return
       setOpen(false)
       if (key === 's') keysRef.current.startSave('file')
       else keysRef.current.openChain()

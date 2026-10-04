@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import type { MutableRefObject } from 'react'
-import type { SignalEdge } from '../store/signalStore'
+import { useReactFlow } from '@xyflow/react'
+import { useSignalStore } from '../store/signalStore'
 import type { Pt } from '../utils/layoutHelpers'
 import { useLatestRef } from './useLatestRef'
 
@@ -12,11 +12,9 @@ export type Reshaping = {
   livePos: Pt
 }
 
-export function useEdgeReshape(
-  screenToFlowPosition: (p: Pt) => Pt,
-  edgesRef: MutableRefObject<SignalEdge[]>,
-  updateEdgeWaypoints: (id: string, waypoints: Pt[]) => void,
-) {
+/** Dragging a wire's corner (or a segment's midpoint, which adds a corner): committed on release. */
+export function useEdgeReshape() {
+  const { screenToFlowPosition } = useReactFlow()
   const [reshaping, setReshaping] = useState<Reshaping | null>(null)
   const reshapingRef = useLatestRef(reshaping)
 
@@ -33,7 +31,8 @@ export function useEdgeReshape(
       if (!r) return
       e.stopPropagation()
       const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      const edge = edgesRef.current.find((ed) => ed.id === r.edgeId)
+      const { edges, updateEdgeWaypoints } = useSignalStore.getState()
+      const edge = edges.find((ed) => ed.id === r.edgeId)
       if (edge) {
         const wps = [...(edge.waypoints ?? [])]
         if (r.inserting) {
@@ -52,7 +51,7 @@ export function useEdgeReshape(
       document.removeEventListener('mousemove', onReshapeMove)
       document.removeEventListener('mouseup', onReshapeUp, true)
     }
-  }, [screenToFlowPosition, edgesRef, updateEdgeWaypoints, reshapingRef])
+  }, [screenToFlowPosition, reshapingRef])
 
   return { reshaping, setReshaping }
 }

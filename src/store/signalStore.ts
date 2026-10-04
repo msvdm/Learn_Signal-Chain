@@ -25,10 +25,20 @@ type GraphSnapshot = GraphView
 
 const EMPTY_GRAPH: GraphSnapshot = { nodes: [], edges: [] }
 
-/** The output port a wire is currently being drawn from (null when idle). */
+/** The output port a wire is drawn from. */
 export interface WireSource {
   nodeId: string
   handleId: string
+}
+
+/**
+ * A wire being drawn: the output it starts from, where that port is and the corners clicked so far
+ * (flow coordinates). Its loose end follows the cursor (useWireDrawing), which is not kept here.
+ */
+export interface WireDraft {
+  source: WireSource
+  start: Pt
+  waypoints: Pt[]
 }
 
 function getInitialTheme(): Theme {
@@ -95,7 +105,8 @@ interface SignalChainStore {
   /** Undo / redo steps: the graph before each change (see the history section at the bottom) */
   past: GraphSnapshot[]
   future: GraphSnapshot[]
-  wireSource: WireSource | null
+  /** The wire being drawn (null when idle); cards read its `source` to highlight the inputs that take it */
+  wire: WireDraft | null
   /** Wires whose chains are highlighted (hovered in the unplug list or a Matrix Bus row); everything else is dimmed. */
   highlightEdgeIds: string[]
   /** Zoomed out far enough that cards show only their name and output level (set by SignalChain, not persisted). */
@@ -125,7 +136,10 @@ interface SignalChainStore {
   redo: () => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
-  setWireSource: (source: WireSource | null) => void
+  startWire: (source: WireSource, start: Pt) => void
+  /** A click in empty space while drawing: the wire turns a corner there */
+  addWireCorner: (at: Pt) => void
+  cancelWire: () => void
   setHighlightEdges: (edgeIds: string[]) => void
   setOverview: (on: boolean) => void
   setCapturing: (on: boolean) => void
@@ -177,7 +191,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   clipboard: null,
   past: [],
   future: [],
-  wireSource: null,
+  wire: null,
   highlightEdgeIds: [],
   overview: false,
   capturing: false,
@@ -248,9 +262,15 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     })))
   },
 
-  setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wireSource: null } : { toolMode: mode }),
+  // Back in Select mode nothing is being wired (a new canvas and undo / redo drop the wire too: NO_WIRE)
+  setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wire: null } : { toolMode: mode }),
 
-  setWireSource: (source) => set({ wireSource: source }),
+  startWire: (source, start) => set({ wire: { source, start, waypoints: [] } }),
+
+  // The source stays the same object, so the cards watching it do not re-render
+  addWireCorner: (at) => set((s) => (s.wire ? { wire: { ...s.wire, waypoints: [...s.wire.waypoints, at] } } : {})),
+
+  cancelWire: () => set({ wire: null }),
 
   setHighlightEdges: (edgeIds) => set({ highlightEdgeIds: edgeIds }),
 
@@ -355,7 +375,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 // ── One way into the graph ──────────────────────────────────────────────────
 
 /** No wire is being drawn (a new canvas, undo / redo: the wire's start may be gone or have moved). */
-const NO_WIRE = { toolMode: 'select', wireSource: null } as const
+const NO_WIRE = { toolMode: 'select', wire: null } as const
 
 /**
  * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
@@ -393,7 +413,7 @@ function pruneRefs(s: SignalChainStore, graph: GraphView): Partial<SignalChainSt
     ...(selected.length < s.selectedNodeIds.length ? { selectedNodeIds: selected } : {}),
     ...(highlight.length < s.highlightEdgeIds.length ? { highlightEdgeIds: highlight } : {}),
     ...(s.activeTooltipId && !nodeIds.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
-    ...(s.wireSource && !nodeIds.has(s.wireSource.nodeId) ? NO_WIRE : {}),
+    ...(s.wire && !nodeIds.has(s.wire.source.nodeId) ? NO_WIRE : {}),
   }
 }
 

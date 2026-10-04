@@ -9,6 +9,13 @@ export type Pt = { x: number; y: number }
 
 export const GRID = 36
 
+/** `p` on the grid (Snap to grid on), else on whole pixels. */
+export function snapPoint(p: Pt, toGrid: boolean): Pt {
+  return toGrid
+    ? { x: Math.round(p.x / GRID) * GRID, y: Math.round(p.y / GRID) * GRID }
+    : { x: Math.round(p.x), y: Math.round(p.y) }
+}
+
 // Minimum clearance between any two nodes, in all directions.
 export const MIN_NODE_GAP = 100
 
@@ -249,8 +256,3 @@ export function findEdgeAtPoint(
   return null
 }
 
-/** True only for nodes that have both an input and an output port. */
-export function canInsertMidChain(typeKey: TypeKey): boolean {
-  const def = NODE_REGISTRY[typeKey]
-  return def.inputs.length > 0 && def.outputs.length > 0
-}

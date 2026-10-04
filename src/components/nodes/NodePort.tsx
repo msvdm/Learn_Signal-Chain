@@ -34,7 +34,7 @@ interface NodePortProps {
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
   const { wires, stages } = useGraphSignal()
   const edges      = useSignalStore((s) => s.edges)
-  const wireSource = useSignalStore((s) => s.wireSource)
+  const wireSource = useSignalStore((s) => s.wire?.source ?? null)
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const nodes      = useSignalStore((s) => s.nodes)
   const node       = nodes.find((n) => n.id === nodeId)

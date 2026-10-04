@@ -13,7 +13,8 @@ import { NoticeToast } from './components/NoticeToast'
 import { Radio, Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
-import { useMediaQuery, TABLET_QUERY, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
+import { useMediaQuery, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
+import { usePaletteWidth } from './hooks/usePaletteWidth'
 
 type PendingConfirm = { kind: 'reset' } | { kind: 'level'; level: ComplexityLevel } | null
 
@@ -38,9 +39,8 @@ function App() {
   const paletteOpen        = useSignalStore((s) => s.paletteOpen)
   const setPaletteOpen     = useSignalStore((s) => s.setPaletteOpen)
   const { t, fmt }       = useTranslation()
-  const isTablet           = useMediaQuery(TABLET_QUERY)
   const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
-  const paletteWidth       = paletteOpen ? (isTablet ? 64 : 240) : 0
+  const paletteWidth       = usePaletteWidth()
   const themeLabel         = theme === 'dark' ? t.app.theme.light : t.app.theme.dark
 
   const [showLanguages, setShowLanguages] = useState(false)

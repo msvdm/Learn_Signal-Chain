@@ -126,21 +126,90 @@ change again; `portLayoutKey` reads outputs only). A saved chain that has one op
 the usual notice ("… elements were left out: this version of the app does not have them" — it
 used to say they came from a newer version).
 
-## 5. Break up the big components
+## 5. Break up the big components — first half done
 
-- `SignalChain.tsx` (1,248 lines) → `useWireDrawing`, `useCanvasShortcuts`, `usePlaceGroup`,
-  `ChainOpener`, `usePaletteDrop`, `CanvasOverlays`; target < 400 lines.
-  - Wire state is local, mirrored into the store by an effect (`setWireSource`) and cancelled back
-    by a store subscription → keep source + waypoints in the store, cursor local.
-  - Reshape handles pass data through `data-*` attributes read back with `elementsFromPoint` +
-    `parseInt` → give the circles their own `onPointerDown` (+ `lsc-overlay`).
-  - Two `keydown` listeners with copy-pasted typing guards (a third in `FileMenu.tsx`).
-  - Three identical viewport-aligned overlay `<svg>` wrappers → one `<ViewportLayer>`.
-  - `onNodeDrag` / `onNodeDragStop` duplicate the overlap resolve; the start-wire object is built
-    twice; `setTimeout(() => fitView(…), 50)` ×4.
-  - `insertSlot` hard-codes the Matrix Bus rule → validate the two replacement wires with
-    `nodeAcceptsWire` / `portAcceptsWire`.
-  - `paletteWidth = paletteOpen ? (isTablet ? 64 : 240) : 0` duplicated in `App.tsx`.
+### ~~`SignalChain.tsx`~~ — done
+
+`SignalChain.tsx` went from 1,189 lines to 229: it puts the canvas hooks together, switches the
+overview from the zoom, resets the camera on a blank canvas and holds the menus' state. The split,
+adjusted where the code suggested it:
+- `hooks/useWireDrawing.ts` — click-once wiring, the mouse-follow Select ↔ Connect switch,
+  right-click cancel. `useSwallowClick` (same file) is the click stopped after a press the canvas
+  used; the Remove tool uses it too, so it is shared, not inside the wiring.
+- `hooks/useCanvasClicks.ts` (not planned) — the left-click tools: selecting (`onNodeClick`,
+  `onNodeDragStart`, `selectFromBox`, `onPaneClick`) and the Remove tool, whose `pointerdown` was
+  in the same capture handler as the wiring but shares only the swallowed click with it.
+- `hooks/useNodeDrag.ts` (not planned) — drag ghosts and the drop of a card or a selection.
+- `hooks/useGroupActions.ts` (planned as `usePlaceGroup`) — placing a copy is shared by duplicate,
+  paste and an added chain, and the menus and keys take cut / copy / remove from the same place.
+- `hooks/useCanvasShortcuts.ts` — Esc, the Ctrl / ⌘ keys and Delete in one listener.
+- `components/ChainOpener.tsx` — the Replace / Add beside dialog, an offer onto an empty canvas,
+  share links.
+- `hooks/usePaletteDrop.ts` — drop preview, a tile dropped on the canvas or onto a wire, the cards
+  making room once it is measured, a chain file dropped from the computer.
+- `components/CanvasOverlays.tsx` — `ViewportLayer` (the one viewport-aligned `<svg>`), reshape
+  handles, the wire being drawn, ghosts.
+- `hooks/useFlowElements.ts` (not planned) — the React Flow nodes / edges and the measured sizes:
+  100 lines that kept `SignalChain` over 400.
+- Shared by them: `hooks/useCanvasLayout.ts` (`measuredNodes`, `layoutNodes`, `sizeOf`, `snap`,
+  `dropOrigin`), `hooks/useFitView.ts` (`fitViewOptions` + `fitSoon`, which replaces the four
+  `setTimeout(() => fitView(…), 50)`), `hooks/usePaletteWidth.ts`.
+
+The sub-items:
+- One owner for the wire being drawn: the store's `wire` (`{ source, start, waypoints }`,
+  `startWire` / `addWireCorner` / `cancelWire`) replaces `wireSource`, the local `drawing`, the
+  effect that mirrored it and the subscription that cancelled it — leaving Connect mode
+  (`setToolMode('select')`, `NO_WIRE`) drops it in the store itself. Only the loose end (cursor,
+  snap ring, crossing warning) stays in the hook. Cards read `wire.source`, the same object while
+  corners are added, so they do not re-render on a corner.
+- Reshape handles: their own `onPointerDown` and `lsc-overlay` (the wiring's `mousedown` skips
+  overlays); no `data-*`, `elementsFromPoint` or `parseInt`. `useEdgeReshape` reads the store itself.
+  The handles also stop their left-button `mousedown`, as the old document-level `stopPropagation`
+  did: a header menu (File, language) left open stays open — as after a press anywhere on the canvas.
+- Key guards: `typingInField` / `pressedInside` in `utils/shortcut.ts`, used by the canvas keys
+  (Esc and the rest, now one listener) and the File menu. The checks stay as they were: canvas keys
+  — not while typing, nor in a menu or `role="dialog"`; Esc — not while typing; File menu Ctrl / ⌘
+  + S / O — not in a dialog (Ctrl+S in the palette search still saves).
+- One `landing()` for both drag handlers, one `startFrom()` for starting a wire, `fitSoon()`.
+- `usePaletteWidth()` with `PALETTE_WIDTH` / `PALETTE_RAIL_WIDTH`, which the palette itself uses too.
+- `ChainEdge` reads `data.overview` (smaller item below).
+- `SignalChain` re-renders on a zoom change (`useStore`), no longer on every pan.
+
+Kept on purpose:
+- Dropping a card onto a wire: the rule moved to `wireTakesCard()` in `utils/connectionRules.ts`,
+  unchanged. Validating the two replacement wires with `nodeAcceptsWire` / `portAcceptsWire`
+  instead would refuse drops accepted today. Compared on 1,600 random graphs (built through the
+  connection rules and takeovers, with drops the old rule allows), every wire × every type: the
+  same everywhere except, all accepted today and refused by the full check:
+  - any card dropped on a Matrix send (a bus's or Main Fader's `send` → Matrix Bus): it goes in
+    (send → card → Matrix Bus), a wiring the rules refuse by hand — a send feeds only Matrix Buses,
+    and the card's output is no longer a mix;
+  - a Relay or a Matrix Bus dropped between a mono Aux (straight or through effects) and a Matrix
+    Bus — a Relay's output is not a mix (`passesThrough` is false), a Matrix Bus can't feed one;
+  - any card dropped on a wire into a Matrix Bus that no longer carries a mix (left by one of the
+    above, or its bus removed).
+  A decision for later: refusing them is probably right (the card is then placed freely).
+
+Found while testing, not fixed (the same in HEAD, checked side by side):
+- The canvas keys (Delete, Ctrl+Z …) act while a confirm dialog has the focus — New, a level change,
+  the open dialog: they are `role="alertdialog"`, which the guard does not list. Delete with
+  "Start over?" open removes the selection.
+- Dragging a reshape handle selects the "React Flow" attribution text (no `preventDefault`).
+
+Checked in the browser with real clicks: wiring with corners, the snap ring, Esc / right-click
+cancel, Ctrl+Z while drawing, the Select ↔ Connect switch, unplugging; dragging corners and
+midpoints; dragging a card, a Ctrl+clicked selection and a card outside it; the Select tool's box
+and toggle; the Remove tool on a control and a wire; drops on the canvas, onto a wire (preview and
+slot, a Fader on a Master Bus's L becoming the Main Fader, a Matrix Bus refused on a mic wire and
+accepted on a mono Aux's), the cards making room; copy / paste at the mouse / duplicate / cut /
+Delete / select all / undo / redo, and none of them while typing in the palette search or the name
+dialog; Open → Add beside / Replace, Insert a saved chain here, a file dropped on the canvas, a share
+link with and without cards; overview in and out (hysteresis, wire width), show everything with the
+palette open / hidden / as a rail, a reload with an autosaved canvas. The reshape handle and menu
+behaviour was compared with HEAD running side by side.
+
+### Still to do
+
 - Dynamics graphs: `DynamicsCurve` / `LimiterCurve` / `GateCurve` (~100 lines each, same frame,
   axes, grid, operating point) → one `<TransferCurve transfer={…}>`, fed by transfer functions
   exported from the engine.
@@ -152,7 +221,7 @@ used to say they came from a newer version).
 - Geometry: four `Pt` types, three rect shapes (`FlowNode` + `measured`, `Placed`, `NodeInfo`),
   three overlap tests, two routers (`elbowSegments` in `wireValidation.ts` re-implements
   `orthogonalRoute`), three unmeasured-size defaults (`nodeDims` ≥ 280×210 vs 160×120 in
-  `wireValidation.ts` and `Tooltip.tsx`). Bug from it: `displayEdges` passes no sizes, so the
+  `wireValidation.ts` and `Tooltip.tsx`). Bug from it: `displayEdges` (now `useFlowElements`) passes no sizes, so the
   crossing warning on committed wires tests 160×120 boxes. → `geometry.ts` + one
   `layoutSnapshot()`; layout helpers stop taking React Flow's `FlowNode`.
 
@@ -164,7 +233,7 @@ used to say they came from a newer version).
   `help: { nodeId, key } | null`.
 - Outside-click + Esc dismissal hand-written in 5 places (`UnplugMenu` re-implements
   `useLatestRef`); pointer dragging in 4 controls → `useDismiss`, `usePointerDrag`.
-- `ChainEdge` infers overview from `strokeWidth > 3` — pass it in `data`.
+- ~~`ChainEdge` infers overview from `strokeWidth > 3` — pass it in `data`.~~ — done (step 5)
 - Display names: `nodeName()` (palette name first) and `helpTitle()` in `Tooltip.tsx` (card
   label first) disagree; `nodes` locale keys mix `activeSpeaker` / `graphicEq` / `master` with
   type keys.

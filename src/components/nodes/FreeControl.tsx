@@ -39,7 +39,7 @@ export function FreeControl({ nodeId, typeKey, label, value, portLine, children,
   const node           = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const nodes          = useSignalStore((s) => s.nodes)
   const edges          = useSignalStore((s) => s.edges)
-  const wireSource     = useSignalStore((s) => s.wireSource)
+  const wireSource     = useSignalStore((s) => s.wire?.source ?? null)
   const selected       = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.activeTooltipId === nodeId)
   const overview       = useSignalStore((s) => s.overview)
   // Joined into a string so the control only re-renders when its chains change

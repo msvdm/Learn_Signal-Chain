@@ -9,6 +9,8 @@ export interface ChainEdgeData extends Record<string, unknown> {
   routingWarning?: boolean
   /** Carries Left and Right together — drawn as a twin line. */
   stereo?: boolean
+  /** Zoomed out: drawn thicker, with longer dashes */
+  overview?: boolean
 }
 
 export function ChainEdge({
@@ -28,7 +30,7 @@ export function ChainEdge({
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
   // The dash period stays a divisor of the 24px flow animation, so it loops smoothly.
   const width = Number(style?.strokeWidth ?? 3)
-  const thick = width > 3
+  const thick = d.overview ?? false
   const dash  = thick ? { strokeDasharray: '16 8' } : {}
 
   const edgeStyle = routingWarn

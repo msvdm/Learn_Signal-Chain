@@ -57,7 +57,7 @@ export function NodeWrapper({
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
   // Joined into a string so the card only re-renders when its chains change
   const chainColors      = useSignalStore((s) => chainColorsOf(nodeId, s.nodes, s.edges).join(' '))
-  const wireSource       = useSignalStore((s) => s.wireSource)
+  const wireSource       = useSignalStore((s) => s.wire?.source ?? null)
   const edges            = useSignalStore((s) => s.edges)
   const nodes            = useSignalStore((s) => s.nodes)
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
