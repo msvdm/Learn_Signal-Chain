@@ -3,9 +3,9 @@ import { NODE_REGISTRY, matrixSendParam } from '../data/nodeRegistry'
 import { nodeAcceptsWire, portAcceptsWire } from './connectionRules'
 import { newEdge } from '../graph/edits'
 import { GRID, MIN_NODE_GAP } from './layoutHelpers'
-import type { Pt } from './layoutHelpers'
+import type { Box, Pt, Size } from './geometry'
+import { rectOf, rectsOverlap } from './geometry'
 
-export type Size = { w: number; h: number }
 export type Direction = 'left' | 'right' | 'up' | 'down'
 
 /** A copied piece of the graph (Copy / Cut / Duplicate): a snapshot, so later edits don't change it. */
@@ -18,9 +18,6 @@ export interface NodeGroup {
   /** Each element's size when it was copied, for placing the copy */
   sizes: Record<string, Size>
 }
-
-/** A positioned rectangle of something already on the canvas. */
-export interface Placed { position: Pt; size: Size }
 
 export function takeGroup(
   ids: string[],
@@ -60,13 +57,11 @@ const STEP: Record<Direction, Pt> = {
  * Moves `start` on in `dir`, one grid step at a time, until the group moved by it keeps
  * MIN_NODE_GAP from every element in `others`.
  */
-function clearOffset(group: NodeGroup, start: Pt, dir: Direction, others: Placed[]): Pt {
-  const PAD = MIN_NODE_GAP / 2
+function clearOffset(group: NodeGroup, start: Pt, dir: Direction, others: Box[]): Pt {
+  const rects   = others.map((o) => rectOf(o.position, o.size))
   const clashes = (off: Pt) => group.nodes.some((n) => {
-    const a = { x: n.position.x + off.x, y: n.position.y + off.y, ...group.sizes[n.id] }
-    return others.some(({ position: p, size: s }) =>
-      a.x < p.x + s.w + PAD && a.x + a.w > p.x - PAD &&
-      a.y < p.y + s.h + PAD && a.y + a.h > p.y - PAD)
+    const a = rectOf({ x: n.position.x + off.x, y: n.position.y + off.y }, group.sizes[n.id])
+    return rects.some((r) => rectsOverlap(a, r, MIN_NODE_GAP / 2))
   })
   let off = start
   for (let i = 0; i < 200 && clashes(off); i++) {
@@ -76,7 +71,7 @@ function clearOffset(group: NodeGroup, start: Pt, dir: Direction, others: Placed
 }
 
 /** How far the copy of a group moves to sit beside it in `dir`, clear of every element. */
-export function duplicateOffset(group: NodeGroup, dir: Direction, others: Placed[]): Pt {
+export function duplicateOffset(group: NodeGroup, dir: Direction, others: Box[]): Pt {
   const box  = groupBox(group)
   const dx   = toGrid(box.right - box.left + MIN_NODE_GAP)
   const dy   = toGrid(box.bottom - box.top + MIN_NODE_GAP)
@@ -89,7 +84,7 @@ export function duplicateOffset(group: NodeGroup, dir: Direction, others: Placed
  * canvas in `dir`: lined up with the canvas's top (left / right) or left edge (up / down),
  * MIN_NODE_GAP away, clear of every element.
  */
-export function besideOffset(group: NodeGroup, dir: Direction, others: Placed[]): Pt {
+export function besideOffset(group: NodeGroup, dir: Direction, others: Box[]): Pt {
   if (others.length === 0) return { x: 0, y: 0 }
   const box = groupBox(group)
   const all = {
@@ -109,7 +104,7 @@ export function besideOffset(group: NodeGroup, dir: Direction, others: Placed[])
 }
 
 /** How far a pasted group moves so its top-left corner lands at `at`, clear of every element. */
-export function pasteOffset(group: NodeGroup, at: Pt, others: Placed[]): Pt {
+export function pasteOffset(group: NodeGroup, at: Pt, others: Box[]): Pt {
   const box = groupBox(group)
   return clearOffset(group, { x: at.x - box.left, y: at.y - box.top }, 'down', others)
 }

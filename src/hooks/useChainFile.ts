@@ -3,7 +3,7 @@ import { toBlob } from 'html-to-image'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import { takeGroup } from '../utils/nodeGroup'
-import { nodeDims } from '../utils/layoutHelpers'
+import { useCanvasLayout } from './useCanvasLayout'
 import { cssVar } from '../utils/fitText'
 import { addPngText } from '../utils/pngText'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
@@ -37,16 +37,14 @@ const NOT_IN_PICTURE = '.lsc-selected, .lsc-dimmed, .lsc-fade[aria-hidden="false
  * Problems and results are shown as a notice at the bottom of the screen.
  */
 export function useChainFile() {
-  const { getInternalNode, getNodes, getNodesBounds } = useReactFlow()
+  const { getNodes, getNodesBounds } = useReactFlow()
   const { t, fmt } = useTranslation()
+  const layout     = useCanvasLayout()
 
   /** Everything on the canvas, with each card's real size. */
   function snapshot(name: string): ChainFile {
     const { nodes, edges, complexityLevel } = useSignalStore.getState()
-    const group = takeGroup(nodes.map((n) => n.id), nodes, edges, (n) => {
-      const m = getInternalNode(n.id)?.measured
-      return nodeDims(n.typeKey, m?.width, m?.height)
-    })
+    const group = takeGroup(nodes.map((n) => n.id), nodes, edges, layout.sizeOf)
     return toChainFile(group, name, complexityLevel)
   }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
-import type { Pt } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import { useLatestRef } from './useLatestRef'
 
 export type Reshaping = {

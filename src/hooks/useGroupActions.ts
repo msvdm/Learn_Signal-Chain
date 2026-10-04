@@ -1,9 +1,9 @@
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import { GRID } from '../utils/layoutHelpers'
-import type { Pt } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import { takeGroup, cloneGroup, groupBox, duplicateOffset, pasteOffset } from '../utils/nodeGroup'
-import type { Direction, NodeGroup, Placed } from '../utils/nodeGroup'
+import type { Direction, NodeGroup } from '../utils/nodeGroup'
 import { chainToGroup } from '../utils/chainFile'
 import type { ParsedChain } from '../utils/chainFile'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -23,11 +23,6 @@ export function useGroupActions() {
   const { fitSoon }    = useFitView()
   const { skippedNotice } = useChainFile()
   const { flowToScreenPosition, getZoom } = useReactFlow()
-
-  /** Everything on the canvas, with its real size. */
-  function placedNodes(): Placed[] {
-    return useSignalStore.getState().nodes.map((n) => ({ position: n.position, size: layout.sizeOf(n) }))
-  }
 
   function groupOf(ids: string[]) {
     const { nodes, edges } = useSignalStore.getState()
@@ -59,7 +54,7 @@ export function useGroupActions() {
   function duplicateNodes(ids: string[], dir: Direction) {
     if (ids.length === 0) return
     const group = groupOf(ids)
-    placeCopy(group, duplicateOffset(group, dir, placedNodes()))
+    placeCopy(group, duplicateOffset(group, dir, layout.layoutSnapshot()))
   }
 
   function copyNodes(ids: string[]) {
@@ -83,7 +78,7 @@ export function useGroupActions() {
     const clip = useSignalStore.getState().clipboard
     if (!clip || clip.nodes.length === 0) return
     const box = groupBox(clip)
-    placeCopy(clip, pasteOffset(clip, layout.snap(at ?? { x: box.left + 2 * GRID, y: box.top + 2 * GRID }), placedNodes()))
+    placeCopy(clip, pasteOffset(clip, layout.snap(at ?? { x: box.left + 2 * GRID, y: box.top + 2 * GRID }), layout.layoutSnapshot()))
   }
 
   /** An opened chain's elements join the canvas with new ids and chain colours, moved by `offsetOf`. */
@@ -97,9 +92,9 @@ export function useGroupActions() {
 
   /** Right-click → Insert a saved chain here, or a file dropped at `at`: no question asked. */
   function insertChainAt(read: ParsedChain, at: Pt) {
-    addChain(read, (group) => pasteOffset(group, layout.snap(at), placedNodes()))
+    addChain(read, (group) => pasteOffset(group, layout.snap(at), layout.layoutSnapshot()))
     skippedNotice(read)
   }
 
-  return { placedNodes, duplicateNodes, copyNodes, cutNodes, removeSelected, pasteAt, addChain, insertChainAt }
+  return { duplicateNodes, copyNodes, cutNodes, removeSelected, pasteAt, addChain, insertChainAt }
 }

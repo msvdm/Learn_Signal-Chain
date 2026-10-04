@@ -1,4 +1,4 @@
-type Pt = { x: number; y: number }
+import type { Pt } from './geometry'
 
 const MIN_EXIT = 40
 

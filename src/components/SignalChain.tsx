@@ -33,7 +33,7 @@ import { useCanvasShortcuts }   from '../hooks/useCanvasShortcuts'
 import { usePaletteDrop }       from '../hooks/usePaletteDrop'
 import { useFlowElements }      from '../hooks/useFlowElements'
 import { GRID, nodeDims }       from '../utils/layoutHelpers'
-import type { Pt }              from '../utils/layoutHelpers'
+import type { Pt }              from '../utils/geometry'
 
 const edgeTypes = { chain: ChainEdge }
 

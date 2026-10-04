@@ -241,14 +241,34 @@ Checked in the browser against HEAD running side by side: the same 27-element gr
 stereo and mono, bypassed, selected, help open, a wire being drawn) gives the same DOM for every
 element, zoomed out and in (meters caught mid-animation aside).
 
+### ~~Geometry~~ — done
+
+`utils/geometry.ts` holds the shapes (`Pt`, `Size`, `Box` = id + position + size, `Rect`) and the
+tests (`rectOf`, `rectsOverlap` with a clearance, `segmentTouchesRect`); the other `Pt` / `Size`
+copies, `Placed` and `NodeInfo` are gone. `useCanvasLayout().layoutSnapshot()` — the store's
+positions with React Flow's measured sizes — replaces `measuredNodes()` (React Flow's nodes),
+`layoutNodes()`, `placedNodes()` and the wiring's own card list; `resolveOverlap`, `enforceGap`,
+`makeRoomForInsert`, `findEdgeAtPoint` and the copy offsets take `Box[]` (no `FlowNode`). The
+crossing test walks `orthogonalRoute` (its `elbowSegments` copy is gone). `nodeDims` is the one
+size fallback (the help popover and the crossing test no longer assume 160 × 120).
+`useChainFile` takes its sizes from `useCanvasLayout().sizeOf`. The overlap comment that promised
+MIN_NODE_GAP between cards now says what the test does: cards closer than MIN_NODE_GAP / 2 overlap.
+
+Checked old (HEAD) against new on 3,000 random layouts (68,948 comparisons: grid and free
+positions, measured and unmeasured cards, wires with and without corners, loops):
+`resolveOverlap`, `enforceGap`, `makeRoomForInsert`, `findEdgeAtPoint`, the three copy offsets and
+the crossing test on the same points — identical. In the browser, side by side with HEAD: a drop
+onto a wire (the chain sliding right once the card is measured), Ctrl+D and a drop nudged clear of
+other cards land in the same places; wiring with a corner by real clicks moves the target as before.
+
+The bug, fixed: a committed wire's crossing warning tested the cards as 160 × 120 boxes, and only
+its corners — from the first corner to the last, with a 40px exit that is not drawn there, so a
+wire with one corner was never checked. It now tests the wire as it is drawn, port → corners →
+port, against the real sizes: the same test as while it was being drawn. Kept: a wire without
+corners never gets the warning once committed (the preview still warns while drawing it).
+
 ### Still to do
 
-- Geometry: four `Pt` types, three rect shapes (`FlowNode` + `measured`, `Placed`, `NodeInfo`),
-  three overlap tests, two routers (`elbowSegments` in `wireValidation.ts` re-implements
-  `orthogonalRoute`), three unmeasured-size defaults (`nodeDims` ≥ 280×210 vs 160×120 in
-  `wireValidation.ts` and `Tooltip.tsx`). Bug from it: `displayEdges` (now `useFlowElements`) passes no sizes, so the
-  crossing warning on committed wires tests 160×120 boxes. → `geometry.ts` + one
-  `layoutSnapshot()`; layout helpers stop taking React Flow's `FlowNode`.
 
 ## Smaller items (fit into any step)
 

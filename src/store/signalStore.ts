@@ -11,7 +11,7 @@ import {
 } from '../graph/edits'
 import type { ToolMode, LeftTool } from '../types'
 import type { NodeGroup } from '../utils/nodeGroup'
-import type { Pt } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
 import { parseChainFile, toChainFile } from '../utils/chainFile'
 

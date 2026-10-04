@@ -6,6 +6,7 @@ import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useChainFile } from '../hooks/useChainFile'
 import { useFitView } from '../hooks/useFitView'
 import { useGroupActions } from '../hooks/useGroupActions'
+import { useCanvasLayout } from '../hooks/useCanvasLayout'
 import { useLatestRef } from '../hooks/useLatestRef'
 import { besideOffset } from '../utils/nodeGroup'
 import { readLink, LINK_PREFIX } from '../utils/chainFile'
@@ -27,7 +28,8 @@ export function ChainOpener() {
   const { t, fmt }      = useTranslation()
   const { skippedNotice }          = useChainFile()
   const { fitSoon }                = useFitView()
-  const { addChain, placedNodes }  = useGroupActions()
+  const { addChain }  = useGroupActions()
+  const layout        = useCanvasLayout()
 
   /** The canvas becomes the chain (at the level it was made at). */
   function replaceWithChain(read: ParsedChain) {
@@ -89,7 +91,7 @@ export function ChainOpener() {
         <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{t.file.addBeside}</span>
         <DirectionArrows
           labels={{ left: t.file.addLeft, right: t.file.addRight, up: t.file.addUp, down: t.file.addDown }}
-          onPick={(dir) => addChain(chainOffer, (group) => besideOffset(group, dir, placedNodes()), true)}
+          onPick={(dir) => addChain(chainOffer, (group) => besideOffset(group, dir, layout.layoutSnapshot()), true)}
         />
       </div>
     </ConfirmDialog>

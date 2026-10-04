@@ -1,8 +1,7 @@
 import type { EdgeProps } from '@xyflow/react'
 import { BaseEdge } from '@xyflow/react'
 import { buildWirePath } from '../utils/wirePath'
-
-type Pt = { x: number; y: number }
+import type { Pt } from '../utils/geometry'
 
 export interface ChainEdgeData extends Record<string, unknown> {
   waypoints?: Pt[]

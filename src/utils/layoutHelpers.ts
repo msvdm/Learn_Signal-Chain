@@ -1,11 +1,13 @@
-import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
-import type { Size, TypeKey } from '../data/nodeRegistry'
+import type { TypeKey } from '../data/nodeRegistry'
 import { NODE_REGISTRY, isTypeKey } from '../data/nodeRegistry'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
+import type { Box, Pt, Size } from './geometry'
+import { rectOf, rectsOverlap } from './geometry'
 
-export type Pt = { x: number; y: number }
+// Placing cards: where a new or moved card goes, and which cards make room for it. Every helper
+// takes the cards as Boxes with their real sizes (useCanvasLayout's layoutSnapshot).
 
 export const GRID = 36
 
@@ -16,8 +18,12 @@ export function snapPoint(p: Pt, toGrid: boolean): Pt {
     : { x: Math.round(p.x), y: Math.round(p.y) }
 }
 
-// Minimum clearance between any two nodes, in all directions.
+// Room left between cards: a wire into a card starts at least this far right of the card feeding
+// it, and a copy sits this far beside its original.
 export const MIN_NODE_GAP = 100
+
+/** Cards closer than this to each other (in any direction) count as overlapping. */
+const CLEARANCE = MIN_NODE_GAP / 2
 
 // ── Card geometry ──────────────────────────────────────────────────────────────
 // Every node card shares the same header height and port line, so wires between
@@ -27,6 +33,14 @@ export const HEADER_H = 56
 // buttons. The ring is 28px (40px while it shows the unplug ×), so it never touches the line.
 export const PORT_TOP = HEADER_H + 24
 export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
+
+/** The centre of a port ring: on the left edge (inputs) or right edge (outputs), `index` down the stack. */
+export function portPoint(card: Box, type: 'source' | 'target', index: number): Pt {
+  return {
+    x: type === 'source' ? card.position.x + card.size.w : card.position.x,
+    y: card.position.y + PORT_TOP + index * PORT_GAP,
+  }
+}
 
 // Every card is at least this big and landscape (never taller than wide, except a tall stack of
 // ports), so its name has room to grow in overview (zoomed out). Some are bigger (`minSize` in the
@@ -60,8 +74,12 @@ function unmeasuredSize(typeKey: string): Size {
   return NODE_REGISTRY[typeKey].freeSize ?? cardMinSize(typeKey)
 }
 
-// `typeKey` may be React Flow's node type (a string)
-export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
+/**
+ * An element's size: React Flow's measurement, else the last measured size of its type, else its
+ * type's usual size (a free-standing control's `freeSize`, a card's minimum). The one fallback for
+ * an element not drawn yet. `typeKey` may be React Flow's node type (a string).
+ */
+export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number): Size {
   const known = measuredSizeByType.get(typeKey) ?? unmeasuredSize(typeKey)
   return {
     w: measuredW ?? known.w,
@@ -69,39 +87,16 @@ export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number
   }
 }
 
-// nodeOrigin=[0,0]: position is the top-left corner
-function nodeRect(pos: Pt, w: number, h: number) {
-  return { left: pos.x, right: pos.x + w, top: pos.y, bottom: pos.y + h }
-}
-
-// PAD = MIN_NODE_GAP / 2 so clearance between any two rects ≥ MIN_NODE_GAP in both axes.
-function rectsOverlap(a: ReturnType<typeof nodeRect>, b: ReturnType<typeof nodeRect>) {
-  const PAD = MIN_NODE_GAP / 2
-  return (
-    a.left   < b.right  + PAD &&
-    a.right  > b.left   - PAD &&
-    a.top    < b.bottom + PAD &&
-    a.bottom > b.top    - PAD
-  )
-}
+const boxRect = (b: Box, dx = 0) => rectOf({ x: b.position.x + dx, y: b.position.y }, b.size)
 
 // ── Placement helpers ──────────────────────────────────────────────────────────
 
-export function resolveOverlap(
-  pos: Pt,
-  w: number,
-  h: number,
-  others: FlowNode[],
-  skipId?: string,
-): Pt {
+/** Where a card of `size` placed at `pos` goes: nudged down and right until it overlaps no other card. */
+export function resolveOverlap(pos: Pt, size: Size, others: Box[], skipId?: string): Pt {
   let cur = { ...pos }
   for (let i = 0; i < 60; i++) {
-    const r = nodeRect(cur, w, h)
-    const clash = others.find((n) => {
-      if (n.id === skipId) return false
-      const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-      return rectsOverlap(r, nodeRect(n.position, d.w, d.h))
-    })
+    const r = rectOf(cur, size)
+    const clash = others.find((n) => n.id !== skipId && rectsOverlap(r, boxRect(n), CLEARANCE))
     if (!clash) return cur
     // Alternate axis nudging — Y first (less disruptive), then X
     if (i % 2 === 0) {
@@ -115,23 +110,18 @@ export function resolveOverlap(
 
 // ── Push helpers ───────────────────────────────────────────────────────────────
 
-function cardRect(n: FlowNode, dx = 0) {
-  const d = nodeDims(n.type ?? '', n.measured?.width, n.measured?.height)
-  return nodeRect({ x: n.position.x + dx, y: n.position.y }, d.w, d.h)
-}
-
 /**
  * New positions that give src's wires to tgtIds room: each target starts at least MIN_NODE_GAP
  * right of src. Targets that are closer move right together with the chain they feed, plus any
  * card they would land on. src and the cards feeding it never move — taking them along would
  * leave the gap as it was.
  */
-function gapMoves(srcId: string, tgtIds: string[], nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+function gapMoves(srcId: string, tgtIds: string[], nodes: Box[], edges: SignalEdge[]): Map<string, Pt> {
   const moves   = new Map<string, Pt>()
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
   const src = nodeMap.get(srcId)
   if (!src) return moves
-  const srcRight = cardRect(src).right
+  const srcRight = boxRect(src).right
   const fixed    = upstreamOf(srcId, edges).nodeIds
 
   // A wire that loops back into its own chain has no left-to-right order to restore
@@ -151,9 +141,9 @@ function gapMoves(srcId: string, tgtIds: string[], nodes: FlowNode[], edges: Sig
       for (const e of edges) if (e.source === id) next.push(e.target)
     }
     // Then any card a moved card would now land on
-    const moved = [...moving].map((id) => cardRect(nodeMap.get(id)!, shift))
+    const moved = [...moving].map((id) => boxRect(nodeMap.get(id)!, shift))
     next = nodes
-      .filter((n) => !moving.has(n.id) && !fixed.has(n.id) && moved.some((r) => rectsOverlap(r, cardRect(n))))
+      .filter((n) => !moving.has(n.id) && !fixed.has(n.id) && moved.some((r) => rectsOverlap(r, boxRect(n), CLEARANCE)))
       .map((n) => n.id)
   }
 
@@ -168,7 +158,7 @@ function gapMoves(srcId: string, tgtIds: string[], nodes: FlowNode[], edges: Sig
  * New positions that give a new src→tgt wire room: tgt starts at least MIN_NODE_GAP right of src
  * (see gapMoves). `edges` are the wires before this one.
  */
-export function enforceGap(srcId: string, tgtId: string, nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+export function enforceGap(srcId: string, tgtId: string, nodes: Box[], edges: SignalEdge[]): Map<string, Pt> {
   return gapMoves(srcId, [tgtId], nodes, edges)
 }
 
@@ -179,7 +169,7 @@ export function enforceGap(srcId: string, tgtId: string, nodes: FlowNode[], edge
  * those cards down moves down as one block, so the rows underneath keep their shape and their
  * wires stay straight. The chain feeding the new card never moves.
  */
-export function makeRoomForInsert(newId: string, nodes: FlowNode[], edges: SignalEdge[]): Map<string, Pt> {
+export function makeRoomForInsert(newId: string, nodes: Box[], edges: SignalEdge[]): Map<string, Pt> {
   const targets = edges.filter((e) => e.source === newId).map((e) => e.target)
   const moves   = gapMoves(newId, targets, nodes, edges)
   const placed  = nodes.map((n) => {
@@ -189,28 +179,24 @@ export function makeRoomForInsert(newId: string, nodes: FlowNode[], edges: Signa
   const byId = new Map(placed.map((n) => [n.id, n]))
   const card = byId.get(newId)
   if (!card) return moves
-  const r     = cardRect(card)
+  const r     = boxRect(card)
   const fixed = upstreamOf(newId, edges).nodeIds
   // Cards in its own row (top within its header) can't be moved out of its way downward
-  const isBelow = (n: FlowNode) => !fixed.has(n.id) && n.position.y >= r.top + HEADER_H
+  const isBelow = (n: Box) => !fixed.has(n.id) && n.position.y >= r.top + HEADER_H
 
   // A wire's first and last runs sit on its cards' port lines: one under the new card moves with its card
-  const PAD = MIN_NODE_GAP / 2
   const runUnderCard = (a: Pt, b: Pt) =>
-    a.y === b.y && a.y > r.top - PAD && a.y < r.bottom + PAD &&
+    a.y === b.y && a.y > r.top - CLEARANCE && a.y < r.bottom + CLEARANCE &&
     Math.max(a.x, b.x) > r.left && Math.min(a.x, b.x) < r.right
 
-  const inTheWay = placed.filter((n) => isBelow(n) && rectsOverlap(r, cardRect(n)))
+  const inTheWay = placed.filter((n) => isBelow(n) && rectsOverlap(r, boxRect(n), CLEARANCE))
   for (const e of edges) {
     if (e.source === newId || e.target === newId) continue
     const src = byId.get(e.source)
     const tgt = byId.get(e.target)
     if (!src || !tgt) continue
-    const route = orthogonalRoute([
-      { x: cardRect(src).right, y: src.position.y + PORT_TOP },
-      ...(e.waypoints ?? []),
-      { x: tgt.position.x, y: tgt.position.y + PORT_TOP },
-    ])
+    // (Both ends on the first port line)
+    const route = orthogonalRoute([portPoint(src, 'source', 0), ...(e.waypoints ?? []), portPoint(tgt, 'target', 0)])
     if (isBelow(src) && runUnderCard(route[0], route[1])) inTheWay.push(src)
     if (isBelow(tgt) && runUnderCard(route[route.length - 2], route[route.length - 1])) inTheWay.push(tgt)
   }
@@ -233,20 +219,14 @@ export function makeRoomForInsert(newId: string, nodes: FlowNode[], edges: Signa
  * Each edge owns the horizontal band between the centre of its source and target.
  * Vertical tolerance is ±HIT_THRESHOLD around both nodes' port lines.
  */
-export function findEdgeAtPoint(
-  point: Pt,
-  edges: SignalEdge[],
-  nodes: FlowNode[],
-): SignalEdge | null {
+export function findEdgeAtPoint(point: Pt, edges: SignalEdge[], nodes: Box[]): SignalEdge | null {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
   for (const edge of edges) {
     const src = nodeMap.get(edge.source)
     const tgt = nodeMap.get(edge.target)
     if (!src || !tgt) continue
-    const srcDims = nodeDims(src.type ?? '', src.measured?.width, src.measured?.height)
-    const tgtDims = nodeDims(tgt.type ?? '', tgt.measured?.width, tgt.measured?.height)
-    const srcCX = src.position.x + srcDims.w / 2
-    const tgtCX = tgt.position.x + tgtDims.w / 2
+    const srcCX = src.position.x + src.size.w / 2
+    const tgtCX = tgt.position.x + tgt.size.w / 2
     if (point.x < srcCX || point.x > tgtCX) continue
     const minY = Math.min(src.position.y, tgt.position.y) + PORT_TOP - HIT_THRESHOLD
     const maxY = Math.max(src.position.y, tgt.position.y) + PORT_TOP + HIT_THRESHOLD

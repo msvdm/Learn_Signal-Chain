@@ -7,6 +7,7 @@ import { useTranslation } from '../i18n/useTranslation'
 import type { Translations } from '../i18n/translations'
 import { chainOrder } from '../graph/graph'
 import { helpKeyOf } from '../utils/nodeName'
+import { nodeDims } from '../utils/layoutHelpers'
 import { useGraphSignal } from '../hooks/useGraphSignal'
 
 const WIDTH  = 380
@@ -53,8 +54,9 @@ export function HelpPopover() {
   useEffect(() => {
     if (!anchor || height === 0) return
     const vp    = getViewport()
-    const w     = (anchor.measured.width ?? 160) * vp.zoom
-    const h     = (anchor.measured.height ?? 120) * vp.zoom
+    const size  = nodeDims(anchor.type ?? '', anchor.measured.width, anchor.measured.height)
+    const w     = size.w * vp.zoom
+    const h     = size.h * vp.zoom
     const left  = anchor.internals.positionAbsolute.x * vp.zoom + vp.x
     let   top   = anchor.internals.positionAbsolute.y * vp.zoom + vp.y
 
@@ -91,8 +93,9 @@ export function HelpPopover() {
   const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : undefined
 
   // Anchor geometry in canvas (screen) pixels
-  const nodeW    = (anchor.measured.width ?? 160) * zoom
-  const nodeH    = (anchor.measured.height ?? 120) * zoom
+  const size     = nodeDims(anchor.type ?? '', anchor.measured.width, anchor.measured.height)
+  const nodeW    = size.w * zoom
+  const nodeH    = size.h * zoom
   const nodeLeft = anchor.internals.positionAbsolute.x * zoom + vx
   const nodeTop  = anchor.internals.positionAbsolute.y * zoom + vy
   const centerX  = nodeLeft + nodeW / 2

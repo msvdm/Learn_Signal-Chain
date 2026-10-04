@@ -5,7 +5,8 @@ import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { getPorts } from '../graph/queries'
 import { getHealth, healthColor } from '../signal/levels'
 import { levelOf } from '../signal/engine'
-import { recordMeasuredSize } from '../utils/layoutHelpers'
+import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
+import type { Box } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { chainOfEdge } from '../utils/chainColors'
 import type { ChainEdgeData } from '../components/ChainEdge'
@@ -87,7 +88,24 @@ export function useFlowElements() {
   )
 
   const edges: Edge[] = useMemo(() => {
-    const nodesForValidation = graphNodes.map((n) => ({ id: n.id, position: n.position }))
+    const graph = { nodes: graphNodes, edges: graphEdges }
+    const cards: Box[] = graphNodes.map((n) => {
+      const size = measuredSizes[n.id]
+      return { id: n.id, position: n.position, size: nodeDims(n.typeKey, size?.width, size?.height) }
+    })
+
+    /** A wire with corners runs through another card, as it is drawn: port, corners, port. */
+    function crossesCard(edge: SignalEdge): boolean {
+      const src = cards.find((c) => c.id === edge.source)
+      const tgt = cards.find((c) => c.id === edge.target)
+      const srcNode = graphNodes.find((n) => n.id === edge.source)
+      const tgtNode = graphNodes.find((n) => n.id === edge.target)
+      if (!src || !tgt || !srcNode || !tgtNode) return false
+      const out = getPorts(srcNode, graph).outputs.findIndex((p) => p.id === edge.sourceHandle)
+      const inp = getPorts(tgtNode, graph).inputs.findIndex((p) => p.id === edge.targetHandle)
+      const points = [portPoint(src, 'source', Math.max(out, 0)), ...(edge.waypoints ?? []), portPoint(tgt, 'target', Math.max(inp, 0))]
+      return wirePassesThroughNode(points, cards, [edge.source, edge.target])
+    }
 
     return graphEdges.map((edge) => {
       const sourceStage = stages[edge.source]
@@ -96,9 +114,8 @@ export function useFlowElements() {
       const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
-      const routingWarning = (edge.waypoints?.length ?? 0) > 0
-        ? wirePassesThroughNode(edge.waypoints!, nodesForValidation, [edge.source, edge.target])
-        : false
+      // (A wire without corners is routed for you: only one with corners gets the warning)
+      const routingWarning = (edge.waypoints?.length ?? 0) > 0 && crossesCard(edge)
 
       const data: ChainEdgeData = {
         waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview,
@@ -123,7 +140,7 @@ export function useFlowElements() {
         data,
       }
     })
-  }, [graphEdges, stages, wires, graphNodes, highlight, overview])
+  }, [graphEdges, stages, wires, graphNodes, highlight, overview, measuredSizes])
 
   return { nodes, edges, keepSizes }
 }

@@ -5,10 +5,8 @@ import type { SignalEdge } from '../store/signalStore'
 import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import type { TypeKey } from '../data/nodeRegistry'
 import { activeDragTypeKey } from '../utils/dragState'
-import {
-  GRID, MIN_NODE_GAP, nodeDims, resolveOverlap, makeRoomForInsert, findEdgeAtPoint,
-} from '../utils/layoutHelpers'
-import type { Pt } from '../utils/layoutHelpers'
+import { GRID, MIN_NODE_GAP, nodeDims, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import { wireTakesCard } from '../utils/connectionRules'
 import type { ParsedChain } from '../utils/chainFile'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -37,11 +35,11 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
   function insertSlot(raw: Pt, typeKey: TypeKey): { edge: SignalEdge; pos: Pt } | null {
     // Edges from Zustand: always in sync, unlike getEdges() which can lag
     const view  = useSignalStore.getState()
-    const nodes = layout.layoutNodes(view.nodes)
-    const edge  = findEdgeAtPoint(raw, view.edges, nodes)
-    const src   = edge && nodes.find((n) => n.id === edge.source)
+    const cards = layout.layoutSnapshot(view.nodes)
+    const edge  = findEdgeAtPoint(raw, view.edges, cards)
+    const src   = edge && cards.find((n) => n.id === edge.source)
     if (!edge || !src || !wireTakesCard(typeKey, edge, view)) return null
-    const srcRight = src.position.x + nodeDims(src.type ?? '', src.measured?.width, src.measured?.height).w
+    const srcRight = src.position.x + src.size.w
     const minX     = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
     return { edge, pos: { x: Math.max(minX, layout.dropOrigin(raw).x), y: src.position.y } }
   }
@@ -90,8 +88,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
       return
     }
 
-    const { w, h } = nodeDims(typeKey)
-    const finalPos = resolveOverlap(layout.dropOrigin(raw), w, h, layout.measuredNodes())
+    const finalPos = resolveOverlap(layout.dropOrigin(raw), nodeDims(typeKey), layout.layoutSnapshot())
     store.addNode({ id: newId, typeKey, position: finalPos, params, bypassed: false })
   }
 
@@ -100,7 +97,8 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
     if (nodeId !== pendingInsertRef.current) return
     pendingInsertRef.current = null
     const { nodes, edges, setPositions } = useSignalStore.getState()
-    const placed = layout.layoutNodes(nodes).map((n) => (n.id === nodeId ? { ...n, measured: size } : n))
+    const placed = layout.layoutSnapshot(nodes)
+      .map((n) => (n.id === nodeId ? { ...n, size: { w: size.width, h: size.height } } : n))
     setPositions(makeRoomForInsert(nodeId, placed, edges))
     fitSoon({ duration: 400 })
   }

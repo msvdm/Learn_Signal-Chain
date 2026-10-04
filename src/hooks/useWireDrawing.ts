@@ -4,7 +4,7 @@ import { useReactFlow } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import { newEdge } from '../graph/edits'
 import { enforceGap } from '../utils/layoutHelpers'
-import type { Pt } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -63,7 +63,7 @@ export function useWireDrawing(
   wrapperRef: RefObject<HTMLDivElement | null>,
   swallowClick: MutableRefObject<boolean>,
 ): WireCursor | null {
-  const { screenToFlowPosition, getInternalNode } = useReactFlow()
+  const { screenToFlowPosition } = useReactFlow()
   const layout = useCanvasLayout()
   const [cursor, setCursor] = useState<WireCursor | null>(null)
   const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -93,19 +93,16 @@ export function useWireDrawing(
     }
 
     function onMove(e: MouseEvent) {
-      const { wire, nodes } = useSignalStore.getState()
+      const { wire } = useSignalStore.getState()
       if (!wire) { followMouse(e); return }
       const pos      = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       const hEl      = handleUnder(e.clientX, e.clientY)
       const onTarget = hEl?.classList.contains('target') ? hEl : null
       const snap     = onTarget ? handleFlowPos(onTarget, screenToFlowPosition) : null
-      const cards    = nodes.map((n) => {
-        const m = getInternalNode(n.id)?.measured
-        return { id: n.id, position: n.position, width: m?.width, height: m?.height }
-      })
       // The wire ends on its target's edge — only other cards in the way count as crossing
       const exclude = onTarget ? [wire.source.nodeId, onTarget.dataset.nodeid!] : [wire.source.nodeId]
-      setCursor({ pos, snap, warning: wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], cards, exclude) })
+      const warning = wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], layout.layoutSnapshot(), exclude)
+      setCursor({ pos, snap, warning })
     }
 
     document.addEventListener('mousemove', onMove)
@@ -113,7 +110,7 @@ export function useWireDrawing(
       document.removeEventListener('mousemove', onMove)
       if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
     }
-  }, [screenToFlowPosition, getInternalNode])
+  }, [screenToFlowPosition, layout])
 
   useEffect(() => {
     /** A new wire from the output `hEl`. */
@@ -185,7 +182,7 @@ export function useWireDrawing(
           waypoints:    wire.waypoints.length > 0 ? wire.waypoints : undefined,
         }))
         // (The wires before this one)
-        store.setPositions(enforceGap(source.nodeId, targetNodeId, layout.measuredNodes(), edges))
+        store.setPositions(enforceGap(source.nodeId, targetNodeId, layout.layoutSnapshot(), edges))
         store.cancelWire()
         return
       }

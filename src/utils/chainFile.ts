@@ -2,7 +2,8 @@ import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/no
 import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
-import type { NodeGroup, Size } from './nodeGroup'
+import type { NodeGroup } from './nodeGroup'
+import type { Size } from './geometry'
 import { nodeDims } from './layoutHelpers'
 import { isPng, readPngText } from './pngText'
 

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { Node as FlowNode } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
+import type { TypeKey } from '../data/nodeRegistry'
 import { resolveOverlap } from '../utils/layoutHelpers'
-import type { Pt } from '../utils/layoutHelpers'
+import type { Pt } from '../utils/geometry'
 import { useCanvasLayout } from './useCanvasLayout'
 
 /** Where a card will land, drawn as a dashed outline while it is dragged (or dropped from the palette). */
@@ -26,8 +27,8 @@ export function useNodeDrag() {
 
   /** Where one dragged element lands: snapped, and clear of the other cards. */
   function landing(node: FlowNode): Ghost {
-    const { w, h } = layout.sizeOf({ id: node.id, typeKey: node.type ?? '' })
-    return { pos: resolveOverlap(layout.snap(node.position), w, h, layout.measuredNodes(), node.id), w, h }
+    const size = layout.sizeOf({ id: node.id, typeKey: node.type as TypeKey })
+    return { pos: resolveOverlap(layout.snap(node.position), size, layout.layoutSnapshot(), node.id), ...size }
   }
 
   function onNodeDrag(_e: React.MouseEvent, node: FlowNode, dragged: FlowNode[]) {
