@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { GitBranch } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -39,7 +38,6 @@ export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="relay"
-      icon={<GitBranch size={16} />}
       label={data.label ?? t.nodes.relay.label}
     >
       {/* A / B input selector */}

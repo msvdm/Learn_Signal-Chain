@@ -1,5 +1,6 @@
 import type en from './locales/en.json'
 import type { ComplexityLevel } from '../data/levels'
+import type { TypeKey } from '../data/nodeRegistry'
 
 export type Lang = string
 
@@ -14,11 +15,13 @@ export interface TheoryEntry {
 
 /**
  * All UI text, typed from en.json — add a key there (and to every other locale) and it is typed.
- * The tables looked up by node type are records, so any type key can be looked up.
+ * The tables looked up by node type are records: every type must have a palette name and a help
+ * text (a new type without them does not compile), and any key can be looked up (help texts also
+ * exist for roles: Preamp, Main Fader, Balance).
  */
 export type Translations = Omit<LocaleStrings, 'palette' | 'theory' | 'levelNames'> & {
-  palette: Omit<LocaleStrings['palette'], 'items'> & { items: Record<string, string> }
-  theory: Record<string, TheoryEntry>
+  palette: Omit<LocaleStrings['palette'], 'items'> & { items: Record<TypeKey, string> & Record<string, string> }
+  theory: Record<TypeKey, TheoryEntry> & Record<string, TheoryEntry>
   /**
    * Names that change with the level, by node type: a card that is simpler on a lower level is
    * named for it (Intermediate's three-knob "Equalizer"). Replaces its palette name and card label.

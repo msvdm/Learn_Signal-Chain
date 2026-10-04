@@ -138,7 +138,7 @@ export function cloneGroup(
       return [bus ? matrixSendParam(bus[1]) : k, v]
     })),
     // A copied source starts a chain of its own: it gets its own colour when added
-    color:    NODE_REGISTRY[n.typeKey]?.category === 'source' ? undefined : n.color,
+    color:    NODE_REGISTRY[n.typeKey].category === 'source' ? undefined : n.color,
   }))
 
   const edges: SignalEdge[] = group.edges.map((e) => newEdge({

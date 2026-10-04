@@ -19,7 +19,7 @@ export function newEdge(wire: Omit<SignalEdge, 'id'>): SignalEdge {
 export function withNodes(graph: GraphView, added: SignalNode[], addedEdges: SignalEdge[] = []): GraphView {
   let nodes = graph.nodes
   for (const n of added) {
-    const isSource = NODE_REGISTRY[n.typeKey]?.category === 'source'
+    const isSource = NODE_REGISTRY[n.typeKey].category === 'source'
     nodes = [...nodes, isSource && !n.color ? { ...n, color: pickChainColor(nodes) } : n]
   }
   return { nodes, edges: addedEdges.length > 0 ? [...graph.edges, ...addedEdges] : graph.edges }
@@ -90,7 +90,7 @@ export function withPositions(graph: GraphView, moves: Map<string, { x: number; 
  */
 export function withStereo(graph: GraphView, nodeId: string, on: boolean): GraphView | null {
   const node = graph.nodes.find((n) => n.id === nodeId)
-  if (!node || NODE_REGISTRY[node.typeKey]?.stereo !== 'optional') return null
+  if (!node || NODE_REGISTRY[node.typeKey].stereo !== 'optional') return null
   if ((node.params.stereo === true) === on) return null
 
   const updated = { ...node, params: { ...node.params, stereo: on } }

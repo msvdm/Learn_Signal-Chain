@@ -1,96 +1,26 @@
 import { useState } from 'react'
-import type { ReactNode } from 'react'
-import {
-  Mic, Guitar, Plug,
-  Zap, Activity, Box, ToggleLeft, Radio, Sliders,
-  AudioWaveform, ShieldAlert, DoorClosed, Minus,
-  Merge, Volume2, Cpu, Search,
-  SlidersHorizontal, GitBranch, MoveHorizontal,
-  ArrowRight, ArrowLeft,
-} from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
-import type { ComplexityLevel } from '../data/levels'
+import type { TypeKey } from '../data/nodeRegistry'
+import { availableAt } from '../data/nodeRegistry'
+import { NODE_LOOK, PALETTE_GROUPS } from './nodes/nodeLook'
+import type { PaletteGroup } from './nodes/nodeLook'
 import { setActiveDragTypeKey } from '../utils/dragState'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 
-type Category = 'source' | 'processing' | 'routing' | 'output'
-type Tab = 'all' | Category
-
-interface PaletteItem {
-  typeKey: string
-  icon: ReactNode
-  category: Category
-}
+type Tab = 'all' | PaletteGroup
 
 const ICON = 18
 
-const ALL_ITEMS: PaletteItem[] = [
-  // Sources
-  { typeKey: 'mic',              icon: <Mic size={ICON} />,               category: 'source' },
-  { typeKey: 'line-in',          icon: <svg viewBox="0 0 24 24" width={ICON} height={ICON} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-45 12 12)"><line x1="10.5" y1="22" x2="10.5" y2="20"/><line x1="13.5" y1="22" x2="13.5" y2="20"/><rect x="8.5" y="13" width="7" height="7.5" rx="1.5"/><line x1="10" y1="13" x2="10" y2="11"/><line x1="14" y1="13" x2="14" y2="11"/><line x1="10" y1="11" x2="14" y2="11"/><path d="M10 11 L10 6.5 Q10 4 12 4 Q14 4 14 6.5 L14 11"/><line x1="10" y1="8.5" x2="14" y2="8.5"/></g></svg>, category: 'source' },
-  { typeKey: 'instrument',       icon: <Guitar size={ICON} />,            category: 'source' },
-  { typeKey: 'di-box',           icon: <Plug size={ICON} />,              category: 'source' },
-  // Processing
-  { typeKey: 'gain',             icon: <Zap size={ICON} />,               category: 'processing' },
-  { typeKey: 'hpf',              icon: <svg width={ICON} height={Math.round(ICON * 0.7)} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 13 C3 1 9 1 12 1 L22 1" /></svg>, category: 'processing' },
-  { typeKey: 'eq',               icon: <Activity size={ICON} />,          category: 'processing' },
-  { typeKey: 'comp',             icon: <Box size={ICON} />,               category: 'processing' },
-  { typeKey: 'pad',              icon: <Minus size={ICON} />,             category: 'processing' },
-  { typeKey: 'deesser',          icon: <AudioWaveform size={ICON} />,     category: 'processing' },
-  { typeKey: 'noise-gate',       icon: <DoorClosed size={ICON} />,        category: 'processing' },
-  { typeKey: 'limiter',          icon: <ShieldAlert size={ICON} />,       category: 'processing' },
-  { typeKey: 'amp',              icon: <Radio size={ICON} />,             category: 'processing' },
-  { typeKey: 'graphic-eq',       icon: <Sliders size={ICON} />,           category: 'processing' },
-  // Routing — level controls, switches, panning, conversion, buses
-  { typeKey: 'fader',            icon: <SlidersHorizontal size={ICON} />, category: 'routing' },
-  { typeKey: 'switch',           icon: <ToggleLeft size={ICON} />,        category: 'routing' },
-  { typeKey: 'relay',            icon: <GitBranch size={ICON} />,         category: 'routing' },
-  { typeKey: 'pan',              icon: <MoveHorizontal size={ICON} />,    category: 'routing' },
-  { typeKey: 'adc',              icon: <ArrowRight size={ICON} />,        category: 'routing' },
-  { typeKey: 'dac',              icon: <ArrowLeft size={ICON} />,         category: 'routing' },
-  { typeKey: 'master-bus',       icon: <Merge size={ICON} />,             category: 'routing' },
-  { typeKey: 'aux-bus',          icon: <Merge size={ICON} />,             category: 'routing' },
-  { typeKey: 'matrix-bus',       icon: <Merge size={ICON} />,             category: 'routing' },
-  { typeKey: 'audio-interface',  icon: <Cpu size={ICON} />,               category: 'routing' },
-  // Output
-  { typeKey: 'active-speaker',   icon: <Volume2 size={ICON} />,           category: 'output' },
-  { typeKey: 'speaker',          icon: <Volume2 size={ICON} />,           category: 'output' },
-]
-
-const PALETTE_BY_LEVEL: Record<ComplexityLevel, string[]> = {
-  beginner: [
-    'mic', 'line-in', 'instrument', 'di-box',
-    'active-speaker',
-    'gain', 'fader',
-  ],
-  intermediate: [
-    'mic', 'line-in', 'instrument', 'di-box',
-    'active-speaker',
-    'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
-    'noise-gate', 'limiter', 'deesser',
-    'switch', 'relay', 'pan',
-    'master-bus', 'aux-bus', 'audio-interface',
-  ],
-  advanced: [
-    'mic', 'line-in', 'instrument', 'di-box',
-    'active-speaker', 'speaker',
-    'gain', 'fader', 'hpf', 'eq', 'comp', 'pad',
-    'noise-gate', 'limiter', 'deesser',
-    'switch', 'relay', 'pan',
-    'amp', 'graphic-eq',
-    'master-bus', 'aux-bus', 'matrix-bus', 'audio-interface',
-    'adc', 'dac',
-  ],
-}
-
-const CATEGORY_ORDER: Category[] = ['source', 'processing', 'routing', 'output']
+// Every type, in palette order (NODE_LOOK's order)
+const ALL_ITEMS = (Object.keys(NODE_LOOK) as TypeKey[]).map((typeKey) => ({ typeKey, ...NODE_LOOK[typeKey] }))
 
 // The first thing to drag onto an empty canvas
 const START_ITEM = 'mic'
 
-function onDragStart(e: React.DragEvent, typeKey: string) {
+function onDragStart(e: React.DragEvent, typeKey: TypeKey) {
   setActiveDragTypeKey(typeKey)
   e.dataTransfer.setData('application/lsc-node-type', typeKey)
   e.dataTransfer.effectAllowed = 'copy'
@@ -108,9 +38,8 @@ export function ElementPalette() {
   const [tab, setTab]     = useState<Tab>('all')
   const [query, setQuery] = useState('')
 
-  const visibleKeys  = PALETTE_BY_LEVEL[complexityLevel]
-  const nameOf       = (typeKey: string) => t.palette.items[typeKey] ?? typeKey
-  const visibleItems = ALL_ITEMS.filter((item) => visibleKeys.includes(item.typeKey))
+  const nameOf       = (typeKey: TypeKey) => t.palette.items[typeKey] ?? typeKey
+  const visibleItems = ALL_ITEMS.filter((item) => availableAt(item.typeKey, complexityLevel))
 
   // ── Tablet: icon rail ──────────────────────────────────────────────────────
   if (isTablet) {
@@ -142,7 +71,7 @@ export function ElementPalette() {
                 cursor: 'grab',
               }}
             >
-              {item.icon}
+              <item.icon size={ICON} />
             </div>
           )
         })}
@@ -153,14 +82,14 @@ export function ElementPalette() {
   // ── Desktop: search, tabs, tile grid ───────────────────────────────────────
   const q = query.trim().toLowerCase()
   const matching = visibleItems.filter((item) =>
-    (tab === 'all' || item.category === tab) &&
+    (tab === 'all' || item.group === tab) &&
     // The type key too, so "eq" finds the Equalizer in any language
     (q === '' || nameOf(item.typeKey).toLowerCase().includes(q) || item.typeKey.includes(q)),
   )
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'all', label: t.palette.all },
-    ...CATEGORY_ORDER.map((c) => ({ id: c, label: t.palette.categories[c] })),
+    ...PALETTE_GROUPS.map((g) => ({ id: g, label: t.palette.categories[g] })),
   ]
 
   return (
@@ -222,8 +151,8 @@ export function ElementPalette() {
       </div>
 
       {/* Groups */}
-      {CATEGORY_ORDER.map((cat) => {
-        const items = matching.filter((item) => item.category === cat)
+      {PALETTE_GROUPS.map((cat) => {
+        const items = matching.filter((item) => item.group === cat)
         if (items.length === 0) return null
         return (
           <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
@@ -255,7 +184,7 @@ export function ElementPalette() {
                     }}
                   >
                     <span style={{ color: 'var(--lsc-fg-muted)', display: 'flex', height: ICON, alignItems: 'center' }}>
-                      {item.icon}
+                      <item.icon size={ICON} />
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.25, hyphens: 'auto', overflowWrap: 'break-word' }}>
                       {nameOf(item.typeKey)}

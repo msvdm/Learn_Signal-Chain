@@ -1,6 +1,7 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Volume2, VolumeX } from 'lucide-react'
+import { VolumeX } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
+import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -11,6 +12,7 @@ interface GraphSpeakerData extends Record<string, unknown> {
 }
 
 const NOTE_LINE = 1.25
+const Icon      = NODE_LOOK.speaker.icon
 
 /**
  * Passive speaker: a card with a big icon and the level it plays, at every zoom.
@@ -26,11 +28,10 @@ export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="speaker"
-      icon={<Volume2 size={20} />}
       label={data.label ?? t.nodes.speaker.label}
       faceOnly
       overviewArt={(box) => {
-        if (!needsAmp) return <OverviewIcon icon={<Volume2 />} box={box} />
+        if (!needsAmp) return <OverviewIcon icon={<Icon />} box={box} />
         // Room for a two-line note under the icon
         const note = Math.max(13, Math.min(18, Math.round(box.w * 0.065)))
         const noteH = note * NOTE_LINE * 2 + 6

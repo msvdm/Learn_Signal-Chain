@@ -1,6 +1,7 @@
 import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
+import type { Size, TypeKey } from '../data/nodeRegistry'
+import { NODE_REGISTRY, isTypeKey } from '../data/nodeRegistry'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
 
@@ -21,29 +22,14 @@ export const PORT_TOP = HEADER_H + 24
 export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
 
 // Every card is at least this big and landscape (never taller than wide, except a tall stack of
-// ports), so its name has room to grow in overview (zoomed out)
+// ports), so its name has room to grow in overview (zoomed out). Some are bigger (`minSize` in the
+// registry: the mixing buses).
 export const CARD_MIN_W = 280
 export const CARD_MIN_H = 210
 
-// Cards with their own minimum size
-const CARD_MIN_BY_TYPE: Record<string, { w: number; h: number }> = {
-  // Mixing buses: the size of the Compressor card, so their long names stay big in overview
-  'master-bus': { w: 398, h: 298 },
-  'aux-bus':    { w: 398, h: 298 },
-  'matrix-bus': { w: 398, h: 298 },
-}
-
-// Free-standing controls (Gain, Pan, Fader, Switch — FreeControl, not cards): their usual size, for drop previews
-const FREE_CONTROL_SIZE: Record<string, { w: number; h: number }> = {
-  gain:   { w: 162, h: 216 },
-  pan:    { w: 232, h: 266 },
-  fader:  { w: 198, h: 541 },
-  switch: { w: 175, h: 188 },
-}
-
 /** The smallest a card of this type can be (it grows with its content). */
-export function cardMinSize(typeKey: string): { w: number; h: number } {
-  return CARD_MIN_BY_TYPE[typeKey] ?? { w: CARD_MIN_W, h: CARD_MIN_H }
+export function cardMinSize(typeKey: TypeKey): Size {
+  return NODE_REGISTRY[typeKey].minSize ?? { w: CARD_MIN_W, h: CARD_MIN_H }
 }
 
 /**
@@ -51,7 +37,7 @@ export function cardMinSize(typeKey: string): { w: number; h: number } {
  * size. Nodes size themselves to their content, so once any node of a type has been measured its
  * real size is remembered and used instead.
  */
-const measuredSizeByType = new Map<string, { w: number; h: number }>()
+const measuredSizeByType = new Map<string, Size>()
 
 export function recordMeasuredSize(typeKey: string, w: number, h: number) {
   if (w > 0 && h > 0) measuredSizeByType.set(typeKey, { w, h })
@@ -61,8 +47,15 @@ export const HIT_THRESHOLD = 48
 
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
+/** A type never measured: a free-standing control's usual size, else a card's minimum. */
+function unmeasuredSize(typeKey: string): Size {
+  if (!isTypeKey(typeKey)) return { w: CARD_MIN_W, h: CARD_MIN_H }
+  return NODE_REGISTRY[typeKey].freeSize ?? cardMinSize(typeKey)
+}
+
+// `typeKey` may be React Flow's node type (a string)
 export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number) {
-  const known = measuredSizeByType.get(typeKey) ?? FREE_CONTROL_SIZE[typeKey] ?? cardMinSize(typeKey)
+  const known = measuredSizeByType.get(typeKey) ?? unmeasuredSize(typeKey)
   return {
     w: measuredW ?? known.w,
     h: measuredH ?? known.h,
@@ -257,7 +250,7 @@ export function findEdgeAtPoint(
 }
 
 /** True only for nodes that have both an input and an output port. */
-export function canInsertMidChain(typeKey: string): boolean {
+export function canInsertMidChain(typeKey: TypeKey): boolean {
   const def = NODE_REGISTRY[typeKey]
-  return !!def && def.inputs.length > 0 && def.outputs.length > 0
+  return def.inputs.length > 0 && def.outputs.length > 0
 }

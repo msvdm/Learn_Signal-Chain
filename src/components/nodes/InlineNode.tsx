@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
+import type { TypeKey } from '../../data/nodeRegistry'
 import { NodeWrapper } from './NodeWrapper'
 import type { OverviewArt } from './OverviewFace'
 
 interface InlineNodeProps {
   nodeId: string
-  typeKey: string
-  icon: ReactNode
+  typeKey: TypeKey
   label: string
   /** A single big reading shown at the top of the body (e.g. a source's level). */
   value?: string
@@ -22,7 +22,6 @@ interface InlineNodeProps {
 export function InlineNode({
   nodeId,
   typeKey,
-  icon,
   label,
   value,
   children,
@@ -32,7 +31,7 @@ export function InlineNode({
 }: InlineNodeProps) {
   return (
     <NodeWrapper
-      nodeId={nodeId} typeKey={typeKey} icon={icon} label={label} align={align}
+      nodeId={nodeId} typeKey={typeKey} label={label} align={align}
       overviewArt={overviewArt} overviewLevel={overviewLevel}
     >
       {value && (

@@ -1,7 +1,7 @@
 import type { NodePort, SignalNode, SignalEdge } from '../data/nodeRegistry'
 import {
-  NODE_REGISTRY, MIX_BUS_TYPES, MIX_PORT, MATRIX_PORT, SPLIT_TYPES,
-  isNodeStereo, isStereoBus, passesThrough, portSide,
+  NODE_REGISTRY, MIX_PORT, MATRIX_PORT,
+  canSplit, isMixBus, isNodeStereo, isStereoBus, passesThrough, portSide,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
@@ -36,7 +36,7 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
     if (!node || seen.has(id)) return 'mono'
     seen.add(id)
     if (node.typeKey === 'pan') return 'stereo'
-    if (NODE_REGISTRY[node.typeKey]?.stereo !== 'follow') return isNodeStereo(node) ? 'stereo' : 'mono'
+    if (NODE_REGISTRY[node.typeKey].stereo !== 'follow') return isNodeStereo(node) ? 'stereo' : 'mono'
     const wire = drivingWire(node, graph)
     if (!wire) return 'mono'
     id     = wire.source
@@ -50,7 +50,7 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
  * nothing plugged in keeps the layout its wires show, so plugging it back in restores L and R.
  */
 export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: GraphView): boolean {
-  if (!SPLIT_TYPES.has(node.typeKey)) return false
+  if (!canSplit(node.typeKey)) return false
   if (node.typeKey === 'fader') return mixBusOf(node.id, view) !== null
   const graph = graphOf(view)
   const wire  = graph.into(node.id)[0]
@@ -67,8 +67,17 @@ const SIDE_OUTPUTS: NodePort[] = [
   { id: 'out-r', label: 'Right Out' },
 ]
 
+/** The audio interface's inputs: one per wire plugged in (in-1, in-2 …), then a free one for the next. */
+function dynamicInputs(wires: readonly SignalEdge[]): NodePort[] {
+  const used = [...new Set(wires.map((e) => e.targetHandle))]
+  let free = 1
+  while (used.includes(`in-${free}`)) free++
+  return [...used, `in-${free}`].map((id) => ({ id, label: '' }))
+}
+
 /**
- * The ports a node shows right now. Inputs never change. Outputs:
+ * The ports a node shows right now. Inputs never change, except the audio interface's: one per wire
+ * plugged in, plus a free one. Outputs:
  * - a bus switched to Stereo splits its output into Left and Right;
  * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs; a Graphic EQ
  *   or Amplifier fed a stereo wire has Left and Right outputs too (splitsStereo);
@@ -85,10 +94,12 @@ export function getPorts(
   outputs: NodePort[]
 } {
   const def = NODE_REGISTRY[node.typeKey]
-  if (!def) return { inputs: [], outputs: [] }
+  let inputs  = def.inputs
   let outputs = def.stereoOutputs && isNodeStereo(node) ? def.stereoOutputs : def.outputs
   if (view && node.id) {
-    const out     = graphOf(view).from(node.id)
+    const graph   = graphOf(view)
+    if (def.dynamicInputs) inputs = dynamicInputs(graph.into(node.id))
+    const out     = graph.from(node.id)
     const passing = out.some((e) => e.sourceHandle === MIX_PORT)
     if (isStereoBus(node) && passing) {
       outputs = MIX_OUTPUTS
@@ -99,7 +110,7 @@ export function getPorts(
       outputs = [...outputs, MATRIX_SEND_OUTPUT]
     }
   }
-  return { inputs: def.inputs, outputs }
+  return { inputs, outputs }
 }
 
 /**
@@ -143,10 +154,10 @@ export function mixBusOf(nodeId: string, view: GraphView): string | null {
 export function sourceBusOf(nodeId: string, view: GraphView): string | null {
   const node = graphOf(view).node(nodeId)
   if (!node) return null
-  if (MIX_BUS_TYPES.has(node.typeKey)) return node.id
+  if (isMixBus(node.typeKey)) return node.id
   if (!passesThrough(node.typeKey)) return null
   for (const { source } of walkPassthrough(nodeId, view)) {
-    if (MIX_BUS_TYPES.has(source.typeKey)) return source.id
+    if (isMixBus(source.typeKey)) return source.id
   }
   return null
 }
@@ -165,12 +176,13 @@ export function isMatrixSource(nodeId: string, handleId: string, view: GraphView
   if (handleId === MATRIX_PORT || portSide(handleId) !== null) {
     // L / R belong to a stereo bus or its Main Fader — but not a Matrix Bus's own Main Fader
     const bus = node.typeKey === 'fader' ? mixBusOf(node.id, graph) : node.id
-    return bus !== null && MIX_BUS_TYPES.has(graph.node(bus)?.typeKey ?? '')
+    const busNode = bus === null ? undefined : graph.node(bus)
+    return busNode !== undefined && isMixBus(busNode.typeKey)
   }
-  if (MIX_BUS_TYPES.has(node.typeKey)) return handleId === 'out'
+  if (isMixBus(node.typeKey)) return handleId === 'out'
   if (!passesThrough(node.typeKey)) return false
   for (const { wire, source } of walkPassthrough(nodeId, graph)) {
-    if (MIX_BUS_TYPES.has(source.typeKey)) return wire.sourceHandle === 'out'
+    if (isMixBus(source.typeKey)) return wire.sourceHandle === 'out'
   }
   return false
 }

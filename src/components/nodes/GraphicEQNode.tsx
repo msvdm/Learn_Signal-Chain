@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
-import { Sliders } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -111,7 +110,6 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
     <NodeWrapper
       nodeId={id}
       typeKey="graphic-eq"
-      icon={<Sliders size={16} />}
       label={data.label ?? t.nodes.graphicEq.label}
     >
       <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>

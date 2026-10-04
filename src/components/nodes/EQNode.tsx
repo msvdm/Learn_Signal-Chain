@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Activity } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -253,7 +252,6 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="eq"
-      icon={<Activity size={16} />}
       label={data.label ?? t.nodes.eq.label}
       style={advanced ? undefined : twoColumnCard}
     >

@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Plug } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -33,7 +32,6 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="di-box"
-      icon={<Plug size={16} />}
       label={data.label ?? t.nodes['di-box'].label}
     >
       <div style={twoColumns}>

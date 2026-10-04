@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { DoorClosed } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -169,7 +168,6 @@ export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>)
     <NodeWrapper
       nodeId={id}
       typeKey="noise-gate"
-      icon={<DoorClosed size={16} />}
       label={data.label ?? tg?.label ?? 'Noise Gate'}
     >
       <div style={twoColumns}>

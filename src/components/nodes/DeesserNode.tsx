@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { AudioWaveform } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -39,7 +38,6 @@ export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
       nodeId={id}
       typeKey="deesser"
       style={twoColumnCard}
-      icon={<AudioWaveform size={16} />}
       label={data.label ?? t.nodes.deesser.label}
     >
       <div style={twoColumns}>

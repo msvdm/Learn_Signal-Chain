@@ -1,5 +1,5 @@
-import type { SignalNode } from '../data/nodeRegistry'
-import { MULTI_WIRE_TYPES, param } from '../data/nodeRegistry'
+import type { SignalNode, TypeKey } from '../data/nodeRegistry'
+import { param } from '../data/nodeRegistry'
 import type { SignalDomain } from './levels'
 import { CLIP_DBU } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
@@ -50,116 +50,111 @@ export const SPEAKER_LEVEL_DB = 40
 /** A Gain (not a Preamp) or an Amplifier turned all the way down is switched off. */
 export const GAIN_OFF_DB = -60
 
-/** Dynamics that run "linked" in stereo: the louder side decides, both sides get the same change. */
-export const LINKED_DYNAMICS = new Set(['comp', 'limiter', 'deesser', 'noise-gate'])
+/** What one type does to one channel. */
+type Process = (node: SignalNode, input: number, ctx: SideContext) => SideResult
+
+const pass    = (level: number, ctx: SideContext): SideResult => ({ out: level, domain: ctx.domain })
+const blocked = (condition: StageCondition, domain: SignalDomain): SideResult => ({ out: -Infinity, domain, condition })
+
+/** A bus (or the audio interface) cannot add analog and digital signals together. */
+const summing = (process: Process): Process => (node, input, ctx) =>
+  ctx.mixedDomains ? blocked('domainMixedBus', ctx.domain) : process(node, input, ctx)
+
+/** Amplifiers and speakers cannot take a digital signal. */
+const analogOnly = (condition: StageCondition, process: Process): Process => (node, input, ctx) =>
+  ctx.domain === 'digital' ? blocked(condition, ctx.domain) : process(node, input, ctx)
+
+const busFader: Process = summing((node, input, ctx) =>
+  pass(isFinite(input) ? input + param(node, 'faderDb') : -Infinity, ctx))
+
+const sourceLevel: Process = (node) => ({ out: param(node, 'levelDb'), domain: 'analog' })
+
+/** What each type does to one channel (every type has one: a new type without it does not compile). */
+const PROCESS: Record<TypeKey, Process> = {
+  mic:          (node) => ({ out: param(node, 'sensitivityDb'), domain: 'analog' }),
+  'line-in':    sourceLevel,
+  instrument:   sourceLevel,
+  // Passive DI: impedance conversion only, no level change. Both outputs carry same signal.
+  'di-box':     (_, input) => ({ out: input, domain: 'analog' }),
+  gain: (node, input, ctx) => {
+    // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
+    if (ctx.preamp) return pass(Math.min(input + param(node, 'preampDb'), CLIP_DBU), ctx)
+    const gainDb = param(node, 'gainDb')
+    return pass(gainDb <= GAIN_OFF_DB ? -Infinity : Math.min(input + gainDb, CLIP_DBU), ctx)
+  },
+  amp: analogOnly('digitalToAmp', (node, input, ctx) => {
+    // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel
+    // (a two-channel amp): Left uses gainDb, Right gainDbR (until turned, it follows gainDb).
+    const raw    = ctx.side === 'r' ? (param(node, 'gainDbR') ?? param(node, 'gainDb')) : param(node, 'gainDb')
+    const gainDb = Math.min(raw, 0)
+    return pass(gainDb <= GAIN_OFF_DB ? -Infinity : input + gainDb, ctx)
+  }),
+  hpf: (node, input, ctx) => pass(input + hpfLevelChange(param(node, 'cutoffHz')), ctx),
+  eq:  (node, input, ctx) => pass(input + eqLevelChange(param(node, 'bands')), ctx),
+  'graphic-eq': (node, input, ctx) => {
+    // In stereo the right side has its own sliders (r0…r30); untouched, they copy the left
+    const gains = GEQ_CENTERS.map((_, i) => {
+      const left = param(node, `b${i}`)
+      return ctx.side === 'r' ? (param(node, `r${i}`) ?? left) : left
+    })
+    return pass(input + graphicEqLevelChange(gains), ctx)
+  },
+  comp: (node, input, ctx) => {
+    const threshold = param(node, 'thresholdDb')
+    const ratio     = param(node, 'ratio')
+    const gainReductionDb = input > threshold ? (input - threshold) * (1 - 1 / ratio) : 0
+    return { out: input - gainReductionDb + param(node, 'makeupGainDb'), domain: ctx.domain, gainReductionDb }
+  },
+  'noise-gate': (node, input, ctx) => {
+    // Closed (below the threshold): turned down by the Range (−80 dB ≈ silence). Hold, Attack and
+    // Release are shown on the card but are timings, not part of this level math.
+    const range = param(node, 'rangeDb')
+    const open  = input >= param(node, 'thresholdDb')
+    const gainReductionDb = open || !isFinite(input) ? 0 : -range
+    return { out: open ? input : input + range, domain: ctx.domain, gainReductionDb }
+  },
+  limiter: (node, input, ctx) => {
+    const ceiling = param(node, 'thresholdDb')
+    const gainReductionDb = Math.max(0, input - ceiling)
+    return { out: Math.min(input, ceiling) + param(node, 'makeupGainDb'), domain: ctx.domain, gainReductionDb }
+  },
+  deesser: (node, input, ctx) => {
+    // 8:1 ratio on sibilant frequencies — simplified to overall level reduction
+    const gainReductionDb = Math.max(0, (input - param(node, 'thresholdDb')) * (1 - 1 / 8))
+    return { out: input - gainReductionDb, domain: ctx.domain, gainReductionDb }
+  },
+  pad:    (node, input, ctx) => pass(param(node, 'engaged') ? input - 20 : input, ctx),
+  fader:  (node, input, ctx) => pass(input + param(node, 'faderDb'), ctx),
+  switch: (node, input, ctx) => pass(param(node, 'on') ? input : -Infinity, ctx),
+  // The Relay passes on its selected input (the engine hands it only that one)
+  relay:  (_, input, ctx) => pass(input, ctx),
+  // Pan / Balance spread the signal over L / R in the engine (panSides, balanceSides)
+  pan:    (_, input, ctx) => pass(input, ctx),
+  adc: (node, input, ctx) => {
+    if (ctx.domain === 'digital') return blocked('adcExpectsAnalog', 'digital')
+    // Unity (0 dBu) lands at −18 dBFS, leaving headroom up to the digital ceiling (0 dBFS)
+    return { out: isFinite(input) ? input - param(node, 'alignmentDb') : -Infinity, domain: 'digital' }
+  },
+  dac: (node, input, ctx) => {
+    if (ctx.domain === 'analog') return blocked('dacExpectsDigital', 'analog')
+    return { out: isFinite(input) ? input + param(node, 'alignmentDb') : -Infinity, domain: 'analog' }
+  },
+  'master-bus':      busFader,
+  'aux-bus':         busFader,
+  'matrix-bus':      busFader,
+  'audio-interface': summing((_, input, ctx) => pass(input, ctx)),
+  // Only runs with an amplifier before it (the engine checks); otherwise it is silent
+  speaker: analogOnly('digitalToSpeaker', (node, input, ctx) => pass(input + param(node, 'outputTrimDb'), ctx)),
+  'active-speaker': analogOnly('digitalToSpeaker', (node, input, ctx) =>
+    pass(isFinite(input) ? input + param(node, 'volumeDb') : -Infinity, ctx)),
+}
 
 /**
  * One channel of `node` with `input` arriving (dBu, or dBFS after an ADC). A bus or the audio
  * interface gets everything plugged into it already added up.
  */
 export function processSide(node: SignalNode, input: number, ctx: SideContext): SideResult {
-  const { domain } = ctx // most nodes pass domain through unchanged
-  const out = (level: number): SideResult => ({ out: level, domain })
-  const blocked = (condition: StageCondition, d = domain): SideResult => ({ out: -Infinity, domain: d, condition })
-
-  // Domain mismatch in bus nodes — cannot sum analog and digital signals
-  if (ctx.mixedDomains && (MULTI_WIRE_TYPES.has(node.typeKey) || node.typeKey === 'audio-interface')) {
-    return blocked('domainMixedBus')
-  }
-
-  // Amp and speakers cannot process digital signals
-  if (domain === 'digital' && (node.typeKey === 'amp' || node.typeKey === 'speaker' || node.typeKey === 'active-speaker')) {
-    return blocked(node.typeKey === 'amp' ? 'digitalToAmp' : 'digitalToSpeaker')
-  }
-
-  switch (node.typeKey) {
-    case 'mic':
-      return { out: param(node, 'sensitivityDb'), domain: 'analog' }
-    case 'line-in':
-    case 'instrument':
-      return { out: param(node, 'levelDb'), domain: 'analog' }
-    case 'di-box':
-      // Passive DI: impedance conversion only, no level change. Both outputs carry same signal.
-      return { out: input, domain: 'analog' }
-    case 'gain': {
-      // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
-      if (ctx.preamp) return out(Math.min(input + param(node, 'preampDb'), CLIP_DBU))
-      const gainDb = param(node, 'gainDb')
-      return out(gainDb <= GAIN_OFF_DB ? -Infinity : Math.min(input + gainDb, CLIP_DBU))
-    }
-    case 'amp': {
-      // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel
-      // (a two-channel amp): Left uses gainDb, Right gainDbR (until turned, it follows gainDb).
-      const raw    = ctx.side === 'r' ? (param(node, 'gainDbR') ?? param(node, 'gainDb')) : param(node, 'gainDb')
-      const gainDb = Math.min(raw, 0)
-      return out(gainDb <= GAIN_OFF_DB ? -Infinity : input + gainDb)
-    }
-    case 'hpf':
-      return out(input + hpfLevelChange(param(node, 'cutoffHz')))
-    case 'eq':
-      return out(input + eqLevelChange(param(node, 'bands')))
-    case 'graphic-eq': {
-      // In stereo the right side has its own sliders (r0…r30); untouched, they copy the left
-      const gains = GEQ_CENTERS.map((_, i) => {
-        const left = param(node, `b${i}`)
-        return ctx.side === 'r' ? (param(node, `r${i}`) ?? left) : left
-      })
-      return out(input + graphicEqLevelChange(gains))
-    }
-    case 'comp': {
-      const threshold = param(node, 'thresholdDb')
-      const ratio     = param(node, 'ratio')
-      const gainReductionDb = input > threshold ? (input - threshold) * (1 - 1 / ratio) : 0
-      return { out: input - gainReductionDb + param(node, 'makeupGainDb'), domain, gainReductionDb }
-    }
-    case 'noise-gate': {
-      // Closed (below the threshold): turned down by the Range (−80 dB ≈ silence). Hold, Attack and
-      // Release are shown on the card but are timings, not part of this level math.
-      const range = param(node, 'rangeDb')
-      const open  = input >= param(node, 'thresholdDb')
-      const gainReductionDb = open || !isFinite(input) ? 0 : -range
-      return { out: open ? input : input + range, domain, gainReductionDb }
-    }
-    case 'limiter': {
-      const ceiling = param(node, 'thresholdDb')
-      const gainReductionDb = Math.max(0, input - ceiling)
-      return { out: Math.min(input, ceiling) + param(node, 'makeupGainDb'), domain, gainReductionDb }
-    }
-    case 'deesser': {
-      // 8:1 ratio on sibilant frequencies — simplified to overall level reduction
-      const gainReductionDb = Math.max(0, (input - param(node, 'thresholdDb')) * (1 - 1 / 8))
-      return { out: input - gainReductionDb, domain, gainReductionDb }
-    }
-    case 'pad':
-      return out(param(node, 'engaged') ? input - 20 : input)
-    case 'fader':
-      return out(input + param(node, 'faderDb'))
-    case 'switch':
-      return out(param(node, 'on') ? input : -Infinity)
-    case 'master-bus':
-    case 'aux-bus':
-    case 'matrix-bus':
-      return out(isFinite(input) ? input + param(node, 'faderDb') : -Infinity)
-    case 'audio-interface':
-      return out(input)
-    case 'adc': {
-      if (domain === 'digital') return blocked('adcExpectsAnalog', 'digital')
-      // Unity (0 dBu) lands at −18 dBFS, leaving headroom up to the digital ceiling (0 dBFS)
-      return { out: isFinite(input) ? input - param(node, 'alignmentDb') : -Infinity, domain: 'digital' }
-    }
-    case 'dac': {
-      if (domain === 'analog') return blocked('dacExpectsDigital', 'analog')
-      return { out: isFinite(input) ? input + param(node, 'alignmentDb') : -Infinity, domain: 'analog' }
-    }
-    case 'speaker':
-      // Only runs with an amplifier before it (the engine checks); otherwise it is silent
-      return out(input + param(node, 'outputTrimDb'))
-    case 'active-speaker':
-      return out(isFinite(input) ? input + param(node, 'volumeDb') : -Infinity)
-    default:
-      // The Relay passes on its selected input (the engine hands it only that one)
-      return out(input)
-  }
+  return PROCESS[node.typeKey](node, input, ctx)
 }
 
 /** Pan knob (0 = full left, 50 = centre, 100 = full right): equal-power, −3 dB each side at centre. */

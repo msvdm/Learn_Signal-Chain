@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
-import { Merge } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -9,7 +8,7 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE, formatTaperDb } from '../../utils/readout'
-import type { SignalEdge } from '../../data/nodeRegistry'
+import type { SignalEdge, TypeKey } from '../../data/nodeRegistry'
 import { matrixSendParam } from '../../data/nodeRegistry'
 import { matrixSendKey } from '../../graph/queries'
 import { useParams } from '../../hooks/useParams'
@@ -21,7 +20,6 @@ import { nodeName } from '../../utils/nodeName'
 interface BusData extends Record<string, unknown> {
   color?: string
   label?: string
-  typeKey?: string
 }
 
 /**
@@ -30,7 +28,7 @@ interface BusData extends Record<string, unknown> {
  * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
-export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
+export function MasterBusNode({ id, type, data }: NodeProps<Node<BusData>>) {
   const { stages } = useGraphSignal()
   const nodes         = useSignalStore((s) => s.nodes)
   const allEdges      = useSignalStore((s) => s.edges)
@@ -39,7 +37,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
   const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
   const { t, fmt }    = useTranslation()
 
-  const typeKey  = (data.typeKey as string) ?? 'master-bus'
+  const typeKey  = type as TypeKey
   const isAux    = typeKey === 'aux-bus'
   const isMatrix = typeKey === 'matrix-bus'
   const p        = useParams(id, typeKey)
@@ -73,7 +71,6 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey={typeKey}
-      icon={<Merge size={16} />}
       label={data.label ?? defaultLabel}
     >
       {isMatrix && (n > 0 ? (

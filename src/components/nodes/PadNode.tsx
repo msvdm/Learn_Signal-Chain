@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Minus } from 'lucide-react'
 import { InlineNode } from './InlineNode'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
@@ -21,7 +20,6 @@ export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
     <InlineNode
       nodeId={id}
       typeKey="pad"
-      icon={<Minus size={18} />}
       label={data.label ?? t.nodes.pad.label}
     >
       <button

@@ -120,18 +120,3 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
     </>
   )
 }
-
-/** Dynamic input ports for buses: one per connected channel + one free slot for the next wire. */
-export function BusInputPorts({ nodeId, connectedHandles }: { nodeId: string; connectedHandles: string[] }) {
-  const used = new Set(connectedHandles)
-  let free = 1
-  while (used.has(`in-${free}`)) free++
-  const handles = [...new Set(connectedHandles), `in-${free}`]
-  return (
-    <>
-      {handles.map((handleId, i) => (
-        <NodePort key={handleId} nodeId={nodeId} portId={handleId} type="target" index={i} />
-      ))}
-    </>
-  )
-}

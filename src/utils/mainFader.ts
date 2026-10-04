@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIX_PORT, SPLIT_TYPES, isStereoBus, portSide } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIX_PORT, canSplit, isStereoBus, portSide } from '../data/nodeRegistry'
 import type { GraphView } from '../graph/graph'
 import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '../graph/queries'
 
@@ -36,7 +36,7 @@ function moveSource(e: SignalEdge, source: string, sourceHandle: string): Signal
 
 /** A card that holds a stereo mix's L / R outputs right now: a stereo bus, or a Main Fader / EQ / amp splitting it. */
 function holdsSides(node: SignalNode, graph: GraphView): boolean {
-  return (isStereoBus(node) || SPLIT_TYPES.has(node.typeKey)) &&
+  return (isStereoBus(node) || canSplit(node.typeKey)) &&
     getPorts(node, graph).outputs.some((p) => portSide(p.id) !== null)
 }
 
@@ -92,7 +92,7 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
     const hit = next.find((e) => {
       const src = byId.get(e.source)
       const tgt = byId.get(e.target)
-      if (!src || !tgt || portSide(e.sourceHandle) === null || !SPLIT_TYPES.has(tgt.typeKey)) return false
+      if (!src || !tgt || portSide(e.sourceHandle) === null || !canSplit(tgt.typeKey)) return false
       if (!holdsSides(src, graph)) return false
       // A Fader takes the sides over only from a bus's mix (it becomes the Main Fader)
       return tgt.typeKey !== 'fader' || isStereoBus(src) || mixBusOf(src.id, graph) !== null
@@ -118,7 +118,7 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
     let changed   = false
     next = next.map((e) => {
       const src = byId.get(e.source)
-      if (!src || !SPLIT_TYPES.has(src.typeKey)) return e
+      if (!src || !canSplit(src.typeKey)) return e
       const splits = splitsStereo(src, graph)
       let handle   = e.sourceHandle
       if (!splits && (isSideOutput(handle) || handle === MIX_PORT)) handle = 'out'
@@ -154,7 +154,7 @@ export function reconcileMainFaders(prev: GraphView, next: GraphView): SignalEdg
   const before = takeovers(prev)
   const after  = takeovers(next)
   const kept   = new Set(after.values())
-  const canHold = (id: string) => next.nodes.some((n) => n.id === id && (isStereoBus(n) || SPLIT_TYPES.has(n.typeKey)))
+  const canHold = (id: string) => next.nodes.some((n) => n.id === id && (isStereoBus(n) || canSplit(n.typeKey)))
   const lost   = [...before].filter(([card, holder]) => !after.has(card) && !kept.has(holder) && canHold(holder))
   if (lost.length === 0) return attachMainFaders(next.nodes, next.edges)
 

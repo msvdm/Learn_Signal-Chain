@@ -1,7 +1,5 @@
 import { useMemo } from 'react'
 import type { NodeProps, Node } from '@xyflow/react'
-import { Cpu } from 'lucide-react'
-import { BusInputPorts } from './NodePort'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
@@ -32,10 +30,7 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
     <NodeWrapper
       nodeId={id}
       typeKey="audio-interface"
-      icon={<Cpu size={16} />}
       label={data.label ?? t.nodes['audio-interface'].label}
-      customInputs={<BusInputPorts nodeId={id} connectedHandles={incomingEdges.map((e) => e.targetHandle)} />}
-      customInputCount={incomingEdges.length + 1}
     >
       <div className="space-y-2">
         <div className="lsc-wrap-text text-[var(--node-text-sm)] leading-relaxed" style={{ color: 'var(--lsc-fg-muted)' }}>

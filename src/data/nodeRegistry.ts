@@ -1,7 +1,8 @@
-// Node type registry — single source of truth for port definitions and defaults.
-// No imports from the rest of the app (only the level type); safe to import from anywhere.
+// Node type registry — single source of truth for every element type: ports, defaults, levels.
+// No imports from the rest of the app (only the levels); safe to import from anywhere.
 
 import type { ComplexityLevel } from './levels'
+import { LEVELS } from './levels'
 
 export type NodePort = {
   id: string
@@ -29,21 +30,64 @@ export type NodeParamValue = number | string | boolean | EQBand[]
  */
 export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 
+/** Every kind of element on the canvas. */
+export type TypeKey =
+  | 'mic' | 'line-in' | 'instrument'
+  | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
+  | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
+  | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'audio-interface'
+  | 'speaker' | 'active-speaker'
+
+export type Size = { w: number; h: number }
+
+/**
+ * What an element type is and does. Its look (icon, palette group) is in
+ * components/nodes/nodeLook.ts, its card in components/nodes/index.ts, what it does to the level in
+ * signal/process.ts (PROCESS) — each a table keyed by TypeKey, so a new type missing from one does
+ * not compile.
+ */
 export type NodeTypeDef = {
-  typeKey: string
+  /** source: starts a chain (and gives it its colour) · processor · merge: a bus · sink: an end point */
+  category: NodeCategory
   inputs: NodePort[]
   outputs: NodePort[]
-  category: NodeCategory
-  stereo?: StereoSupport
+  stereo: StereoSupport
   /** Outputs when the Mono | Stereo switch is on (the Aux Bus splits into L / R). */
   stereoOutputs?: NodePort[]
   defaultParams: Record<string, NodeParamValue>
+  /** The easiest level whose palette has it; every harder level has it too. */
+  minLevel: ComplexityLevel
+  /**
+   * Has an On / Off (bypass) button. Not for sources and end points, nor where the control itself
+   * is the state (a fader, a switch, a pad …).
+   */
+  bypass: boolean
+  /**
+   * A mixing bus: its input takes any number of wires, added together. 'mix': a Master or Aux Bus,
+   * whose mix may feed a Matrix Bus; 'matrix': the Matrix Bus, a bus of buses.
+   */
+  bus?: 'mix' | 'matrix'
+  /** Its inputs follow the wires: one per wire plugged in, plus a free one (graph/queries.ts getPorts). */
+  dynamicInputs?: true
+  /**
+   * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
+   * separately: the Fader after a bus (Main Fader), the Graphic EQ and the Amplifier (a two-channel
+   * amp). The Graphic EQ and the Amplifier do it for any stereo wire; fed one channel they stay
+   * single-channel.
+   */
+  splits?: true
+  /** Dynamics that run "linked" in stereo: the louder side decides, both sides get the same change. */
+  linked?: true
+  /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
+  freeSize?: Size
+  /** A card bigger than the usual minimum (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). */
+  minSize?: Size
 }
 
 // Graph node — the authoritative model for Phase 2+ rendering.
 export type SignalNode = {
   id: string
-  typeKey: string
+  typeKey: TypeKey
   position: { x: number; y: number }
   params: Record<string, NodeParamValue>
   bypassed: boolean
@@ -63,53 +107,46 @@ export type SignalEdge = {
   waypoints?: { x: number; y: number }[]
 }
 
-export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
+const IN: NodePort[]    = [{ id: 'in', label: 'Input' }]
+const OUT: NodePort[]   = [{ id: 'out', label: 'Output' }]
+const SIDES: NodePort[] = [
+  { id: 'out-l', label: 'Left Out' },
+  { id: 'out-r', label: 'Right Out' },
+]
+// Mixing buses: the size of the Compressor card, so their long names stay big in overview
+const BUS_SIZE: Size = { w: 398, h: 298 }
+
+export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   mic: {
-    typeKey: 'mic',
-    inputs: [],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'source',
+    category: 'source', inputs: [], outputs: OUT, stereo: 'never',
+    minLevel: 'beginner', bypass: false,
     defaultParams: { sensitivityDb: -60 },
   },
   'line-in': {
-    typeKey: 'line-in',
-    inputs: [],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'source',
-    stereo: 'optional',
+    category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
+    minLevel: 'beginner', bypass: false,
     defaultParams: { levelDb: -10, stereo: false },
   },
   instrument: {
-    typeKey: 'instrument',
-    inputs: [],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'source',
+    category: 'source', inputs: [], outputs: OUT, stereo: 'never',
+    minLevel: 'beginner', bypass: false,
     defaultParams: { levelDb: -30 },
   },
   gain: {
-    typeKey: 'gain',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'beginner', bypass: false, freeSize: { w: 162, h: 216 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
   },
   hpf: {
-    typeKey: 'hpf',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true,
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
-    typeKey: 'eq',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true,
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -119,195 +156,146 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
       ] as EQBand[],
     },
   },
+  'graphic-eq': {
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'advanced', bypass: true, splits: true,
+    // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
+    defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
+  },
   comp: {
-    typeKey: 'comp',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true, linked: true,
     // Attack / Release are shown on the card but do not change the sound yet
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
-  fader: {
-    typeKey: 'fader',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
-    defaultParams: { faderDb: 0 },
-  },
-  switch: {
-    typeKey: 'switch',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
-    defaultParams: { on: true },
-  },
-  amp: {
-    typeKey: 'amp',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
-    defaultParams: { gainDb: 0 },
-  },
-  'di-box': {
-    typeKey: 'di-box',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [
-      { id: 'out', label: 'XLR Out' },
-      { id: 'direct', label: 'Direct Out' },
-    ],
-    category: 'processor',
-    stereo: 'follow',
-    defaultParams: { groundLift: false },
-  },
   'noise-gate': {
-    typeKey: 'noise-gate',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true, linked: true,
     // Range sets how far it turns down when closed; Hold / Attack / Release are shown, not simulated
     defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {
-    typeKey: 'limiter',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true, linked: true,
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
-  pad: {
-    typeKey: 'pad',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
-    defaultParams: { engaged: true },
-  },
   deesser: {
-    typeKey: 'deesser',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: true, linked: true,
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
+  pad: {
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: false,
+    defaultParams: { engaged: true },
+  },
+  'di-box': {
+    category: 'processor', inputs: IN, stereo: 'follow',
+    outputs: [
+      { id: 'out', label: 'XLR Out' },
+      { id: 'direct', label: 'Direct Out' },
+    ],
+    minLevel: 'beginner', bypass: true,
+    defaultParams: { groundLift: false },
+  },
+  amp: {
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'advanced', bypass: false, splits: true,
+    defaultParams: { gainDb: 0 },
+  },
+  fader: {
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'beginner', bypass: false, splits: true, freeSize: { w: 198, h: 541 },
+    defaultParams: { faderDb: 0 },
+  },
+  switch: {
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 175, h: 188 },
+    defaultParams: { on: true },
+  },
   relay: {
-    typeKey: 'relay',
+    category: 'processor', stereo: 'follow',
     inputs: [
       { id: 'in-a', label: 'Input A' },
       { id: 'in-b', label: 'Input B' },
     ],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    outputs: OUT,
+    minLevel: 'intermediate', bypass: false,
     defaultParams: { selectedInput: 'a' },
   },
   pan: {
-    typeKey: 'pan',
-    inputs: [{ id: 'in', label: 'Input' }],
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 266 },
     defaultParams: { panPosition: 50 },
   },
-  'audio-interface': {
-    typeKey: 'audio-interface',
-    inputs: [], // dynamic at runtime — one per connected channel
-    outputs: [],
-    category: 'sink',
-    defaultParams: {},
-  },
   adc: {
-    typeKey: 'adc',
+    category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in', label: 'Analog In' }],
     outputs: [{ id: 'out', label: 'Digital Out' }],
-    category: 'processor',
-    stereo: 'follow',
+    minLevel: 'advanced', bypass: false,
     // alignmentDb: how far below the digital ceiling unity sits (EBU R68: 0 dBu = −18 dBFS,
     // so 0 dBFS = +18 dBu). dBFS = dBu − alignmentDb.
     defaultParams: { alignmentDb: 18 },
   },
   dac: {
-    typeKey: 'dac',
+    category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in', label: 'Digital In' }],
     outputs: [{ id: 'out', label: 'Analog Out' }],
-    category: 'processor',
-    stereo: 'follow',
+    minLevel: 'advanced', bypass: false,
     defaultParams: { alignmentDb: 18 },
   },
   'master-bus': {
-    typeKey: 'master-bus',
     // Always stereo. The input accepts any number of wires; they are added together.
     // The mix leaves on two wires: Left and Right.
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [
-      { id: 'out-l', label: 'Left Out' },
-      { id: 'out-r', label: 'Right Out' },
-    ],
-    category: 'merge',
-    stereo: 'always',
+    category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'mix',
+    minLevel: 'intermediate', bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
   'aux-bus': {
-    typeKey: 'aux-bus',
     // The input accepts any number of wires; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    stereoOutputs: [
-      { id: 'out-l', label: 'Left Out' },
-      { id: 'out-r', label: 'Right Out' },
-    ],
-    category: 'merge',
-    stereo: 'optional',
+    category: 'merge', inputs: IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
+    minLevel: 'intermediate', bypass: true, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0, stereo: false },
   },
   'matrix-bus': {
-    typeKey: 'matrix-bus',
     // A bus of buses, always stereo: only finished mixes go in, after their fader — a stereo bus
     // through its Matrix send (one stereo wire), a mono Aux Bus through its output or its fader.
     // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
     // A mono bus lands on both sides at full level.
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [
-      { id: 'out-l', label: 'Left Out' },
-      { id: 'out-r', label: 'Right Out' },
-    ],
-    category: 'merge',
-    stereo: 'always',
+    category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
+    minLevel: 'advanced', bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
-  'graphic-eq': {
-    typeKey: 'graphic-eq',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [{ id: 'out', label: 'Output' }],
-    category: 'processor',
-    stereo: 'follow',
-    // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
-    defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
+  'audio-interface': {
+    // One input per wire plugged in (in-1, in-2 …), plus a free one
+    category: 'sink', inputs: [], outputs: [], stereo: 'never', dynamicInputs: true,
+    minLevel: 'intermediate', bypass: false,
+    defaultParams: {},
   },
   speaker: {
-    typeKey: 'speaker',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [],
-    category: 'sink',
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
+    category: 'sink', inputs: IN, outputs: [], stereo: 'never',
+    minLevel: 'advanced', bypass: false,
     defaultParams: { outputTrimDb: 0 },
   },
   'active-speaker': {
-    typeKey: 'active-speaker',
-    inputs: [{ id: 'in', label: 'Input' }],
-    outputs: [],
-    category: 'sink',
     // Active/powered speaker — has built-in amplification, works directly from line level
+    category: 'sink', inputs: IN, outputs: [], stereo: 'never',
+    minLevel: 'beginner', bypass: false,
     defaultParams: { volumeDb: 0 },
   },
+}
+
+/** True for a type this version of the app knows (a saved file may hold newer ones). */
+export function isTypeKey(key: string): key is TypeKey {
+  return Object.hasOwn(NODE_REGISTRY, key)
+}
+
+/** Is this element in the palette at this level? */
+export function availableAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
+  return LEVELS.indexOf(NODE_REGISTRY[typeKey].minLevel) <= LEVELS.indexOf(level)
 }
 
 /**
@@ -316,10 +304,10 @@ export const NODE_REGISTRY: Record<string, NodeTypeDef> = {
  * and lets you choose.
  */
 export function initialParams(
-  typeKey: string,
+  typeKey: TypeKey,
   level: ComplexityLevel,
 ): Record<string, NodeParamValue> {
-  const params = { ...NODE_REGISTRY[typeKey]?.defaultParams }
+  const params = { ...NODE_REGISTRY[typeKey].defaultParams }
   if (typeKey === 'eq' && level !== 'advanced') {
     params.bands = (params.bands as EQBand[]).map((b, i): EQBand =>
       i === 0 ? { ...b, type: 'low-shelf' } : i === 3 ? { ...b, type: 'high-shelf' } : b)
@@ -376,48 +364,45 @@ export function param<K extends ParamKey>(
   node: Pick<SignalNode, 'typeKey' | 'params'>,
   key: K,
 ): ParamTypes[K] {
-  return (node.params[key] ?? NODE_REGISTRY[node.typeKey]?.defaultParams[key]) as ParamTypes[K]
+  return (node.params[key] ?? NODE_REGISTRY[node.typeKey].defaultParams[key]) as ParamTypes[K]
 }
 
-// ── Mono / stereo ports ────────────────────────────────────────────────────────
+// ── Buses, mono / stereo ports ──────────────────────────────────────────────────
 
-// Bypassing these makes no sense — the control itself is the state, or the node is a source / end point
-const NO_BYPASS_TYPES = new Set([
-  'mic', 'line-in', 'instrument', 'speaker', 'active-speaker', 'amp',
-  'fader', 'switch', 'gain', 'relay', 'pan', 'adc', 'dac', 'pad',
-  'master-bus', 'matrix-bus', 'audio-interface',
-])
-
-/** Can this element be bypassed (On / Off)? */
-export function canBypass(typeKey: string): boolean {
-  return !NO_BYPASS_TYPES.has(typeKey)
+/** A mixing bus (Master, Aux, Matrix): its input takes any number of wires, added together. */
+export function isBus(typeKey: TypeKey): boolean {
+  return NODE_REGISTRY[typeKey].bus !== undefined
 }
 
-/** Bus types whose inputs accept any number of wires (they are added together). */
-export const MULTI_WIRE_TYPES = new Set(['master-bus', 'aux-bus', 'matrix-bus'])
+/** A Master or Aux Bus: its mix may feed a Matrix Bus. */
+export function isMixBus(typeKey: TypeKey): boolean {
+  return NODE_REGISTRY[typeKey].bus === 'mix'
+}
 
-/** Buses whose outputs are mixes a Matrix Bus may take. */
-export const MIX_BUS_TYPES = new Set(['master-bus', 'aux-bus'])
+/** A Fader, Graphic EQ or Amplifier: takes a stereo mix's L / R over (NodeTypeDef `splits`). */
+export function canSplit(typeKey: TypeKey): boolean {
+  return NODE_REGISTRY[typeKey].splits === true
+}
 
 /**
  * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …): walks up a
  * chain (graph/queries.ts) go through these and stop at anything else — a source, a bus, a Relay.
  */
-export function passesThrough(typeKey: string): boolean {
+export function passesThrough(typeKey: TypeKey): boolean {
   const def = NODE_REGISTRY[typeKey]
-  return def?.stereo === 'follow' && def.inputs.length === 1
+  return def.stereo === 'follow' && def.inputs.length === 1
 }
 
 /** True when this node's own setting is stereo (Mono | Stereo switch on, or always stereo). */
 export function isNodeStereo(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
-  const support = NODE_REGISTRY[node.typeKey]?.stereo ?? 'never'
+  const support = NODE_REGISTRY[node.typeKey].stereo
   if (support === 'always') return true
   return support === 'optional' && node.params.stereo === true
 }
 
 /** A bus that sends its mix out as Left and Right: the Master, or an Aux set to Stereo. */
 export function isStereoBus(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
-  return MULTI_WIRE_TYPES.has(node.typeKey) && isNodeStereo(node)
+  return isBus(node.typeKey) && isNodeStereo(node)
 }
 
 /** Which side a bus output carries: 'l' / 'r' for Left / Right outputs, null otherwise. */
@@ -435,14 +420,6 @@ export const MIX_PORT = 'mix'
  * after the fader. It shows below the R output once a wire uses it.
  */
 export const MATRIX_PORT = 'send'
-
-/**
- * Cards that take a stereo mix's Left / Right outputs over when wired to one of them, and send
- * L and R out separately: the Fader after a bus (Main Fader), the Graphic EQ and the Amplifier
- * (a two-channel amp). The Graphic EQ and the Amplifier do it for any stereo wire; fed one
- * channel they stay single-channel.
- */
-export const SPLIT_TYPES = new Set(['fader', 'graphic-eq', 'amp'])
 
 /** Param key of a Matrix Bus send knob (`key`: the bus it is for, graph/queries.ts matrixSendKey). */
 export function matrixSendParam(key: string): `send-${string}` {

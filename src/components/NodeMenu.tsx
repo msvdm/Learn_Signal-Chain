@@ -7,7 +7,7 @@ import {
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import { useGraphSignal } from '../hooks/useGraphSignal'
-import { canBypass } from '../data/nodeRegistry'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { helpKeyOf } from '../utils/nodeName'
 import { useLatestRef } from '../hooks/useLatestRef'
 import { MOD } from '../utils/shortcut'
@@ -56,6 +56,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
   const helpKey   = helpKeyOf(node, stages[nodeId])
   const hasHelp   = !many && Boolean(t.theory[helpKey])
   const bypassed  = node.bypassed ?? false
+  const canBypass = !many && NODE_REGISTRY[node.typeKey].bypass
 
   const act = (fn: () => void) => () => { fn(); onClose() }
 
@@ -73,14 +74,14 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
           onClick={act(() => { setActiveTooltip(nodeId, helpKey); setSelectedNode(nodeId) })}
         />
       )}
-      {!many && canBypass(node.typeKey) && (
+      {canBypass && (
         <MenuItem
           icon={<Power size={15} />}
           label={bypassed ? t.nodeMenu.turnOn : t.nodeMenu.bypass}
           onClick={act(() => toggleBypassNode(nodeId))}
         />
       )}
-      {(hasHelp || (!many && canBypass(node.typeKey))) && <MenuDivider />}
+      {(hasHelp || canBypass) && <MenuDivider />}
       <MenuItem icon={<Scissors size={15} />} label={t.nodeMenu.cut} hint={`${MOD}X`} onClick={act(onCut)} />
       <MenuItem icon={<Copy size={15} />} label={t.nodeMenu.copy} hint={`${MOD}C`} onClick={act(onCopy)} />
       {/* Duplicate: one row, an arrow per side the copy can go */}

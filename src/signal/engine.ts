@@ -6,7 +6,7 @@ import { getPorts, matrixSendKey, mixBusOf, outputKind, preampMicOf } from '../g
 import type { SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, TAPER_UNITY, getHealth, sumSignalsToDb, taperToDb } from './levels'
 import type { SideResult, StageCondition } from './process'
-import { LINKED_DYNAMICS, SPEAKER_LEVEL_DB, balanceSides, panSides, processSide } from './process'
+import { SPEAKER_LEVEL_DB, balanceSides, panSides, processSide } from './process'
 
 // The signal engine: walks the graph in signal order and works out the level at every card and on
 // every wire. What each wire carries (mono, stereo, one side) comes from the graph
@@ -102,16 +102,15 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
 
   for (const node of flowOrder(graph)) {
     const incoming = graph.into(node.id)
-    const ports    = getPorts(node, graph)
+    const def      = NODE_REGISTRY[node.typeKey]
     const relay    = node.typeKey === 'relay'
-    const follows  = NODE_REGISTRY[node.typeKey]?.stereo === 'follow'
+    const follows  = def.stereo === 'follow'
     // A "follow" node passes on what its wire carries — the Relay follows its selected input
     const driving    = drivingWire(node, graph)
     const followKind = driving ? wireOf(driving).kind : 'mono'
-    // The wires it works on: those on the Relay's selected input or any other card's one input
-    // (every wire on a bus's); everything into the audio interface (an input per wire)
-    const inPort = relay ? `in-${param(node, 'selectedInput')}` : ports.inputs[0]?.id
-    const used   = inPort ? incoming.filter((e) => e.targetHandle === inPort) : incoming
+    // The wires it works on: everything plugged in (every wire on a bus's input, an input per wire
+    // on the audio interface), but only the Relay's selected input
+    const used = relay ? incoming.filter((e) => e.targetHandle === `in-${param(node, 'selectedInput')}`) : incoming
 
     // Analog or digital: what arrives decides (the Relay: its selected input). A bus can't mix them.
     const domains      = incoming.map((e) => stages[e.source]?.domain ?? 'analog')
@@ -172,12 +171,12 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       }
       outSig = stereo(spread.l, spread.r)
       side   = { out: levelOf(outSig), domain: inputDomain }
-    } else if (NODE_REGISTRY[node.typeKey]?.category === 'source') {
+    } else if (def.category === 'source') {
       // Line In set to Stereo sends the same level on both sides
       side   = runSide(null)
       inSig  = SILENT_WIRE
       outSig = isStereo ? stereo(side.out, side.out) : mono(side.out)
-    } else if (isStereo && LINKED_DYNAMICS.has(node.typeKey) && !node.bypassed) {
+    } else if (isStereo && def.linked && !node.bypassed) {
       // The louder side drives the detector; the same gain change goes to both sides
       const l = arriving('l')
       const r = arriving('r')
@@ -230,7 +229,7 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       condition,
       role,
     }
-    for (const port of ports.outputs) {
+    for (const port of getPorts(node, graph).outputs) {
       wires.set(`${node.id}:${port.id}`, onPort(outputKind(node.id, port.id, graph), outSig))
     }
   }

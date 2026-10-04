@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { TypeKey } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { getPorts } from '../../graph/queries'
@@ -12,7 +13,7 @@ const SIDE = 26
 
 interface FreeControlProps {
   nodeId: string
-  typeKey: string
+  typeKey: TypeKey
   /** Name under the control (follows the wiring: Preamp / Gain, Pan / Balance, Main Fader). */
   label: string
   /** Reading under the name. Keep it in a StableText so the control never changes size. */

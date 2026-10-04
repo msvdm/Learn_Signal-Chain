@@ -1,5 +1,5 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { ArrowRight, ArrowLeft } from 'lucide-react'
+import type { TypeKey } from '../../data/nodeRegistry'
 import { InlineNode } from './InlineNode'
 import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -11,17 +11,16 @@ import { LEVEL_SAMPLE } from '../../utils/readout'
 const levelText = (db: number) => (isFinite(db) ? db.toFixed(1) : '−∞')
 
 interface GraphAdcDacData extends Record<string, unknown> {
-  typeKey?: string
   color?: string
   label?: string
 }
 
-export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
+export function AdcDacNode({ id, type, data }: NodeProps<Node<GraphAdcDacData>>) {
   const { stages }          = useGraphSignal()
   const levels              = useStereoLevels(id)
   const { t }               = useTranslation()
 
-  const typeKey    = (data.typeKey as string) ?? 'adc'
+  const typeKey    = type as TypeKey
   const isAdc      = typeKey === 'adc'
   const result     = stages[id]
   const domain     = result?.domain ?? 'analog'
@@ -40,7 +39,6 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
     <InlineNode
       nodeId={id}
       typeKey={typeKey}
-      icon={isAdc ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
       label={label}
     >
       {/* Conversion label */}

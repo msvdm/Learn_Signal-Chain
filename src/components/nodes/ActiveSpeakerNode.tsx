@@ -1,6 +1,6 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Volume2 } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
+import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
@@ -17,6 +17,7 @@ const GAP = 16
 // Value and label under the knob
 const READOUT_H = 34
 const NOTE_LINE = 1.25
+const Icon      = NODE_LOOK['active-speaker'].icon
 
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
 function BlownSpeakerIcon() {
@@ -48,7 +49,6 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
     <NodeWrapper
       nodeId={id}
       typeKey="active-speaker"
-      icon={<Volume2 size={16} />}
       label={data.label ?? t.nodes.activeSpeaker.label}
       faceOnly
       overviewArt={(box) => {
@@ -74,7 +74,7 @@ export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeake
         const icon = Math.min(box.h, box.w - knob - GAP)
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
-            <OverviewIcon icon={<Volume2 />} box={{ w: icon, h: icon }} />
+            <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
             {/* The face ignores the pointer; the knob takes it back */}
             <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
               <KnobControl

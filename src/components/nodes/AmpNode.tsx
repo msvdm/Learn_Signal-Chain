@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Radio } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
@@ -36,7 +35,6 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="amp"
-      icon={<Radio size={16} />}
       label={data.label ?? t.palette.items['amp']}
     >
       <div className="space-y-3">

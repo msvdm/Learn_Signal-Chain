@@ -1,5 +1,5 @@
-import type { SignalNode, SignalEdge, NodeParamValue } from '../data/nodeRegistry'
-import { NODE_REGISTRY, initialParams } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/nodeRegistry'
+import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
 import type { NodeGroup, Size } from './nodeGroup'
@@ -66,7 +66,7 @@ const isStr   = (v: unknown): v is string => typeof v === 'string'
 const isPoint = (v: unknown): v is { x: number; y: number } => isObj(v) && isNum(v.x) && isNum(v.y)
 
 /** Saved params over the type's defaults: a file from an older version gets the newer knobs. */
-function readParams(typeKey: string, level: ComplexityLevel, saved: unknown): Record<string, NodeParamValue> {
+function readParams(typeKey: TypeKey, level: ComplexityLevel, saved: unknown): Record<string, NodeParamValue> {
   const params = initialParams(typeKey, level)
   if (!isObj(saved)) return params
   for (const [key, value] of Object.entries(saved)) {
@@ -89,7 +89,7 @@ export function parseChainFile(data: unknown): ParsedChain | null {
   let skipped = 0
   for (const n of data.nodes) {
     if (!isObj(n) || !isStr(n.id) || !isStr(n.typeKey) || !isPoint(n.position) ||
-        !NODE_REGISTRY[n.typeKey] || nodes.some((m) => m.id === n.id)) {
+        !isTypeKey(n.typeKey) || nodes.some((m) => m.id === n.id)) {
       skipped++
       continue
     }

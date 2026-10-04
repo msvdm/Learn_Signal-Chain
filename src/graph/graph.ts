@@ -1,4 +1,4 @@
-import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { param, passesThrough } from '../data/nodeRegistry'
 
 // The graph with lookups, and the walks every query is built from (graph/queries.ts).
@@ -116,7 +116,7 @@ export function upstreamOf(nodeId: string, edges: SignalEdge[]): { nodeIds: Set<
 }
 
 /** True when a card of type `typeKey` is anywhere before this one (an amplifier before a speaker). */
-export function fedBy(nodeId: string, typeKey: string, view: GraphView): boolean {
+export function fedBy(nodeId: string, typeKey: TypeKey, view: GraphView): boolean {
   const graph = graphOf(view)
   for (const id of upstreamOf(nodeId, view.edges).nodeIds) {
     if (id !== nodeId && graph.node(id)?.typeKey === typeKey) return true

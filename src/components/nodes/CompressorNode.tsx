@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { Box } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -170,7 +169,6 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="comp"
-      icon={<Box size={16} />}
       label={data.label ?? t.nodes.comp.label}
     >
       <div style={twoColumns}>

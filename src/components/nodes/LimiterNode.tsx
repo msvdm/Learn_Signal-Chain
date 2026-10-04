@@ -1,5 +1,4 @@
 import type { NodeProps, Node } from '@xyflow/react'
-import { ShieldAlert } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
@@ -173,7 +172,6 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="limiter"
-      icon={<ShieldAlert size={16} />}
       label={data.label ?? t.nodes.limiter.label}
     >
       <div style={twoColumns}>

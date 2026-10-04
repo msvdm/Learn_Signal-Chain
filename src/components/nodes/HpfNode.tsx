@@ -120,11 +120,6 @@ export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
     <NodeWrapper
       nodeId={id}
       typeKey="hpf"
-      icon={
-        <svg width="16" height="11" viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M3 13 C3 1 9 1 12 1 L22 1" />
-        </svg>
-      }
       label={data.label ?? t.nodes.hpf.label}
     >
       <div className="space-y-2">

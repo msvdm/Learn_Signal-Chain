@@ -14,27 +14,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { MicNode }             from './nodes/MicNode'
-import { GainNode }            from './nodes/GainNode'
-import { FaderNode }           from './nodes/FaderNode'
-import { MasterBusNode }       from './nodes/MasterBusNode'
-import { AmpNode }             from './nodes/AmpNode'
-import { SpeakerNode }         from './nodes/SpeakerNode'
-import { ActiveSpeakerNode }   from './nodes/ActiveSpeakerNode'
-import { SwitchNode }          from './nodes/SwitchNode'
-import { CompressorNode }      from './nodes/CompressorNode'
-import { HpfNode }             from './nodes/HpfNode'
-import { EQNode }              from './nodes/EQNode'
-import { GraphicEQNode }       from './nodes/GraphicEQNode'
-import { DIBoxNode }           from './nodes/DIBoxNode'
-import { NoiseGateNode }       from './nodes/NoiseGateNode'
-import { LimiterNode }         from './nodes/LimiterNode'
-import { PadNode }             from './nodes/PadNode'
-import { DeesserNode }         from './nodes/DeesserNode'
-import { RelayNode }           from './nodes/RelayNode'
-import { PanNode }             from './nodes/PanNode'
-import { AudioInterfaceNode }  from './nodes/AudioInterfaceNode'
-import { AdcDacNode }          from './nodes/AdcDacNode'
+import { NODE_COMPONENTS }     from './nodes'
 import { ChainEdge }           from './ChainEdge'
 import type { ChainEdgeData }  from './ChainEdge'
 import { ConnectingToast }     from './ConnectingToast'
@@ -54,9 +34,9 @@ import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { useChainFile }       from '../hooks/useChainFile'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
-import { NODE_REGISTRY, initialParams } from '../data/nodeRegistry'
+import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import { getPorts, isMatrixSource } from '../graph/queries'
-import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { newEdge } from '../graph/edits'
 import { activeDragTypeKey }  from '../utils/dragState'
 import {
@@ -74,36 +54,6 @@ import { takeGroup, cloneGroup, groupBox, duplicateOffset, pasteOffset, besideOf
 import type { Direction, NodeGroup, Placed } from '../utils/nodeGroup'
 import { chainToGroup, readLink, LINK_PREFIX } from '../utils/chainFile'
 import type { ParsedChain } from '../utils/chainFile'
-
-// nodeTypes must be defined outside the component to avoid re-registration on every render
-const nodeTypes = {
-  mic:                MicNode,
-  'line-in':          MicNode,
-  instrument:         MicNode,
-  'di-box':           DIBoxNode,
-  gain:               GainNode,
-  amp:                AmpNode,
-  fader:              FaderNode,
-  'noise-gate':       NoiseGateNode,
-  limiter:            LimiterNode,
-  pad:                PadNode,
-  deesser:            DeesserNode,
-  'master-bus':       MasterBusNode,
-  'aux-bus':          MasterBusNode,
-  'matrix-bus':       MasterBusNode,
-  'audio-interface':  AudioInterfaceNode,
-  hpf:                HpfNode,
-  eq:                 EQNode,
-  comp:               CompressorNode,
-  switch:             SwitchNode,
-  relay:              RelayNode,
-  pan:                PanNode,
-  'graphic-eq':       GraphicEQNode,
-  speaker:            SpeakerNode,
-  'active-speaker':   ActiveSpeakerNode,
-  adc:                AdcDacNode,
-  dac:                AdcDacNode,
-}
 
 const edgeTypes = { chain: ChainEdge }
 
@@ -157,14 +107,13 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
 }
 
 /**
- * What a card's ports depend on: its port layout (a stereo Aux's L / R, a bus or fader taken
- * over by a Main Fader) and the wires plugged into it (the audio interface grows an input per wire).
- * When this changes, React Flow must re-read the ports.
+ * What a card's ports are: its port layout (a stereo Aux's L / R, a bus or fader taken over by a
+ * Main Fader, the audio interface's input per wire). When this changes, React Flow must re-read
+ * the ports.
  */
 function portLayoutKey(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): string {
   const { inputs, outputs } = getPorts(node, { nodes, edges })
-  const plugged = edges.filter((e) => e.target === node.id).map((e) => e.targetHandle).sort()
-  return `${[...inputs, ...outputs].map((p) => p.id).join(',')}|${plugged.join(',')}`
+  return `${inputs.map((p) => p.id).join(',')}|${outputs.map((p) => p.id).join(',')}`
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -220,7 +169,7 @@ export function SignalChain() {
   const [drawing, setDrawing]               = useState<WireDrawing>({ active: false })
   const [snapPos, setSnapPos]               = useState<Pt | null>(null)
   const [wireWarning, setWireWarning]       = useState(false)
-  const [dropPreview, setDropPreview]       = useState<{ typeKey: string; pos: Pt } | null>(null)
+  const [dropPreview, setDropPreview]       = useState<{ typeKey: TypeKey; pos: Pt } | null>(null)
   // Where the dragged elements will land (several when a selection is dragged)
   const [dragGhosts, setDragGhosts]         = useState<{ pos: Pt; w: number; h: number }[]>([])
   // Right-click menu of an element (Help, Bypass, Cut, Copy, Duplicate, Remove) — `targets` are
@@ -728,7 +677,7 @@ export function SignalChain() {
    * Where a card dropped at `raw` goes if it lands on a wire (null if it doesn't): right of the
    * wire's source and top-aligned with it, so the wires on both sides stay straight.
    */
-  function insertSlot(raw: Pt, typeKey: string): { edge: SignalEdge; pos: Pt } | null {
+  function insertSlot(raw: Pt, typeKey: TypeKey): { edge: SignalEdge; pos: Pt } | null {
     if (!canInsertMidChain(typeKey)) return null
     const nodes = layoutNodes()
     // Edges from Zustand: always in sync, unlike getEdges() which can lag
@@ -754,9 +703,7 @@ export function SignalChain() {
       return
     }
     const typeKey = e.dataTransfer.getData('application/lsc-node-type')
-    if (!typeKey) return
-    const def = NODE_REGISTRY[typeKey]
-    if (!def) return
+    if (!isTypeKey(typeKey)) return
     const raw    = screenToFlowPosition({ x: e.clientX, y: e.clientY })
     const newId  = `${typeKey}-${Date.now()}`
     const params = initialParams(typeKey, complexityLevel)
@@ -880,7 +827,7 @@ export function SignalChain() {
             : undefined,
           selected:  selectedNodeIds.includes(node.id),
           className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
-          data:      { color: node.color, label: node.label, typeKey: node.typeKey },
+          data:      { color: node.color, label: node.label },
         }
       }),
     [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes]
@@ -980,7 +927,7 @@ export function SignalChain() {
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
-        nodeTypes={nodeTypes}
+        nodeTypes={NODE_COMPONENTS}
         edgeTypes={edgeTypes}
         nodesDraggable={canEdit}
         nodesConnectable={false}

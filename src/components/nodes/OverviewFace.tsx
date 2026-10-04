@@ -7,6 +7,8 @@ import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { getHealth, healthColor, formatDb } from '../../signal/levels'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
+import type { TypeKey } from '../../data/nodeRegistry'
+import { NODE_LOOK } from './nodeLook'
 
 // ── Geometry (all sizes follow the card's measured width W) ─────────────────────
 const PAD         = 20     // around the name and the level block
@@ -21,15 +23,12 @@ const HEALTH_MAX  = 0.75   // health word, relative to the number
 const HEALTH_MIN  = 0.55   // below this it moves to its own row
 const NUMBER_SAMPLE = '-00.0'   // widest level reading (formatDb, mono font)
 
-// Names in capitals look much bigger than mixed-case ones at the same size
-const NAME_MAX_BY_TYPE: Record<string, number> = { hpf: 70 }
-
 /** Drawn instead of the name, given the box it may fill (px). */
 export type OverviewArt = (box: { w: number; h: number }) => ReactNode
 
 interface OverviewFaceProps {
   nodeId: string
-  typeKey: string
+  typeKey: TypeKey
   label: string
   /** Shown instead of the name (a big icon, the control itself). */
   art?: OverviewArt
@@ -81,7 +80,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
     const nameH  = H - 2 - PAD * 2 - levelH - tagH
     const name   = fitText(label, innerW, nameH, {
       family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
-      maxSize: NAME_MAX_BY_TYPE[typeKey] ?? NAME_MAX, maxLines: 2,
+      maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
     return { number, unit, meter, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
   }, [sizeKey, label, t, bypassed, typeKey, showLevel])

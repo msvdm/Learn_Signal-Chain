@@ -75,27 +75,49 @@ Found while testing, fixed after: removing a card in a two-card loop (A → B �
 join its wires into a wire from A to itself — A went silent, and removing A later left a wire to a
 card that was gone. `withoutNode` no longer joins wires that would start and end on the same card.
 
-## 4. Each node type described once
+## ~~4. Each node type described once~~ — done
 
-Today a type lives in ~15 places: `NODE_REGISTRY`, `nodeTypes` (`SignalChain.tsx`), `ALL_ITEMS`
-+ `PALETTE_BY_LEVEL` (`ElementPalette.tsx`; its categories differ from the registry's; the level
-lists are supersets → `minLevel`), `NO_BYPASS_TYPES`, `MULTI_WIRE_TYPES`, `MIX_BUS_TYPES`,
-`SPLIT_TYPES`, `DYNAMIC_INPUT_TYPES` (`connectionRules.ts`), `LINKED_DYNAMICS` (`signal/process.ts`),
-`FREE_CONTROL_SIZE` + `CARD_MIN_BY_TYPE` (`layoutHelpers.ts`), `NAME_MAX_BY_TYPE`
-(`OverviewFace.tsx`), the `processSide` switch (`signal/process.ts`) and ~39 `typeKey === '…'` checks.
+`TypeKey` (in `data/nodeRegistry.ts`) is the union of every type; `SignalNode.typeKey` is typed by it
+(`isTypeKey()` checks a string from a file or a palette drag). A type is now described in five
+tables keyed by it, so a new type missing from one does not compile:
+- `NODE_REGISTRY: Record<TypeKey, NodeTypeDef>` — what it is. The type sets became fields:
+  `minLevel` (was `PALETTE_BY_LEVEL`; `availableAt()`), `bypass` (`NO_BYPASS_TYPES` / `canBypass`),
+  `bus: 'mix' | 'matrix'` (`MULTI_WIRE_TYPES`, `MIX_BUS_TYPES`; `isBus` / `isMixBus`), `splits`
+  (`SPLIT_TYPES`; `canSplit`), `linked` (`LINKED_DYNAMICS`), `dynamicInputs`
+  (`DYNAMIC_INPUT_TYPES`), `freeSize` / `minSize` (`FREE_CONTROL_SIZE`, `CARD_MIN_BY_TYPE`).
+  `stereo` is required. The def's own `typeKey` field is gone.
+- `PROCESS: Record<TypeKey, Process>` in `signal/process.ts` — the old `switch`. Not a registry
+  field: `data/` imports nothing from the app, and the maths needs `signal/`. "Analog only" and
+  "a bus can't mix analog and digital" are wrappers (`analogOnly()`, `summing()`), not flags.
+- `NODE_LOOK: Record<TypeKey, NodeLook>` in `components/nodes/nodeLook.ts` — icon, palette group,
+  `headerSize`, `nameMax` (was `NAME_MAX_BY_TYPE`). Its order is the palette's (`ALL_ITEMS` is
+  built from it). `NodeWrapper` draws the header icon itself (the `icon` prop is gone), the palette
+  and the source / speaker faces use the same icons; the jack plug and HPF curve live once, in
+  `icons.tsx`.
+- `NODE_COMPONENTS: Record<TypeKey, …>` in `components/nodes/index.ts` — the old `nodeTypes`. A
+  separate table because the cards import `NodeWrapper`, which reads `NODE_LOOK` (a cycle otherwise).
+  Cards read their type from React Flow's `type` prop: `data.typeKey` is gone.
+- The locales: `palette.items` and `theory` are typed `Record<TypeKey, …> & Record<string, …>`.
 
-- `TypeKey` string-literal union instead of `string`.
-- `NODE_TYPES: Record<TypeKey, NodeTypeDef>` — pure data + behaviour: ports, `minLevel`, `bypass`,
-  `multiWire`, `splits`, `linked`, `analogOnly`, `process(ctx)`.
-- `NODE_UI: Record<TypeKey, { component, icon, paletteGroup, freeSize? }>` — the type-checker
-  then lists every table a new type still needs. Icons are chosen twice today (palette and each
-  card); the jack-plug SVG is copy-pasted in `MicNode.tsx` and `ElementPalette.tsx`.
-- Audio Interface's dynamic `in-1, in-2 …` ports are a second multi-input model
-  (`BusInputPorts`, `DYNAMIC_INPUT_TYPES`, `customInputs` / `customInputCount` on `NodeWrapper`,
-  the plugged-wires half of `portLayoutKey`, the engine's `inPort ? … : incoming` branch and its
-  per-side `in` for the interface's L / R meters). Buses already do "one port,
-  many wires".
-- Update CLAUDE.md's "Adding a new node" checklist to match.
+The Audio Interface keeps its numbered inputs (behaviour kept), but they now come from `getPorts`
+like every other card's: `BusInputPorts`, `customInputs` / `customInputCount`, the plugged-wires
+half of `portLayoutKey` and the engine's `inPort ? … : incoming` branch are gone (the engine works
+on every wire in, the Relay on its selected input). Left: the `dynamicInputs` flag (`getPorts`,
+`portAcceptsWire`) and the engine's per-side `in` for its L / R meters. Turning it into "one port,
+many wires" like the buses would change what it looks like — numbered inputs are closer to a real
+interface — so that is a decision for later, not a refactor.
+
+Checked old (HEAD) against new on 1,400 random graphs (21,470 states, 4 seeds, many with several
+wires into an interface, digital chains, linked stereo dynamics, mixed-domain buses): registry
+fields, palette per level, initial params, sizes, ports, every query, connection rules (every
+output to every card and input), takeovers, `withStereo` / `withoutNode`, chain order and every
+stage and wire — identical. In the browser: palette (26 tiles, same order and icon sizes), every
+card's header icon, the interface growing / reordering its inputs with real clicks, wires ending on
+their ports, a drop onto a wire, overview faces.
+
+One difference, in what was drawn: the Audio Interface's minimum height counted every wire plus
+one, even when two wires share an input, so it kept room for ports it did not show; it now counts
+the ports it shows (visible only with 4+ wires, some sharing an input).
 
 ## 5. Break up the big components
 
@@ -119,8 +141,7 @@ lists are supersets → `minLevel`), `NO_BYPASS_TYPES`, `MULTI_WIRE_TYPES`, `MIX
   "{node} input" badge and the chain stripe → `useNodeChrome()` + `<PortStack>` +
   `<WireTargetBadge>`. The "only re-renders when its chains change" comment is false (the same
   component subscribes to all `nodes` / `edges`). `NodePort` re-does the bus voltage sum.
-  23 identical `XData extends Record<string, unknown>` interfaces; `data.typeKey` duplicates
-  React Flow's `type`; `InlineNode` is a pass-through.
+  23 identical `XData extends Record<string, unknown>` interfaces; `InlineNode` is a pass-through.
 - Geometry: four `Pt` types, three rect shapes (`FlowNode` + `measured`, `Placed`, `NodeInfo`),
   three overlap tests, two routers (`elbowSegments` in `wireValidation.ts` re-implements
   `orthogonalRoute`), three unmeasured-size defaults (`nodeDims` ≥ 280×210 vs 160×120 in

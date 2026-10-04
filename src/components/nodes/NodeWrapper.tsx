@@ -2,12 +2,14 @@ import type { ReactNode, CSSProperties } from 'react'
 import { Power } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { NODE_REGISTRY, isNodeStereo, canBypass as canBypassType } from '../../data/nodeRegistry'
+import type { TypeKey } from '../../data/nodeRegistry'
+import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
 import { getPorts } from '../../graph/queries'
 import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { chainColorsOf } from '../../utils/chainColors'
 import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
 import { NodePort } from './NodePort'
+import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
 
@@ -16,14 +18,9 @@ const BODY_PAD_X = 20
 
 interface NodeWrapperProps {
   nodeId: string
-  typeKey: string
-  icon: ReactNode
+  typeKey: TypeKey
   label: string
   children?: ReactNode
-  /** Ports the node renders itself (dynamic bus inputs). Registry inputs are then skipped. */
-  customInputs?: ReactNode
-  /** Number of custom input ports, so the card grows tall enough to hold them. */
-  customInputCount?: number
   /** Horizontal alignment of the body content. */
   align?: 'stretch' | 'start' | 'center'
   className?: string
@@ -45,11 +42,8 @@ interface NodeWrapperProps {
 export function NodeWrapper({
   nodeId,
   typeKey,
-  icon,
   label,
   children,
-  customInputs,
-  customInputCount,
   align = 'stretch',
   className = '',
   style,
@@ -71,18 +65,18 @@ export function NodeWrapper({
   const { t, fmt }       = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
-  const canBypass  = canBypassType(typeKey)
+  const look       = NODE_LOOK[typeKey]
+  const canBypass  = NODE_REGISTRY[typeKey].bypass
   const helpOpen   = activeTooltipId === nodeId
   const selected   = isSelected || helpOpen
 
   const ports      = getPorts(node ?? { typeKey, params: {} }, { nodes, edges })
-  const canStereo  = NODE_REGISTRY[typeKey]?.stereo === 'optional'
+  const canStereo  = NODE_REGISTRY[typeKey].stereo === 'optional'
   const stripe     = chainColors ? chainColors.split(' ') : []
-  const inputs  = customInputs ? [] : ports.inputs
-  const outputs = ports.outputs
+  const { inputs, outputs } = ports
 
   // Tall enough for the longest stack of ports
-  const portRows  = Math.max(inputs.length, customInputCount ?? 0, outputs.length, 1)
+  const portRows  = Math.max(inputs.length, outputs.length, 1)
   const minSize   = cardMinSize(typeKey)
   const minHeight = Math.max(minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
 
@@ -156,7 +150,6 @@ export function NodeWrapper({
       {inputs.map((port, i) => (
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={port.label} />
       ))}
-      {customInputs}
       {outputs.map((port, i) => (
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={port.label} />
       ))}
@@ -176,7 +169,9 @@ export function NodeWrapper({
             flexShrink: 0,
           }}
         >
-          <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>{icon}</span>
+          <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>
+            <look.icon size={look.headerSize ?? 16} />
+          </span>
           {/* Short titles stay on one line (the card grows); long ones wrap */}
           <span
             style={{
