@@ -280,8 +280,19 @@ corners never gets the warning once committed (the preview still warns while dra
   autosave keeps its own key (`lsc-canvas`, which carries the level of the chain it holds).
 - ~~`activeTooltipId` + `activeTooltipTypeKey` always set / cleared together → one
   `help: { nodeId, key } | null`.~~ — done (`setHelp`, `HelpOpen`).
-- Outside-click + Esc dismissal hand-written in 5 places (`UnplugMenu` re-implements
-  `useLatestRef`); pointer dragging in 4 controls → `useDismiss`, `usePointerDrag`.
+- ~~Outside-click + Esc dismissal hand-written in 5 places (`UnplugMenu` re-implements
+  `useLatestRef`); pointer dragging in 4 controls → `useDismiss`, `usePointerDrag`.~~ — done.
+  `useDismiss` closes the right-click menus, the unplug list (capture phase, Esc) and the File and
+  language menus (bubble phase, no Esc — as before: Esc there would also reach the canvas keys).
+  `ConfirmDialog` keeps its own: it is modal (backdrop press, Esc in the capture phase, stopped).
+  `usePointerDrag` + `takePress` serve the Knob, the Fader, the Graphic EQ sliders and the EQ
+  curve's dots; the latest move handler is always used (the knob and fader re-subscribed on prop
+  changes, the Graphic EQ kept a latest-ref by hand). Differences: the EQ dots follow window
+  listeners instead of pointer capture (so another dot under the pointer can light up while one is
+  dragged — the dragged one stays on top), and every drag also ends on `pointercancel`.
+  Checked with real mouse drags: knob, fader cap and track click, a Graphic EQ slider dragged
+  sideways (stays on its band), an EQ dot (and its cursor after release), a right-click on a knob;
+  each popup closing on an outside press / Esc; the File menu closing on a canvas press, as in HEAD.
 - ~~`ChainEdge` infers overview from `strokeWidth > 3` — pass it in `data`.~~ — done (step 5)
 - Display names: `nodeName()` (palette name first) and `helpTitle()` in `Tooltip.tsx` (card
   label first) disagree; `nodes` locale keys mix `activeSpeaker` / `graphicEq` / `master` with

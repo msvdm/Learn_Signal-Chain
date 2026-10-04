@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { useDismiss } from '../hooks/useDismiss'
+import { useLatestRef } from '../hooks/useLatestRef'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
@@ -32,30 +34,16 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
   const ref             = useRef<HTMLDivElement>(null)
 
   // The parent passes a new onClose each render — keep the latest without re-subscribing
-  const onCloseRef = useRef(onClose)
-  useEffect(() => { onCloseRef.current = onClose })
+  const onCloseRef = useLatestRef(onClose)
 
   // Close on a click outside or Escape; clear the highlight when the list goes away
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onCloseRef.current()
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCloseRef.current()
-    }
-    document.addEventListener('mousedown', onDown, true)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown, true)
-      document.removeEventListener('keydown', onKey)
-      setHighlight([])
-    }
-  }, [setHighlight])
+  useDismiss(ref, onClose, { escape: true, capture: true })
+  useEffect(() => () => setHighlight([]), [setHighlight])
 
   // Nothing left to choose from — close
   useEffect(() => {
     if (wires.length === 0) onCloseRef.current()
-  }, [wires.length])
+  }, [wires.length, onCloseRef])
 
   // Open to the left of the input port so the card itself stays visible
   const WIDTH = 280

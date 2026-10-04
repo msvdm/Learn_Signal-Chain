@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CardProps } from './cardProps'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
@@ -8,7 +8,7 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
-import { useLatestRef } from '../../hooks/useLatestRef'
+import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import { GEQ_CENTERS, GEQ_RANGE, geqShortLabel, geqLongLabel } from '../../signal/eqMath'
 
 // Same body width as the Parametric EQ, so both EQ cards are the same size
@@ -57,42 +57,26 @@ export function GraphicEQNode({ id, data }: CardProps) {
 
   // The band under the pointer or being dragged — only for the readout and highlight
   const [active, setActive] = useState<{ side: Side; band: number } | null>(null)
-  // A drag keeps to the bank and slider it started on
-  const drag    = useRef<{ side: Side; band: number; el: HTMLElement } | null>(null)
-  const setGain = useLatestRef((side: Side, band: number, db: number) => {
+  function setGain(side: Side, band: number, db: number) {
     // The first touch on the right side copies the left over, then the two are independent
     if (side === 'r' && p('r0') === undefined) {
       updateNodeParams(id, { ...Object.fromEntries(right.map((g, i) => [`r${i}`, g])), [`r${band}`]: db })
     } else {
       updateNodeParams(id, { [paramOf(side, band)]: db })
     }
-  })
+  }
 
-  // A drag keeps to the slider it started on, however far the pointer wanders sideways
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      const d = drag.current
-      if (d) setGain.current(d.side, d.band, gainAt(e.clientY, d.el))
-    }
-    const onUp = () => { drag.current = null }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [setGain])
+  // A drag keeps to the bank and slider it started on, however far the pointer wanders sideways
+  const drag = usePointerDrag<{ side: Side; band: number; el: HTMLElement }>((e, d) =>
+    setGain(d.side, d.band, gainAt(e.clientY, d.el)))
 
   function onBankDown(side: Side, e: React.PointerEvent<HTMLDivElement>) {
-    // Only the main button moves a slider: a right-click opens the element's menu instead
-    if (e.button !== 0) return
-    e.stopPropagation()
-    e.preventDefault()
+    if (!takePress(e)) return
     const el   = e.currentTarget
     const band = bandAt(e.clientX, el)
-    drag.current = { side, band, el }
+    drag.start({ side, band, el })
     setActive({ side, band })
-    setGain.current(side, band, gainAt(e.clientY, el))
+    setGain(side, band, gainAt(e.clientY, el))
   }
 
   const sides: Side[] = stereo ? ['l', 'r'] : ['l']
@@ -168,8 +152,8 @@ export function GraphicEQNode({ id, data }: CardProps) {
                 channel={stereo ? side.toUpperCase() : null}
                 activeBand={active?.side === side ? active.band : null}
                 onDown={(e) => onBankDown(side, e)}
-                onHover={(band) => { if (!drag.current) setActive(band === null ? null : { side, band }) }}
-                onReset={(band) => setGain.current(side, band, 0)}
+                onHover={(band) => { if (!drag.active()) setActive(band === null ? null : { side, band }) }}
+                onReset={(band) => setGain(side, band, 0)}
               />
             ))}
           </div>

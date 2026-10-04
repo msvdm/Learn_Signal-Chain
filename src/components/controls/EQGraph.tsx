@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import type { EQBand } from '../../data/nodeRegistry'
 import {
   FREQ_MIN, FREQ_MAX, DB_MIN, DB_MAX, Q_MIN, Q_MAX,
@@ -57,7 +58,6 @@ function dbLabel(db: number): string {
  */
 export function EQGraph({ bands, onBandChange, width, height, adjustableWidth = false }: EQGraphProps) {
   const svgRef   = useRef<SVGSVGElement>(null)
-  const grab     = useRef({ dx: 0, dy: 0 })        // pointer offset from the dot centre
   const lastDown = useRef({ index: -1, time: 0 })  // double-click detection
   const wheelAcc = useRef(0)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -80,7 +80,7 @@ export function EQGraph({ bands, onBandChange, width, height, adjustableWidth = 
     `${curve(gainAt)} L${fx(FREQ_MAX)},${zeroY} L${fx(FREQ_MIN)},${zeroY} Z`
 
   /** Pointer position in SVG px — correct at any canvas zoom. */
-  function toSvg(e: React.PointerEvent) {
+  function toSvg(e: { clientX: number; clientY: number }) {
     const rect = svgRef.current!.getBoundingClientRect()
     return {
       x: (e.clientX - rect.left) * (width / rect.width),
@@ -88,10 +88,19 @@ export function EQGraph({ bands, onBandChange, width, height, adjustableWidth = 
     }
   }
 
+  // A dot follows the pointer, held where it was grabbed (grabX / grabY: dot centre − pointer)
+  const drag = usePointerDrag<{ index: number; grabX: number; grabY: number }>((e, { index, grabX, grabY }) => {
+    const { band, freqRange } = bands[index]
+    const p = toSvg(e)
+    const gainDb = Math.round(clamp(yd(p.y + grabY), DB_MIN, DB_MAX) * 2) / 2
+    const freqHz = freqRange
+      ? Math.round(clamp(xf(p.x + grabX), freqRange[0], freqRange[1]))
+      : band.freqHz
+    if (gainDb !== band.gainDb || freqHz !== band.freqHz) onBandChange(index, { gainDb, freqHz })
+  }, () => setDragging(null))
+
   function onDotDown(i: number, e: React.PointerEvent) {
-    if (e.button !== 0) return
-    e.stopPropagation()
-    e.preventDefault()
+    if (!takePress(e)) return
     const { band } = bands[i]
     // Second press on the same dot in quick succession = double-click → back to 0 dB
     if (lastDown.current.index === i && e.timeStamp - lastDown.current.time < DOUBLE_CLICK_MS) {
@@ -101,26 +110,8 @@ export function EQGraph({ bands, onBandChange, width, height, adjustableWidth = 
     }
     lastDown.current = { index: i, time: e.timeStamp }
     const p = toSvg(e)
-    grab.current = { dx: fx(band.freqHz) - p.x, dy: dy(band.gainDb) - p.y }
-    svgRef.current?.setPointerCapture(e.pointerId)
+    drag.start({ index: i, grabX: fx(band.freqHz) - p.x, grabY: dy(band.gainDb) - p.y })
     setDragging(i)
-  }
-
-  function onPointerMove(e: React.PointerEvent) {
-    if (dragging === null) return
-    const { band, freqRange } = bands[dragging]
-    const p = toSvg(e)
-    const gainDb = Math.round(clamp(yd(p.y + grab.current.dy), DB_MIN, DB_MAX) * 2) / 2
-    const freqHz = freqRange
-      ? Math.round(clamp(xf(p.x + grab.current.dx), freqRange[0], freqRange[1]))
-      : band.freqHz
-    if (gainDb !== band.gainDb || freqHz !== band.freqHz) onBandChange(dragging, { gainDb, freqHz })
-  }
-
-  function endDrag(e: React.PointerEvent) {
-    if (dragging === null) return
-    if (svgRef.current?.hasPointerCapture(e.pointerId)) svgRef.current.releasePointerCapture(e.pointerId)
-    setDragging(null)
   }
 
   function onDotWheel(i: number, e: React.WheelEvent) {
@@ -163,9 +154,6 @@ export function EQGraph({ bands, onBandChange, width, height, adjustableWidth = 
         height={height}
         viewBox={`0 0 ${width} ${height}`}
         style={{ display: 'block', touchAction: 'none', userSelect: 'none' }}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
       >
         <rect
           x={0.5} y={0.5} width={width - 1} height={height - 1} rx={8}

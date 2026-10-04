@@ -6,6 +6,7 @@ import { useTranslation } from '../i18n/useTranslation'
 import { useChainFile } from '../hooks/useChainFile'
 import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useLatestRef } from '../hooks/useLatestRef'
+import { useDismiss } from '../hooks/useDismiss'
 import { MOD, pressedInside } from '../utils/shortcut'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MenuItem, MenuDivider } from './NodeMenu'
@@ -29,13 +30,7 @@ export function FileMenu({ onNew, buttonStyle }: {
   const [name, setName]     = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  useDismiss(ref, () => setOpen(false), { open })
 
   /** Ask for the name first (the last one used is suggested). */
   function startSave(kind: Exclude<Saving, null>) {

@@ -10,6 +10,7 @@ import { useGraphSignal } from '../hooks/useGraphSignal'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { helpKeyOf } from '../utils/nodeName'
 import { useLatestRef } from '../hooks/useLatestRef'
+import { useDismiss } from '../hooks/useDismiss'
 import { MOD } from '../utils/shortcut'
 import type { Direction } from '../utils/nodeGroup'
 import { DirectionArrows } from './DirectionArrows'
@@ -165,22 +166,13 @@ function ContextMenu({ x, y, onClose, children }: { x: number; y: number; onClos
   }, [x, y])
 
   // Close on a click outside, Escape, zooming or scrolling; focus the first item for the keyboard
+  useDismiss(ref, onClose, { escape: true, capture: true })
   useEffect(() => {
     ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onCloseRef.current()
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCloseRef.current()
-    }
     const close = () => onCloseRef.current()
-    document.addEventListener('mousedown', onDown, true)
-    document.addEventListener('keydown', onKey)
     window.addEventListener('wheel', close, { passive: true })
     window.addEventListener('resize', close)
     return () => {
-      document.removeEventListener('mousedown', onDown, true)
-      document.removeEventListener('keydown', onKey)
       window.removeEventListener('wheel', close)
       window.removeEventListener('resize', close)
     }

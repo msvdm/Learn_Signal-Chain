@@ -89,6 +89,8 @@ Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `sig
 | `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R when a stereo signal comes in / goes out (`stage.in` / `stage.out` kind), plus `inPeak` (louder input side). |
 | `src/hooks/useParams.ts` | `useParams(id, typeKey)` → `p(key)`: a card's setting, typed, its type's default when unset (`param()` in the registry). |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup, commits `updateEdgeWaypoints` on release). Returns `{ reshaping, setReshaping }`; used by `CanvasOverlays`' reshape handles. |
+| `src/hooks/usePointerDrag.ts` | `usePointerDrag(move, end?)` — dragging a control (knob, fader, Graphic EQ slider, EQ dot): `start(state)` from its pointer-down, then every pointer move on the page until release; `takePress(e)` — the main button only (a right-click opens the menu), kept from the canvas. |
+| `src/hooks/useDismiss.ts` | `useDismiss(ref, onClose, { open, escape, capture })` — a popup (right-click menu, unplug list, File menu, language menu) closes on a press outside it, and on Esc where asked. |
 | `src/hooks/useLatestRef.ts` | `useLatestRef(value)` — a ref holding the latest committed value, for document/window listeners. Synced in a layout effect: never assign `ref.current` during render (react-hooks lint). |
 | `src/hooks/useChainEmpty.ts` | `useChainEmpty()` — true when no node is on the canvas (drives the palette's "Start here" badge and the camera reset). |
 | `src/hooks/useMediaQuery.ts` | `useMediaQuery()`, `TABLET_QUERY` (≤ 1024px: palette icon rail), `WIDE_HEADER_QUERY` (≥ 1280px: the tagline and all header labels fit). |

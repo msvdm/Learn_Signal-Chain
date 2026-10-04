@@ -1,7 +1,8 @@
-import { Fragment, useRef, useEffect, useId } from 'react'
+import { Fragment, useRef, useId } from 'react'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
 import { useLatestRef } from '../../hooks/useLatestRef'
+import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import type { FaderMark } from '../../utils/faderTaper'
 
 const DEFAULT_MARKS = [
@@ -86,9 +87,6 @@ export function VerticalFader({
   const capLeft   = trackCx - capW / 2                  // centres cap on track
   const line      = Math.max(1, Math.round(k * 0.75))   // tick thickness
   const containerRef = useRef<HTMLDivElement>(null)
-  const isDragging   = useRef(false)
-  // Grabbing the cap keeps the spot you hold under the pointer (no jump): pointer − cap centre
-  const grabOffset   = useRef(0)
   const valueRef     = useLatestRef(value)
 
   const positionOf = (v: number) => taper ? taper.toPosition(v) : (v - min) / (max - min)
@@ -102,38 +100,27 @@ export function VerticalFader({
   const format       = formatValue ?? ((v: number) => `${v >= 0 ? '+' : ''}${v} dB`)
   const displayValue = format(value)
 
-  function computeFromPointer(clientY: number): number {
+  /** The value under the pointer; `grabOffset`: where on the cap it is held (pointer − cap centre). */
+  function computeFromPointer(clientY: number, grabOffset: number): number {
     if (!containerRef.current) return valueRef.current
     const rect = containerRef.current.getBoundingClientRect()
-    const relY = Math.max(0, Math.min(rect.height, clientY - grabOffset.current - rect.top))
+    const relY = Math.max(0, Math.min(rect.height, clientY - grabOffset - rect.top))
     return valueAt(1 - relY / rect.height)
   }
 
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => { if (isDragging.current) onChange(computeFromPointer(e.clientY)) }
-    const onUp   = () => { isDragging.current = false }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup',   onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup',   onUp)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [min, max, step, onChange])
+  // Grabbing the cap keeps the spot you hold under the pointer (no jump)
+  const drag = usePointerDrag<{ grabOffset: number }>((e, { grabOffset }) => onChange(computeFromPointer(e.clientY, grabOffset)))
 
   function handlePointerDown(e: React.PointerEvent) {
-    // Only the main button moves the fader: a right-click opens the element's menu instead
-    if (e.button !== 0) return
-    e.stopPropagation()
-    e.preventDefault()
-    isDragging.current = true
+    if (!takePress(e)) return
     // On the cap: drag it from where it is held. On the track: the cap jumps there.
     const rect     = e.currentTarget.getBoundingClientRect()
     const capY     = rect.top + (1 - positionOf(valueRef.current)) * rect.height
     const capHalf  = (capH / 2) * (rect.height / height)
     const onCap    = Math.abs(e.clientY - capY) <= capHalf
-    grabOffset.current = onCap ? e.clientY - capY : 0
-    if (!onCap) onChange(computeFromPointer(e.clientY))
+    const grabOffset = onCap ? e.clientY - capY : 0
+    drag.start({ grabOffset })
+    if (!onCap) onChange(computeFromPointer(e.clientY, grabOffset))
   }
 
   return (

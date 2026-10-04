@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
 
@@ -62,35 +62,18 @@ export function KnobControl({
   const format  = formatValue ?? ((v: number) => String(v))
   const display = format(value)
 
-  const startY = useRef<number | null>(null)
-  const startValue = useRef(value)
-
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      if (startY.current === null) return
-      const dy = startY.current - e.clientY
-      const deltaValue = (dy / 150) * range
-      const raw = startValue.current + deltaValue
-      const clamped = Math.max(min, Math.min(max, raw))
-      const stepped = Math.round(clamped / step) * step
-      onChange(parseFloat(stepped.toFixed(10)))
-    }
-    const onUp = () => { startY.current = null }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [min, max, range, step, onChange])
+  // Drag up / down: 150px is the whole range
+  const drag = usePointerDrag<{ y: number; value: number }>((e, from) => {
+    const dy = from.y - e.clientY
+    const deltaValue = (dy / 150) * range
+    const raw = from.value + deltaValue
+    const clamped = Math.max(min, Math.min(max, raw))
+    const stepped = Math.round(clamped / step) * step
+    onChange(parseFloat(stepped.toFixed(10)))
+  })
 
   const onPointerDown = (e: React.PointerEvent) => {
-    // Only the main button turns the knob: a right-click opens the element's menu instead
-    if (e.button !== 0) return
-    e.stopPropagation()
-    e.preventDefault()
-    startY.current = e.clientY
-    startValue.current = value
+    if (takePress(e)) drag.start({ y: e.clientY, value })
   }
 
   const valueSize = size >= 52 ? 15 : 13

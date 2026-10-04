@@ -15,6 +15,7 @@ import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
 import { useMediaQuery, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
 import { usePaletteWidth } from './hooks/usePaletteWidth'
+import { useDismiss } from './hooks/useDismiss'
 
 type PendingConfirm = { kind: 'reset' } | { kind: 'level'; level: ComplexityLevel } | null
 
@@ -51,15 +52,7 @@ function App() {
     document.documentElement.lang = language
   }, [language])
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (languageRef.current && !languageRef.current.contains(e.target as Node)) {
-        setShowLanguages(false)
-      }
-    }
-    if (showLanguages) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showLanguages])
+  useDismiss(languageRef, () => setShowLanguages(false), { open: showLanguages })
 
   function handleLevelChange(level: ComplexityLevel) {
     if (level === complexityLevel) return
