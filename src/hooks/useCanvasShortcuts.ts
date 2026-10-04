@@ -37,7 +37,7 @@ export function useCanvasShortcuts(wrapperRef: RefObject<HTMLDivElement | null>,
       const store = useSignalStore.getState()
       if (e.key === 'Escape') {
         if (store.wire) store.cancelWire()
-        else if (store.activeTooltipId) store.setActiveTooltip(null, null)
+        else if (store.help) store.setHelp(null)
         else store.setSelection([])
         return
       }

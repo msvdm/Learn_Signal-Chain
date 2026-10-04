@@ -38,7 +38,7 @@ interface NodeMenuProps {
  */
 export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, onRemove, onClose }: NodeMenuProps) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
-  const setActiveTooltip = useSignalStore((s) => s.setActiveTooltip)
+  const setHelp          = useSignalStore((s) => s.setHelp)
   const setSelectedNode  = useSignalStore((s) => s.setSelectedNode)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const { stages }       = useGraphSignal()
@@ -71,7 +71,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
         <MenuItem
           icon={<HelpCircle size={15} />}
           label={t.tooltip.whatIsThis}
-          onClick={act(() => { setActiveTooltip(nodeId, helpKey); setSelectedNode(nodeId) })}
+          onClick={act(() => { setHelp({ nodeId, key: helpKey }); setSelectedNode(nodeId) })}
         />
       )}
       {canBypass && (

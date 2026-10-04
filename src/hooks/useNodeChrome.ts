@@ -14,7 +14,7 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   const nodes      = useSignalStore((s) => s.nodes)
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wire?.source ?? null)
-  const selected   = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.activeTooltipId === nodeId)
+  const selected   = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.help?.nodeId === nodeId)
   const overview   = useSignalStore((s) => s.overview)
   // (Gone for the moment the card is drawn while being removed)
   const node       = nodes.find((n) => n.id === nodeId)

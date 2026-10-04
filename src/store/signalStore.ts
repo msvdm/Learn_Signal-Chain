@@ -25,6 +25,12 @@ type GraphSnapshot = GraphView
 
 const EMPTY_GRAPH: GraphSnapshot = { nodes: [], edges: [] }
 
+/** The help popover, open on an element: `key` is its text in `theory` (helpKeyOf: a role or a type). */
+export interface HelpOpen {
+  nodeId: string
+  key: string
+}
+
 /** The output port a wire is drawn from. */
 export interface WireSource {
   nodeId: string
@@ -41,9 +47,28 @@ export interface WireDraft {
   waypoints: Pt[]
 }
 
+// ── Settings kept in the browser ────────────────────────────────────────────
+// Each is written by one subscriber (at the bottom) whenever it changes, and read back at start.
+
+/** Store field → its localStorage key. */
+const SETTING_KEYS = {
+  language:        'lsc-language',
+  theme:           'lsc-theme',
+  snapToGrid:      'lsc-snap-to-grid',
+  paletteOpen:     'lsc-palette-open',
+  complexityLevel: 'lsc-complexity-level',
+} as const
+
+type Setting = keyof typeof SETTING_KEYS
+
+/** A setting as it was left (null: never set, or the browser keeps nothing). */
+function stored(setting: Setting): string | null {
+  try { return localStorage.getItem(SETTING_KEYS[setting]) } catch { return null }
+}
+
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('lsc-theme')
-  if (stored === 'dark' || stored === 'light') return stored
+  const theme = stored('theme')
+  if (theme === 'dark' || theme === 'light') return theme
   return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 }
 
@@ -51,24 +76,16 @@ function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme
 }
 
-function getInitialSnapToGrid(): boolean {
-  return localStorage.getItem('lsc-snap-to-grid') !== 'false'
-}
-
-function getInitialPaletteOpen(): boolean {
-  return localStorage.getItem('lsc-palette-open') !== 'false'
-}
-
 function getInitialLanguage(): Lang {
-  const stored = localStorage.getItem('lsc-language')
-  if (stored && stored in LOCALES) return stored
+  const lang = stored('language')
+  if (lang && lang in LOCALES) return lang
   const browserLang = navigator.language.split('-')[0]
   return browserLang in LOCALES ? browserLang : DEFAULT_LANG
 }
 
 function getInitialComplexityLevel(): ComplexityLevel {
-  const stored = localStorage.getItem('lsc-complexity-level')
-  return LEVELS.find((l) => l === stored) ?? 'beginner'
+  const level = stored('complexityLevel')
+  return LEVELS.find((l) => l === level) ?? 'beginner'
 }
 
 /** The autosaved canvas (see the autosave section at the bottom) */
@@ -93,8 +110,8 @@ interface SignalChainStore {
   /** The element palette on the left is shown (persisted); collapsed = more room for the canvas. */
   paletteOpen: boolean
   complexityLevel: ComplexityLevel
-  activeTooltipId: string | null
-  activeTooltipTypeKey: string | null
+  /** The help popover: the element it is anchored to and which text it shows (its role or type) */
+  help: HelpOpen | null
   /** Selected elements (several with the Select tool, Ctrl+click or Shift+drag) */
   selectedNodeIds: string[]
   toolMode: ToolMode
@@ -127,7 +144,8 @@ interface SignalChainStore {
   setTheme: (theme: Theme) => void
   setSnapToGrid: (on: boolean) => void
   setPaletteOpen: (open: boolean) => void
-  setActiveTooltip: (id: string | null, typeKey?: string | null) => void
+  /** Open the help popover on an element (null: close it) */
+  setHelp: (help: HelpOpen | null) => void
   setSelectedNode: (id: string | null) => void
   setSelection: (ids: string[]) => void
   setLeftTool: (tool: LeftTool) => void
@@ -181,10 +199,9 @@ const initialCanvas = getInitialCanvas()
 export const useSignalStore = create<SignalChainStore>((set, get) => ({
   language: getInitialLanguage(),
   theme: initialTheme,
-  snapToGrid: getInitialSnapToGrid(),
-  paletteOpen: getInitialPaletteOpen(),
-  activeTooltipId: null,
-  activeTooltipTypeKey: null,
+  snapToGrid: stored('snapToGrid') !== 'false',
+  paletteOpen: stored('paletteOpen') !== 'false',
+  help: null,
   selectedNodeIds: [],
   toolMode: 'select',
   leftTool: 'drag',
@@ -200,28 +217,18 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
   ...initialCanvas,
 
-  setLanguage: (lang) => {
-    localStorage.setItem('lsc-language', lang)
-    set({ language: lang })
-  },
+  setLanguage: (lang) => set({ language: lang }),
 
   setTheme: (theme) => {
-    localStorage.setItem('lsc-theme', theme)
     applyTheme(theme)
     set({ theme })
   },
 
-  setSnapToGrid: (on) => {
-    localStorage.setItem('lsc-snap-to-grid', String(on))
-    set({ snapToGrid: on })
-  },
+  setSnapToGrid: (on) => set({ snapToGrid: on }),
 
-  setPaletteOpen: (open) => {
-    localStorage.setItem('lsc-palette-open', String(open))
-    set({ paletteOpen: open })
-  },
+  setPaletteOpen: (open) => set({ paletteOpen: open }),
 
-  setActiveTooltip: (id, typeKey = null) => set({ activeTooltipId: id, activeTooltipTypeKey: typeKey }),
+  setHelp: (help) => set({ help }),
 
   setSelectedNode: (id) => set({ selectedNodeIds: id ? [id] : [] }),
 
@@ -254,7 +261,6 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   },
 
   setComplexityLevel: (level) => {
-    localStorage.setItem('lsc-complexity-level', level)
     // A new level starts a new history: its palette has other elements
     withoutHistory(() => set((s) => ({
       ...commitGraph(s, EMPTY_GRAPH, { newCanvas: true }),
@@ -289,13 +295,11 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     }))
     if (chain.level === get().complexityLevel) { apply(); return }   // one undo step
     // Another level starts a new history, like switching level in the header
-    localStorage.setItem('lsc-complexity-level', chain.level)
     withoutHistory(() => { apply(); set({ past: [], future: [] }) })
   },
 
   raiseLevel: (level) => {
     if (LEVELS.indexOf(level) <= LEVELS.indexOf(get().complexityLevel)) return
-    localStorage.setItem('lsc-complexity-level', level)
     set({ complexityLevel: level })
   },
 
@@ -412,7 +416,7 @@ function pruneRefs(s: SignalChainStore, graph: GraphView): Partial<SignalChainSt
   return {
     ...(selected.length < s.selectedNodeIds.length ? { selectedNodeIds: selected } : {}),
     ...(highlight.length < s.highlightEdgeIds.length ? { highlightEdgeIds: highlight } : {}),
-    ...(s.activeTooltipId && !nodeIds.has(s.activeTooltipId) ? { activeTooltipId: null, activeTooltipTypeKey: null } : {}),
+    ...(s.help && !nodeIds.has(s.help.nodeId) ? { help: null } : {}),
     ...(s.wire && !nodeIds.has(s.wire.source.nodeId) ? NO_WIRE : {}),
   }
 }
@@ -455,6 +459,15 @@ useSignalStore.subscribe((s, prev) => {
     past: [...prev.past, { nodes: prev.nodes, edges: prev.edges }].slice(-HISTORY_LIMIT),
     future: [],
   })
+})
+
+// ── Settings ────────────────────────────────────────────────────────────────
+
+useSignalStore.subscribe((s, prev) => {
+  for (const setting of Object.keys(SETTING_KEYS) as Setting[]) {
+    if (s[setting] === prev[setting]) continue
+    try { localStorage.setItem(SETTING_KEYS[setting], String(s[setting])) } catch { /* storage full or blocked */ }
+  }
 })
 
 // ── Autosave ────────────────────────────────────────────────────────────────

@@ -272,10 +272,14 @@ corners never gets the warning once committed (the preview still warns while dra
 
 ## Smaller items (fit into any step)
 
-- Persistence: six setters each `localStorage.setItem('lsc-…')`; the level key is written in
-  three places and also in the autosave → one persist subscriber with a key map.
-- `activeTooltipId` + `activeTooltipTypeKey` always set / cleared together → one
-  `help: { nodeId, key } | null`.
+- ~~Persistence: six setters each `localStorage.setItem('lsc-…')`; the level key is written in
+  three places and also in the autosave → one persist subscriber with a key map.~~ — done:
+  `SETTING_KEYS` (store field → key) and one subscriber that writes a setting when it changes; the
+  setters only set. Reading goes through `stored()`, and both sides survive a browser that keeps
+  nothing (a write used to throw inside the setter, so the setting did not change either). The
+  autosave keeps its own key (`lsc-canvas`, which carries the level of the chain it holds).
+- ~~`activeTooltipId` + `activeTooltipTypeKey` always set / cleared together → one
+  `help: { nodeId, key } | null`.~~ — done (`setHelp`, `HelpOpen`).
 - Outside-click + Esc dismissal hand-written in 5 places (`UnplugMenu` re-implements
   `useLatestRef`); pointer dragging in 4 controls → `useDismiss`, `usePointerDrag`.
 - ~~`ChainEdge` infers overview from `strokeWidth > 3` — pass it in `data`.~~ — done (step 5)

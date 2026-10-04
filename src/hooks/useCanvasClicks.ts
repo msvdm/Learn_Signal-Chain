@@ -106,9 +106,9 @@ export function useCanvasClicks(
 
   function onPaneClick() {
     if (!canSelect()) return
-    const { setSelection, setActiveTooltip } = useSignalStore.getState()
+    const { setSelection, setHelp } = useSignalStore.getState()
     setSelection([])
-    setActiveTooltip(null, null)
+    setHelp(null)
   }
 
   return { onNodeClick, onNodeDragStart, selectFromBox, onPaneClick }

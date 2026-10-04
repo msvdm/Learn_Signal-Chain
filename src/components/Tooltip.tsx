@@ -26,11 +26,10 @@ function helpTitle(t: Translations, typeKey: string): string {
  * Previous / Next walk the chain in signal-flow order.
  */
 export function HelpPopover() {
-  const activeId   = useSignalStore((s) => s.activeTooltipId)
-  const typeKey    = useSignalStore((s) => s.activeTooltipTypeKey)
+  const help       = useSignalStore((s) => s.help)
   const nodes      = useSignalStore((s) => s.nodes)
   const edges      = useSignalStore((s) => s.edges)
-  const setActive  = useSignalStore((s) => s.setActiveTooltip)
+  const setHelp    = useSignalStore((s) => s.setHelp)
   const setSelected = useSignalStore((s) => s.setSelectedNode)
   const { t, fmt } = useTranslation()
   const { stages } = useGraphSignal()
@@ -38,7 +37,9 @@ export function HelpPopover() {
   const { x: vx, y: vy, zoom } = useViewport()
   const paneW = useStore((s) => s.width)
   const paneH = useStore((s) => s.height)
-  const anchor = useInternalNode(activeId ?? '')
+  const activeId = help?.nodeId ?? null
+  const helpKey  = help?.key ?? null
+  const anchor   = useInternalNode(activeId ?? '')
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(0)
@@ -47,7 +48,7 @@ export function HelpPopover() {
   useLayoutEffect(() => {
     // Natural height (before any max-height clamp) + the 1px border top and bottom
     if (scrollRef.current) setHeight(scrollRef.current.scrollHeight + 2)
-  }, [activeId, typeKey, t, hasAnchor])
+  }, [activeId, helpKey, t, hasAnchor])
 
   // Bring the stage and its popover into view: once per opened stage, so it never
   // fights the learner's own panning afterwards.
@@ -85,8 +86,8 @@ export function HelpPopover() {
     [nodes, edges, stages, t],
   )
 
-  const entry = typeKey ? t.theory[typeKey] : undefined
-  if (!activeId || !typeKey || !entry || !anchor) return null
+  const entry = helpKey ? t.theory[helpKey] : undefined
+  if (!activeId || !helpKey || !entry || !anchor) return null
 
   const idx  = order.findIndex((n) => n.id === activeId)
   const prev = idx > 0 ? order[idx - 1] : undefined
@@ -111,12 +112,12 @@ export function HelpPopover() {
   const arrowLeft = Math.max(16, Math.min(width - 28, centerX - left - 6))
 
   function goTo(id: string, key: string) {
-    setActive(id, key)
+    setHelp({ nodeId: id, key })
     setSelected(id)
   }
 
   function close() {
-    setActive(null, null)
+    setHelp(null)
   }
 
   return (
@@ -151,7 +152,7 @@ export function HelpPopover() {
           }}
         >
           <h3 id="lsc-help-title" style={{ flex: 1, margin: 0, fontSize: 15, fontWeight: 700 }}>
-            {helpTitle(t, typeKey)}
+            {helpTitle(t, helpKey)}
           </h3>
           {idx >= 0 && (
             <span style={{ fontSize: 12, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>
