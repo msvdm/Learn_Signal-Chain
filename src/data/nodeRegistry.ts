@@ -35,7 +35,7 @@ export type TypeKey =
   | 'mic' | 'line-in' | 'instrument'
   | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
-  | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'audio-interface'
+  | 'master-bus' | 'aux-bus' | 'matrix-bus'
   | 'speaker' | 'active-speaker'
 
 export type Size = { w: number; h: number }
@@ -67,8 +67,6 @@ export type NodeTypeDef = {
    * whose mix may feed a Matrix Bus; 'matrix': the Matrix Bus, a bus of buses.
    */
   bus?: 'mix' | 'matrix'
-  /** Its inputs follow the wires: one per wire plugged in, plus a free one (graph/queries.ts getPorts). */
-  dynamicInputs?: true
   /**
    * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
    * separately: the Fader after a bus (Main Fader), the Graphic EQ and the Amplifier (a two-channel
@@ -99,9 +97,9 @@ export type SignalNode = {
 export type SignalEdge = {
   id: string
   source: string       // node id
-  sourceHandle: string // port id, e.g. 'out' | 'out-1' | 'out-2'
+  sourceHandle: string // port id, e.g. 'out' | 'out-l' | 'mix'
   target: string
-  targetHandle: string // port id, e.g. 'in' | 'in-1'
+  targetHandle: string // port id, e.g. 'in' | 'in-a'
   // Optional intermediate corner points in flow coordinates.
   // When present, the wire follows these waypoints instead of a plain two-point elbow.
   waypoints?: { x: number; y: number }[]
@@ -267,12 +265,6 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
     minLevel: 'advanced', bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
-  },
-  'audio-interface': {
-    // One input per wire plugged in (in-1, in-2 …), plus a free one
-    category: 'sink', inputs: [], outputs: [], stereo: 'never', dynamicInputs: true,
-    minLevel: 'intermediate', bypass: false,
-    defaultParams: {},
   },
   speaker: {
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound

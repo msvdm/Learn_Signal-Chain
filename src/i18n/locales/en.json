@@ -47,7 +47,7 @@
     "addDown": "Add it below",
     "levelReplace": "It was made at the {level} level: replacing the canvas switches the app to {level}.",
     "levelAdd": "It was made at the {level} level, so the app switches to {level}.",
-    "skipped": "{count} elements were left out: they come from a newer version of this app.",
+    "skipped": "{count} elements were left out: this version of the app does not have them.",
     "linkCopied": "Link copied. Anyone who opens it gets a copy of this chain.",
     "linkLong": "Link copied — but it is very long, so some chat apps may cut it short. Saving a file is safer.",
     "linkFailed": "The link could not be copied. Save the chain to a file instead.",
@@ -250,12 +250,6 @@
       "label": "Pan",
       "balanceLabel": "Balance"
     },
-    "audio-interface": {
-      "label": "Audio Interface",
-      "noChannels": "No channels connected",
-      "digitalIn": "↓ Digital — End of chain",
-      "analogIn": "↓ Analog — End of chain"
-    },
     "adc": {
       "label": "ADC"
     },
@@ -359,7 +353,6 @@
       "master-bus": "Master Bus",
       "aux-bus": "Aux Bus",
       "matrix-bus": "Matrix Bus",
-      "audio-interface": "Audio Interface",
       "active-speaker": "Active Speaker",
       "speaker": "Speaker (passive)"
     }
@@ -499,11 +492,6 @@
       "what": "Feed it a mono signal and this is a Pan knob: it spreads that one signal between Left and Right and sends both out on one stereo wire. Fully left, only the left side gets it; fully right, only the right side. At centre each side gets it 3 dB quieter, so the overall loudness stays the same. Feed it a stereo wire and it turns into a Balance knob on its own.",
       "why": "A mono signal — one microphone, one guitar — has no left or right of its own. Wired straight into a stereo bus it lands on both sides at full level: stuck in the middle and 3 dB louder than a centred pan. The Pan knob is how you place it anywhere between the speakers.",
       "tip": "Compare: Line Input → Pan at centre → the Master shows 3 dB less on each side than the same Line Input wired straight into the Master. Then set the Line Input to Stereo: the card turns into Balance. A balance knob does not spread one signal, it only turns down one side of a signal that already has two."
-    },
-    "audio-interface": {
-      "what": "An audio interface is the device that connects your studio to your computer. It receives the final analog signal from your mixer or monitor controller, converts it to digital, and sends it to your recording software. In this signal chain, it is the last stop — nothing comes after it.",
-      "why": "Every recording studio needs a way to get audio into a computer. The audio interface takes the balanced analog outputs from your desk and converts them to digital data that your DAW can record. It also handles the reverse — playing back digital audio from your computer as analog signal for monitoring.",
-      "tip": "The level reaching the audio interface matters. Aim for a signal that peaks in the green zone — up to about 0 dBu in the analog chain, which is −18 dBFS in digital terms. This gives the converter enough signal to work cleanly while leaving headroom for unexpected peaks."
     },
     "adc": {
       "what": "An Analog-to-Digital Converter (ADC) samples the continuously varying analog voltage from your gear thousands of times per second and converts each measurement into a digital number. The level scale changes from dBu (analog) to dBFS (digital full scale). With the standard alignment, 0 dBu (unity) becomes −18 dBFS — so the digital ceiling, 0 dBFS, is +18 dBu. Healthy analog levels land well below it.",

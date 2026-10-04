@@ -67,17 +67,8 @@ const SIDE_OUTPUTS: NodePort[] = [
   { id: 'out-r', label: 'Right Out' },
 ]
 
-/** The audio interface's inputs: one per wire plugged in (in-1, in-2 …), then a free one for the next. */
-function dynamicInputs(wires: readonly SignalEdge[]): NodePort[] {
-  const used = [...new Set(wires.map((e) => e.targetHandle))]
-  let free = 1
-  while (used.includes(`in-${free}`)) free++
-  return [...used, `in-${free}`].map((id) => ({ id, label: '' }))
-}
-
 /**
- * The ports a node shows right now. Inputs never change, except the audio interface's: one per wire
- * plugged in, plus a free one. Outputs:
+ * The ports a node shows right now. Inputs never change. Outputs:
  * - a bus switched to Stereo splits its output into Left and Right;
  * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs; a Graphic EQ
  *   or Amplifier fed a stereo wire has Left and Right outputs too (splitsStereo);
@@ -94,12 +85,9 @@ export function getPorts(
   outputs: NodePort[]
 } {
   const def = NODE_REGISTRY[node.typeKey]
-  let inputs  = def.inputs
   let outputs = def.stereoOutputs && isNodeStereo(node) ? def.stereoOutputs : def.outputs
   if (view && node.id) {
-    const graph   = graphOf(view)
-    if (def.dynamicInputs) inputs = dynamicInputs(graph.into(node.id))
-    const out     = graph.from(node.id)
+    const out     = graphOf(view).from(node.id)
     const passing = out.some((e) => e.sourceHandle === MIX_PORT)
     if (isStereoBus(node) && passing) {
       outputs = MIX_OUTPUTS
@@ -110,7 +98,7 @@ export function getPorts(
       outputs = [...outputs, MATRIX_SEND_OUTPUT]
     }
   }
-  return { inputs, outputs }
+  return { inputs: def.inputs, outputs }
 }
 
 /**

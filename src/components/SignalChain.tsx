@@ -107,13 +107,11 @@ function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
 }
 
 /**
- * What a card's ports are: its port layout (a stereo Aux's L / R, a bus or fader taken over by a
- * Main Fader, the audio interface's input per wire). When this changes, React Flow must re-read
- * the ports.
+ * What a card's outputs are (a stereo Aux's L / R, a bus or fader taken over by a Main Fader …;
+ * inputs never change). When this changes, React Flow must re-read the ports.
  */
 function portLayoutKey(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): string {
-  const { inputs, outputs } = getPorts(node, { nodes, edges })
-  return `${inputs.map((p) => p.id).join(',')}|${outputs.map((p) => p.id).join(',')}`
+  return getPorts(node, { nodes, edges }).outputs.map((p) => p.id).join(',')
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

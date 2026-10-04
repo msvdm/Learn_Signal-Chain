@@ -55,10 +55,7 @@ export type StageRole =
 
 /** What one card does to the signal. */
 export interface StageResult {
-  /**
-   * What the card works on: both sides when it takes a stereo signal, else one channel (l = r).
-   * The audio interface: what arrives on each side.
-   */
+  /** What the card works on: both sides when it takes a stereo signal, else one channel (l = r). */
   in: WireSignal
   /** What it sends out: both sides when it works in stereo, else one channel (l = r). */
   out: WireSignal
@@ -108,8 +105,8 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
     // A "follow" node passes on what its wire carries — the Relay follows its selected input
     const driving    = drivingWire(node, graph)
     const followKind = driving ? wireOf(driving).kind : 'mono'
-    // The wires it works on: everything plugged in (every wire on a bus's input, an input per wire
-    // on the audio interface), but only the Relay's selected input
+    // The wires it works on: everything plugged in (every wire on a bus's input), but only the
+    // Relay's selected input
     const used = relay ? incoming.filter((e) => e.targetHandle === `in-${param(node, 'selectedInput')}`) : incoming
 
     // Analog or digital: what arrives decides (the Relay: its selected input). A bus can't mix them.
@@ -204,13 +201,6 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
     if (node.typeKey === 'active-speaker' && isFinite(levelOf(outSig)) && fedBy(node.id, 'amp', graph)) {
       outSig    = mono(Math.max(levelOf(outSig) + SPEAKER_LEVEL_DB, CLIP_DBU))
       condition = 'blown'
-    }
-    // The audio interface shows L / R: each wire adds its left side to L and its right side to R
-    if (node.typeKey === 'audio-interface') {
-      inSig = stereo(
-        sumSignalsToDb(incoming.map((e) => wireOf(e).l)),
-        sumSignalsToDb(incoming.map((e) => wireOf(e).r)),
-      )
     }
 
     const role: StageRole | undefined = preamp ? 'preamp'

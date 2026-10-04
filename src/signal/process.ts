@@ -56,7 +56,7 @@ type Process = (node: SignalNode, input: number, ctx: SideContext) => SideResult
 const pass    = (level: number, ctx: SideContext): SideResult => ({ out: level, domain: ctx.domain })
 const blocked = (condition: StageCondition, domain: SignalDomain): SideResult => ({ out: -Infinity, domain, condition })
 
-/** A bus (or the audio interface) cannot add analog and digital signals together. */
+/** A bus cannot add analog and digital signals together. */
 const summing = (process: Process): Process => (node, input, ctx) =>
   ctx.mixedDomains ? blocked('domainMixedBus', ctx.domain) : process(node, input, ctx)
 
@@ -142,7 +142,6 @@ const PROCESS: Record<TypeKey, Process> = {
   'master-bus':      busFader,
   'aux-bus':         busFader,
   'matrix-bus':      busFader,
-  'audio-interface': summing((_, input, ctx) => pass(input, ctx)),
   // Only runs with an amplifier before it (the engine checks); otherwise it is silent
   speaker: analogOnly('digitalToSpeaker', (node, input, ctx) => pass(input + param(node, 'outputTrimDb'), ctx)),
   'active-speaker': analogOnly('digitalToSpeaker', (node, input, ctx) =>
@@ -150,8 +149,8 @@ const PROCESS: Record<TypeKey, Process> = {
 }
 
 /**
- * One channel of `node` with `input` arriving (dBu, or dBFS after an ADC). A bus or the audio
- * interface gets everything plugged into it already added up.
+ * One channel of `node` with `input` arriving (dBu, or dBFS after an ADC). A bus gets everything
+ * plugged into it already added up.
  */
 export function processSide(node: SignalNode, input: number, ctx: SideContext): SideResult {
   return PROCESS[node.typeKey](node, input, ctx)

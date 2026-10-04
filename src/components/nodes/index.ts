@@ -19,7 +19,6 @@ import { PadNode }            from './PadNode'
 import { DeesserNode }        from './DeesserNode'
 import { RelayNode }          from './RelayNode'
 import { PanNode }            from './PanNode'
-import { AudioInterfaceNode } from './AudioInterfaceNode'
 import { AdcDacNode }         from './AdcDacNode'
 
 /**
@@ -41,7 +40,6 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'master-bus':      MasterBusNode,
   'aux-bus':         MasterBusNode,
   'matrix-bus':      MasterBusNode,
-  'audio-interface': AudioInterfaceNode,
   hpf:               HpfNode,
   eq:                EQNode,
   comp:              CompressorNode,

@@ -119,6 +119,13 @@ One difference, in what was drawn: the Audio Interface's minimum height counted 
 one, even when two wires share an input, so it kept room for ports it did not show; it now counts
 the ports it shows (visible only with 4+ wires, some sharing an input).
 
+Afterwards the Audio Interface was removed altogether: the app shows what happens inside the desk,
+and an ADC already turns it into one. Gone with it: its card and texts, `dynamicInputs`, the
+engine's per-side `in` for its meters, and inputs that depend on the wires (`getPorts` inputs never
+change again; `portLayoutKey` reads outputs only). A saved chain that has one opens without it, with
+the usual notice ("… elements were left out: this version of the app does not have them" — it
+used to say they came from a newer version).
+
 ## 5. Break up the big components
 
 - `SignalChain.tsx` (1,248 lines) → `useWireDrawing`, `useCanvasShortcuts`, `usePlaceGroup`,
@@ -162,7 +169,6 @@ the ports it shows (visible only with 4+ wires, some sharing an input).
   label first) disagree; `nodes` locale keys mix `activeSpeaker` / `graphicEq` / `master` with
   type keys.
 - English shown to Bulgarian users (a separate suggestion may cover it — check `git log`):
-  hard-coded — Audio Interface "N channels received" (and the Aux Bus's English plural `s`
-  param), "LIMITING" / "PASS", the curves' "0 dB in", port tooltips taken from the registry's
-  English port labels; and bg.json values that were never translated — the `warnings.*` domain
+  hard-coded — the Aux Bus's English plural `s` param, "LIMITING" / "PASS", the curves'
+  "0 dB in", port tooltips taken from the registry's English port labels; and bg.json values that were never translated — the `warnings.*` domain
   texts, `nodes.di-box` (groundLift, description), Relay "In A / In B".

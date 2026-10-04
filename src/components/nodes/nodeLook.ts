@@ -3,7 +3,7 @@ import {
   Mic, Guitar, Plug,
   Zap, Activity, Box, ToggleLeft, Radio, Sliders,
   AudioWaveform, ShieldAlert, DoorClosed, Minus,
-  Merge, Volume2, Cpu,
+  Merge, Volume2,
   SlidersHorizontal, GitBranch, MoveHorizontal,
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
@@ -58,7 +58,6 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'master-bus':      { icon: Merge,             group: 'routing' },
   'aux-bus':         { icon: Merge,             group: 'routing' },
   'matrix-bus':      { icon: Merge,             group: 'routing' },
-  'audio-interface': { icon: Cpu,               group: 'routing' },
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },
