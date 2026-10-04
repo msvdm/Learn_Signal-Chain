@@ -1,4 +1,5 @@
-import { useGraphSignal } from './useSignalChain'
+import { useGraphSignal } from './useGraphSignal'
+import { SILENT_WIRE, levelOf } from '../signal/engine'
 
 /**
  * Input / output levels for a node's meters.
@@ -8,20 +9,17 @@ import { useGraphSignal } from './useSignalChain'
  * `inPeak` is the louder input side — what a linked stereo compressor or gate reacts to.
  */
 export function useStereoLevels(id: string) {
-  const { stages, inputDb } = useGraphSignal()
-  const stage    = stages[id]
-  const stereoIn = stage?.stereoIn ?? false
-  const stereo   = stage?.stereoOut ?? false
-
-  const inL = stereoIn ? (stage?.inL ?? -Infinity) : (inputDb[id] ?? -Infinity)
-  const inR = stereoIn ? (stage?.inR ?? -Infinity) : undefined
+  const stage    = useGraphSignal().stages[id]
+  const arriving = stage?.in ?? SILENT_WIRE
+  const leaving  = stage?.out ?? SILENT_WIRE
+  const stereoIn = arriving.kind === 'stereo'
+  const stereo   = leaving.kind === 'stereo'
   return {
     stereo,
     /** Analog (dBu) or digital (dBFS), arriving and leaving — an ADC / DAC changes it */
-    inDomain:  stage?.inDomain ?? stage?.domain ?? 'analog',
+    inDomain:  stage?.inDomain ?? 'analog',
     outDomain: stage?.domain ?? 'analog',
-    in: inL, inR, inPeak: Math.max(inL, inR ?? -Infinity),
-    out:  stereo ? (stage?.outL ?? -Infinity) : (stage?.out ?? -Infinity),
-    outR: stereo ? (stage?.outR ?? -Infinity) : undefined,
+    in: arriving.l, inR: stereoIn ? arriving.r : undefined, inPeak: levelOf(arriving),
+    out: leaving.l, outR: stereo ? leaving.r : undefined,
   }
 }

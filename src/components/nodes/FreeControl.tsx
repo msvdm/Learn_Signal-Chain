@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { getPorts } from '../../data/nodeRegistry'
+import { getPorts } from '../../graph/queries'
 import { nodeAcceptsWire } from '../../utils/connectionRules'
 import { chainColorsOf } from '../../utils/chainColors'
 import { PORT_TOP } from '../../utils/layoutHelpers'

@@ -3,7 +3,8 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
-import type { NodeParamValue, SignalNode, SignalEdge, GraphView } from '../data/nodeRegistry'
+import type { NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { GraphView } from '../graph/graph'
 import { reconcileMainFaders } from '../utils/mainFader'
 import {
   withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,

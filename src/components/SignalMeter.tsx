@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion'
-import { healthColor, dbToPercent, formatDb } from '../hooks/useGainStaging'
 import { useTranslation } from '../i18n/useTranslation'
-import { getHealth, UNITY_DBU, ALIGNMENT_DB } from '../hooks/useSignalChain'
-import type { SignalHealth, SignalDomain } from '../hooks/useSignalChain'
+import { healthColor, dbToPercent, formatDb, getHealth, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
+import type { SignalHealth, SignalDomain } from '../signal/levels'
 import { StableText } from './controls/StableText'
 import { LEVEL_SAMPLE } from '../utils/readout'
 

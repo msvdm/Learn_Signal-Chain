@@ -5,9 +5,9 @@ import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import type { Translations } from '../i18n/translations'
-import { chainOrder } from '../utils/chainOrder'
-import { helpKeyOf } from '../data/nodeRegistry'
-import { useGraphSignal } from '../hooks/useSignalChain'
+import { chainOrder } from '../graph/graph'
+import { helpKeyOf } from '../utils/nodeName'
+import { useGraphSignal } from '../hooks/useGraphSignal'
 
 const WIDTH  = 380
 const ARROW  = 12
@@ -77,7 +77,7 @@ export function HelpPopover() {
   // Stages that have help text, in the order the signal flows through them
   // (a Pan fed a stereo wire opens the Balance text)
   const order = useMemo(
-    () => chainOrder(nodes, edges)
+    () => chainOrder({ nodes, edges })
       .map((n) => ({ id: n.id, helpKey: helpKeyOf(n, stages[n.id]) }))
       .filter((n) => Boolean(t.theory[n.helpKey])),
     [nodes, edges, stages, t],

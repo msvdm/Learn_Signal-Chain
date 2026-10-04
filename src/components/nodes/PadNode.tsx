@@ -2,6 +2,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Minus } from 'lucide-react'
 import { InlineNode } from './InlineNode'
 import { useSignalStore } from '../../store/signalStore'
+import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphPadData extends Record<string, unknown> {
@@ -10,11 +11,11 @@ interface GraphPadData extends Record<string, unknown> {
 }
 
 export function PadNode({ id, data }: NodeProps<Node<GraphPadData>>) {
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'pad')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const engaged = (node?.params.engaged as boolean) !== false
+  const engaged = p('engaged')
 
   return (
     <InlineNode

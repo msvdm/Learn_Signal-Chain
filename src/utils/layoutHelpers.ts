@@ -1,7 +1,7 @@
 import type { Node as FlowNode } from '@xyflow/react'
 import type { SignalEdge } from '../store/signalStore'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
-import { upstreamOf } from './chainColors'
+import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
 
 export type Pt = { x: number; y: number }

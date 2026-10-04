@@ -5,8 +5,10 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
-import { useGraphSignal } from '../../hooks/useSignalChain'
-import { healthColor } from '../../hooks/useGainStaging'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useParams } from '../../hooks/useParams'
+import { levelOf } from '../../signal/engine'
+import { healthColor } from '../../signal/levels'
 
 interface GraphRelayData extends Record<string, unknown> {
   color?: string
@@ -14,20 +16,20 @@ interface GraphRelayData extends Record<string, unknown> {
 }
 
 export function RelayNode({ id, data }: NodeProps<Node<GraphRelayData>>) {
-  const { stages, portSignal } = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const { stages, wires } = useGraphSignal()
+  const p                = useParams(id, 'relay')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const allEdges         = useSignalStore((s) => s.edges)
   const { t }            = useTranslation()
 
-  const selected = (node?.params.selectedInput as string) ?? 'a'
+  const selected = p('selectedInput')
   const result   = stages[id]
 
   // Signal level coming into each input (the louder side of a stereo wire)
   const levelOn = (port: string) => {
     const dbs = allEdges
       .filter((e) => e.target === id && e.targetHandle === port)
-      .map((e) => portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity)
+      .map((e) => levelOf(wires.get(`${e.source}:${e.sourceHandle}`)))
     return dbs.length > 0 ? Math.max(...dbs) : -Infinity
   }
   const sigA = levelOn('in-a')

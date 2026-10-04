@@ -4,7 +4,7 @@ import { Mic, Guitar } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { InlineNode } from './InlineNode'
 import { OverviewIcon } from './OverviewFace'
-import { useSignalStore } from '../../store/signalStore'
+import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphMicData extends Record<string, unknown> {
@@ -39,12 +39,11 @@ const ICONS: Record<string, ReactNode> = {
  * zoom (nothing to set on them). Line Input keeps a full card: it has a Mono / Stereo switch.
  */
 export function MicNode({ id, data }: NodeProps<Node<GraphMicData>>) {
-  const node  = useSignalStore((s) => s.nodes.find((n) => n.id === id))
   const { t } = useTranslation()
 
   const resolvedTypeKey = (data.typeKey as string) ?? 'mic'
-  const params          = node?.params ?? {}
-  const levelDb         = (params.sensitivityDb as number) ?? (params.levelDb as number) ?? -60
+  const p               = useParams(id, resolvedTypeKey)
+  const levelDb         = resolvedTypeKey === 'mic' ? p('sensitivityDb') : p('levelDb')
   const icon            = ICONS[resolvedTypeKey] ?? <Mic size={20} />
   const label           = data.label ?? t.palette.items[resolvedTypeKey] ?? t.nodes.mic.label
   const art             = (box: { w: number; h: number }) => <OverviewIcon icon={icon} box={box} />

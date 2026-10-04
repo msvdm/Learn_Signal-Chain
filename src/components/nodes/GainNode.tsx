@@ -3,7 +3,9 @@ import { FreeControl } from './FreeControl'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal, GAIN_OFF_DB } from '../../hooks/useSignalChain'
+import { useParams } from '../../hooks/useParams'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { GAIN_OFF_DB } from '../../signal/process'
 import { useTranslation } from '../../i18n/useTranslation'
 import { widestFormat } from '../../utils/readout'
 
@@ -25,17 +27,17 @@ const formatGain   = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v > 0 ? '+
  * Drawn as a bare knob (no card).
  */
 export function GainNode({ id, data }: NodeProps<Node<GraphGainData>>) {
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'gain')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
   const { t }            = useTranslation()
 
-  const preamp = stages[id]?.preamp ?? false
+  const preamp = stages[id]?.role === 'preamp'
   const label  = data.label ?? (preamp ? t.nodes.preamp.label : t.palette.items.gain)
 
   const knob = preamp
-    ? { param: 'preampDb', value: (node?.params.preampDb as number) ?? 40, min: 0, max: 60, format: formatPreamp }
-    : { param: 'gainDb', value: (node?.params.gainDb as number) ?? 0, min: GAIN_OFF_DB, max: 20, format: formatGain }
+    ? { param: 'preampDb', value: p('preampDb'), min: 0, max: 60, format: formatPreamp }
+    : { param: 'gainDb', value: p('gainDb'), min: GAIN_OFF_DB, max: 20, format: formatGain }
 
   return (
     <FreeControl

@@ -4,13 +4,17 @@ import { Merge } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE, formatTaperDb } from '../../utils/readout'
 import type { SignalEdge } from '../../data/nodeRegistry'
-import { matrixSendKey, matrixSendParam } from '../../data/nodeRegistry'
+import { matrixSendParam } from '../../data/nodeRegistry'
+import { matrixSendKey } from '../../graph/queries'
+import { useParams } from '../../hooks/useParams'
+import { SILENT_WIRE, levelOf } from '../../signal/engine'
+import { TAPER_UNITY } from '../../signal/levels'
 import { chainSourcesOfEdge } from '../../utils/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
@@ -38,12 +42,14 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
   const typeKey  = (data.typeKey as string) ?? 'master-bus'
   const isAux    = typeKey === 'aux-bus'
   const isMatrix = typeKey === 'matrix-bus'
-  const node     = nodes.find((n) => n.id === id)
-  const result   = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const stereo   = stages[id]?.stereoOut ?? !isAux
-  const domain   = (result as { domain?: string }).domain ?? 'analog'
+  const p        = useParams(id, typeKey)
+  const result   = stages[id]
+  const out      = result?.out ?? SILENT_WIRE
+  const level    = levelOf(out)
+  const stereo   = result ? out.kind === 'stereo' : !isAux
+  const domain   = result?.domain ?? 'analog'
   const unit     = domain === 'digital' ? 'dBFS' : 'dBu'
-  const domainWarning = (result as { warning?: string }).warning === 'domainMixedBus'
+  const domainWarning = result?.condition === 'domainMixedBus'
   const tm       = t.nodes['matrix-bus']
 
   const defaultLabel = isMatrix ? tm.label
@@ -102,7 +108,7 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
                   </span>
                 </span>
                 <KnobControl
-                  value={(node?.params[param] as number) ?? 75}
+                  value={p(param) ?? TAPER_UNITY}
                   min={0}
                   max={100}
                   step={0.5}
@@ -124,14 +130,14 @@ export function MasterBusNode({ id, data }: NodeProps<Node<BusData>>) {
 
       {stereo ? (
         <>
-          <ChannelRow ch="L" db={result.outL ?? result.out} />
-          <ChannelRow ch="R" db={result.outR ?? result.out} />
+          <ChannelRow ch="L" db={out.l} />
+          <ChannelRow ch="R" db={out.r} />
         </>
       ) : (
         <>
-          <SignalMeter db={result.out} health={result.health} showValue={false} domain={domain === 'digital' ? 'digital' : 'analog'} />
+          <SignalMeter db={level} health={result?.health ?? 'too-quiet'} showValue={false} domain={domain} />
           <div style={{ fontSize: 12, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)', textAlign: 'right' }}>
-            <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(result.out) ? result.out.toFixed(1) : '−∞'}</StableText> {unit}
+            <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(level) ? level.toFixed(1) : '−∞'}</StableText> {unit}
           </div>
         </>
       )}

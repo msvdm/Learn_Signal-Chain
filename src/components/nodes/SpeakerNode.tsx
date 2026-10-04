@@ -2,7 +2,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Volume2, VolumeX } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { OverviewIcon } from './OverviewFace'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphSpeakerData extends Record<string, unknown> {
@@ -20,7 +20,7 @@ const NOTE_LINE = 1.25
 export function SpeakerNode({ id, data }: NodeProps<Node<GraphSpeakerData>>) {
   const { stages } = useGraphSignal()
   const { t }      = useTranslation()
-  const needsAmp   = stages[id]?.needsAmp ?? false
+  const needsAmp   = stages[id]?.condition === 'needsAmp'
 
   return (
     <NodeWrapper

@@ -3,11 +3,12 @@ import { Box } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import type { CompressorResult } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
@@ -150,22 +151,20 @@ function DynamicsCurve({ threshold, ratio, makeupGain, inputLevel, gainReduction
 
 export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
   const { stages }          = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'comp')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const params      = node?.params ?? {}
   const levels      = useStereoLevels(id)
   const input       = levels.inPeak
-  const result      = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const, gainReductionDb: 0 }
-  const compResult  = result as CompressorResult
-  const threshold   = (params.thresholdDb as number) ?? -20
-  const ratio       = (params.ratio as number) ?? 2
-  const makeupGain  = (params.makeupGainDb as number) ?? 0
+  const result      = stages[id]
+  const threshold   = p('thresholdDb')
+  const ratio       = p('ratio')
+  const makeupGain  = p('makeupGainDb')
   // Shown and stored, but not part of the sound yet
-  const attackMs    = (params.attackMs as number) ?? 10
-  const releaseMs   = (params.releaseMs as number) ?? 100
-  const gainReduction = compResult.gainReductionDb ?? 0
+  const attackMs    = p('attackMs')
+  const releaseMs   = p('releaseMs')
+  const gainReduction = result?.gainReductionDb ?? 0
 
   return (
     <NodeWrapper
@@ -176,7 +175,7 @@ export function CompressorNode({ id, data }: NodeProps<Node<GraphCompData>>) {
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
-        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
         <KnobStack>
           <KnobControl

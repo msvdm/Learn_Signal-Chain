@@ -3,7 +3,7 @@ import type { EQBand } from '../../data/nodeRegistry'
 import {
   FREQ_MIN, FREQ_MAX, DB_MIN, DB_MAX, Q_MIN, Q_MAX,
   bandGain, isShelf, formatFreq, formatGain,
-} from './eqMath'
+} from '../../signal/eqMath'
 
 export interface GraphBand {
   band: EQBand

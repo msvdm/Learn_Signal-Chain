@@ -1,5 +1,7 @@
-import type { SignalNode, SignalEdge, GraphView } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, getPorts } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT } from '../data/nodeRegistry'
+import type { GraphView } from './graph'
+import { getPorts } from './queries'
 import { pickChainColor } from '../utils/chainColors'
 
 // Pure edits of the graph: each takes a graph and gives the new one. The store runs the result

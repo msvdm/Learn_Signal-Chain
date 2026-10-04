@@ -1,4 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import { upstreamOf } from '../graph/graph'
 
 /**
  * Colours that tag each chain (everything fed by one source).
@@ -27,25 +28,6 @@ export function pickChainColor(nodes: SignalNode[]): string {
     if (uses.get(c)! < uses.get(best)!) best = c
   }
   return best
-}
-
-/** Every node and wire upstream of `nodeId` (the node itself included). */
-export function upstreamOf(nodeId: string, edges: SignalEdge[]): { nodeIds: Set<string>; edgeIds: Set<string> } {
-  const nodeIds = new Set<string>([nodeId])
-  const edgeIds = new Set<string>()
-  const queue   = [nodeId]
-  while (queue.length > 0) {
-    const id = queue.shift()!
-    for (const e of edges) {
-      if (e.target !== id || edgeIds.has(e.id)) continue
-      edgeIds.add(e.id)
-      if (!nodeIds.has(e.source)) {
-        nodeIds.add(e.source)
-        queue.push(e.source)
-      }
-    }
-  }
-  return { nodeIds, edgeIds }
 }
 
 /** The chain one wire belongs to: the wire itself plus everything feeding it. */

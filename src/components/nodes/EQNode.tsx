@@ -4,17 +4,19 @@ import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
 import { EQGraph, type GraphBand } from '../controls/EQGraph'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import type { EQBand, NodeParamValue } from '../../data/nodeRegistry'
+import type { EQBand } from '../../data/nodeRegistry'
 import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import type { Translations } from '../../i18n/translations'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import {
   BAND_COLORS, DB_MIN, DB_MAX, Q_MIN, Q_MAX,
   isShelf, formatFreq, formatGain,
-} from '../controls/eqMath'
+} from '../../signal/eqMath'
 import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 
 const DEFAULT_BANDS = NODE_REGISTRY.eq.defaultParams.bands as EQBand[]
@@ -60,9 +62,9 @@ function bandSpecs(advanced: boolean, t: Translations): BandSpec[] {
   ]
 }
 
-function getBands(params: Record<string, NodeParamValue>): EQBand[] {
-  const stored = params.bands
-  if (Array.isArray(stored) && stored.length === 4) return stored as EQBand[]
+/** The four bands; anything else (a file edited by hand) starts again from the defaults. */
+function getBands(stored: EQBand[]): EQBand[] {
+  if (Array.isArray(stored) && stored.length === 4) return stored
   return DEFAULT_BANDS.map((b) => ({ ...b }))
 }
 
@@ -224,14 +226,14 @@ function BandCell({ spec, band, onChange }: {
 
 export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
   const { stages }          = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const complexityLevel  = useSignalStore((s) => s.complexityLevel)
   const { t }            = useTranslation()
 
   const levels = useStereoLevels(id)
-  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const bands  = getBands(node?.params ?? {})
+  const result = stages[id]
+  const bands  = getBands(p('bands'))
 
   const updateBand = (i: number, patch: Partial<EQBand>) => {
     updateNodeParams(id, { bands: bands.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) })
@@ -245,7 +247,7 @@ export function EQNode({ id, data }: NodeProps<Node<GraphEQData>>) {
     band: bands[s.index], name: s.name, color: BAND_COLORS[s.index], freqRange: s.freqRange,
   }))
   const meterIn  = <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
-  const meterOut = <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
+  const meterOut = <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
   return (
     <NodeWrapper

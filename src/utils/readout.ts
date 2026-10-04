@@ -1,4 +1,4 @@
-import { taperToDb } from '../hooks/useSignalChain'
+import { taperToDb } from '../signal/levels'
 
 /** Readout of an audio-taper knob (0 = off, 75 = 0 dB, 100 = +10 dB). */
 export function formatTaperDb(position: number): string {

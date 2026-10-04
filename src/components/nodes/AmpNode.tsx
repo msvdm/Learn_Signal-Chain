@@ -3,10 +3,13 @@ import { Radio } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth, GAIN_OFF_DB } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
+import { GAIN_OFF_DB } from '../../signal/process'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 
 interface GraphAmpData extends Record<string, unknown> {
   color?: string
@@ -18,15 +21,14 @@ const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
 export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
   const { stages }          = useGraphSignal()
-  const node                = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                   = useParams(id, 'amp')
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
   const { t }               = useTranslation()
 
-  const params = node?.params ?? {}
   const levels = useStereoLevels(id)
-  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const gainDb  = Math.min((params.gainDb as number) ?? 0, 0)
-  const gainDbR = Math.min((params.gainDbR as number) ?? gainDb, 0)
+  const result = stages[id]
+  const gainDb  = Math.min(p('gainDb'), 0)
+  const gainDbR = Math.min(p('gainDbR') ?? gainDb, 0)
   // Fed a stereo wire it is a two-channel amp: a Volume knob for each side
   const stereo  = levels.stereo
 
@@ -59,7 +61,7 @@ export function AmpNode({ id, data }: NodeProps<Node<GraphAmpData>>) {
           />
         )}
 
-        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
       </div>
     </NodeWrapper>
   )

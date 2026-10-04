@@ -3,11 +3,12 @@ import { ShieldAlert } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import type { CompressorResult } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
@@ -157,18 +158,16 @@ function LimiterCurve({ ceiling, makeupGain, inputLevel, gainReduction }: Limite
 
 export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
   const { stages }          = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'limiter')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const params        = node?.params ?? {}
-  const ceiling       = (params.thresholdDb as number) ?? -3
-  const makeupGain    = (params.makeupGainDb as number) ?? 0
+  const ceiling       = p('thresholdDb')
+  const makeupGain    = p('makeupGainDb')
   const levels        = useStereoLevels(id)
   const inputLevel    = levels.inPeak
-  const result        = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const, gainReductionDb: 0 }
-  const limResult     = result as CompressorResult
-  const gainReduction = limResult.gainReductionDb ?? 0
+  const result        = stages[id]
+  const gainReduction = result?.gainReductionDb ?? 0
 
   return (
     <NodeWrapper
@@ -179,7 +178,7 @@ export function LimiterNode({ id, data }: NodeProps<Node<GraphLimiterData>>) {
     >
       <div style={twoColumns}>
         <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
-        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
+        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
         <KnobStack>
           <KnobControl

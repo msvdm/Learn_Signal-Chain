@@ -3,12 +3,14 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Sliders } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import { useLatestRef } from '../../hooks/useLatestRef'
-import { GEQ_CENTERS, GEQ_RANGE, geqShortLabel, geqLongLabel } from '../controls/eqMath'
+import { GEQ_CENTERS, GEQ_RANGE, geqShortLabel, geqLongLabel } from '../../signal/eqMath'
 
 // Same body width as the Parametric EQ, so both EQ cards are the same size
 const BODY_W    = 640
@@ -48,16 +50,15 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
  */
 export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>) {
   const { stages }       = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'graphic-eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const params = node?.params ?? {}
   const levels = useStereoLevels(id)
-  const result = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
+  const result = stages[id]
   const stereo = levels.stereo
-  const left   = GEQ_CENTERS.map((_, i) => (params[`b${i}`] as number) ?? 0)
-  const right  = GEQ_CENTERS.map((_, i) => (params[`r${i}`] as number) ?? left[i])
+  const left   = GEQ_CENTERS.map((_, i) => p(`b${i}`))
+  const right  = GEQ_CENTERS.map((_, i) => p(`r${i}`) ?? left[i])
   const gainsOf = (side: Side) => (side === 'r' ? right : left)
 
   // The band under the pointer or being dragged — only for the readout and highlight
@@ -66,7 +67,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
   const drag    = useRef<{ side: Side; band: number; el: HTMLElement } | null>(null)
   const setGain = useLatestRef((side: Side, band: number, db: number) => {
     // The first touch on the right side copies the left over, then the two are independent
-    if (side === 'r' && params.r0 === undefined) {
+    if (side === 'r' && p('r0') === undefined) {
       updateNodeParams(id, { ...Object.fromEntries(right.map((g, i) => [`r${i}`, g])), [`r${band}`]: db })
     } else {
       updateNodeParams(id, { [paramOf(side, band)]: db })
@@ -119,7 +120,7 @@ export function GraphicEQNode({ id, data }: NodeProps<Node<GraphGraphicEQData>>)
             <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
           </div>
           <div style={{ flex: 1 }}>
-            <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result.health} label={t.meters.output} />
+            <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
           </div>
         </div>
 

@@ -4,7 +4,8 @@ import { NodeWrapper } from './NodeWrapper'
 import { OverviewIcon } from './OverviewFace'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useParams } from '../../hooks/useParams'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphActiveSpeakerData extends Record<string, unknown> {
@@ -31,17 +32,17 @@ function BlownSpeakerIcon() {
 
 /**
  * Active speaker (amplifier built in): a card with a big icon, its Volume knob and the level
- * it plays, at every zoom. Fed from an Amplifier it blows (stage.blown): the level goes red, the
+ * it plays, at every zoom. Fed from an Amplifier it blows (condition 'blown'): the level goes red, the
  * icon cracks and smokes, and a note says why.
  */
 export function ActiveSpeakerNode({ id, data }: NodeProps<Node<GraphActiveSpeakerData>>) {
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'active-speaker')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
   const { t }            = useTranslation()
 
-  const volumeDb = (node?.params.volumeDb as number) ?? 0
-  const blown    = stages[id]?.blown ?? false
+  const volumeDb = p('volumeDb')
+  const blown    = stages[id]?.condition === 'blown'
 
   return (
     <NodeWrapper

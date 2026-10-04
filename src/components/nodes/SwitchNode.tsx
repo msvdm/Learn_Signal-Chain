@@ -1,6 +1,7 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
+import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
 interface GraphSwitchData extends Record<string, unknown> {
@@ -13,11 +14,11 @@ const BUTTON = 110
 
 /** On = the signal passes, Off = silence. Drawn as one big square On / Off button (no card). */
 export function SwitchNode({ id, data }: NodeProps<Node<GraphSwitchData>>) {
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'switch')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const isOn = (node?.params.on as boolean) !== false
+  const isOn = p('on')
 
   return (
     <FreeControl nodeId={id} typeKey="switch" label={data.label ?? t.palette.items['switch']} portLine={BUTTON / 2}>

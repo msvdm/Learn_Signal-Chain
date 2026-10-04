@@ -3,6 +3,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { widestFormat } from '../../utils/readout'
 import { useSignalStore } from '../../store/signalStore'
+import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
 // ── HPF curve math ────────────────────────────────────────────────────────────
@@ -102,12 +103,12 @@ interface HpfData extends Record<string, unknown> {
 }
 
 export function HpfNode({ id, data }: NodeProps<Node<HpfData>>) {
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'hpf')
+  const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const cutoffHz = (node?.params.cutoffHz as number) ?? 80
-  const bypassed = node?.bypassed ?? false
+  const cutoffHz = p('cutoffHz')
 
   const sliderVal = hzToSlider(cutoffHz)
 

@@ -2,12 +2,15 @@ import type { NodeProps, Node } from '@xyflow/react'
 import { Plug } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
+import { levelOf } from '../../signal/engine'
 import { twoColumns } from '../../utils/twoColumns'
 
 interface GraphDIBoxData extends Record<string, unknown> {
@@ -17,13 +20,14 @@ interface GraphDIBoxData extends Record<string, unknown> {
 
 export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
   const { stages }          = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'di-box')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const result       = stages[id]
+  const out          = levelOf(result?.out)
   const levels       = useStereoLevels(id)
-  const groundLift   = (node?.params.groundLift as boolean) ?? false
+  const groundLift   = p('groundLift')
 
   return (
     <NodeWrapper
@@ -71,8 +75,8 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
               {t.nodes['di-box'].xlrOut}
             </span>
             <StableText reserve={[`${LEVEL_SAMPLE} dBFS`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
-              {isFinite(result?.out ?? -Infinity)
-                ? `${(result!.out).toFixed(1)} ${(result as { domain?: string })?.domain === 'digital' ? 'dBFS' : 'dBu'}`
+              {isFinite(out)
+                ? `${out.toFixed(1)} ${result?.domain === 'digital' ? 'dBFS' : 'dBu'}`
                 : '−∞'}
             </StableText>
           </div>
@@ -81,8 +85,8 @@ export function DIBoxNode({ id, data }: NodeProps<Node<GraphDIBoxData>>) {
               {t.nodes['di-box'].directOut}
             </span>
             <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg-muted)' }}>
-              {isFinite(result?.out ?? -Infinity)
-                ? `${(result!.out).toFixed(1)} dBu`
+              {isFinite(out)
+                ? `${out.toFixed(1)} dBu`
                 : '−∞'}
             </StableText>
           </div>

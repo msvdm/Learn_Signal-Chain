@@ -37,39 +37,50 @@ the fader's `out` wire to the matrix into `out-l`, which then followed L / R to 
 Aux → Graphic EQ / Amp → Matrix Bus switched to Stereo left the send on the EQ / Amp (which
 `isMatrixSource` does not allow); it now goes back to the Aux, or its Main Fader.
 
-## 3. `src/graph/` and `src/signal/`
+## ~~3. `src/graph/` and `src/signal/`~~ — done
 
-- `nodeRegistry.ts` is half graph queries: five upstream walkers (`findUpstream`, `sourceBusOf`,
-  `isMatrixSource`, `outputKind`, `mixBusOf`), the pass-through test
-  `def.stereo !== 'follow' || def.inputs.length !== 1` copied 3×. Plus `upstreamOf`
-  (`chainColors.ts`), the engine's `upstreamTypes`, two topological sorts (`topoSort`,
-  `chainOrder`). → `src/graph/`: an indexed graph (byId / incoming / outgoing, built once per
-  change), one `walkPassthrough()` generator, each query a few lines over it.
-- What a wire carries is computed twice: `outputKind` (registry) and `WireSignal.kind` (engine);
-  `WireKind` is declared in both files. The engine should take kinds from the graph module and
-  compute only levels.
-- Engine (`hooks/useSignalChain.ts`) → `src/signal/` (engine, health + `formatDb` /
-  `healthColor` from `hooks/useGainStaging.ts`, which holds no hook; `utils/readout.ts` imports
-  `taperToDb` from `hooks/` — layering inverted). `useGraphSignal` stays a small hook.
-- 28 `(p.x as number) ?? default` reads repeat registry defaults and disagree (comp threshold
-  `?? 0` vs −20, instrument `?? -10` vs −30). Params are always filled (`initialParams`,
-  `parseChainFile`) → one typed `param(node, key)` reading the registry default. Same casts in
-  the node components.
-- `CompressorResult` ≡ `DeesserResult`; limiter / gate cast to `CompressorResult`; components cast
-  `(result as { warning?: string })` / `{ domain?: string }` for fields already on the type.
-  `StageResult` has 13 optionals. Target shape:
-  `{ in: WireSignal, out: WireSignal, domain, inDomain, gainReductionDb?, condition? }` — also
-  removes `inputDb` and simplifies `useStereoLevels`.
-- Three copy-pasted pink-noise loops (EQ, graphic EQ, HPF) → one integrator in `eqMath.ts`.
+`src/graph/graph.ts`: `graphOf()` (node / wires-in / wires-out lookups, indexed once per change of
+the store's arrays), `drivingWire`, one `walkPassthrough()` generator (`passesThrough()` in the
+registry replaces the 3 copies of the test), `upstreamOf`, `fedBy` (replaces the engine's
+`upstreamTypes`), one topological sort (`flowOrder`; `chainOrder` is built on it).
+`src/graph/queries.ts`: `WireKind` (declared once), `outputKind`, `getPorts`, `splitsStereo`,
+`mixSourceOf` / `mixBusOf`, `sourceBusOf`, `isMatrixSource`, `matrixSendKey`, `preampMicOf` — each
+a few lines over the walks. The registry keeps type-level data only.
+`src/signal/`: `engine.ts` (traversal; takes wire kinds from `outputKind`, works out levels only),
+`process.ts` (`processSide`: one channel through each type), `levels.ts` (health, `formatDb`,
+`healthColor`, `sumSignalsToDb`, `taperToDb`), `eqMath.ts` (moved from `components/controls/`, one
+pink-noise integrator). `hooks/useGraphSignal.ts` is the small hook; `useGainStaging.ts`,
+`useSignalChain.ts` and `utils/chainOrder.ts` are gone. `StageResult` is now
+`{ in, out (WireSignal), health, domain, inDomain, gainReductionDb?, condition?, role? }` —
+`inputDb`, `portSignal` (= `levelOf(wire)`), `portOutputs` (never set), `CompressorResult` /
+`DeesserResult` and the components' casts are gone; `helpKeyOf` reads `stage.role` (moved to
+`utils/nodeName.ts`). Settings: `param(node, key)` typed by `ParamTypes`, the type's default when
+unset; cards use `useParams(id, typeKey)`.
+
+Checked old (HEAD) against new on 6,000 random graphs (92,661 states, built through the real
+connection rules and takeovers): ports, every query, takeovers, `withStereo`, help keys, chain
+order and every level, health, domain, gain reduction and condition are identical. Two differences,
+both in what a wire is labelled as, where the old engine disagreed with the port layout:
+- A Graphic EQ / Amplifier with nothing plugged in keeps its L / R outputs (so re-plugging restores
+  them). Its outputs now show L / R letters and its Mix wire a twin line, and the cards after it
+  stay stereo (an Amplifier keeps its two volume knobs) — all silent. Before, they turned mono
+  until it was plugged back in.
+- A Fader fed one side of a two-channel Amplifier through an effect (Amp R → Pad → Fader) counts
+  as a Main Fader (`mixSourceOf` walks through side wires) and shows L / R. Its L output used to be
+  labelled R (both outputs carried the side it was fed); now L is L.
+
+Found while testing, not fixed (behaviour kept): removing a card in a two-card loop (A → B → A)
+makes `withoutNode` join its wires into a wire from A to itself — A goes silent, and removing A
+later leaves a wire to a card that is gone. Also the Main Fader-through-a-side-wire case above.
 
 ## 4. Each node type described once
 
 Today a type lives in ~15 places: `NODE_REGISTRY`, `nodeTypes` (`SignalChain.tsx`), `ALL_ITEMS`
 + `PALETTE_BY_LEVEL` (`ElementPalette.tsx`; its categories differ from the registry's; the level
 lists are supersets → `minLevel`), `NO_BYPASS_TYPES`, `MULTI_WIRE_TYPES`, `MIX_BUS_TYPES`,
-`SPLIT_TYPES`, `DYNAMIC_INPUT_TYPES` (`connectionRules.ts`), `LINKED_DYNAMICS` (engine),
+`SPLIT_TYPES`, `DYNAMIC_INPUT_TYPES` (`connectionRules.ts`), `LINKED_DYNAMICS` (`signal/process.ts`),
 `FREE_CONTROL_SIZE` + `CARD_MIN_BY_TYPE` (`layoutHelpers.ts`), `NAME_MAX_BY_TYPE`
-(`OverviewFace.tsx`), the `computeGraphNode` switch and ~39 `typeKey === '…'` checks.
+(`OverviewFace.tsx`), the `processSide` switch (`signal/process.ts`) and ~39 `typeKey === '…'` checks.
 
 - `TypeKey` string-literal union instead of `string`.
 - `NODE_TYPES: Record<TypeKey, NodeTypeDef>` — pure data + behaviour: ports, `minLevel`, `bypass`,
@@ -79,8 +90,8 @@ lists are supersets → `minLevel`), `NO_BYPASS_TYPES`, `MULTI_WIRE_TYPES`, `MIX
   card); the jack-plug SVG is copy-pasted in `MicNode.tsx` and `ElementPalette.tsx`.
 - Audio Interface's dynamic `in-1, in-2 …` ports are a second multi-input model
   (`BusInputPorts`, `DYNAMIC_INPUT_TYPES`, `customInputs` / `customInputCount` on `NodeWrapper`,
-  the plugged-wires half of `portLayoutKey`, the engine's
-  `ports.inputs.length > 0 ? … : Object.values(portInputs)` branch). Buses already do "one port,
+  the plugged-wires half of `portLayoutKey`, the engine's `inPort ? … : incoming` branch and its
+  per-side `in` for the interface's L / R meters). Buses already do "one port,
   many wires".
 - Update CLAUDE.md's "Adding a new node" checklist to match.
 

@@ -3,11 +3,12 @@ import { DoorClosed } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import type { CompressorResult } from '../../hooks/useSignalChain'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
@@ -148,21 +149,20 @@ function GateCurve({ threshold, range, inputLevel, isOpen, openLabel, closedLabe
 
 export function NoiseGateNode({ id, data }: NodeProps<Node<GraphNoiseGateData>>) {
   const { stages }       = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'noise-gate')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
   const tg               = t.nodes['noise-gate']
 
-  const params     = node?.params ?? {}
-  const threshold  = (params.thresholdDb as number) ?? -40
-  const range      = (params.rangeDb as number) ?? -80
+  const threshold  = p('thresholdDb')
+  const range      = p('rangeDb')
   // Shown and stored, but timings are not part of the sound yet
-  const holdMs     = (params.holdMs as number) ?? 50
-  const attackMs   = (params.attackMs as number) ?? 1
-  const releaseMs  = (params.releaseMs as number) ?? 100
+  const holdMs     = p('holdMs')
+  const attackMs   = p('attackMs')
+  const releaseMs  = p('releaseMs')
   const levels     = useStereoLevels(id)
   const inputLevel = levels.inPeak
-  const result     = stages[id] as CompressorResult | undefined
+  const result     = stages[id]
   const isOpen     = isFinite(inputLevel) && inputLevel >= threshold
 
   return (

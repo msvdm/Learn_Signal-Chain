@@ -1,4 +1,4 @@
-import type { EQBand } from '../../data/nodeRegistry'
+import type { EQBand } from '../data/nodeRegistry'
 
 export const FREQ_MIN = 20
 export const FREQ_MAX = 20000
@@ -33,6 +33,61 @@ export function bandGain(freq: number, band: EQBand): number {
   return band.type === 'high-shelf' || band.type === 'low-shelf'
     ? shelfGain(freq, band.freqHz, band.gainDb, band.type)
     : bellGain(freq, band.freqHz, band.gainDb, band.Q ?? 1.4)
+}
+
+// ── How much louder or quieter a filter makes the whole signal ────────────────
+// Pink noise has equal power per octave. Sampling log-uniformly from 20–20kHz gives each octave
+// the same weight, which is the right weighting for a perceived level change (rather than just
+// adding up band gains).
+
+/**
+ * The level change (dB) of pink noise through a filter that lets `powerAt(freq)` of the power
+ * through at each frequency (1 = all of it), averaged over `samples` log-spaced frequencies from
+ * 20 Hz to 20 kHz.
+ */
+function pinkNoiseLevelChange(powerAt: (freq: number) => number, samples: number): number {
+  let sumPower = 0
+  for (let i = 0; i < samples; i++) {
+    const t    = i / (samples - 1)
+    const freq = Math.pow(10, t * (Math.log10(FREQ_MAX) - Math.log10(FREQ_MIN)) + Math.log10(FREQ_MIN))
+    sumPower += powerAt(freq)
+  }
+  return 10 * Math.log10(sumPower / samples)
+}
+
+/** The power a gain of `db` lets through (1 = all of it). */
+const powerOf = (db: number) => Math.pow(10, db / 10)
+
+const EQ_SAMPLES = 64
+// A one-third-octave band is narrow: sample finely enough that every band counts
+const GEQ_SAMPLES = 256
+
+/** Level change of the Equalizer: its bands added together. */
+export function eqLevelChange(bands: EQBand[]): number {
+  if (bands.every((b) => b.gainDb === 0)) return 0
+  return pinkNoiseLevelChange((freq) => powerOf(bands.reduce((sum, b) => sum + bandGain(freq, b), 0)), EQ_SAMPLES)
+}
+
+/** Level change of the Graphic EQ: one one-third-octave bell (Q ≈ 4.3) per slider. */
+export function graphicEqLevelChange(gains: number[]): number {
+  if (gains.every((g) => g === 0)) return 0
+  return pinkNoiseLevelChange((freq) => {
+    let gain = 0
+    for (let b = 0; b < GEQ_CENTERS.length; b++) {
+      if (gains[b] !== 0) gain += bellGain(freq, GEQ_CENTERS[b], gains[b], GEQ_Q)
+    }
+    return powerOf(gain)
+  }, GEQ_SAMPLES)
+}
+
+/** Level change of the High-Pass Filter: 2nd-order Butterworth, |H(f)|² = r⁴ / (1 + r⁴), r = f / cutoff. */
+export function hpfLevelChange(cutoffHz: number): number {
+  if (cutoffHz <= FREQ_MIN) return 0
+  return pinkNoiseLevelChange((freq) => {
+    const r  = freq / cutoffHz
+    const r4 = r * r * r * r
+    return r4 / (1 + r4)
+  }, EQ_SAMPLES)
 }
 
 /** "200 Hz", "1.2 kHz" */

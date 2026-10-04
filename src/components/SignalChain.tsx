@@ -46,14 +46,16 @@ import { DirectionArrows }     from './DirectionArrows'
 
 import { useSignalStore } from '../store/signalStore'
 import { LEVELS } from '../data/levels'
-import { useGraphSignal, getHealth } from '../hooks/useSignalChain'
-import { healthColor }        from '../hooks/useGainStaging'
+import { useGraphSignal }     from '../hooks/useGraphSignal'
+import { getHealth, healthColor } from '../signal/levels'
+import { levelOf }            from '../signal/engine'
 import { useEdgeReshape }     from '../hooks/useEdgeReshape'
 import { useLatestRef }       from '../hooks/useLatestRef'
 import { useChainEmpty }      from '../hooks/useChainEmpty'
 import { useChainFile }       from '../hooks/useChainFile'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
-import { NODE_REGISTRY, getPorts, initialParams, isMatrixSource } from '../data/nodeRegistry'
+import { NODE_REGISTRY, initialParams } from '../data/nodeRegistry'
+import { getPorts, isMatrixSource } from '../graph/queries'
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { newEdge } from '../graph/edits'
 import { activeDragTypeKey }  from '../utils/dragState'
@@ -201,7 +203,7 @@ export function SignalChain() {
   const offerChain            = useSignalStore((s) => s.offerChain)
   const loadChain             = useSignalStore((s) => s.loadChain)
   const raiseLevel            = useSignalStore((s) => s.raiseLevel)
-  const { stages, portSignal, wires } = useGraphSignal()
+  const { stages, wires }     = useGraphSignal()
   const { t, fmt }            = useTranslation()
   const chainFile             = useChainFile()
   // An autosaved canvas is brought on screen once it is measured (a blank one stays at 100%)
@@ -890,7 +892,7 @@ export function SignalChain() {
     return graphEdges.map((edge) => {
       const sourceStage = stages[edge.source]
       const key         = `${edge.source}:${edge.sourceHandle}`
-      const db          = portSignal.get(key) ?? sourceStage?.out ?? -Infinity
+      const db          = levelOf(wires.get(key) ?? sourceStage?.out)
       const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
@@ -919,7 +921,7 @@ export function SignalChain() {
         data,
       }
     })
-  }, [graphEdges, stages, portSignal, wires, graphNodes, highlight, overview])
+  }, [graphEdges, stages, wires, graphNodes, highlight, overview])
 
   // Build live wire preview path
   const wirePath = (() => {

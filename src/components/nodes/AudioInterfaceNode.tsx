@@ -4,7 +4,8 @@ import { Cpu } from 'lucide-react'
 import { BusInputPorts } from './NodePort'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { levelOf } from '../../signal/engine'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -19,12 +20,13 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
   const { t }         = useTranslation()
 
   const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
-  const result        = stages[id] ?? { out: -Infinity, health: 'too-quiet' as const }
-  const domain        = (result as { domain?: string }).domain ?? 'analog'
+  const result        = stages[id]
+  const health        = result?.health ?? 'too-quiet'
+  const domain        = result?.domain ?? 'analog'
   const unit          = domain === 'digital' ? 'dBFS' : 'dBu'
 
   // Domain mismatch warning
-  const domainWarning = (result as { warning?: string }).warning === 'domainMixedBus'
+  const domainWarning = result?.condition === 'domainMixedBus'
 
   return (
     <NodeWrapper
@@ -56,14 +58,14 @@ export function AudioInterfaceNode({ id, data }: NodeProps<Node<AudioInterfaceDa
           </div>
         )}
 
-        {/* L/R stereo meters or mono meter */}
-        {(result.outL !== undefined && result.outR !== undefined) ? (
+        {/* What arrives on each side (L / R), or one meter while it can't take the signals */}
+        {result && !domainWarning ? (
           <div className="space-y-1">
-            <SignalMeter db={result.outL} health={result.health} label={`L ${unit}`} domain={domain === 'digital' ? 'digital' : 'analog'} />
-            <SignalMeter db={result.outR} health={result.health} label={`R ${unit}`} domain={domain === 'digital' ? 'digital' : 'analog'} />
+            <SignalMeter db={result.in.l} health={health} label={`L ${unit}`} domain={domain} />
+            <SignalMeter db={result.in.r} health={health} label={`R ${unit}`} domain={domain} />
           </div>
         ) : (
-          <SignalMeter db={result.out} health={result.health} label={`${t.meters.output} (${unit})`} domain={domain === 'digital' ? 'digital' : 'analog'} />
+          <SignalMeter db={levelOf(result?.out)} health={health} label={`${t.meters.output} (${unit})`} domain={domain} />
         )}
 
         <div

@@ -1,5 +1,6 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { getPorts, isMatrixSource, MATRIX_PORT, MULTI_WIRE_TYPES } from '../data/nodeRegistry'
+import { MATRIX_PORT, MULTI_WIRE_TYPES } from '../data/nodeRegistry'
+import { getPorts, isMatrixSource } from '../graph/queries'
 import type { WireSource } from '../store/signalStore'
 
 // Inputs are created at runtime (one per connected channel + one free slot)

@@ -1,8 +1,9 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { InlineNode } from './InlineNode'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { levelOf } from '../../signal/engine'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
 import { LEVEL_SAMPLE } from '../../utils/readout'
@@ -23,8 +24,8 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
   const typeKey    = (data.typeKey as string) ?? 'adc'
   const isAdc      = typeKey === 'adc'
   const result     = stages[id]
-  const domain     = (result as { domain?: string })?.domain ?? 'analog'
-  const warning    = (result as { warning?: string })?.warning
+  const domain     = result?.domain ?? 'analog'
+  const warning    = result?.condition
 
   const inputUnit  = isAdc ? 'dBu' : 'dBFS'
   const outputUnit = isAdc ? 'dBFS' : 'dBu'
@@ -69,7 +70,7 @@ export function AdcDacNode({ id, data }: NodeProps<Node<GraphAdcDacData>>) {
         {/* One line per side when stereo: "L  -10.0 dBu → 8.0 dBFS" */}
         {(levels.stereo
           ? [['L ', levels.in, levels.out], ['R ', levels.inR ?? -Infinity, levels.outR ?? -Infinity]] as const
-          : [['', levels.in, result?.out ?? -Infinity]] as const
+          : [['', levels.in, levelOf(result?.out)]] as const
         ).map(([side, inDb, outDb]) => (
           <div key={side}>
             {side && <span style={{ fontWeight: 700, color: 'var(--lsc-fg-muted)' }}>{side}</span>}

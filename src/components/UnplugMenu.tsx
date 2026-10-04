@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalEdge } from '../data/nodeRegistry'
 import { useTranslation } from '../i18n/useTranslation'
-import { useGraphSignal } from '../hooks/useSignalChain'
+import { useGraphSignal } from '../hooks/useGraphSignal'
 import { chainSourcesOfEdge } from '../utils/chainColors'
 import { nodeName, sideLetter } from '../utils/nodeName'
 

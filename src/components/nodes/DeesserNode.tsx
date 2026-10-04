@@ -3,11 +3,12 @@ import { AudioWaveform } from 'lucide-react'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import type { DeesserResult } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { useParams } from '../../hooks/useParams'
 import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
@@ -18,14 +19,14 @@ interface GraphDeesserData extends Record<string, unknown> {
 
 export function DeesserNode({ id, data }: NodeProps<Node<GraphDeesserData>>) {
   const { stages }          = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'deesser')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const threshold  = (node?.params.thresholdDb as number) ?? -20
-  const frequency  = (node?.params.frequencyHz as number) ?? 6000
+  const threshold  = p('thresholdDb')
+  const frequency  = p('frequencyHz')
   const levels     = useStereoLevels(id)
-  const result     = stages[id] as DeesserResult | undefined
+  const result     = stages[id]
   const gr         = result?.gainReductionDb ?? 0
   const isActive   = gr > 0.1
 

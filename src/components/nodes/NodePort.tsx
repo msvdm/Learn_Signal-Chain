@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal, getHealth } from '../../hooks/useSignalChain'
-import { healthColor } from '../../hooks/useGainStaging'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { getHealth, healthColor } from '../../signal/levels'
+import { levelOf } from '../../signal/engine'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
@@ -31,7 +32,7 @@ interface NodePortProps {
  *   shows a small L / R letter beside the dot.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
-  const { portSignal, wires, stages } = useGraphSignal()
+  const { wires, stages } = useGraphSignal()
   const edges      = useSignalStore((s) => s.edges)
   const wireSource = useSignalStore((s) => s.wireSource)
   const removeEdge = useSignalStore((s) => s.removeEdge)
@@ -50,9 +51,9 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   if (connected.length > 0) {
     // An input holding several wires shows the health of their sum
     const db = type === 'source'
-      ? (portSignal.get(`${nodeId}:${portId}`) ?? -Infinity)
+      ? levelOf(wires.get(`${nodeId}:${portId}`))
       : 20 * Math.log10(connected.reduce((sum, e) => {
-          const wireDb = portSignal.get(`${e.source}:${e.sourceHandle}`) ?? -Infinity
+          const wireDb = levelOf(wires.get(`${e.source}:${e.sourceHandle}`))
           return sum + (isFinite(wireDb) ? Math.pow(10, wireDb / 20) : 0)
         }, 0))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)

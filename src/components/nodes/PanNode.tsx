@@ -1,8 +1,9 @@
 import type { NodeProps, Node } from '@xyflow/react'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
+import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
-import { useGraphSignal } from '../../hooks/useSignalChain'
+import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { ChannelRow } from '../SignalMeter'
@@ -31,13 +32,13 @@ function positionLabel(pos: number): string {
  */
 export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
   const { stages }       = useGraphSignal()
-  const node             = useSignalStore((s) => s.nodes.find((n) => n.id === id))
+  const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const stage       = stages[id]
-  const balance     = stage?.stereoIn ?? false
-  const panPosition = (node?.params.panPosition as number) ?? 50
+  const balance     = stage?.role === 'balance'
+  const panPosition = p('panPosition')
 
   const label = data.label ?? (balance
     ? t.nodes.pan.balanceLabel
@@ -52,8 +53,8 @@ export function PanNode({ id, data }: NodeProps<Node<GraphPanData>>) {
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
       footer={
         <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <ChannelRow ch="L" db={stage?.outL ?? -Infinity} />
-          <ChannelRow ch="R" db={stage?.outR ?? -Infinity} />
+          <ChannelRow ch="L" db={stage?.out.l ?? -Infinity} />
+          <ChannelRow ch="R" db={stage?.out.r ?? -Infinity} />
         </div>
       }
     >
