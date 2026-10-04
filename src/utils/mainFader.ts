@@ -63,9 +63,17 @@ function takeovers(graph: GraphView): Map<string, string> {
  */
 function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[] {
   const byId = new Map(nodes.map((n) => [n.id, n]))
+  // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and Main
+  // Faders may feed one — isMatrixSource). Done before every takeover too, so a wire to a Matrix
+  // Bus never follows L / R onto a Graphic EQ or Amplifier: the send stays on the Main Fader.
+  const matrixSends = (list: SignalEdge[]) => list.map((e) =>
+    byId.get(e.target)?.typeKey === 'matrix-bus' && portSide(e.sourceHandle) !== null
+      ? { ...e, sourceHandle: MATRIX_PORT }
+      : e)
   let next = edges
 
   for (let guard = 0; guard < 100; guard++) {
+    next = matrixSends(next)
     const graph = { nodes, edges: next }
     const hit = next.find((e) => {
       const src = byId.get(e.source)
@@ -108,12 +116,8 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
     if (!changed) break
   }
 
-  // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and
-  // Main Faders may feed one — isMatrixSource)
-  next = next.map((e) => (byId.get(e.target)?.typeKey === 'matrix-bus' && portSide(e.sourceHandle) !== null
-    ? { ...e, sourceHandle: MATRIX_PORT }
-    : e))
-  return dedupe(next)
+  // (The tidy can move a one-output wire to L)
+  return dedupe(matrixSends(next))
 }
 
 /**

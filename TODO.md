@@ -30,10 +30,12 @@ Left as it was, on purpose: a level change keeps the clipboard (it is a snapshot
 to carry elements to another level). The cards that slide aside after a drop onto a wire are still
 a second change (they wait for the card to be measured), joined to the drop by the 400 ms merge.
 
-Found while testing, not fixed (old behaviour): switching a stereo Aux with a Main Fader and a
-Graphic EQ after it to Mono and back to Stereo moves the Matrix send from the Main Fader onto the
-Graphic EQ (`attachMainFaders` turns the fader's `out` wire to the matrix into `out-l`, which then
-follows the L / R to the EQ).
+Found while testing, fixed after: switching a stereo Aux with a Main Fader and a Graphic EQ after
+it to Mono and back to Stereo moved the Matrix send onto the Graphic EQ (`attachMainFaders` turned
+the fader's `out` wire to the matrix into `out-l`, which then followed L / R to the EQ). The
+"L / R into a Matrix Bus = Matrix send" rule now runs before every takeover. Still open (old
+behaviour): a mono Aux → Graphic EQ / Amp → Matrix Bus switched to Stereo puts the send on the EQ /
+Amp, which `isMatrixSource` does not allow (no Main Fader there to keep it).
 
 ## 3. `src/graph/` and `src/signal/`
 
