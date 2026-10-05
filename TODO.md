@@ -108,13 +108,34 @@ and works with Wi-Fi off.
 
 ## Step A — the signal carries peak, average and noise
 
-## 3. Lock today's numbers with tests
+## ~~3. Lock today's numbers with tests~~ — done (2026-10-05)
 
-- Add `bun test` (built into Bun, no new dependency) and tests for `src/signal/`: a handful of
-  reference chains (mic → preamp → EQ → comp → fader → bus → speaker, stereo bus with pan, DI with
-  ground loop, ADC / DAC, gate, limiter) and the level at every card.
-- These must keep passing in step 4 for the average level, so Step A cannot change old chains by
-  accident. CLAUDE.md: "No test suite exists yet" → how to run the tests.
+`bun test` (built into Bun, no new package) runs `src/signal/*.test.ts` — 201 tests, all passing
+on the engine as it was:
+- `engine.test.ts`: 19 reference chains with the level (in and out, both sides), health, domain,
+  condition, role, gain reduction and hum at **every card** — channel strip (Mic → Preamp → EQ →
+  Compressor → Fader → Master Bus → speakers, and the same bypassed), stereo Master Bus with Pan,
+  Balance and Main Fader, a mono wire / a side wire on a stereo bus, DI ground loop / Ground Lift /
+  hum through an ADC / guitar without a DI, ADC → DAC, digital near 0 dBFS, every wrong-domain
+  condition, noise gate (closed, Range, at the threshold, open), limiter, linked stereo compressor,
+  bus sums (+6 dB), Matrix Bus with send knobs, Pre / Post aux send, passive / active speakers;
+  plus loops and "same result, same object" (step 1's redraw rule).
+- `process.test.ts` (each card on one channel, the dynamics curves, Pan / Balance) and
+  `levels.test.ts` (zones, readings, sums, taper).
+- Readings that Step A changes **on purpose** are marked in the tables: `D1` (hum through a fader:
+  2 lines) and `D4` (hot averages whose peaks would clip: 3 lines). Everything else must stay.
+  Step 4 changes one line to read the average: `average()` in `engine.test.ts`, `run()` in
+  `process.test.ts`.
+
+Bun is not installed on this machine, so `npm run test:node` runs the same files with Node 22.18
+(it strips the types itself): `test/node-hooks.ts` resolves extensionless imports and swaps
+`bun:test` for `test/bun-test.ts`, a ~60-line stand-in on `node:test` with only the matchers the
+tests use (Bun's meaning: `toEqual` skips undefined fields, `toBeCloseTo` to 2 decimals). CI runs
+the real `bun test` (build-check.yml). `tsconfig.test.json` type-checks the tests in `tsc -b`.
+
+Checked that the tests bite: adding signals as power instead of voltage fails 14 of them. Writing
+the tables found two stale lines in CLAUDE.md (HPF and EQ were described as a placeholder / a plain
+sum; both are pink-noise level changes) — fixed.
 
 ## 4. Three readings per wire: peak, average, noise
 

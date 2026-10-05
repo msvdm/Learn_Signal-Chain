@@ -12,10 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bun dev          # Start local dev server at localhost:5173
 bun run build    # Type-check + production build → dist/
 bun run lint     # ESLint check
+bun test         # The tests (CI runs them on every push)
+npm run test:node  # The same tests without Bun (Node 22.18 or newer)
 bun run preview  # Preview the production build locally
 ```
 
-No test suite exists yet. Manual browser testing is the current approach.
+**Tests** cover the signal maths (`src/signal/*.test.ts`, written for `bun:test`): `levels.test.ts` (the scale, health zones, readings, sums), `process.test.ts` (each card on one channel, the dynamics curves, Pan / Balance) and `engine.test.ts` — reference chains (channel strip into a Master Bus, stereo bus with Pan / Balance / Main Fader, DI Box ground loop and Ground Lift, ADC / DAC, gate, limiter, linked stereo dynamics, bus sums, Matrix Bus, Pre / Post aux send, speakers) with the level, health, domain, condition, role and hum at **every card** (`expectCards`). They lock today's levels: a change to the engine that moves an old chain's average fails them. A reading changed on purpose is updated in the table, with the reason in a comment. `npm run test:node` runs the same files with Node: `test/node-hooks.ts` resolves extensionless imports and swaps `bun:test` for `test/bun-test.ts` (a stand-in with only the matchers the tests use — add one there before using it). `tsconfig.test.json` type-checks the tests (part of `bun run build`); the app's build leaves them out. The UI has no tests: check it in the browser.
 
 ## Architecture
 
@@ -241,8 +243,8 @@ Digital levels (dBFS, after an ADC) use the same zones moved down by the convert
 - **Guitar Amp** (Intermediate): plays `input + volumeDb` (−20…+10). Takes only a guitar at instrument level; its `sound` output (dotted wire) goes only into a Mic, which then sends `sensitivityDb + amp − GUITAR_REF_DB` (−60 dBu with the amp at −30), silent when the amp is. A Mic with nothing plugged in sends `sensitivityDb`
 - **Amp**: `output = input + gainDb`, Volume −∞…0 dB (only turns down — line level is already loud enough; fully left = off). Stereo: the Right side uses `gainDbR` (`processSide` gets the side)
 - **ADC / DAC**: `dBFS = dBu − alignmentDb` and back (default 18: unity 0 dBu = −18 dBFS)
-- **HPF**: passthrough placeholder (no frequency weighting at this level)
-- **EQ**: `output = input + sum(bandGains)` — additive only
+- **HPF**: the level change of pink noise through a 2nd-order high-pass at the cutoff (`hpfLevelChange` in `signal/eqMath.ts`: −1.0 dB at the default 80 Hz)
+- **EQ**: the level change of pink noise through the bands added together (`eqLevelChange`: Low +3, Mid −2, High +2 ≈ +1.2 dB)
 - **Graphic EQ**: 31 one-third-octave bands, 20 Hz … 20 kHz (`GEQ_CENTERS` in `signal/eqMath.ts`, params `b0`…`b30`, ±12 dB in 0.5 dB steps); the level change is the pink-noise-weighted sum of the band bells (Q ≈ 4.3). The card is the Parametric EQ's size: In | Out meters, a readout of the band being touched, a Flat button, and the 31 sliders with a curve through their caps (double-click = 0 dB; a drag stays on the slider it started on) In stereo the sliders split into two half-height banks in the same space — L on top (`b0`…`b30`), R below (`r0`…`r30`); untouched, R copies L, and the first touch on R writes all its bands (independent from then on). Flat resets both.
 - **Compressor**: `gainReduction = max(0, (input − threshold) × (1 − 1/ratio))`, then `output = input − gainReduction + makeupGain`. Attack and Release (`attackMs`, `releaseMs`) are on the card but do not change the sound yet
 - **Noise Gate**: open (`input ≥ threshold`) → `output = input`; closed → `output = input + range` (Range −80…0 dB, −80 ≈ silence). Hold, Attack and Release (`holdMs`, `attackMs`, `releaseMs`) are on the card but do not change the sound yet. Same card layout and size as the Compressor

@@ -41,6 +41,7 @@ Switch levels from the header at any time.
 bun install
 bun dev        # dev server at http://localhost:5173
 bun run build  # production build → dist/
+bun test       # tests of the signal maths (without Bun: npm run test:node)
 ```
 
 (npm/yarn work too if you don't have Bun installed.)
