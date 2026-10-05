@@ -291,19 +291,18 @@ describe('sources: their peaks above the average, their noise below it', () => {
     expect(levels('generator', SILENT, { levelDb: -20 })).toEqual(sig(-17, -20, -110))
   })
 
-  it('each Generator sound has its own peaks: a sine 3 dB up, a chord 6, noise 12, hits 18', () => {
+  it('each Generator sound has its own peaks: a sine 3 dB up, noise 12, clicks 18', () => {
     const peakAbove = (sound: string) => {
       const out = levels('generator', SILENT, { sound })
       return out.peak - out.rms
     }
     expect(peakAbove('sine')).toBe(3)
-    expect(peakAbove('pad')).toBe(6)
     expect(peakAbove('noise')).toBe(12)
-    expect(peakAbove('hits')).toBe(18)
+    expect(peakAbove('click')).toBe(18)
   })
 
-  it('hits at +10 dBu would peak at +28: flattened at the clip level, where a sine passes', () => {
-    expect(levels('generator', SILENT, { sound: 'hits', levelDb: 10 })).toEqual(sig(20, 10, -80))
+  it('clicks at +10 dBu would peak at +28: flattened at the clip level, where a sine passes', () => {
+    expect(levels('generator', SILENT, { sound: 'click', levelDb: 10 })).toEqual(sig(20, 10, -80))
     expect(levels('generator', SILENT, { sound: 'sine', levelDb: 10 })).toEqual(sig(13, 10, -80))
   })
 

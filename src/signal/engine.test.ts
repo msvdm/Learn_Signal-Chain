@@ -720,35 +720,35 @@ describe('the same average, another sound: the peaks decide when it clips (D4)',
   const result = signalOf([
     card('sine', 'generator', { sound: 'sine', levelDb: 10 }),
     card('sineFader', 'fader'),
-    card('hits', 'generator', { sound: 'hits', levelDb: 10 }),
-    card('hitsFader', 'fader', { faderDb: -20 }),
+    card('click', 'generator', { sound: 'click', levelDb: 10 }),
+    card('clickFader', 'fader', { faderDb: -20 }),
     // Professional line level (+4 dBu): keys, and a drum machine
     card('keys', 'line-in', { levelDb: 4 }),
     card('drums', 'line-in', { levelDb: 4, character: 'percussive' }),
   ], [
-    wire('sine', 'sineFader'), wire('hits', 'hitsFader'),
+    wire('sine', 'sineFader'), wire('click', 'clickFader'),
   ])
 
   expectCards(result, {
     // A sine's peaks are 3 dB above its average: +13 dBu, hot but clean
-    sine:      { out: 10, health: 'hot' },
-    sineFader: { in: 10, out: 10, health: 'hot' },
-    // Hits at the same average would peak at +28: clipping
-    hits:      { out: 10, health: 'clipping' },
+    sine:       { out: 10, health: 'hot' },
+    sineFader:  { in: 10, out: 10, health: 'hot' },
+    // Clicks at the same average would peak at +28: clipping
+    click:      { out: 10, health: 'clipping' },
     // Turned down after the clip it is healthy again — but the flattened peaks stay flattened
-    hitsFader: { in: 10, out: -10, health: 'good' },
-    keys:      { out: 4, health: 'hot' },
-    drums:     { out: 4, health: 'clipping' },
+    clickFader: { in: 10, out: -10, health: 'good' },
+    keys:       { out: 4, health: 'hot' },
+    drums:      { out: 4, health: 'clipping' },
   })
 
   expectReadings(result, {
-    sine:      [13, 10, -80],
-    sineFader: [13, 10, -76.99],
-    hits:      [20, 10, -80],
-    // 10 dB between the peaks and the average, where the hits had 18
-    hitsFader: [0, -10, -96.99],
-    keys:      [16, 4, -76],
-    drums:     [20, 4, -76],
+    sine:       [13, 10, -80],
+    sineFader:  [13, 10, -76.99],
+    click:      [20, 10, -80],
+    // 10 dB between the peaks and the average, where the clicks had 18
+    clickFader: [0, -10, -96.99],
+    keys:       [16, 4, -76],
+    drums:      [20, 4, -76],
   })
 })
 

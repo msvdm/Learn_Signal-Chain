@@ -84,10 +84,8 @@ export const PEAKS_ABOVE = {
   /** A steady tone: a sine wave's peaks are 3 dB above its average */
   sine:       3,
   noise:      12,
-  /** A soft held chord, swelling slowly */
-  pad:        6,
-  /** Drum-like hits */
-  hits:       18,
+  /** Short pulses, like a metronome: as far above the average as drums */
+  click:      18,
 } as const satisfies Record<Character | GeneratorSound | 'guitar', number>
 
 /** How far each source's own noise sits below its average (dB). */

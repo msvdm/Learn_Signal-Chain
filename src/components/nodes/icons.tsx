@@ -97,7 +97,7 @@ export function GeneratorIcon({ size = 24 }: { size?: number }) {
 }
 
 // What a sound looks like over time, for the buttons that pick one (the Generator's Sound). Wider
-// than tall (24 × 14): a sine and noise as their wave, a chord and hits as how loud they get.
+// than tall (24 × 14).
 
 function SoundPicture({ size = 24, d }: { size?: number; d: string }) {
   return (
@@ -117,12 +117,7 @@ export function NoiseIcon({ size }: { size?: number }) {
   return <SoundPicture size={size} d="M2 8L3.5 4L5 10L6.5 2.5L8 11L9.5 5L11 12L12.5 3L14 9.5L15.5 1.5L17 10.5L18.5 4.5L20 11.5L22 6" />
 }
 
-/** A soft held chord: it swells in slowly, holds, and fades away. */
-export function PadIcon({ size }: { size?: number }) {
-  return <SoundPicture size={size} d="M2 12C5 12 6 3 9 3H15C18 3 19 12 22 12" />
-}
-
-/** Hits: each one jumps up at once and dies away. */
-export function HitsIcon({ size }: { size?: number }) {
-  return <SoundPicture size={size} d="M2 12H3V2C4.5 8.5 6.5 11.5 11 12H12V2C13.5 8.5 15.5 11.5 20 12H22" />
+/** Clicks: short pulses with silence between them. */
+export function ClickIcon({ size }: { size?: number }) {
+  return <SoundPicture size={size} d="M2 12H5L6 2L7 12H11L12 2L13 12H17L18 2L19 12H22" />
 }

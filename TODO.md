@@ -10,7 +10,7 @@ drawing and an offline version come first, because Step B needs the first and th
 - Runs on anything that opens a web page — phone, tablet, cheap school laptop. No headphones,
   audio interface or pro gear may ever be needed.
 - No server, no accounts, no user data. Chains are shared as files and links, as today.
-- Sounds (later, Step C) are generated only: sine, noise, pads, hits. No samples, no recording.
+- Sounds (later, Step C) are generated only: sine, noise, clicks. No samples, no recording.
 
 **How to work a step:** one step per session, on branch `signal-upgrade`. Run `bun run lint` +
 `bun run build` (+ `bun test` once it exists), check the app in the browser, commit, tick the step
@@ -23,7 +23,7 @@ here. Update CLAUDE.md when a step changes what it describes.
 - **D1 — Hum follows the signal**, like all noise: a fader turns signal and hum down together and
   the gap between them stays. Only fixing the cause (Ground Lift) removes it. (Today it "grows
   with every boost and never drops" — that rule goes.)
-- **D2 — Sources.** A new **Generator** element (Sine / Noise / Pad / Hits). **Microphone and Line
+- **D2 — Sources.** A new **Generator** element (Sine / Noise / Click — changed after step 5, see there). **Microphone and Line
   Input get a Melodic / Percussive switch** (melodic: a voice, keys — a smaller gap between peak
   and average; percussive: drums — a big gap). **Instrument and Guitar Amp are guitars**: a fixed
   character, no switch.
@@ -181,8 +181,8 @@ Original plan:
 The engine (`signal/engine.ts`, `process.ts`) carries, per side, `{ peak, rms, noise }` instead
 of one number. Today's number becomes `rms` (the average) — the tests from step 3 still pass.
 
-- **Peak** = average + the sound's peak-to-average gap (sine 3 dB, pad ~6, voice ~12, noise ~12,
-  hits ~18). Analog stages flatten peaks at the clip level (the gap shrinks = distortion).
+- **Peak** = average + the sound's peak-to-average gap (sine 3 dB, voice ~12, noise ~12,
+  clicks / drums ~18). Analog stages flatten peaks at the clip level (the gap shrinks = distortion).
 - **Noise** = everything you hear when the music stops: hiss and hum together. Each source has
   its own; every analog stage adds its own small hiss (a preamp adds it before its gain, so a
   low preamp setting followed by a big boost later is clearly worse). Gain, faders, EQ move the
@@ -202,34 +202,33 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
 
 ## ~~5. Sources: the Generator and the Melodic / Percussive switch~~ — done (2026-10-05)
 
-- **Generator** (Intermediate and up, `generator`): a full card — its Sound as four buttons in a
-  2 × 2 grid, each with a picture of the sound (a sine wave, noise, a slow swell, two hits), and a
-  Level knob, −60 … +20 dBu, default 0 dBu (unity). Peaks above the average: Sine 3 dB, Chord 6,
-  Noise 12, Hits 18; its own noise 90 dB below (cleaner than any player). Zoomed out: its icon, a
-  circle with a sine in it (the circuit-drawing symbol of a generator).
+- **Generator** (Intermediate and up, `generator`): a full card — its Sound as three stacked
+  buttons, each with a picture of the sound (a sine wave, noise, short pulses), and a Level knob,
+  −60 … +20 dBu, default 0 dBu (unity). Peaks above the average: Sine 3 dB, Noise 12, Click 18;
+  its own noise 90 dB below (cleaner than any player). Zoomed out: its icon, a circle with a sine
+  in it (the circuit-drawing symbol of a generator).
 - **Melodic / Percussive** (`character`) on Microphone and Line Input, from Intermediate
   (`CHARACTER_LEVEL`): two buttons, ♪ and a drum. Percussive = drums, peaks 18 dB above the
   average instead of 12; the average and the noise stay. The Microphone (face-only) shows them
   beside its icon, the Line Input in its body under Mono / Stereo. At Beginner nothing shows and
   both stay melodic (D3). Instrument and Guitar Amp keep the guitar (15 dB).
-- **One word changed from D2, for beginners:** the Generator's "Pad" is labelled **Chord**
-  ("Акорд") on the card — the palette already has "Pad (−20 dB)", and two different Pads would
-  confuse a beginner. Its tooltip says it is a "pad" in synth language; inside it is still `pad`.
-  Easy to change back (`nodes.generator.sounds.pad` in both locales).
+- **Sounds changed from D2 (user, 2026-10-05):** Pad is gone — for the chain it does what Noise
+  does. Hits became **Click** ("Клик"): short pulses, 18 dB of peaks (`click`). A file saved
+  with `pad` / `hits` (only from the first version of this step, never pushed) opens as Sine.
 - Engine: `soundOf(typeKey, params)` — peaks by what it plays (`PEAKS_ABOVE`), noise by source
   (`NOISE_BELOW`) — replaces `SOURCE_SOUND`. Old files get `melodic` / `sine`; a saved word
   the app does not know falls back to the default (`PARAM_CHOICES`, also for the Pre / Post
   switch's `selectedInput`).
-- Help texts (en + bg): the Generator's own ("Try this: Sine at +10 dBu is yellow, Hits at the
+- Help texts (en + bg): the Generator's own ("Try this: Sine at +10 dBu is yellow, Click at the
   same level red"), and a sentence on the switch for Microphone and Line Input. Fixed on the way:
   the hum tag's tooltip still said "nothing later takes it away" (wrong since D1).
 - Tests: 18 new (281 in all, Bun and Node) — each sound's peaks, Percussive on both sources, a
   percussive mic in front of a Guitar Amp (the amp decides), and a reference chain where the same
-  +10 dBu average is hot as a sine and clipping as hits, +4 dBu keys hot and a drum machine
+  +10 dBu average is hot as a sine and clipping as clicks, +4 dBu keys hot and a drum machine
   clipping. No old reading changed.
 
 Checked in the browser (Intermediate): a Generator dragged from the palette (default Sine, 0 dBu,
-its chain colour); real clicks on Hits / Chord turn its +10 dBu wire red / back to yellow; the Level
+its chain colour); real clicks on the sounds turn its +10 dBu wire red (18 dB of peaks) / back to yellow; the Level
 knob drags (canvas does not pan); the Microphone's and Line Input's buttons (a +4 dBu Line Input
 turns red on Percussive); overview faces; Bulgarian (every word fits its button); help popover;
 Beginner shows no switch and no Generator in the palette; a file with `sound: "trumpet"` opens
@@ -274,7 +273,7 @@ lines *is* the headroom and the signal-to-noise — the picture teachers draw on
 ## 10. The time engine
 
 - Pure, testable, no drawing: every source plays its sound as a level that changes over time
-  (sine = steady, hits = sharp attack and decay on a beat, pad = slow swells, voice = phrases with
+  (sine = steady, click = short pulses on a beat, drums = sharp attack and decay, voice = phrases with
   pauses, guitar = plucks). Repeatable (same start → same pictures every time).
 - Runs the chain about 1000 times a second in small steps (cheap: 100 cards × 1000 = nothing for a
   browser), so a compressor's Attack / Release and a gate's Attack / Hold / Release finally do
@@ -307,6 +306,6 @@ lines *is* the headroom and the signal-to-noise — the picture teachers draw on
 
 ## Later — Step C: hear it (not planned yet)
 
-Generated sounds only (sine, noise, pad, hits) through the browser's built-in audio, on laptop or
+Generated sounds only (sine, noise, clicks) through the browser's built-in audio, on laptop or
 phone speakers. Muted until switched on, low volume by default, a safety limiter on the output.
 Built on Step B's time engine.

@@ -230,14 +230,12 @@
       "sounds": {
         "sine": "Sine",
         "noise": "Noise",
-        "pad": "Chord",
-        "hits": "Hits"
+        "click": "Click"
       },
       "hints": {
         "sine": "Sine: a steady test tone. Its loudest moments are only 3 dB above its average — it is the last to clip.",
         "noise": "Noise: hiss across every pitch. Its loudest moments are about 12 dB above its average, like a voice.",
-        "pad": "Chord: a soft held chord that swells in slowly (a \"pad\" in synth language). Its loudest moments are about 6 dB above its average.",
-        "hits": "Hits: drum-like hits. Each one jumps about 18 dB above the average — at the same level, these clip first."
+        "click": "Click: short pulses, like a metronome. Each one jumps about 18 dB above the average — at the same level, these clip first."
       }
     },
     "noise-gate": {
@@ -526,9 +524,9 @@
       "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too."
     },
     "generator": {
-      "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise), a soft held chord (Chord) or drum-like hits (Hits). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around.",
-      "why": "Engineers send a known sound through a chain to check every stage before the musicians arrive. Every sound has loudest moments (its peaks) above its average level, and the gap depends on the sound: about 3 dB for a sine, 18 dB for hits. The meters show the average; the peaks are what clip.",
-      "tip": "Try this: set Sine at +10 dBu — its wire is yellow (hot). Switch to Hits at the same level and the wire turns red: the hits' peaks reach the clip level (+20 dBu) while their average has not moved."
+      "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise) or short pulses (Click). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around.",
+      "why": "Engineers send a known sound through a chain to check every stage before the musicians arrive. Every sound has loudest moments (its peaks) above its average level, and the gap depends on the sound: about 3 dB for a sine, 18 dB for clicks. The meters show the average; the peaks are what clip.",
+      "tip": "Try this: set Sine at +10 dBu — its wire is yellow (hot). Switch to Click at the same level and the wire turns red: the clicks' peaks reach the clip level (+20 dBu) while their average has not moved."
     },
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",

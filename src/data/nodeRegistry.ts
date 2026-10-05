@@ -121,8 +121,8 @@ export type Character = typeof CHARACTERS[number]
 /** The easiest level whose Microphones and Line Inputs show the Melodic / Percussive switch. */
 export const CHARACTER_LEVEL: ComplexityLevel = 'intermediate'
 
-/** What the Generator plays (param `sound`): a steady tone, hiss, a soft held chord, drum-like hits. */
-export const GENERATOR_SOUNDS = ['sine', 'noise', 'pad', 'hits'] as const
+/** What the Generator plays (param `sound`): a steady tone, hiss, short pulses. */
+export const GENERATOR_SOUNDS = ['sine', 'noise', 'click'] as const
 export type GeneratorSound = typeof GENERATOR_SOUNDS[number]
 
 const IN: NodePort[]    = [{ id: 'in' }]
