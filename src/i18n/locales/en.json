@@ -106,7 +106,13 @@
     "output": "Output",
     "analogOut": "Analog out",
     "digitalOut": "Digital out",
-    "axisIn": "0 dB in"
+    "axisIn": "0 dB in",
+    "curve": {
+      "peak": "Peaks",
+      "rms": "Average",
+      "noise": "Noise",
+      "tip": "Left to right: the level coming in. Bottom to top: the level going out. On the dashed diagonal nothing changes; where the curve leaves it, this card is at work. A faint mark on the diagonal shows where the peaks, the average or the noise would be without it."
+    }
   },
   "health": {
     "too-quiet": "Too Quiet",
@@ -483,7 +489,7 @@
     "comp": {
       "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter.",
       "why": "Live performances and recordings have wide dynamic ranges. Without compression, loud notes clip and quiet notes get lost. Compression makes the signal more consistent and controlled.",
-      "tip": "Watch the gain reduction meter. 2-6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
+      "tip": "Watch the curve: the Peaks sit to the right of the Average, and above the Threshold the curve leans over, so the peaks are turned down more than the average — the two move closer together. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. Watch the gain reduction meter too. 2-6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
     },
     "fader": {
       "what": "The channel fader controls the volume of this signal as it enters the mix. Unity gain (0 dB) means the signal passes through unchanged. Moving it down attenuates the signal.",
@@ -553,12 +559,12 @@
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",
       "why": "Every microphone and cable picks up some background noise — air conditioning hum, electrical interference, room ambience. Between musical phrases, when the performer is quiet, that noise is audible. The gate simply closes during those quiet moments, removing the noise before it reaches the mix.",
-      "tip": "Set the threshold just above the noise floor and just below the quietest musical content. Too high, and the gate clips the start of notes (chatter). Too low, and the noise gets through. The OPEN/CLOSED indicator shows you exactly when the gate fires. Range is how far it turns down when closed: all the way (−80 dB, silence) or only a little, so the background drops without vanishing. Attack is how fast it opens, Hold keeps it open for a moment after the sound stops, and Release is how gently it closes."
+      "tip": "Set the threshold between the noise and the quietest part of the signal: on the curve, put the dashed Threshold line between the Noise dot and the Average dot. The Noise dot then drops to the bottom — the gate closes in the pauses — while the music passes untouched. Too high, and the Average drops too: the gate cuts into the music and chops off the start of notes. Too low, and the noise gets through. OPEN / CLOSED shows what the gate is doing to the music right now. Range is how far it turns down when closed: all the way (−80 dB, silence) or only a little, so the background drops without vanishing. Attack is how fast it opens, Hold keeps it open for a moment after the sound stops, and Release is how gently it closes."
     },
     "limiter": {
       "what": "A limiter is a compressor with an extremely high ratio — effectively infinite. It sets a hard ceiling: no signal can exceed the threshold, no matter how loud the input gets. Below the ceiling, the signal passes through unchanged.",
       "why": "Limiters protect equipment and listeners from sudden loud peaks. A drum hit, a mic bump, a loud vocal phrase — without limiting, any of these can clip the mix bus, damage amplifiers, or cause hearing damage at high volumes. The limiter is the safety net at the end of the chain.",
-      "tip": "Unlike a compressor, a limiter is meant to be invisible — you should not hear it working. If you see the 'Limiting' indicator light up often, the signal going into the limiter is too hot. Fix it earlier in the chain rather than relying on the limiter to tame a consistently loud signal."
+      "tip": "Unlike a compressor, a limiter is meant to be invisible — you should not hear it working. If you see the 'Limiting' indicator light up often, the signal going into the limiter is too hot. Fix it earlier in the chain rather than relying on the limiter to tame a consistently loud signal. On the curve, the Peaks stop at the Ceiling while the Average and the Noise below it pass untouched; if the Average is flattened too, the limiter is working far too hard."
     },
     "pad": {
       "what": "A pad is a fixed attenuator — a passive circuit that drops the signal level by a set amount, usually 20 dB. It sits inline in the signal path. When the pad is engaged (button shows −20 dB), the signal is reduced by 20 dB. When disengaged, the signal passes through unchanged.",

@@ -4,6 +4,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
+import { curveInputOf } from '../../signal/engine'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -66,8 +67,8 @@ export function LimiterNode({ id }: CardProps) {
           <TransferCurve
             transfer={limiter(ceiling, makeupGain)}
             thresholdDb={ceiling}
-            inputDb={levels.inLevel}
-            outMaxDb={20}
+            signal={curveInputOf(result)}
+            domain={levels.inDomain}
             ceilingDb={ceiling + makeupGain}
             badge={limiting
               ? { text: t.nodes.limiter.limiting, color: 'var(--signal-hot)', opacity: 1 }

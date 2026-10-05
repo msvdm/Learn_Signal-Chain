@@ -2,11 +2,12 @@ import { describe, expect, it } from 'bun:test'
 import type { EQBand, NodeParamValue, SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { initialParams } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
-import type { GraphSignalResult, StageRole, WireSignal } from './engine'
-import { graphSignal } from './engine'
+import type { GraphSignalResult, StageResult, StageRole, WireSignal } from './engine'
+import { curveInputOf, graphSignal } from './engine'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
-import { headroomOf, louder, snrOf } from './levels'
-import type { StageCondition } from './process'
+import { CLIP_DBU, headroomOf, louder, snrOf } from './levels'
+import type { StageCondition, Transfer } from './process'
+import { compressor, limiter, noiseGate, throughCurve } from './process'
 import type { HissVerdict, RoomVerdict } from './readings'
 import { hissStartsAt, readingsOf } from './readings'
 
@@ -1026,6 +1027,110 @@ describe('the readings leave the hum out of the hiss: it has its own tag', () =>
     expect(readingsOf(humming.out)?.hissBelow).toBe(69)
     expect(readingsOf(rig(true).stages.pre.out)?.hissBelow).toBe(69)
     expect(hissStartsAt(humming)).toBe(false)
+  })
+})
+
+// ── The marks on a dynamics card's curve ────────────────────────────────────────
+// A Compressor, Noise Gate or Limiter draws the peaks, the average and the noise of what goes into
+// its curve (curveIn: what arrives, its own hiss included), each where the curve sends it. Those
+// must be what leaves the card, or the marks and the meters disagree.
+
+/** A side's [peak, average, noise]. */
+function expectSide(actual: SideLevels | undefined, [peak, rms, noise]: readonly [number, number, number]) {
+  expectDb(actual?.peak, peak)
+  expectDb(actual?.rms, rms)
+  expectDb(actual?.noise, noise)
+}
+
+/** Where the marks land: what goes into the curve, through it (peaks flattened at the clip level, as the engine does). */
+function marksOf(stage: StageResult, curve: Transfer): SideLevels {
+  const out = throughCurve(curve, curveInputOf(stage))
+  return { ...out, peak: Math.min(out.peak, CLIP_DBU) }
+}
+
+/** The marks are where the card sends each reading: what leaves it, its louder side. */
+function expectMarksLeave(result: GraphSignalResult, id: string, curve: Transfer) {
+  const marks = marksOf(result.stages[id], curve)
+  const out   = leaving(result, id)
+  expectSide(marks, [out.peak, out.rms, out.noise])
+}
+
+describe("the marks on a dynamics card's curve: what goes in, and where the curve sends it", () => {
+  // Mic → Preamp +50: a voice at −10 dBu, peaks at +2, noise at −73.88; each card adds its own
+  // hiss (−80) to the noise it hears: −72.93
+  const result = signalOf([
+    card('mic', 'mic'),
+    card('pre', 'gain', { preampDb: 50 }),
+    card('comp', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
+    card('gate', 'noise-gate'),
+    card('high', 'noise-gate', { thresholdDb: 0 }),
+    card('lim', 'limiter', { thresholdDb: -3, makeupGainDb: 10 }),
+    card('hot', 'comp', { thresholdDb: 0, ratio: 1, makeupGainDb: 20 }),
+    card('off', 'comp', {}, true),
+    card('fader', 'fader'),
+  ], [
+    wire('mic', 'pre'),
+    ...['comp', 'gate', 'high', 'lim', 'hot', 'off', 'fader'].map((id) => wire('pre', id)),
+  ])
+
+  it('go in as the card hears them: what arrives, with its own hiss', () => {
+    expectSide(result.stages.comp.curveIn, [2, -10, -72.93])
+    expectSide(result.stages.gate.curveIn, [2, -10, -72.93])
+  })
+
+  it('a compressor: the peaks come down further than the average — 12 dB apart in, 3 out', () => {
+    expectSide(marksOf(result.stages.comp, compressor(-20, 4, 6)), [-8.5, -11.5, -66.93])
+    expectMarksLeave(result, 'comp', compressor(-20, 4, 6))
+  })
+
+  it('a noise gate with its threshold between the noise and the music: only the noise drops', () => {
+    expectSide(marksOf(result.stages.gate, noiseGate(-40, -80)), [2, -10, -152.93])
+    expectMarksLeave(result, 'gate', noiseGate(-40, -80))
+  })
+
+  it('a noise gate set above the average: it cuts into the music, only the peaks get through', () => {
+    expectSide(marksOf(result.stages.high, noiseGate(0, -80)), [2, -90, -152.93])
+    expectMarksLeave(result, 'high', noiseGate(0, -80))
+  })
+
+  it('a limiter: the peaks stop at its ceiling, then the makeup gain lifts all three', () => {
+    expectSide(marksOf(result.stages.lim, limiter(-3, 10)), [7, 0, -62.93])
+    expectMarksLeave(result, 'lim', limiter(-3, 10))
+  })
+
+  it('a peak the curve sends past the clip level is flattened there (the top of the curve)', () => {
+    expectDb(throughCurve(compressor(0, 1, 20), curveInputOf(result.stages.hot)).peak, 22)
+    expectMarksLeave(result, 'hot', compressor(0, 1, 20))
+  })
+
+  it('bypassed: nothing of its own goes in — the marks show what arrives', () => {
+    expect(result.stages.off.curveIn).toBeUndefined()
+    expectSide(curveInputOf(result.stages.off), [2, -10, -73.88])
+  })
+
+  it('only dynamics cards have a curve', () => {
+    expect(result.stages.fader.curveIn).toBeUndefined()
+    expect(result.stages.pre.curveIn).toBeUndefined()
+  })
+
+  it("a gate hears its own hiss: set under it (−85), it never closes on the noise", () => {
+    // A line's noise is at −90, under the threshold; with the gate's hiss it is −79.59, over it
+    const line = signalOf([card('line', 'line-in'), card('gate', 'noise-gate', { thresholdDb: -85 })], [wire('line', 'gate')])
+    expectDb(line.stages.gate.curveIn?.noise, -79.59)
+    expectDb(leaving(line, 'gate').noise, -79.59)
+    expectMarksLeave(line, 'gate', noiseGate(-85, -80))
+  })
+
+  it('in stereo (linked): the louder side goes in, and its marks are what leaves on that side', () => {
+    // Pan a quarter left: the left side 7.66 dB louder than the right
+    const panned = signalOf([
+      card('line', 'line-in'),
+      card('pan', 'pan', { panPosition: 25 }),
+      card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
+    ], [wire('line', 'pan'), wire('pan', 'comp')])
+    const comp = panned.stages.comp
+    expectDb(comp.curveIn?.rms, Math.max(comp.in.l.rms, comp.in.r.rms))
+    expectMarksLeave(panned, 'comp', compressor(-20, 4, 0))
   })
 })
 

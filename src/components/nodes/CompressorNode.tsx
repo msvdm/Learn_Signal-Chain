@@ -4,6 +4,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
+import { curveInputOf } from '../../signal/engine'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -80,8 +81,8 @@ export function CompressorNode({ id }: CardProps) {
           <TransferCurve
             transfer={compressor(threshold, ratio, makeupGain)}
             thresholdDb={threshold}
-            inputDb={levels.inLevel}
-            outMaxDb={20}
+            signal={curveInputOf(result)}
+            domain={levels.inDomain}
           />
           <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
         </div>

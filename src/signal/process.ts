@@ -138,6 +138,11 @@ function hissOf(node: SignalNode, ctx: SideContext): number {
 /** `s` with a hiss at `db` added to its noise. */
 const withHiss = (s: SideLevels, db: number): SideLevels => ({ ...s, noise: sumNoiseToDb([s.noise, db]) })
 
+/** What a card works on: `input` with the hiss it adds to what arrives (a dynamics card's curve shows it). */
+export function withOwnHiss(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
+  return withHiss(input, hissOf(node, ctx))
+}
+
 /**
  * Peaks no stage can pass are flattened at the clip level (+20 dBu) or the digital ceiling (0 dBFS):
  * the gap between peak and average shrinks — that is the distortion — and turning down later does
@@ -191,9 +196,12 @@ type Process = (node: SignalNode, input: SideLevels, ctx: SideContext) => SideRe
 const pass    = (levels: SideLevels, ctx: SideContext): SideResult => ({ out: levels, domain: ctx.domain })
 const blocked = (condition: StageCondition, domain: SignalDomain): SideResult => ({ out: SILENT, domain, condition })
 
+/** Every reading through a level curve on its own: the peaks, the average and the noise (the dots on a card's curve). */
+export const throughCurve = (curve: Transfer, input: SideLevels): SideLevels => eachReading((k) => curve(input[k]).out)
+
 /** Every reading through a level curve; the gain reduction shown is the average's. */
 const dynamics = (curve: Transfer, input: SideLevels, ctx: SideContext): SideResult => ({
-  out: eachReading((k) => curve(input[k]).out),
+  out: throughCurve(curve, input),
   domain: ctx.domain,
   gainReductionDb: curve(input.rms).gainReductionDb,
 })
@@ -293,7 +301,7 @@ const PROCESS: Record<TypeKey, Process> = {
  * flattens the peaks it cannot pass.
  */
 export function processSide(node: SignalNode, input: SideLevels, ctx: SideContext): SideResult {
-  const result = PROCESS[node.typeKey](node, withHiss(input, hissOf(node, ctx)), ctx)
+  const result = PROCESS[node.typeKey](node, withOwnHiss(node, input, ctx), ctx)
   return { ...result, out: flattenPeaks(result.out, result.domain) }
 }
 

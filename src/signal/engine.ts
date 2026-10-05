@@ -6,7 +6,7 @@ import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, pre
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideResult, StageCondition } from './process'
-import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processSide } from './process'
+import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processSide, withOwnHiss } from './process'
 import { sameShape } from '../utils/sameShape'
 
 // The signal engine: walks the graph in signal order and works out the levels at every card and on
@@ -88,6 +88,12 @@ export interface StageResult {
   inDomain: SignalDomain
   /** How far a dynamics card turns the signal (its average) down right now */
   gainReductionDb?: number
+  /**
+   * What a dynamics card's level curve works on (Compressor, Noise Gate, Limiter, De-esser; none
+   * when bypassed): the louder side's peaks, average and noise, reading by reading, its own hiss
+   * included. Through the curve (throughCurve) they give what leaves: the dots on the card's curve.
+   */
+  curveIn?: SideLevels
   condition?: StageCondition
   role?: StageRole
   /**
@@ -97,6 +103,12 @@ export interface StageResult {
    * turns it down with the music; only Ground Lift takes it away. Undefined: no hum.
    */
   hum?: number
+}
+
+/** What a dynamics card's curve works on (`curveIn`); bypassed, what arrives — its louder side. */
+export function curveInputOf(stage: StageResult | undefined): SideLevels {
+  if (!stage) return SILENT
+  return stage.curveIn ?? louder(stage.in.l, stage.in.r)
 }
 
 export interface GraphSignalResult {
@@ -285,6 +297,11 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
     }
     const hum = humOf(outSig)
 
+    // The dynamics run linked: one curve for both sides, driven by the louder one
+    const curveIn = def.linked && !node.bypassed
+      ? withOwnHiss(node, louder(inSig.l, inSig.r), { domain: inputDomain, mixedDomains, side: null, preamp, fed })
+      : undefined
+
     const role: StageRole | undefined = preamp ? 'preamp'
       : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
       : node.typeKey === 'pan' && followKind === 'stereo' ? 'balance'
@@ -298,6 +315,7 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       domain: side.domain,
       inDomain: inputDomain,
       gainReductionDb: side.gainReductionDb,
+      ...(curveIn ? { curveIn } : {}),
       condition,
       role,
       ...(isFinite(hum) ? { hum } : {}),

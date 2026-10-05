@@ -297,7 +297,49 @@ Original plan:
 - A new note on a card when the noise becomes audible ("You can hear hiss here"), like the
   hum note today.
 
-## 7. Dynamics show what they do to peaks and noise
+## ~~7. Dynamics show what they do to peaks and noise~~ — done (2026-10-05)
+
+- **Three marks on the curve** (Compressor, Noise Gate, Limiter — the De-esser has no curve): the
+  Peaks ▲, the Average ○ (the card's colour, as before: green open / grey closed, hot limiting) and
+  the Noise ● (grey) of what goes in, each where the curve sends it. A mark the card moves (2 px or
+  more) keeps a faint copy on the dashed diagonal — where it would be untouched — with a thin line
+  to it: a compressor's peaks come down further than its average (12 dB apart in, 3 out at 4:1),
+  its makeup gain lifts the noise above the diagonal, a gate drops the noise to the floor, a
+  limiter flattens the peaks. A legend (Peaks / Average / Noise) in the top-left corner, where no
+  curve can reach; the SVG's tooltip says how to read the graph.
+- **A wider scale**: both axes 120 dB, up to the clip level — −100…+20 dBu (−120…0 dBFS after an
+  ADC; the right-hand "0" is left out there, it would sit beside OPEN). The old −60…0 had no room
+  for the noise (a well-set chain's sits near −74), and with −80 at the bottom a gate's closing did
+  not show: the noise was already on the floor. The curve is as before, a little flatter.
+- **The marks agree with the meters**: the engine keeps what a dynamics card's curve works on
+  (`curveIn`: the louder side, its own −80 dBu hiss included — `withOwnHiss`), and the card puts
+  it through the same `throughCurve` the engine uses. Without the hiss a gate set at −85 would show
+  the noise dropping while the engine (rightly) lets it through. Bypassed: the marks show what
+  arrives on the curve, dimmed with the body, as the one dot did.
+- Help (en + bg): the gate's tip now says "set the threshold between the noise and the quietest
+  part of the signal: put the dashed Threshold line between the Noise dot and the Average dot",
+  and what too high (the Average drops: it chops the music) and too low look like. The compressor's
+  tip explains the peaks moving closer and the noise coming up by the gain reduction; the
+  limiter's, the peaks stopping at the ceiling.
+- Tests: 10 new (323 in all): what goes in (with the hiss), the marks equal what leaves for a
+  compressor, a gate between noise and music / above the average, a limiter with makeup, a peak
+  flattened at the clip level, bypassed, linked stereo, a gate set under its own hiss. Checked that
+  they bite: without the hiss in `curveIn`, 8 fail.
+
+Checked in the browser (Intermediate and Advanced, light and dark, English and Bulgarian): a real
+drag of the gate's Threshold to 0 dB — CLOSED, all three marks drop (the peaks too, −8 dBu); at
+−40 only the noise drops; compressor with makeup +12; limiter flattening the peaks and the average;
+a compressor after an ADC (dBFS scale); a stereo gate after Balance; a bypassed limiter. Card sizes
+unchanged (438 × 428, the Limiter 438 × 372). No console errors.
+
+Choices made here, to review: the scale (120 dB, so the music's part of the curve is flatter
+than before); marks as shapes (triangle / ring / dot) rather than colours, which already mean
+health; the faint copy on the diagonal instead of arrows.
+
+**Found on the way, not fixed** (older than this step): a dynamics card fed a stereo wire is
+taller than wide — 438 × 462 — because its In / Out meters show two bars each (84 px instead of 50).
+
+Original plan:
 
 - Transfer curves show three dots: peak, average, noise. A compressor's dots move closer; a gate's
   noise dot drops when the threshold is set between noise and signal.

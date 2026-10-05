@@ -4,6 +4,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
+import { curveInputOf } from '../../signal/engine'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -84,7 +85,8 @@ export function NoiseGateNode({ id }: CardProps) {
           <TransferCurve
             transfer={noiseGate(threshold, range)}
             thresholdDb={threshold}
-            inputDb={inputLevel}
+            signal={curveInputOf(result)}
+            domain={levels.inDomain}
             badge={isOpen
               ? { text: tg.statusOpen, color: 'var(--signal-good)', opacity: 1 }
               : { text: tg.statusClosed, color: 'var(--lsc-fg)', opacity: 0.45 }}
