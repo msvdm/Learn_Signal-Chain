@@ -415,7 +415,7 @@ Original plan:
 
 ## Step B — the signal moves
 
-## ~~10. The time engine~~ — done (2026-10-05), one decision open (D6, below)
+## ~~10. The time engine~~ — done (2026-10-05); D6 decided (b) and done in 10b
 
 - **The engine split in two** (`signal/engine.ts`): `planChain` — what the wiring makes of each card,
   once per change (its mode, the wires it adds up, what its outputs carry, Preamp, role …) — and
@@ -462,7 +462,10 @@ Checked in the browser: the app works as before on the split engine (an Advanced
 compressor, gate, stereo Line In and Pan: the same readings; an HPF knob change moves the level and
 back), no console errors. The time engine is not drawn yet (step 11).
 
-**D6 — open: dynamics in the two pictures.** The still picture puts each reading through a dynamics
+**D6 — decided (b), 2026-10-05, done the same day:** the cards' readings after a dynamics card come
+from the moving picture. See *10b* below.
+
+**D6 — the question as it was put.** The still picture puts each reading through a dynamics
 card's curve on its own; no real compressor can do that — it gives one gain to the whole moment. So
 after a compressor or de-esser the moving peaks come out higher than the still ones (voice, default
 2:1 at −20, Attack 10 ms: +9.7 dB; 4:1 at −30: +21 dB; drums: +19 dB; even with a 1 ms Attack:
@@ -489,6 +492,48 @@ Original plan:
 - Over a few seconds its peak, average and noise agree with Step A's numbers (a test), so the
   still picture and the moving picture never disagree.
 
+## ~~10b. The still picture measures the dynamics (D6 = b)~~ — done (2026-10-05)
+
+- **From a dynamics card at work on** (Compressor, Noise Gate, Limiter, De-esser, not bypassed — and
+  every card after one), the still picture takes the peaks and the average of what arrives, leaves
+  and goes down each wire from a loop of the moving picture (`measureMusic`, after the dynamics have
+  settled: seven times each one's slowest time). The noise stays the still picture's: what you hear
+  when the music stops is the curve with the gain settled on the noise — the two agree exactly.
+  Now every card of every test chain matches the moving picture to 0.005 dB, dynamics included;
+  only different sounds on one bus (average ≤ 1 dB) and clipping still differ, as before.
+- **Fast enough to turn a knob** (desktop, Bun): the measurement keeps every output millisecond by
+  millisecond (Float32), so a change plays again only the cards it reaches — the rest is played back
+  — and cards the measured ones do not hear are not played. A compressor knob: ~20 ms for one strip,
+  ~30 for four channels, ~50 for the 75-card stress chain (it was 39 / 119 / 343 measuring all).
+  A card dragged across the canvas measures nothing. Weak devices: step 13.
+- **The engine split again**: `chain.ts` (the plan and one moment), `engine.ts` (the still picture),
+  `time.ts` (the moving one) — the still picture now needs the moving one, without a loop between them.
+- **What changes for the learner** (measured, then written into the help, en + bg):
+  - Compressor: the average comes down by the gain reduction; the **Attack decides the peaks** — a
+    voice at −10 dBu through 2:1 at −20: 12 dB above the average in, about 14 out with the starting
+    10 ms (the start of each syllable gets through), about 10 with 1 ms. On the curve the Peaks mark
+    sits above it with a slow Attack. Before, the still picture said "12 in, 6 out" whatever the Attack.
+  - Noise gate: opens on the **peaks** (a real gate opens at once on a hit): set between the noise and
+    the music it drops only the noise, exactly as before; set above the average, its peaks open it and
+    the rest of the music is turned down (average −15.8 instead of −90 before).
+  - Limiter: no peak passes its ceiling, and each caught peak turns that moment down: the average
+    drops a little (1.3 dB on keys peaking 5 dB over it) — before, it stayed untouched.
+  - A compressor still costs as much signal-to-noise as it turns the average down (the lesson holds,
+    with the measured gain reduction: 8.56 dB on keys at 4:1 from −20, not the 7.5 a steady sound gives).
+- **Fixed on the way**: a note rising just before the loop's end (the voice's first syllable) lost
+  its rise and jumped from silence to full level at 0 ms — no Attack could catch it; drum hits, keys
+  and plucks now rise over 1–2 ms (a stick, a hammer, a pick). A stereo dynamics card gave its
+  quieter side the louder side's share of its hiss (−84 instead of −80 dBu on a side 8 dB quieter);
+  each side now gets its own, as the moving picture does.
+- Tests: 21 old lines changed, each marked `D6` with its reason (the channel strip's compressor
+  10.18 dB instead of 8.43; a gate opening on a voice's peaks; a limiter turning the moments down;
+  the curve marks now `curveOut`); a quick Attack bringing the peaks closer; the time tests now
+  demand exact agreement after dynamics too (356 in all).
+
+Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → speaker: "Turning down
+−6.3 dB", "Peaks 14 dB above the average", the Peaks mark above the curve; Attack to 1 ms: "Peaks
+10 dB" — as the help says; a knob step 20 ms (dev build); no console errors.
+
 ## 11. The fast lane: live meters
 
 - One animation loop outside React writes the moving values straight into the meters, gain
@@ -509,6 +554,10 @@ Original plan:
 - Chrome dev tools: CPU 6× slower, phone screen size, the stress chain from step 1. Must stay
   smooth (drop to 30 updates a second on slow devices if needed). Battery: nothing runs while
   paused, hidden, or with an empty canvas.
+- Since 10b the still picture plays the dynamics' part of the chain on every change: a compressor
+  knob costs ~20 ms (one strip) … ~50 ms (the stress chain) on a desktop — 6× slower is 120–300 ms
+  a step. If it drags: a faster core (no objects made per card per millisecond), or measuring in a
+  worker / in slices between frames while the cards keep the last readings.
 
 ---
 

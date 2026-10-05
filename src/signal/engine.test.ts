@@ -17,6 +17,9 @@ import { hissStartsAt, readingsOf } from './readings'
 // purpose (step 4), the line says so:
 // - D1: a hum follows the signal (a fader turns it down too); before, it only ever grew
 // - D4: a card clips as soon as its peaks reach the clip level; before, a hot average stayed "hot"
+// - D6: from a dynamics card at work on, the peaks and the average are measured over a loop of the
+//   sound (signal/time.ts): a real compressor, gate or limiter gives one gain to the whole moment,
+//   over its Attack and Release; before, each reading went through its curve on its own
 // Peaks, noise and the hum: the tests after the reference chains.
 
 // ── Building a chain ────────────────────────────────────────────────────────────
@@ -139,13 +142,14 @@ describe('a channel strip: mic → preamp → EQ → compressor → fader → Ma
     mic:   { out: -60, health: 'too-quiet' },
     pre:   { in: -60, out: -10, health: 'good', role: 'preamp' },
     eq:    { in: -10, out: -8.76, health: 'good' },
-    // (−8.76 − −20) × (1 − 1/4) = 8.43 dB down, then +3 dB makeup
-    comp:  { in: -8.76, out: -14.19, health: 'good', reduction: 8.43 },
-    fader: { in: -14.19, out: -19.19, health: 'good' },
+    // D6: 4:1 over −20, then +3 dB makeup. Its loud syllables come down most: 10.18 dB on average
+    // over the loop (a steady sound at −8.76 would lose (−8.76 − −20) × (1 − 1/4) = 8.43)
+    comp:  { in: -8.76, out: -15.94, health: 'good', reduction: 10.18 },
+    fader: { in: -15.94, out: -20.94, health: 'good' },
     // A mono wire lands on both sides at full level
-    bus:   { in: [-19.19, -19.19], out: [-19.19, -19.19], health: 'good' },
-    spkL:  { in: -19.19, out: -19.19, health: 'good' },
-    spkR:  { in: -19.19, out: -19.19, health: 'good' },
+    bus:   { in: [-20.94, -20.94], out: [-20.94, -20.94], health: 'good' },
+    spkL:  { in: -20.94, out: -20.94, health: 'good' },
+    spkR:  { in: -20.94, out: -20.94, health: 'good' },
   })
 })
 
@@ -225,18 +229,19 @@ describe('on a stereo bus a mono wire lands on both sides, a side wire keeps its
   expectCards(result, {
     line:  { out: -20, health: 'good' },
     aux:   { in: [-20, -20], out: [-20, -20], health: 'good' },
-    // The Aux's L through a compressor (just below its threshold): still the left side only
-    comp:  { in: -20, out: -20, health: 'good', reduction: 0 },
+    // The Aux's L through a compressor: still the left side only. D6: the keys average its threshold
+    // (−20); their louder moments are over it — 1.4 dB down on average
+    comp:  { in: -20, out: -21.4, health: 'good', reduction: 1.4 },
     line2: { out: -10, health: 'good' },
-    // Left: −10 and −20 added · Right: only the mono −10
-    bus:   { in: [-7.61, -10], out: [-7.61, -10], health: 'good' },
-    spkL:  { in: -7.61, out: -7.61, health: 'good' },
+    // Left: −10 and −21.4 added · Right: only the mono −10
+    bus:   { in: [-7.94, -10], out: [-7.94, -10], health: 'good' },
+    spkL:  { in: -7.94, out: -7.94, health: 'good' },
     spkR:  { in: -10, out: -10, health: 'good' },
   })
 
   it('carries one side through the compressor', () => {
     expectWire(result, 'aux:out-l', 'left', -20, S)
-    expectWire(result, 'comp:out', 'left', -20, S)
+    expectWire(result, 'comp:out', 'left', -21.4, S)
   })
 })
 
@@ -417,12 +422,12 @@ describe('analog and digital in the wrong place', () => {
   })
 })
 
-describe('a noise gate: closed below its threshold (−40), open from it up', () => {
+describe('a noise gate: open while the peaks reach its threshold (−40), closed below', () => {
   expectCards(signalOf([
     card('mic', 'mic'),
     card('gate', 'noise-gate'),
     card('mic2', 'mic'),
-    card('pre2', 'gain', { preampDb: 15 }),
+    card('pre2', 'gain', { preampDb: 5 }),
     card('gate2', 'noise-gate', { rangeDb: -20 }),
     card('mic3', 'mic'),
     card('pre3', 'gain', { preampDb: 20 }),
@@ -437,16 +442,17 @@ describe('a noise gate: closed below its threshold (−40), open from it up', ()
     wire('mic4', 'pre4'), wire('pre4', 'gate4'),
   ]), {
     mic:   { out: -60, health: 'too-quiet' },
-    // Closed: turned down by its Range (−80 dB, about silence)
+    // Its peaks (−48) never reach the threshold: closed, turned down by its Range (−80 dB, about silence)
     gate:  { in: -60, out: -140, health: 'too-quiet', reduction: 80 },
     mic2:  { out: -60, health: 'too-quiet' },
-    pre2:  { in: -60, out: -45, health: 'too-quiet', role: 'preamp' },
-    // Closed, with a Range of −20 dB
-    gate2: { in: -45, out: -65, health: 'too-quiet', reduction: 20 },
+    pre2:  { in: -60, out: -55, health: 'too-quiet', role: 'preamp' },
+    // Closed (peaks at −43), with a Range of −20 dB
+    gate2: { in: -55, out: -75, health: 'too-quiet', reduction: 20 },
     mic3:  { out: -60, health: 'too-quiet' },
     pre3:  { in: -60, out: -40, health: 'good', role: 'preamp' },
-    // Right at the threshold: open
-    gate3: { in: -40, out: -40, health: 'good', reduction: 0 },
+    // D6: the average right at the threshold, its peaks (−28) far over it: open — but each phrase
+    // rises from below the threshold, and that first moment is turned down (0.01 dB on average)
+    gate3: { in: -40, out: -40.01, health: 'too-quiet', reduction: 0.01 },
     mic4:  { out: -60, health: 'too-quiet' },
     pre4:  { in: -60, out: -20, health: 'good', role: 'preamp' },
     gate4: { in: -20, out: -20, health: 'good', reduction: 0 },
@@ -467,10 +473,13 @@ describe('a limiter: nothing above its ceiling (−3), then the makeup gain', ()
     line:  { out: 0, health: 'good' },
     // D4: a line's peaks (12 dB above +10 dBu) reach the clip level (it was 'hot')
     gain:  { in: 0, out: 10, health: 'clipping' },
-    lim:   { in: 10, out: -3, health: 'good', reduction: 13 },
+    // D6: no peak gets past −3, and every moment with a peak over it comes down with it: the average
+    // 18.45 dB (a curve on the average alone said 13)
+    lim:   { in: 10, out: -8.45, health: 'good', reduction: 18.45 },
     line2: { out: -10, health: 'good' },
-    // Under the ceiling: untouched, then +2 dB
-    lim2:  { in: -10, out: -8, health: 'good', reduction: 0 },
+    // D6: under the ceiling on average, but not its peaks (+2): the moments with them come down,
+    // 1.29 dB on average; then +2 dB
+    lim2:  { in: -10, out: -9.29, health: 'good', reduction: 1.29 },
   })
 })
 
@@ -484,8 +493,9 @@ describe('dynamics in stereo are linked: the louder side sets the change for bot
   ]), {
     keys: { out: [0, 0], health: 'good' },
     bal:  { in: [0, 0], out: [0, -6.02], health: 'good', role: 'balance' },
-    // The left (0 dBu) is 20 dB over the threshold: 10 dB down at 2:1, on both sides
-    comp: { in: [0, -6.02], out: [-10, -16.02], health: 'good', reduction: 10 },
+    // The left (0 dBu) is 20 dB over the threshold: at 2:1 the same change on both sides —
+    // D6: 10.85 dB on average over the loop (a steady sound: 10)
+    comp: { in: [0, -6.02], out: [-10.85, -16.87], health: 'good', reduction: 10.85 },
   })
 })
 
@@ -707,10 +717,11 @@ describe('peaks: the loudest moments, above the average', () => {
   ]), {
     // Keys: peaks 12 dB above the average
     line:  [2, -10, -90],
-    // 4:1 from −20: the average comes down 7.5 dB, the peaks 16.5 — the gap shrinks from 12 dB to 3
-    comp:  [-14.5, -17.5, -79.59],
-    // A limiter at −3: the average passes untouched, the peaks are capped
-    lim:   [-3, -10, -79.59],
+    // D6: 4:1 from −20 over time: the average comes down 8.56 dB, but the start of each chord gets
+    // through before the Attack (10 ms) acts — the peaks only 2.31: the gap grows from 12 dB to 18
+    comp:  [-0.31, -18.56, -79.59],
+    // A limiter at −3: no peak gets past it; the moments with a peak over it come down too (1.29 dB)
+    lim:   [-3, -11.29, -79.59],
     loud:  [12, 0, -80],
     // +15 dB: the peaks would reach +27, an analog stage flattens them at the clip level (+20)
     gain:  [20, 15, -61.99],
@@ -790,9 +801,9 @@ describe('noise: what is left when the music stops', () => {
       card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
       card('comp6', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
     ], [wire('line', 'comp'), wire('line', 'comp6')])
-    // The line (80 dB), the compressor's hiss (69.59), then 7.5 dB of gain reduction
-    expectDb(snrOf(leaving(result, 'comp')), 62.09)
-    expectDb(result.stages.comp.gainReductionDb, 7.5)
+    // The line (80 dB), the compressor's hiss (69.59), then 8.56 dB of gain reduction (D6: over a loop)
+    expectDb(snrOf(leaving(result, 'comp')), 61.02)
+    expectDb(result.stages.comp.gainReductionDb, 8.56)
     // The makeup gain lifts the noise with the music
     expectDb(leaving(result, 'comp6').noise - leaving(result, 'comp').noise, 6)
     expectDb(leaving(result, 'comp6').rms - leaving(result, 'comp').rms, 6)
@@ -1042,26 +1053,30 @@ function expectSide(actual: SideLevels | undefined, [peak, rms, noise]: readonly
   expectDb(actual?.noise, noise)
 }
 
-/** Where the marks land: what goes into the curve, through it (peaks flattened at the clip level, as the engine does). */
+/** The noise through the card's curve on its own (peaks flattened at the clip level, as the engine does). */
 function marksOf(stage: StageResult, curve: Transfer): SideLevels {
   const out = throughCurve(curve, curveInputOf(stage))
   return { ...out, peak: Math.min(out.peak, CLIP_DBU) }
 }
 
-/** The marks are where the card sends each reading: what leaves it, its louder side. */
+/**
+ * The marks leave where the card sends each reading: what leaves it, its louder side (`curveOut`);
+ * the noise where the curve sends it — what you hear when the music stops, the gain settled on it.
+ */
 function expectMarksLeave(result: GraphSignalResult, id: string, curve: Transfer) {
-  const marks = marksOf(result.stages[id], curve)
-  const out   = leaving(result, id)
-  expectSide(marks, [out.peak, out.rms, out.noise])
+  const out = leaving(result, id)
+  expectSide(result.stages[id].curveOut, [out.peak, out.rms, out.noise])
+  expectDb(result.stages[id].curveOut?.noise, marksOf(result.stages[id], curve).noise)
 }
 
-describe("the marks on a dynamics card's curve: what goes in, and where the curve sends it", () => {
+describe("the marks on a dynamics card's curve: what goes in, and where the card sends it", () => {
   // Mic → Preamp +50: a voice at −10 dBu, peaks at +2, noise at −73.88; each card adds its own
-  // hiss (−80) to the noise it hears: −72.93
+  // hiss (−80) to the noise it hears: −72.93. D6: what leaves is measured over a loop of the voice.
   const result = signalOf([
     card('mic', 'mic'),
     card('pre', 'gain', { preampDb: 50 }),
     card('comp', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
+    card('quick', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6, attackMs: 1 }),
     card('gate', 'noise-gate'),
     card('high', 'noise-gate', { thresholdDb: 0 }),
     card('lim', 'limiter', { thresholdDb: -3, makeupGainDb: 10 }),
@@ -1070,7 +1085,7 @@ describe("the marks on a dynamics card's curve: what goes in, and where the curv
     card('fader', 'fader'),
   ], [
     wire('mic', 'pre'),
-    ...['comp', 'gate', 'high', 'lim', 'hot', 'off', 'fader'].map((id) => wire('pre', id)),
+    ...['comp', 'quick', 'gate', 'high', 'lim', 'hot', 'off', 'fader'].map((id) => wire('pre', id)),
   ])
 
   it('go in as the card hears them: what arrives, with its own hiss', () => {
@@ -1078,33 +1093,40 @@ describe("the marks on a dynamics card's curve: what goes in, and where the curv
     expectSide(result.stages.gate.curveIn, [2, -10, -72.93])
   })
 
-  it('a compressor: the peaks come down further than the average — 12 dB apart in, 3 out', () => {
-    expectSide(marksOf(result.stages.comp, compressor(-20, 4, 6)), [-8.5, -11.5, -66.93])
+  it('a compressor (Attack 10 ms): the average comes down, the start of each syllable gets through — 12 dB apart in, 14.3 out', () => {
+    expectSide(result.stages.comp.curveOut, [1.02, -13.29, -66.93])
     expectMarksLeave(result, 'comp', compressor(-20, 4, 6))
   })
 
+  it('a quick Attack (1 ms) catches the start of each syllable: the peaks come closer to the average', () => {
+    const { curveIn, curveOut } = result.stages.quick
+    expect(curveOut!.peak - curveOut!.rms).toBeLessThan(curveIn!.peak - curveIn!.rms)
+    expectMarksLeave(result, 'quick', compressor(-20, 4, 6))
+  })
+
   it('a noise gate with its threshold between the noise and the music: only the noise drops', () => {
-    expectSide(marksOf(result.stages.gate, noiseGate(-40, -80)), [2, -10, -152.93])
+    expectSide(result.stages.gate.curveOut, [2, -10, -152.93])
     expectMarksLeave(result, 'gate', noiseGate(-40, -80))
   })
 
-  it('a noise gate set above the average: it cuts into the music, only the peaks get through', () => {
-    expectSide(marksOf(result.stages.high, noiseGate(0, -80)), [2, -90, -152.93])
+  it('a noise gate set above the average: it cuts into the music — the peaks open it, the rest is turned down', () => {
+    expectSide(result.stages.high.curveOut, [2, -15.84, -152.93])
     expectMarksLeave(result, 'high', noiseGate(0, -80))
   })
 
-  it('a limiter: the peaks stop at its ceiling, then the makeup gain lifts all three', () => {
-    expectSide(marksOf(result.stages.lim, limiter(-3, 10)), [7, 0, -62.93])
+  it('a limiter: the peaks stop at its ceiling, the moments with them come down, then the makeup gain lifts all three', () => {
+    expectSide(result.stages.lim.curveOut, [7, -1.27, -62.93])
     expectMarksLeave(result, 'lim', limiter(-3, 10))
   })
 
-  it('a peak the curve sends past the clip level is flattened there (the top of the curve)', () => {
-    expectDb(throughCurve(compressor(0, 1, 20), curveInputOf(result.stages.hot)).peak, 22)
+  it('a peak the card sends past the clip level is flattened there (the top of the curve)', () => {
+    expectDb(result.stages.hot.curveOut?.peak, CLIP_DBU)
     expectMarksLeave(result, 'hot', compressor(0, 1, 20))
   })
 
   it('bypassed: nothing of its own goes in — the marks show what arrives', () => {
     expect(result.stages.off.curveIn).toBeUndefined()
+    expect(result.stages.off.curveOut).toBeUndefined()
     expectSide(curveInputOf(result.stages.off), [2, -10, -73.88])
   })
 

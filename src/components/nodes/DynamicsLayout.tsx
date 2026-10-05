@@ -54,10 +54,11 @@ export function ReductionReadout({ db, maxDb, label, style }: {
 // ── Transfer curve ───────────────────────────────────────────────────────────
 // X = level in, Y = level out. The grey dashed diagonal is 1:1 (nothing changes); where the curve
 // leaves it, the card is at work: a shallower slope (compressor), a flat top (limiter), a drop
-// below the threshold (noise gate). Three marks sit on it — the peaks, the average and the noise of
-// what arrives — each where the curve sends it; one the card moves keeps a faint mark on the
-// diagonal, where it would be untouched. So a compressor's peaks come down further than its average
-// (they move closer), a gate drops the noise when its threshold sits between the noise and the music.
+// below the threshold (noise gate). Three marks — the peaks, the average and the noise of what
+// arrives (left to right) — sit where the card sends them (bottom to top): what leaves it over a few
+// seconds of the sound, measured (decision D6); one the card moves keeps a faint mark on the
+// diagonal, where it would be untouched. A gate drops the noise when its threshold sits between the
+// noise and the music; a Peaks mark above the curve got through before the Attack turned it down.
 
 const GW = COLUMN_W - 2   // SVG width (px — drawn 1:1; with its border the box fills its column)
 const GH = 112
@@ -93,7 +94,7 @@ function ReadingMark({ reading, x, y, color, opacity }: {
 }
 
 export function TransferCurve({
-  transfer, thresholdDb, signal, domain, ceilingDb, badge,
+  transfer, thresholdDb, signal, leaving: measured, domain, ceilingDb, badge,
   pointColor = 'var(--lsc-accent)', pointOpacity,
 }: {
   /** The card's curve: what leaves for each level in (signal/process.ts) */
@@ -102,6 +103,8 @@ export function TransferCurve({
   thresholdDb: number
   /** What goes into the curve (curveInputOf in signal/engine.ts): its peaks, average and noise are the marks; none when silent */
   signal: SideLevels
+  /** What leaves (the stage's curveOut, measured over time); bypassed, none: the marks go through the curve */
+  leaving?: SideLevels
   /** Analog (dBu) or digital (dBFS), arriving: the axes end at its clip level / ceiling */
   domain: SignalDomain
   /** A limiter's flat top: a faint line from the threshold to the right edge */
@@ -127,7 +130,7 @@ export function TransferCurve({
   const unity = `M ${x(bottom).toFixed(1)},${y(bottom).toFixed(1)} L ${x(top).toFixed(1)},${y(top).toFixed(1)}`
   const grid  = Array.from({ length: RANGE_DB / GRID_STEP_DB }, (_, i) => bottom + (i + 1) * GRID_STEP_DB)
 
-  const leaving  = throughCurve(transfer, signal)
+  const leaving  = measured ?? throughCurve(transfer, signal)
   const hasSignal = isFinite(signal.rms) && signal.rms > SILENCE_DB
   const marks = hasSignal
     ? MARKS.filter((k) => isFinite(signal[k])).map((k) => {

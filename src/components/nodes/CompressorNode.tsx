@@ -82,6 +82,7 @@ export function CompressorNode({ id }: CardProps) {
             transfer={compressor(threshold, ratio, makeupGain)}
             thresholdDb={threshold}
             signal={curveInputOf(result)}
+            leaving={result?.curveOut}
             domain={levels.inDomain}
           />
           <ReductionReadout db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />

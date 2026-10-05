@@ -74,9 +74,9 @@ function levelAt(hit: Hit, ms: number): number {
 }
 
 /**
- * The hits laid out over one loop (one running past the end comes back at the start, so the loop
- * joins up): at each millisecond the level is all of them added (as powers), the peaks those of
- * the loudest one.
+ * The hits laid out over one loop (one running past the end comes back at the start, one rising
+ * before the start rises at the end, so the loop joins up): at each millisecond the level is all
+ * of them added (as powers), the peaks those of the loudest one.
  */
 function render(hits: Hit[]): { rms: Float64Array; crest: Float64Array } {
   const rms   = new Float64Array(LOOP_MS)
@@ -85,7 +85,8 @@ function render(hits: Hit[]): { rms: Float64Array; crest: Float64Array } {
     let power = 0
     let top   = -Infinity
     for (const hit of hits) {
-      const db = Math.max(levelAt(hit, t - hit.at), levelAt(hit, t + LOOP_MS - hit.at))
+      const ms = t - hit.at
+      const db = Math.max(levelAt(hit, ms), levelAt(hit, ms + LOOP_MS), levelAt(hit, ms - LOOP_MS))
       if (!isFinite(db)) continue
       power += Math.pow(10, db / 10)
       if (db > top) { top = db; crest[t] = hit.crestDb }
@@ -117,8 +118,8 @@ function voice(): Hit[] {
 
 /** Keys: a chord on beats 1 and 3, a melody note on 2 and 4 — struck, then fading, never silent. */
 function keys(): Hit[] {
-  const chord  = { attackMs: 0, holdMs: 0, fadeDbPerMs: 0.02, lengthMs: 2 * BEAT_MS, crestDb: 6 }
-  const melody = { attackMs: 0, holdMs: 0, fadeDbPerMs: 0.03, lengthMs: BEAT_MS, crestDb: 5 }
+  const chord  = { attackMs: 2, holdMs: 0, fadeDbPerMs: 0.02, lengthMs: 2 * BEAT_MS, crestDb: 6 }
+  const melody = { attackMs: 2, holdMs: 0, fadeDbPerMs: 0.03, lengthMs: BEAT_MS, crestDb: 5 }
   return [
     ...every(2 * BEAT_MS, [0, -2, -1, -2], chord),
     ...every(2 * BEAT_MS, [-6, -7, -6, -8], melody, BEAT_MS),
@@ -127,9 +128,9 @@ function keys(): Hit[] {
 
 /** Drums: a kick on beats 1 and 3, a snare on 2 and 4, a hi-hat every half beat — sharp hits that die away. */
 function drums(): Hit[] {
-  const kick  = { attackMs: 0, holdMs: 5, fadeDbPerMs: 0.15, lengthMs: 300, crestDb: 8 }
-  const snare = { attackMs: 0, holdMs: 5, fadeDbPerMs: 0.2,  lengthMs: 250, crestDb: 8 }
-  const hat   = { attackMs: 0, holdMs: 2, fadeDbPerMs: 0.5,  lengthMs: 60,  crestDb: 8 }
+  const kick  = { attackMs: 2, holdMs: 5, fadeDbPerMs: 0.15, lengthMs: 300, crestDb: 8 }
+  const snare = { attackMs: 2, holdMs: 5, fadeDbPerMs: 0.2,  lengthMs: 250, crestDb: 8 }
+  const hat   = { attackMs: 1, holdMs: 2, fadeDbPerMs: 0.5,  lengthMs: 60,  crestDb: 8 }
   return [
     ...every(2 * BEAT_MS, [0, -1, -1, -1], kick),
     ...every(2 * BEAT_MS, [-2, -2, -2, -2], snare, BEAT_MS),
@@ -139,7 +140,7 @@ function drums(): Hit[] {
 
 /** A guitar: a pluck on every beat, the first of each bar the strongest, each ringing until the next. */
 function guitar(): Hit[] {
-  const pluck = { attackMs: 0, holdMs: 3, fadeDbPerMs: 0.04, lengthMs: BEAT_MS, crestDb: 8 }
+  const pluck = { attackMs: 1, holdMs: 3, fadeDbPerMs: 0.04, lengthMs: BEAT_MS, crestDb: 8 }
   return every(BEAT_MS, [0, -4, -2, -4, -1, -4, -2, -5], pluck)
 }
 

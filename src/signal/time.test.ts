@@ -9,8 +9,9 @@ import { LOOP_MS, SOUND_KINDS, loopOf, peaksAboveOf, soundKindOf } from './sound
 import { measureChain, startTime } from './time'
 
 // The time engine against the still picture: over a loop, what leaves every card has the still
-// picture's peaks, average and noise — exactly, wherever no dynamics card reacts over time. Then
-// what only the moving picture shows: Attack, Release and Hold.
+// picture's peaks, average and noise — exactly: before a dynamics card the two work the same maths,
+// after one the still picture measures the moving one (D6). Then what only the moving picture
+// shows: Attack, Release and Hold.
 
 // ── Building a chain (as in engine.test.ts) ─────────────────────────────────────
 
@@ -167,6 +168,28 @@ describe('over a loop, every card shows the still picture: peaks, average, noise
     }
   })
 
+  it('dynamics in a row — compressor, gate, limiter, de-esser — and a gate between the noise and the music (D6)', () => {
+    expectStillPicture(...line(
+      card('mic', 'mic', { character: 'percussive' }), card('pre', 'gain', { preampDb: 50 }),
+      card('comp', 'comp', { thresholdDb: -30, ratio: 4, makeupGainDb: 6 }), card('gate', 'noise-gate', { rangeDb: -40 }),
+      card('lim', 'limiter', { thresholdDb: -20, makeupGainDb: 3 }), card('de', 'deesser'), card('fader', 'fader'),
+      card('spk', 'active-speaker'),
+    ))
+    expectStillPicture(...line(card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('gate', 'noise-gate'), card('spk', 'active-speaker')))
+  })
+
+  it('a stereo compressor (linked) on a channel of a mix, a sine through one (D6)', () => {
+    expectStillPicture([
+      card('keys', 'line-in', { stereo: true }), card('bal', 'pan', { panPosition: 30 }), card('comp', 'comp', { ratio: 4 }),
+      card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('bus', 'master-bus'), card('main', 'fader', { faderDb: -3 }),
+      card('spkL', 'active-speaker'), card('spkR', 'active-speaker'),
+    ], [
+      wire('keys', 'bal'), wire('bal', 'comp'), wire('comp', 'bus'), wire('mic', 'pre'), wire('pre', 'bus'),
+      wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
+    ])
+    expectStillPicture(...line(card('gen', 'generator', { levelDb: 10 }), card('comp', 'comp', { thresholdDb: -20, ratio: 4 })))
+  })
+
   it('two voices into one bus: +6 dB, as the still picture adds them', () => {
     expectStillPicture([
       card('m1', 'mic'), card('p1', 'gain', { preampDb: 50 }), card('m2', 'mic'), card('p2', 'gain', { preampDb: 50 }),
@@ -207,28 +230,6 @@ describe('where the moving picture can only come close', () => {
     }
   })
 
-  it('a noise gate set between the noise and the music: the noise as in the still picture, the music within 0.1 dB', () => {
-    // Opening takes a millisecond (Attack): the first moment of each phrase is a little quieter
-    const [nodes, edges] = line(card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('gate', 'noise-gate'), card('spk', 'active-speaker'))
-    expectStillPicture(nodes, edges, ['peak', 'noise', 'hum'])
-    const still  = graphSignal(nodes, edges).stages.spk.out.l
-    const moving = measureChain(nodes, edges).get('spk')!.l
-    expect(Math.abs(moving.rms - still.rms)).toBeLessThan(0.1)
-  })
-
-  it('every dynamics card: what you hear when the music stops is the still picture\'s noise', () => {
-    const [nodes, edges] = line(
-      card('mic', 'mic', { character: 'percussive' }), card('pre', 'gain', { preampDb: 50 }),
-      card('comp', 'comp', { thresholdDb: -30, ratio: 4, makeupGainDb: 6 }), card('gate', 'noise-gate', { rangeDb: -40 }),
-      card('lim', 'limiter', { thresholdDb: -20, makeupGainDb: 3 }), card('de', 'deesser'), card('spk', 'active-speaker'),
-    )
-    expectStillPicture(nodes, edges, ['noise', 'hum'])
-  })
-
-  it('a steady sine through a compressor: the average as in the still picture', () => {
-    const [nodes, edges] = line(card('gen', 'generator', { levelDb: 10 }), card('comp', 'comp', { thresholdDb: -20, ratio: 4 }))
-    expectStillPicture(nodes, edges, ['rms', 'noise'])
-  })
 })
 
 // ── What only the moving picture shows ──────────────────────────────────────────

@@ -68,6 +68,7 @@ export function LimiterNode({ id }: CardProps) {
             transfer={limiter(ceiling, makeupGain)}
             thresholdDb={ceiling}
             signal={curveInputOf(result)}
+            leaving={result?.curveOut}
             domain={levels.inDomain}
             ceilingDb={ceiling + makeupGain}
             badge={limiting

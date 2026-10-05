@@ -86,6 +86,7 @@ export function NoiseGateNode({ id }: CardProps) {
             transfer={noiseGate(threshold, range)}
             thresholdDb={threshold}
             signal={curveInputOf(result)}
+            leaving={result?.curveOut}
             domain={levels.inDomain}
             badge={isOpen
               ? { text: tg.statusOpen, color: 'var(--signal-good)', opacity: 1 }

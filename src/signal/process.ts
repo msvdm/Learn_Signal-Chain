@@ -136,7 +136,12 @@ function hissOf(node: SignalNode, ctx: SideContext): number {
 }
 
 /** `s` with a hiss at `db` added to its noise. */
-const withHiss = (s: SideLevels, db: number): SideLevels => ({ ...s, noise: sumNoiseToDb([s.noise, db]) })
+const withHiss = (s: SideLevels, db: number): SideLevels => {
+  if (!isFinite(db)) return s
+  // Written out, not spread: the time engine runs this a thousand times a second for every card
+  const noise = isFinite(s.noise) ? 10 * Math.log10(Math.pow(10, s.noise / 10) + Math.pow(10, db / 10)) : db
+  return { peak: s.peak, rms: s.rms, noise, hum: s.hum }
+}
 
 /** What a card works on: `input` with the hiss it adds to what arrives (a dynamics card's curve shows it). */
 export function withOwnHiss(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
@@ -149,7 +154,8 @@ export function withOwnHiss(node: SignalNode, input: SideLevels, ctx: SideContex
  * not bring it back. A peak is never below the average.
  */
 export function flattenPeaks(s: SideLevels, domain: SignalDomain): SideLevels {
-  return { ...s, peak: Math.max(s.rms, Math.min(s.peak, ceilingOf(domain))) }
+  const peak = Math.max(s.rms, Math.min(s.peak, ceilingOf(domain)))
+  return peak === s.peak ? s : { peak, rms: s.rms, noise: s.noise, hum: s.hum }
 }
 
 // ── Dynamics ─────────────────────────────────────────────────────────────────
