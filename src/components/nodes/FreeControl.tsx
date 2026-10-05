@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { PORT_TOP } from '../../utils/layoutHelpers'
-import { HumTag, PortStack, WireTargetBadge } from './NodeChrome'
+import { NoiseTags, PortStack, WireTargetBadge } from './NodeChrome'
 
 // Room between a port ring (on the edge) and the control: the ring reaches 14px in, then a gap
 const SIDE = 26
@@ -68,7 +68,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
       {wireTarget && <WireTargetBadge label={label} />}
 
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
-      <HumTag nodeId={nodeId} overview={overview} />
+      <NoiseTags nodeId={nodeId} overview={overview} />
 
       {children}
 

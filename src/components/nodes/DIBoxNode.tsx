@@ -53,15 +53,11 @@ export function DIBoxNode({ id }: CardProps) {
       nodeId={id}
       typeKey="di-box"
       label={useNodeName(id, 'di-box')}
+      // Its two outputs send different signals (mic level, instrument level): it shows both levels instead
+      readings={false}
     >
       <div style={twoColumns}>
-        <SignalMeter
-          db={levels.in}
-          dbR={levels.inR}
-          health={levels.inHealth}
-          domain={levels.inDomain}
-          label={t.meters.input}
-        />
+        <SignalMeter {...levels.input} label={t.meters.input} />
 
         {/* Ground lift: lights up while there is a hum to fix */}
         <div className="flex items-center justify-between" style={{ gap: 8 }}>

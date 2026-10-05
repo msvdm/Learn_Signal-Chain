@@ -36,8 +36,8 @@ export function NoiseGateNode({ id }: CardProps) {
       label={useNodeName(id, 'noise-gate')}
     >
       <div style={twoColumns}>
-        <SignalMeter db={levels.in} dbR={levels.inR} health={levels.inHealth} domain={levels.inDomain} label={t.meters.input} />
-        <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
+        <SignalMeter {...levels.input} label={t.meters.input} />
+        <SignalMeter {...levels.output} label={t.meters.output} />
 
         <KnobStack>
           <KnobControl

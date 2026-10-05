@@ -3,7 +3,6 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useStage } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -48,7 +47,6 @@ export function GraphicEQNode({ id }: CardProps) {
   const { t }            = useTranslation()
 
   const levels = useStereoLevels(id)
-  const result = useStage(id)
   const stereo = levels.stereo
   const left   = GEQ_CENTERS.map((_, i) => p(`b${i}`))
   const right  = GEQ_CENTERS.map((_, i) => p(`r${i}`) ?? left[i])
@@ -93,10 +91,10 @@ export function GraphicEQNode({ id }: CardProps) {
       <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <SignalMeter db={levels.in} dbR={levels.inR} health={levels.inHealth} domain={levels.inDomain} label={t.meters.input} />
+            <SignalMeter {...levels.input} label={t.meters.input} />
           </div>
           <div style={{ flex: 1 }}>
-            <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
+            <SignalMeter {...levels.output} label={t.meters.output} />
           </div>
         </div>
 

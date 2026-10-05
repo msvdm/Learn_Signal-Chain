@@ -5,14 +5,18 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
-import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
-import { HumTag, PortStack, WireTargetBadge } from './NodeChrome'
+import { HEADER_H, PORT_TOP, PORT_GAP, READINGS_MIN_W, cardMinSize } from '../../utils/layoutHelpers'
+import { NoiseTags, PortStack, WireTargetBadge } from './NodeChrome'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
+import { SignalReadings } from './Readings'
+import { useReadingsShown } from '../../hooks/useReadingsShown'
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
 const BODY_PAD_X = 20
+// Under a face-only card's face: its readings (the face's own padding is above)
+const FACE_READINGS_PAD = '0 20px 16px'
 
 interface NodeWrapperProps {
   nodeId: string
@@ -25,8 +29,10 @@ interface NodeWrapperProps {
   style?: CSSProperties
   /** Overview (zoomed out): drawn instead of the name, e.g. a big icon or the control itself. */
   overviewArt?: OverviewArt
-  /** Overview: false = no level block, the art takes the whole card. */
+  /** Overview: false = no level block, the art takes the whole card. Also no readings (below). */
   overviewLevel?: boolean
+  /** false = no readings at the bottom (a card whose outputs send different signals: the DI Box) */
+  readings?: boolean
   /** Show only the overview face (icon + level) at every zoom: no header, no body. */
   faceOnly?: boolean
 }
@@ -48,11 +54,14 @@ export function NodeWrapper({
   overviewArt,
   overviewLevel = true,
   faceOnly = false,
+  readings: withReadings = true,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
   const { node, ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
   const { t }            = useTranslation()
+  // From Intermediate up, every card that shows a level ends with the readings of what leaves it
+  const readings         = useReadingsShown() && overviewLevel && withReadings
 
   const isBypassed = node?.bypassed ?? false
   const look       = NODE_LOOK[typeKey]
@@ -80,7 +89,7 @@ export function NodeWrapper({
       style={{
         position: 'relative',
         width: 'max-content',
-        minWidth: minSize.w,
+        minWidth: readings ? Math.max(minSize.w, READINGS_MIN_W) : minSize.w,
         minHeight,
         display: 'flex',
         flexDirection: 'column',
@@ -115,7 +124,7 @@ export function NodeWrapper({
       )}
 
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
-      <HumTag nodeId={nodeId} overview={overview} />
+      <NoiseTags nodeId={nodeId} overview={overview} />
 
       {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
       {!faceOnly && <>
@@ -209,6 +218,25 @@ export function NodeWrapper({
         >
           {children}
         </div>
+
+        {/* The readings of what leaves the card, at its bottom — hidden zoomed out, with the body */}
+        {readings && (
+          <div
+            className="lsc-fade"
+            style={{ padding: `0 ${BODY_PAD_X}px 12px`, opacity: isBypassed ? 0.5 : 1, ...hideInOverview }}
+          >
+            <ReadingsBlock nodeId={nodeId} />
+          </div>
+        )}
+      </>}
+
+      {/* A face-only card keeps its face as it was and takes its readings under it; zoomed out they
+          hide and the face fills the whole card */}
+      {faceOnly && readings && <>
+        <div aria-hidden style={{ height: minHeight - 2, flexShrink: 0 }} />
+        <div className="lsc-fade" style={{ padding: FACE_READINGS_PAD, ...hideInOverview }}>
+          <ReadingsBlock nodeId={nodeId} />
+        </div>
       </>}
 
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
@@ -221,7 +249,17 @@ export function NodeWrapper({
         shown={overview || faceOnly}
         bypassed={isBypassed}
         hasOutput={outputs.length > 0}
+        height={faceOnly && readings && !overview ? minHeight : undefined}
       />
+    </div>
+  )
+}
+
+/** The readings under a line across the card. */
+function ReadingsBlock({ nodeId }: { nodeId: string }) {
+  return (
+    <div style={{ borderTop: '1px solid var(--lsc-border-soft)', paddingTop: 8 }}>
+      <SignalReadings nodeId={nodeId} />
     </div>
   )
 }

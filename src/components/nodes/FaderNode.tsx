@@ -58,7 +58,7 @@ export function FaderNode({ id }: CardProps) {
           showReadout={false}
           capColor={main ? 'red' : 'black'}
         />
-        {main && <VerticalMeterPair dbL={levels.out} dbR={levels.outR ?? levels.out} height={FADER_H} domain={levels.outDomain} />}
+        {main && <VerticalMeterPair l={levels.output.l} r={levels.output.r ?? levels.output.l} height={FADER_H} domain={levels.outDomain} />}
       </div>
     </FreeControl>
   )

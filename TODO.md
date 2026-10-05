@@ -236,7 +236,51 @@ Beginner shows no switch and no Generator in the palette; a file with `sound: "t
 as Sine. No console errors from the new cards (only the first load in the hidden browser pane logs React
 Flow's zero-size warnings and NaN background dots, as before any of this).
 
-## 6. Meters show peak and noise
+## ~~6. Meters show peak and noise~~ — done (2026-10-05)
+
+From Intermediate up (D3); Beginner looks as before (checked: no mark, fog, readings or tag;
+Microphone and Active Speaker still 280 × 210).
+- **Meters**: a mark in the bar's colour at the peaks, and the noise as a grey fog from the left
+  once it reaches the scale (above −60 dBu) — card meters, the L / R rows, the Main Fader's upright
+  pair, the overview faces. The stereo bars (`ChannelRow` in `SignalMeter`, `VerticalMeterPair`)
+  now colour each side from its own peaks, at every level (D5).
+- **Readings** at the bottom of every card that shows a level, the signal leaving it
+  (`signal/readings.ts`, `SignalReadings`): "Peaks 12 dB above the average", "Room before
+  clipping: 18 dB — fine" (careful at 6 dB or less, "it distorts" at 0), "Hiss: 60 dB below the
+  signal — clean" ("you can hear it" under 45 dB, "very noisy" under 20). Whole dB; the verdict is
+  taken from the number shown. Plain text when all is well, the hot / red colours when not. The
+  hiss leaves the hum out (it has its own tag). Silence (−∞ on the meters) has nothing to read.
+  Tooltips explain each line. The lesson reads card by card: well set, the hiss goes 66 → 64 → 63
+  … → 60 dB; the Preamp 30 dB too low, 66 → 64 → **40 at the EQ** → 37 to the end.
+- **"You can hear hiss here"**: a grey tag on the bottom edge of the element where the hiss
+  becomes audible (clean arriving, audible leaving — `hissStartsAt`), beside the hum tag when both;
+  bare controls too (Mic → Preamp +20 → Fader +10: on the Fader). No extra note on speakers — their
+  readings say it.
+- **Room for the readings** (cards must stay landscape): a card with readings is at least 320 wide
+  (the longest line, Bulgarian's "Запас преди изкривяване…", is 273 px); the two-column cards have
+  190 px columns (438 wide — the DI Box too, at every level) so the Compressor and the Noise Gate
+  come out 438 × 428; the Amplifier moved to two columns (it would have been 280 × 346). The DI
+  Box shows no readings: its two outputs send different signals and it already shows both levels.
+  Every type checked at Advanced: all cards landscape.
+- Tests: 32 new (313, Node and Bun): the readings at every card of both gain-staging chains (the
+  hiss starts at the EQ only), room verdicts (a sine at +10: 7 dB fine; clicks: 0; +4 dBu keys:
+  4 careful; through an ADC: 6 careful, against 0 dBFS), no Preamp (20 dB at the fader, 17 very
+  noisy at the bus), silence (a fader at −100, a passive speaker without an amp), the hum left
+  out of the hiss; `crestOf`, `hissOf`.
+
+Checked in the browser (Intermediate, light and dark, English and Bulgarian): peak marks on the
+meters (a clipping Generator's at the end of the bar), the fog on a Master / Aux Bus after the
+classic mistake, the Main Fader's L / R marks, readings on every card and face, the hiss tag on
+the EQ (and beside a hum tag), on a Fader; overview hides the readings and the faces grow back.
+No card changes size while values change (10 knob / switch changes over 12 cards), Bulgarian sizes
+equal English.
+
+Choices made here, to review: the thresholds (6 dB of room, 45 and 20 dB of hiss); the readings
+at the bottom of the card rather than under the Output meter (one place on every card, faces too);
+"fine" while a card is "Hot" (a sine at +10 dBu has 7 dB of room — the average is hot, the peaks
+still fit).
+
+Original plan:
 
 - Every meter gets a peak mark over the average bar, and the noise as a grey "fog" from the left
   when it is loud enough to reach the scale.

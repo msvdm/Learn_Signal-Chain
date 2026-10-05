@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, UNITY_DBU,
-  ceilingOf, dbToPercent, formatDb, getHealth, headroomOf, healthColor, humStrength, louder, shifted, snrOf,
+  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENCE_DB, SILENT, TAPER_UNITY, UNITY_DBU,
+  ceilingOf, crestOf, dbToPercent, formatDb, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
   sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
 
@@ -73,7 +73,7 @@ describe('formatDb', () => {
 
   it('is a real reading down to −99.9, silence below', () => {
     expect(formatDb(-99.9)).toBe('-99.9 dBu')
-    expect(formatDb(-100)).toBe('-∞ dBu')
+    expect(formatDb(SILENCE_DB)).toBe('-∞ dBu')
     expect(formatDb(-140)).toBe('-∞ dBu')
     expect(formatDb(S, 'digital')).toBe('-∞ dBFS')
   })
@@ -136,6 +136,19 @@ describe('one side of a signal: peak, average, noise and hum', () => {
     expect(snrOf(voice)).toBe(64)
     expect(headroomOf(voice)).toBe(18)
     expect(headroomOf({ ...voice, peak: -6 }, 'digital')).toBe(6)
+  })
+
+  it('crest: the peaks over the average', () => {
+    expect(crestOf(voice)).toBe(12)
+  })
+
+  it('the hiss: the noise with its hum taken out', () => {
+    expect(hissOf(voice)).toBe(-74)
+    // Hiss and hum both at −43 dBu make a noise of −40
+    expect(hissOf({ ...humming, noise: sumNoiseToDb([-43, -43]), hum: -43 })).toBeCloseTo(-43, 2)
+    // Nothing but hum: no hiss
+    expect(hissOf(humming)).toBe(S)
+    expect(hissOf(SILENT)).toBe(S)
   })
 })
 

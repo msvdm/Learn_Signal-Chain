@@ -17,7 +17,7 @@ import { useParams } from '../../hooks/useParams'
 import { SILENT_WIRE, graphSignal, levelOf } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
-import { TAPER_UNITY } from '../../signal/levels'
+import { TAPER_UNITY, louder } from '../../signal/levels'
 import { chainSourcesOfEdge } from '../../utils/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
@@ -123,12 +123,12 @@ export function MasterBusNode({ id, type }: CardProps) {
 
       {stereo ? (
         <>
-          <ChannelRow ch="L" db={out.l.rms} peak={out.l.peak} domain={domain} />
-          <ChannelRow ch="R" db={out.r.rms} peak={out.r.peak} domain={domain} />
+          <ChannelRow ch="L" side={out.l} domain={domain} />
+          <ChannelRow ch="R" side={out.r} domain={domain} />
         </>
       ) : (
         <>
-          <SignalMeter db={level} health={result?.health ?? 'too-quiet'} showValue={false} domain={domain} />
+          <SignalMeter l={louder(out.l, out.r)} health={result?.health ?? 'too-quiet'} showValue={false} domain={domain} />
           <div style={{ fontSize: 12, fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)', textAlign: 'right' }}>
             <StableText reserve={[LEVEL_SAMPLE]} align="end">{isFinite(level) ? level.toFixed(1) : '−∞'}</StableText> {unit}
           </div>

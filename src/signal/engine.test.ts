@@ -7,6 +7,8 @@ import { graphSignal } from './engine'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { headroomOf, louder, snrOf } from './levels'
 import type { StageCondition } from './process'
+import type { HissVerdict, RoomVerdict } from './readings'
+import { hissStartsAt, readingsOf } from './readings'
 
 // Reference chains: the level, health, domain and condition at every card. Since step 4 (TODO.md)
 // every wire carries a peak and a noise reading too, but the average — the one number before it —
@@ -882,6 +884,148 @@ describe('D1: a hum is part of the noise and follows the signal', () => {
     const lifted = rig(true)
     expect(lifted.stages.pre.hum).toBeUndefined()
     expectDb(snrOf(leaving(lifted, 'pre')), 69.36)
+  })
+})
+
+// ── What a beginner reads under each card (signal/readings.ts) ─────────────────────
+
+/**
+ * Each card's readings leaving it, whole dB: [peaks above the average, room before clipping, its
+ * verdict, hiss below the signal, its verdict] — or null for silence. One test per card.
+ */
+function expectToRead(result: GraphSignalResult, cards: Record<string, readonly [number, number, RoomVerdict, number, HissVerdict] | null>) {
+  for (const [id, expected] of Object.entries(cards)) {
+    it(`${id}: ${expected ? expected.join(', ') : 'silence'}`, () => {
+      const r = readingsOf(result.stages[id].out, result.stages[id].domain)
+      if (expected === null) {
+        expect(r).toBe(null)
+        return
+      }
+      const [peaksAbove, room, roomVerdict, hissBelow, hissVerdict] = expected
+      expect(r).toEqual({ peaksAbove, room, roomVerdict, hissBelow, hissVerdict })
+    })
+  }
+}
+
+/** The cards where the hiss becomes audible. */
+const hissStarts = (result: GraphSignalResult) =>
+  Object.keys(result.stages).filter((id) => hissStartsAt(result.stages[id]))
+
+describe('the readings: the gain made early, at the Preamp', () => {
+  const result = gainStaging(50, 0, 0)
+
+  expectToRead(result, {
+    // A voice at mic level: lots of room, its noise far under it
+    mic:   [12, 68, 'fine', 66, 'clean'],
+    pre:   [12, 18, 'fine', 64, 'clean'],
+    eq:    [12, 18, 'fine', 63, 'clean'],
+    gain:  [12, 18, 'fine', 62, 'clean'],
+    fader: [12, 18, 'fine', 61, 'clean'],
+    bus:   [12, 18, 'fine', 61, 'clean'],
+    spk:   [12, 18, 'fine', 60, 'clean'],
+  })
+
+  it('nowhere does the hiss become audible', () => {
+    expect(hissStarts(result)).toEqual([])
+  })
+})
+
+describe('the readings: the Preamp 30 dB too low, made up later', () => {
+  const result = gainStaging(20, 20, 10)
+
+  expectToRead(result, {
+    mic:   [12, 68, 'fine', 66, 'clean'],
+    pre:   [12, 48, 'fine', 64, 'clean'],
+    // The EQ's hiss lands on a voice 30 dB too weak: from here on it can be heard
+    eq:    [12, 48, 'fine', 40, 'audible'],
+    gain:  [12, 28, 'fine', 37, 'audible'],
+    fader: [12, 18, 'fine', 37, 'audible'],
+    bus:   [12, 18, 'fine', 37, 'audible'],
+    spk:   [12, 18, 'fine', 37, 'audible'],
+  })
+
+  it('the hiss becomes audible at the EQ, and only there', () => {
+    expect(hissStarts(result)).toEqual(['eq'])
+  })
+})
+
+describe('the readings: room before clipping', () => {
+  const result = signalOf([
+    card('sine', 'generator', { sound: 'sine', levelDb: 10 }),
+    card('click', 'generator', { sound: 'click', levelDb: 10 }),
+    card('clickFader', 'fader', { faderDb: -20 }),
+    card('keys', 'line-in', { levelDb: 4 }),
+    card('drums', 'line-in', { levelDb: 4, character: 'percussive' }),
+    // Unity (0 dBu) is −18 dBFS: a voice's peaks at −6 dBFS
+    card('line', 'line-in', { levelDb: 0 }),
+    card('adc', 'adc'),
+  ], [
+    wire('click', 'clickFader'), wire('line', 'adc'),
+  ])
+
+  expectToRead(result, {
+    // Peaks at +13 dBu: 7 dB left
+    sine:       [3, 7, 'fine', 90, 'clean'],
+    // Peaks flattened at the clip level: no room, it distorts
+    click:      [10, 0, 'clipping', 90, 'clean'],
+    // Turned down after the clip: room again, the flattened peaks stay flattened
+    clickFader: [10, 20, 'fine', 87, 'clean'],
+    keys:       [12, 4, 'careful', 80, 'clean'],
+    drums:      [16, 0, 'clipping', 80, 'clean'],
+    line:       [12, 8, 'fine', 80, 'clean'],
+    // Judged against 0 dBFS
+    adc:        [12, 6, 'careful', 77, 'clean'],
+  })
+})
+
+describe('the readings: hiss and silence', () => {
+  const result = signalOf([
+    // No Preamp: a voice at mic level straight into a fader, then a bus
+    card('mic', 'mic'),
+    card('fader', 'fader'),
+    card('bus', 'master-bus'),
+    // A fader all the way down: silence, and nothing to read after it
+    card('line', 'line-in'),
+    card('down', 'fader', { faderDb: -100 }),
+    card('after', 'eq'),
+    // A passive speaker without an amplifier plays nothing
+    card('spk', 'speaker'),
+  ], [
+    wire('mic', 'fader'), wire('fader', 'bus'),
+    wire('line', 'down'), wire('down', 'after'), wire('line', 'spk'),
+  ])
+
+  expectToRead(result, {
+    // The fader's hiss (−80) only 20 dB under the voice (−60)
+    fader: [12, 68, 'fine', 20, 'audible'],
+    // The bus adds its own: nearly as loud as the music
+    bus:   [12, 68, 'fine', 17, 'loud'],
+    down:  null,
+    after: null,
+    spk:   null,
+  })
+
+  it('the hiss becomes audible at the fader; never after silence', () => {
+    expect(hissStarts(result)).toEqual(['fader'])
+  })
+})
+
+describe('the readings leave the hum out of the hiss: it has its own tag', () => {
+  const rig = (groundLift: boolean) => signalOf([
+    card('gtr', 'instrument'),
+    card('di', 'di-box', { groundLift }),
+    card('amp', 'guitar-amp'),
+    card('pre', 'gain'),
+  ], [
+    wire('gtr', 'di'), wire('di:direct', 'amp'), wire('di', 'pre'),
+  ])
+
+  it('a hum 30 dB under the guitar: the hiss reads as it does with Ground Lift on', () => {
+    const humming = rig(false).stages.pre
+    expectDb(snrOf(louder(humming.out.l, humming.out.r)), 30)
+    expect(readingsOf(humming.out)?.hissBelow).toBe(69)
+    expect(readingsOf(rig(true).stages.pre.out)?.hissBelow).toBe(69)
+    expect(hissStartsAt(humming)).toBe(false)
   })
 })
 

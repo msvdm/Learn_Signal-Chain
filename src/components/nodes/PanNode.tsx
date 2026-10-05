@@ -7,6 +7,7 @@ import { useStage } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { ChannelRow } from '../SignalMeter'
+import { SILENT } from '../../signal/levels'
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
@@ -43,8 +44,8 @@ export function PanNode({ id }: CardProps) {
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
       footer={
         <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <ChannelRow ch="L" db={stage?.out.l.rms ?? -Infinity} peak={stage?.out.l.peak} domain={stage?.domain} />
-          <ChannelRow ch="R" db={stage?.out.r.rms ?? -Infinity} peak={stage?.out.r.peak} domain={stage?.domain} />
+          <ChannelRow ch="L" side={stage?.out.l ?? SILENT} domain={stage?.domain} />
+          <ChannelRow ch="R" side={stage?.out.r ?? SILENT} domain={stage?.domain} />
         </div>
       }
     >

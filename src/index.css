@@ -86,6 +86,7 @@
   --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
   --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
+  --lsc-noise-fog:   rgba(196,202,216,0.5); /* the noise on a meter: grey fog from the left */
 
   /* Pro tip */
   --lsc-tip:    #facc15;
@@ -153,6 +154,7 @@
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */
+  --lsc-noise-fog:   rgba(92,84,79,0.38); /* the noise on a meter: grey fog from the left */
 
   /* Pro tip */
   --lsc-tip:    #d89548;

@@ -73,6 +73,22 @@ export function headroomOf(s: SideLevels, domain: SignalDomain = 'analog'): numb
   return ceilingOf(domain) - s.peak
 }
 
+/** Crest: how far the peaks sit above the average (dB) — a sine 3, a voice 12, drums 18. */
+export function crestOf(s: SideLevels): number {
+  return s.peak - s.rms
+}
+
+/**
+ * The hiss: the noise without its hum (powers taken apart). Shown on its own, since a hum has its
+ * own tag. −∞: none (or nothing but hum).
+ */
+export function hissOf(s: SideLevels): number {
+  if (!isFinite(s.hum)) return s.noise
+  const power = Math.pow(10, s.noise / 10) - Math.pow(10, s.hum / 10)
+  // Rounding can leave a sliver when the noise is all hum
+  return power > Math.pow(10, s.hum / 10) * 1e-9 ? 10 * Math.log10(power) : -Infinity
+}
+
 /** Where a ground-loop hum starts: on a DI Box's XLR Out, 30 dB under a guitar at mic level. */
 export const HUM_DBU = -80
 
@@ -106,10 +122,13 @@ export function dbToPercent(db: number): number {
   return Math.max(0, Math.min(100, ((db + 60) / 80) * 100))
 }
 
+/** At or below this a level counts as silence: written −∞, no readings (a microphone sits at −60 dBu). */
+export const SILENCE_DB = -100
+
 export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
-  // A real reading down to −99.9 (a microphone sits at −60 dBu); below that it is silence
+  // A real reading down to −99.9; below that it is silence
   const unit = domain === 'digital' ? 'dBFS' : 'dBu'
-  if (!isFinite(db) || db <= -100) return `-∞ ${unit}`
+  if (!isFinite(db) || db <= SILENCE_DB) return `-∞ ${unit}`
   return `${db >= 0 ? '+' : ''}${db.toFixed(1)} ${unit}`
 }
 

@@ -4,7 +4,8 @@ import { useStore } from '@xyflow/react'
 import { MeterBar } from '../SignalMeter'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { healthColor, formatDb } from '../../signal/levels'
+import { healthColor, formatDb, louder } from '../../signal/levels'
+import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
 import type { TypeKey } from '../../data/nodeRegistry'
@@ -39,6 +40,8 @@ interface OverviewFaceProps {
   bypassed: boolean
   /** Cards without an output (speakers) show the level they play: silent for a passive speaker without an amp. */
   hasOutput: boolean
+  /** Height of the face (px) when it covers only the top of the card (a face-only card's readings below it). */
+  height?: number
 }
 
 /**
@@ -46,8 +49,9 @@ interface OverviewFaceProps {
  * leaving it. A layer over the card — the card's controls stay in place underneath, hidden,
  * so the card keeps exactly the same size and its ports stay where they are.
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, shown, bypassed, hasOutput }: OverviewFaceProps) {
-  const { t } = useTranslation()
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, shown, bypassed, hasOutput, height }: OverviewFaceProps) {
+  const { t }    = useTranslation()
+  const detailed = useReadingsShown()
   // A string, so dragging the card (a new internal node each frame) does not re-render it
   const sizeKey = useStore((s) => {
     const m = s.nodeLookup.get(nodeId)?.measured
@@ -57,7 +61,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
   const layout = useMemo(() => {
     if (!sizeKey) return null
-    const [W, H] = sizeKey.split('x').map(Number)
+    const [W, cardH] = sizeKey.split('x').map(Number)
+    const H = height ?? cardH
     const sans = cssVar('--lsc-font-sans')
     const mono = cssVar('--lsc-font-mono')
     // Inside the 1px border
@@ -83,12 +88,14 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
     return { number, unit, meter, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel])
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height])
 
   if (!layout) return null
 
-  // The level leaving the card; a speaker's is the sound it plays (its stage result)
-  const db     = Math.max(levels.out, hasOutput ? (levels.outR ?? -Infinity) : -Infinity)
+  // The level leaving the card (its louder side); a speaker's is the sound it plays (its stage result)
+  const { l, r } = levels.output
+  const side   = r && hasOutput ? louder(l, r) : l
+  const db     = side.rms
   const state  = levels.outHealth
   const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
   const healthWord = (
@@ -106,7 +113,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
       aria-hidden={!shown}
       className="lsc-fade"
       style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
+        position: 'absolute', top: 0, left: 0, right: 0, height: height ?? '100%', pointerEvents: 'none',
         opacity: shown ? (bypassed ? 0.5 : 1) : 0,
         visibility: shown ? 'visible' : 'hidden',
       }}
@@ -144,7 +151,10 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
       {/* Level leaving the card: meter, then reading + health word */}
       {showLevel && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
-        <MeterBar db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain} />
+        <MeterBar
+          db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain}
+          peak={detailed ? side.peak : undefined} noise={detailed ? side.noise : undefined}
+        />
         <div
           style={{
             marginTop: METER_GAP, height: layout.number,

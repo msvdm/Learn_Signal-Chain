@@ -10,3 +10,10 @@ export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced'
 export function atLeast(level: ComplexityLevel, min: ComplexityLevel): boolean {
   return LEVELS.indexOf(level) >= LEVELS.indexOf(min)
 }
+
+/**
+ * The easiest level whose meters show the peaks and the noise, with the readings under each card
+ * (peaks above the average, room before clipping, hiss) and the hiss note. Beginner shows only
+ * the average, as before (decision D3, TODO.md).
+ */
+export const READINGS_LEVEL: ComplexityLevel = 'intermediate'

@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { StableText } from '../controls/StableText'
 import type { Transfer } from '../../signal/process'
 import { useTranslation } from '../../i18n/useTranslation'
+import { COLUMN_W } from '../../utils/twoColumns'
 
 // Pieces of the two-column dynamics body (layout: utils/twoColumns.ts): knobs, the transfer curve,
 // the turning-down reading
@@ -52,7 +53,7 @@ export function ReductionReadout({ db, maxDb, label, style }: {
 // leaves it, the card is at work: a shallower slope (compressor), a flat top (limiter), a drop
 // below the threshold (noise gate). The dot is where the signal is right now.
 
-const GW = 168   // SVG width (px — drawn 1:1; with its border the box fills the 170px column)
+const GW = COLUMN_W - 2   // SVG width (px — drawn 1:1; with its border the box fills its column)
 const GH = 112
 const GP = 14    // padding inside the SVG
 const STEPS = 80
