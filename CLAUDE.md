@@ -68,11 +68,16 @@ signalStore (Zustand)
   └── nodes[] + edges[]  (graph model — user-built, freely positioned)
         ├── src/graph/   what the wiring makes of it: ports, what each wire carries, Main Faders, Preamps …
         └── src/signal/  the engine: walks the graph in signal order, works out the level at every card / wire
-              └── useGraphSignal() hook  (computed once per change, shared by every caller)
-                    └── every node component reads its own stage result and renders accordingly
+              └── graphSignal()  (computed once per change, shared by every caller)
+                    └── useStage(id) / useWire(key): each card reads only its own result
 ```
 
-Every slider change → updates `signalStore` → `useGraphSignal` recomputes → all meters/colors/edges update simultaneously. There is no local component state for signal values.
+Every slider change → updates `signalStore` → the engine recomputes → the cards and wires whose own reading changed redraw; the rest are left alone. There is no local component state for signal values.
+
+**Redraw only what changed** (the canvas must stay smooth at 100+ cards, and later at 60 updates a second):
+- The engine hands back last time's stage / wire object when a result came out the same (`keepUnchanged`, `utils/sameShape.ts`), so "did my reading change?" is one comparison.
+- Cards never read the whole graph: `useStage(id)`, `useWire(key)`, `useParams`, `useNodeName`, `useNodeChrome` and `NodePort` each select only their own piece from the store (zustand selectors; `useShallow` for small arrays). A new hook for cards must do the same — a selector over `s.nodes` / `s.edges` as a whole redraws every card on every change.
+- `useFlowElements` hands React Flow last time's node / wire object when nothing about it changed (`keepSame`), and everything `SignalChain` passes to `<ReactFlow>` is stable (`useStableHandlers`, module constants): React Flow passes its node handlers on to every card, so one new function per render redraws them all.
 
 Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `signal/` (pure maths) ← `hooks/`, `store/`, `components/`. Nothing in `graph/` or `signal/` imports React or the store.
 
@@ -85,7 +90,9 @@ Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `sig
 | `src/signal/process.ts` | `processSide(node, input, ctx)` — one channel through a card: `PROCESS`, one function per type (`Record<TypeKey, …>`); the dynamics are transfer functions (`compressor`, `noiseGate`, `limiter` → `{ out, gainReductionDb }`) the cards draw their curves from. Each with its `condition` (`StageCondition`: a bus fed analog and digital — `summing()`, digital into an amp / speaker — `analogOnly()`, an ADC / DAC fed the wrong domain; `needsAmp` / `blown` / `needsDi` are set by the engine). `panSides` / `balanceSides`, `GAIN_OFF_DB`, `SPEAKER_LEVEL_DB`, `DI_DROP_DB` (a DI's XLR Out: −20 dB, mic level), `GUITAR_REF_DB` (a Mic in front of a Guitar Amp: `sensitivityDb + amp − GUITAR_REF_DB`; `ctx.fed`). |
 | `src/signal/levels.ts` | The dB scale: `UNITY_DBU`, `CLIP_DBU`, `ALIGNMENT_DB`, `HUM_DBU` / `humStrength` (a DI ground-loop hum), `getHealth(db, domain)`, `healthColor(health)` (`var(--signal-<health>)`), `formatDb()` (real down to −99.9 dBu — a microphone sits at −60 — `-∞` below), `dbToPercent`, `sumSignalsToDb` (voltage sum), `taperToDb` / `TAPER_UNITY` (send knobs). |
 | `src/signal/eqMath.ts` | EQ response (`bellGain`, `shelfGain`, `bandGain`, `GEQ_CENTERS` / `GEQ_Q`), the level change of each filter through one pink-noise integrator (`eqLevelChange`, `graphicEqLevelChange`, `hpfLevelChange`), and EQ labels / formats. |
-| `src/hooks/useGraphSignal.ts` | `useGraphSignal()` — the engine's result for the store's current graph. |
+| `src/hooks/useGraphSignal.ts` | `useStage(id)` / `useWire(key)` — one card's result / one output's signal, redrawing the caller only when it changes. `useGraphSignal()` — the whole result, for one-off components (menus, overlays, `useFlowElements`), never for cards. |
+| `src/hooks/useStableHandlers.ts` | `useStableHandlers({...})` — handlers that never change identity but call the latest code; for callbacks handed to React Flow. |
+| `src/utils/sameShape.ts` | `sameShape(a, b)` (plain data equal all the way down) and `keepSame(last, items)` (keep last time's object for each id that came out the same). |
 | `src/hooks/useStereoLevels.ts` | `useStereoLevels(id)` — a card's input / output levels for its meters: one value each in mono, L + R when a stereo signal comes in / goes out (`stage.in` / `stage.out` kind), plus `inPeak` (louder input side). |
 | `src/hooks/useParams.ts` | `useParams(id, typeKey)` → `p(key)`: a card's setting, typed, its type's default when unset (`param()` in the registry). |
 | `src/hooks/useEdgeReshape.ts` | `useEdgeReshape()` — waypoint drag state machine (mousemove/mouseup, commits `updateEdgeWaypoints` on release). Returns `{ reshaping, setReshaping }`; used by `CanvasOverlays`' reshape handles. |
@@ -242,7 +249,8 @@ The math is intentionally simplified. It teaches the concept correctly without I
 
 - `nodeTypes` is `NODE_COMPONENTS` (`components/nodes/index.ts`), defined **outside** any component to avoid re-registration on every render. Components read their type from React Flow's `type` prop.
 - All interactive elements inside nodes (sliders, buttons) carry `nodrag nopan` CSS classes so the canvas does not intercept their pointer events.
-- Edges are colored from health values computed by `useGraphSignal`, not stored in React Flow state.
+- Edges are colored from health values computed by the engine (`useFlowElements`), not stored in React Flow state.
+- Every prop of `<ReactFlow>` is stable between renders (see *Redraw only what changed*): no inline arrow functions, arrays or objects — wrap handlers in `useStableHandlers`, hoist constants.
 - **`nodeOrigin` is `[0, 0]`**: a node's `position` is its top-left corner. All layout helpers assume this.
 - Anything that must escape React Flow's transformed viewport (e.g. `ConfirmDialog`) uses `createPortal` to `document.body` — the viewport's CSS `transform` breaks `position: fixed` inside its DOM tree. Canvas overlays that must not start a wire or a waypoint (the help popover) carry the `lsc-overlay` class.
 - `nodesDraggable`, `elementsSelectable` and `panOnDrag` follow `toolMode`. `nodesConnectable` is always `false` — connections are handled entirely by the custom click system (`useWireDrawing`: capture-phase `mousedown` on `document`), not React Flow's drag mechanism.
@@ -251,7 +259,7 @@ The math is intentionally simplified. It teaches the concept correctly without I
 - `MasterBusNode` serves `master-bus`, `aux-bus` and `matrix-bus` (reads its type from `type`; the Matrix Bus adds one send-knob row per bus). Its one input (`in`) comes from the registry and accepts many wires.
 - While `highlightEdgeIds` is not empty, `useFlowElements` gives nodes outside those wires' chains the `lsc-dimmed` class and fades their edges.
 - **Handle hit-testing**: custom `<Handle>`s default to `isConnectable`, so React Flow gives them the `connectionindicator` class and `pointer-events: all` even in Select mode — that is what lets the mouse-follow switch find them with `document.elementsFromPoint`. `.lsc-connect-mode` (on the canvas wrapper) also forces it. Handle type (source vs target) is detected via `classList.contains('source'/'target')` — there is no `data-handletype` attribute.
-- **Display nodes carry `measured`.** They are rebuilt from the store on every change; a node without `measured` is new to React Flow, which hides it (`visibility: hidden`) until re-measured on the next frame — a click in that gap lands on the pane (a knob drag used to pan the canvas). `useFlowElements` keeps React Flow's sizes from `onNodesChange` (`dimensions`, `keepSizes`) and hands them back, except for a card whose ports changed (`portLayoutKey`: its outputs — a stereo Aux's L / R, a Main Fader's …), which is left unmeasured on purpose so its ports are re-read. A port's ring changes size on hover / while wiring; `NodePort` re-reads it on `transitionend` so wires end at the ring's edge.
+- **Display nodes carry `measured`.** They are rebuilt from the store on every change (then swapped back for last time's object where nothing changed, `keepSame`); a node without `measured` is new to React Flow, which hides it (`visibility: hidden`) until re-measured on the next frame — a click in that gap lands on the pane (a knob drag used to pan the canvas). `useFlowElements` keeps React Flow's sizes from `onNodesChange` (`dimensions`, `keepSizes`) and hands them back, except for a card whose ports changed (`portLayoutKey`: its outputs — a stereo Aux's L / R, a Main Fader's …), which is left unmeasured on purpose so its ports are re-read. A port's ring changes size on hover / while wiring; `NodePort` re-reads it on `transitionend` so wires end at the ring's edge.
 - The wire preview, reshape-handle and ghost SVGs (`CanvasOverlays`) are absolutely-positioned siblings of the ReactFlow div. Each is a `ViewportLayer`, which uses `useViewport()` to apply the same `translate/scale` transform as the flow canvas, so they stay aligned during pan and zoom.
 - Zoom control labels are translated through ReactFlow's `ariaLabelConfig` prop (`toolbar.zoom*` keys).
 

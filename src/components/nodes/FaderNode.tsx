@@ -6,7 +6,7 @@ import type { FaderTaper } from '../controls/VerticalFader'
 import { StableText } from '../controls/StableText'
 import { VerticalMeterPair } from '../SignalMeter'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { FADER_MIN_DB, FADER_MAX_DB, FADER_MARKS, faderPosition, faderDbAt } from '../../utils/faderTaper'
@@ -30,11 +30,11 @@ const format = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}
 export function FaderNode({ id }: CardProps) {
   const p                = useParams(id, 'fader')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { stages }       = useGraphSignal()
+  const stage            = useStage(id)
   const levels           = useStereoLevels(id)
 
   const faderDb = p('faderDb')
-  const main    = stages[id]?.role === 'main-fader'
+  const main    = stage?.role === 'main-fader'
 
   return (
     <FreeControl

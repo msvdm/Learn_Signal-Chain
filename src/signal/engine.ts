@@ -7,6 +7,7 @@ import type { SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, TAPER_UNITY, getHealth, sumSignalsToDb, taperToDb } from './levels'
 import type { SideResult, StageCondition } from './process'
 import { SPEAKER_LEVEL_DB, balanceSides, panSides, processSide } from './process'
+import { sameShape } from '../utils/sameShape'
 
 // The signal engine: walks the graph in signal order and works out the level at every card and on
 // every wire. What each wire carries (mono, stereo, one side) comes from the graph
@@ -91,12 +92,45 @@ export interface GraphSignalResult {
 // those references lets all callers reuse a single computation per change.
 let lastGraph: { nodes: SignalNode[]; edges: SignalEdge[]; result: GraphSignalResult } | null = null
 
-/** The signal at every card and on every wire (computed once per change of the graph). */
+/**
+ * The signal at every card and on every wire (computed once per change of the graph). A card's
+ * stage and a wire's signal that came out the same as last time are last time's objects, so a
+ * card that reads only its own (useStage) is redrawn only when its own result changed.
+ */
 export function graphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSignalResult {
   if (lastGraph && lastGraph.nodes === nodes && lastGraph.edges === edges) return lastGraph.result
-  const result = computeGraphSignal(nodes, edges)
+  const fresh  = computeGraphSignal(nodes, edges)
+  const result = lastGraph ? keepUnchanged(fresh, lastGraph.result) : fresh
   lastGraph = { nodes, edges, result }
   return result
+}
+
+/** `fresh`, with every stage, wire and hum that equals the one in `before` replaced by that one. */
+function keepUnchanged(fresh: GraphSignalResult, before: GraphSignalResult): GraphSignalResult {
+  let allSame = Object.keys(fresh.stages).length === Object.keys(before.stages).length
+  const stages: Record<string, StageResult> = {}
+  for (const [id, stage] of Object.entries(fresh.stages)) {
+    const old = before.stages[id]
+    const same = old !== undefined && sameShape(old, stage)
+    stages[id] = same ? old : stage
+    allSame &&= same
+  }
+
+  const wires = new Map<string, WireSignal>()
+  let wiresSame = fresh.wires.size === before.wires.size
+  for (const [key, wire] of fresh.wires) {
+    const old = before.wires.get(key)
+    const same = old !== undefined && sameShape(old, wire)
+    wires.set(key, same ? old : wire)
+    wiresSame &&= same
+  }
+
+  const humsSame = sameShape(Object.fromEntries(fresh.hums), Object.fromEntries(before.hums))
+  return {
+    stages: allSame ? before.stages : stages,
+    wires:  wiresSame ? before.wires : wires,
+    hums:   humsSame ? before.hums : fresh.hums,
+  }
 }
 
 function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSignalResult {

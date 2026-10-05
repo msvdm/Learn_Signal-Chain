@@ -4,7 +4,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
 import { EQGraph, type GraphBand } from '../controls/EQGraph'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -220,14 +220,13 @@ function BandCell({ spec, band, onChange }: {
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export function EQNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
   const p                = useParams(id, 'eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const complexityLevel  = useSignalStore((s) => s.complexityLevel)
   const { t }            = useTranslation()
 
   const levels = useStereoLevels(id)
-  const result = stages[id]
+  const result = useStage(id)
   const bands  = getBands(p('bands'))
 
   const updateBand = (i: number, patch: Partial<EQBand>) => {

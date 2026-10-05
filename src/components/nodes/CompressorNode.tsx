@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -14,13 +14,12 @@ import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { compressor } from '../../signal/process'
 
 export function CompressorNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
   const p                = useParams(id, 'comp')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const levels      = useStereoLevels(id)
-  const result      = stages[id]
+  const result      = useStage(id)
   const threshold   = p('thresholdDb')
   const ratio       = p('ratio')
   const makeupGain  = p('makeupGainDb')

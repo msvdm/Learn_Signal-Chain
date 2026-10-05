@@ -2,7 +2,7 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage, useWire } from '../../hooks/useGraphSignal'
 import { formatDb, getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -20,7 +20,6 @@ import { twoColumns } from '../../utils/twoColumns'
  * Ground Lift off) it says "Hum!" where its description was, and the Ground Lift button lights up.
  */
 export function DIBoxNode({ id }: CardProps) {
-  const { stages, wires } = useGraphSignal()
   const p                 = useParams(id, 'di-box')
   const updateNodeParams  = useSignalStore((s) => s.updateNodeParams)
   const { t }             = useTranslation()
@@ -28,9 +27,9 @@ export function DIBoxNode({ id }: CardProps) {
   const text       = t.nodes['di-box']
   const levels     = useStereoLevels(id)
   const groundLift = p('groundLift')
-  const hum        = stages[id]?.hum !== undefined
-  const xlr        = levelOf(wires.get(`${id}:out`))
-  const direct     = levelOf(wires.get(`${id}:${DI_DIRECT_PORT}`))
+  const hum        = useStage(id)?.hum !== undefined
+  const xlr        = levelOf(useWire(`${id}:out`))
+  const direct     = levelOf(useWire(`${id}:${DI_DIRECT_PORT}`))
 
   const output = (name: string, db: number, what: string, main: boolean) => (
     <div style={{ gridColumn: '1 / -1' }}>

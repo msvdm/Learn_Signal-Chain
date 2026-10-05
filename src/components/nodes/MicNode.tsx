@@ -7,7 +7,7 @@ import { OverviewIcon } from './OverviewFace'
 import { FaceNote, WithNote } from './FaceNote'
 import { DullToneIcon } from './icons'
 import { useParams } from '../../hooks/useParams'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
 /**
@@ -20,10 +20,10 @@ export function MicNode({ id, type }: CardProps) {
 
   const typeKey  = type as TypeKey
   const p        = useParams(id, typeKey)
-  const { stages } = useGraphSignal()
+  const stage      = useStage(id)
   const { t }    = useTranslation()
   const levelDb  = typeKey === 'mic' ? p('sensitivityDb') : p('levelDb')
-  const needsDi  = stages[id]?.condition === 'needsDi'
+  const needsDi  = stage?.condition === 'needsDi'
   const Icon     = NODE_LOOK[typeKey].icon
   const label    = useNodeName(id, typeKey)
 

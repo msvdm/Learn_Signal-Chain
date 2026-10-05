@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { ChannelRow } from '../SignalMeter'
@@ -26,11 +26,10 @@ function positionLabel(pos: number): string {
  * Drawn as a bare knob (no card) with a slim L / R meter under it.
  */
 export function PanNode({ id }: CardProps) {
-  const { stages }       = useGraphSignal()
+  const stage            = useStage(id)
   const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
 
-  const stage       = stages[id]
   const panPosition = p('panPosition')
 
   const label = useNodeName(id, 'pan')

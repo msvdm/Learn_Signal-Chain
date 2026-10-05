@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -14,7 +14,6 @@ import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { noiseGate } from '../../signal/process'
 
 export function NoiseGateNode({ id }: CardProps) {
-  const { stages }       = useGraphSignal()
   const p                = useParams(id, 'noise-gate')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -28,7 +27,7 @@ export function NoiseGateNode({ id }: CardProps) {
   const releaseMs  = p('releaseMs')
   const levels     = useStereoLevels(id)
   const inputLevel = levels.inPeak
-  const result     = stages[id]
+  const result     = useStage(id)
   const isOpen     = isFinite(inputLevel) && inputLevel >= threshold
 
   return (

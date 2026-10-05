@@ -1,16 +1,26 @@
 import { useState } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
+import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
 import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
-import { levelOf } from '../../signal/engine'
+import { graphSignal, levelOf } from '../../signal/engine'
+import { graphOf } from '../../graph/graph'
+import type { GraphView } from '../../graph/graph'
 import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
 import { MATRIX_PORT } from '../../data/nodeRegistry'
+import type { SignalEdge } from '../../data/nodeRegistry'
+
+/** The wires plugged into this port. */
+function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source' | 'target'): SignalEdge[] {
+  return type === 'source'
+    ? graphOf(graph).from(nodeId).filter((e) => e.sourceHandle === portId)
+    : graphOf(graph).into(nodeId).filter((e) => e.targetHandle === portId)
+}
 
 interface NodePortProps {
   nodeId: string
@@ -32,40 +42,41 @@ interface NodePortProps {
  *   shows a small L / R letter beside the dot.
  */
 export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
-  const { wires, stages } = useGraphSignal()
-  const edges      = useSignalStore((s) => s.edges)
-  const wireSource = useSignalStore((s) => s.wire?.source ?? null)
   const removeEdge = useSignalStore((s) => s.removeEdge)
-  const nodes      = useSignalStore((s) => s.nodes)
-  const node       = nodes.find((n) => n.id === nodeId)
   const { t }      = useTranslation()
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
   const updateNodeInternals     = useUpdateNodeInternals()
 
-  const connected = type === 'source'
-    ? edges.filter((e) => e.source === nodeId && e.sourceHandle === portId)
-    : edges.filter((e) => e.target === nodeId && e.targetHandle === portId)
+  // Each piece is read on its own, so the port is redrawn only when one of them changes
+  const connected = useSignalStore(useShallow((s) => wiresOn(s, nodeId, portId, type)))
 
-  let ringColor = 'var(--lsc-border)'
-  if (connected.length > 0) {
+  const ringColor = useSignalStore((s) => {
+    const plugged = wiresOn(s, nodeId, portId, type)
+    if (plugged.length === 0) return 'var(--lsc-border)'
+    const { wires, stages } = graphSignal(s.nodes, s.edges)
     // An input holding several wires shows the health of their sum
     const db = type === 'source'
       ? levelOf(wires.get(`${nodeId}:${portId}`))
-      : sumSignalsToDb(connected.map((e) => levelOf(wires.get(`${e.source}:${e.sourceHandle}`))))
+      : sumSignalsToDb(plugged.map((e) => levelOf(wires.get(`${e.source}:${e.sourceHandle}`))))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)
-    const from = type === 'source' ? nodeId : connected[0].source
-    ringColor = healthColor(getHealth(db, stages[from]?.domain))
-  }
+    const from = type === 'source' ? nodeId : plugged[0].source
+    return healthColor(getHealth(db, stages[from]?.domain))
+  })
 
-  const isValidTarget = type === 'target' && wireSource !== null && node !== undefined &&
-    nodeAcceptsWire(node, wireSource, edges, nodes) && portAcceptsWire(node, portId, edges, wireSource)
+  const wiring        = useSignalStore((s) => s.wire !== null)
+  const isValidTarget = useSignalStore((s) => {
+    const node = graphOf(s).node(nodeId)
+    return type === 'target' && s.wire !== null && node !== undefined &&
+      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes) && portAcceptsWire(node, portId, s.edges, s.wire.source)
+  })
 
-  const canUnplug  = type === 'target' && wireSource === null && connected.length > 0
+  const canUnplug  = type === 'target' && !wiring && connected.length > 0
   const showUnplug = canUnplug && (hovered || menuAt !== null)
   // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
   const isSend     = type === 'source' && portId === MATRIX_PORT
-  const side       = isSend ? 'L+R' : type === 'source' ? sideLetter(wires.get(`${nodeId}:${portId}`)?.kind) : null
+  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
+  const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + index * PORT_GAP
 
   function unplug(e: React.MouseEvent) {

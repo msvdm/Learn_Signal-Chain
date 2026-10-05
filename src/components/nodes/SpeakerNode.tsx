@@ -5,7 +5,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { FaceNote, WithNote } from './FaceNote'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
 const Icon = NODE_LOOK.speaker.icon
@@ -16,10 +16,10 @@ const Icon = NODE_LOOK.speaker.icon
  * and the card says so (crossed-out speaker + a note). A hum from a DI Box ground loop shows too.
  */
 export function SpeakerNode({ id }: CardProps) {
-  const { stages } = useGraphSignal()
+  const stage      = useStage(id)
   const { t }      = useTranslation()
-  const needsAmp   = stages[id]?.condition === 'needsAmp'
-  const hum        = stages[id]?.hum !== undefined
+  const needsAmp   = stage?.condition === 'needsAmp'
+  const hum        = stage?.hum !== undefined
 
   return (
     <NodeWrapper

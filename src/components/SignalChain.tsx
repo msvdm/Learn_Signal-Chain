@@ -32,10 +32,17 @@ import { useGroupActions }      from '../hooks/useGroupActions'
 import { useCanvasShortcuts }   from '../hooks/useCanvasShortcuts'
 import { usePaletteDrop }       from '../hooks/usePaletteDrop'
 import { useFlowElements }      from '../hooks/useFlowElements'
+import { useStableHandlers }    from '../hooks/useStableHandlers'
 import { GRID, nodeDims }       from '../utils/layoutHelpers'
 import type { Pt }              from '../utils/geometry'
 
 const edgeTypes = { chain: ChainEdge }
+
+// Handed to React Flow as the same objects on every render: a new one would make it redraw the cards
+const NODE_ORIGIN: [number, number] = [0, 0]
+const PAN_MIDDLE_BUTTON = [1]
+const PRO_OPTIONS = { hideAttribution: false }
+const FLOW_STYLE = { background: 'var(--lsc-canvas)' }
 
 // Overview: zoomed out this far, cards show only their name and output level. Two thresholds
 // (hysteresis), so a zoom resting near the boundary never flips the cards back and forth.
@@ -100,14 +107,38 @@ export function SignalChain() {
     else if (overview && zoom > OVERVIEW_LEAVE_ZOOM) setOverview(false)
   }, [zoom, overview, setOverview, capturing])
 
-  // Selection from React Flow's box, measured card sizes (a card dropped onto a wire then makes room)
-  function onNodesChange(changes: NodeChange[]) {
-    clicks.selectFromBox(changes)
-    flow.keepSizes(changes)
-    for (const c of changes) {
-      if (c.type === 'dimensions' && c.dimensions) drop.onMeasured(c.id, c.dimensions)
-    }
-  }
+  // What React Flow calls back, as functions that never change: it passes the node handlers on to
+  // every card, and a new function would redraw them all on every change
+  const handlers = useStableHandlers({
+    onDrop:          drop.onDrop,
+    onDragOver:      drop.onDragOver,
+    onNodeClick:     clicks.onNodeClick,
+    onNodeDragStart: clicks.onNodeDragStart,
+    onNodeDrag:      drag.onNodeDrag,
+    onNodeDragStop:  drag.onNodeDragStop,
+    onPaneClick:     clicks.onPaneClick,
+    // Selection from React Flow's box, measured card sizes (a card dropped onto a wire then makes room)
+    onNodesChange: (changes: NodeChange[]) => {
+      clicks.selectFromBox(changes)
+      flow.keepSizes(changes)
+      for (const c of changes) {
+        if (c.type === 'dimensions' && c.dimensions) drop.onMeasured(c.id, c.dimensions)
+      }
+    },
+    onNodeContextMenu: (e: React.MouseEvent, node: { id: string }) => {
+      // (A right-click while drawing a wire never gets here: it only cancels the wire)
+      e.preventDefault()
+      // Part of a selection: the menu acts on all of it. Otherwise this element becomes the selection.
+      const selected = useSignalStore.getState().selectedNodeIds
+      const targets  = selected.includes(node.id) ? selected : [node.id]
+      if (!selected.includes(node.id)) setSelectedNode(node.id)
+      setNodeMenu({ nodeId: node.id, targets, x: e.clientX, y: e.clientY })
+    },
+    onPaneContextMenu: (e: React.MouseEvent | MouseEvent) => {
+      e.preventDefault()
+      setCanvasMenu({ x: e.clientX, y: e.clientY, at: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
+    },
+  })
 
   // Zoom control tooltips follow the app language
   const ariaLabelConfig = useMemo(() => ({
@@ -142,39 +173,19 @@ export function SignalChain() {
         nodesConnectable={false}
         elementsSelectable={canEdit}
         // Select tool: dragging empty space draws a selection box (the middle button still pans)
-        panOnDrag={toolMode !== 'select' ? false : leftTool === 'select' ? [1] : true}
+        panOnDrag={toolMode !== 'select' ? false : leftTool === 'select' ? PAN_MIDDLE_BUTTON : true}
         selectionOnDrag={canEdit && leftTool === 'select'}
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={null}
-        nodeOrigin={[0, 0]}
+        nodeOrigin={NODE_ORIGIN}
         fitView={startsFilled}
         fitViewOptions={fitViewOptions}
         minZoom={0.15}
         maxZoom={2}
-        proOptions={{ hideAttribution: false }}
+        proOptions={PRO_OPTIONS}
         ariaLabelConfig={ariaLabelConfig}
-        style={{ background: 'var(--lsc-canvas)' }}
-        onDrop={drop.onDrop}
-        onDragOver={drop.onDragOver}
-        onNodeClick={clicks.onNodeClick}
-        onNodeDragStart={clicks.onNodeDragStart}
-        onNodeDrag={drag.onNodeDrag}
-        onNodeDragStop={drag.onNodeDragStop}
-        onNodesChange={onNodesChange}
-        onNodeContextMenu={(e, node) => {
-          // (A right-click while drawing a wire never gets here: it only cancels the wire)
-          e.preventDefault()
-          // Part of a selection: the menu acts on all of it. Otherwise this element becomes the selection.
-          const selected = useSignalStore.getState().selectedNodeIds
-          const targets  = selected.includes(node.id) ? selected : [node.id]
-          if (!selected.includes(node.id)) setSelectedNode(node.id)
-          setNodeMenu({ nodeId: node.id, targets, x: e.clientX, y: e.clientY })
-        }}
-        onPaneContextMenu={(e) => {
-          e.preventDefault()
-          setCanvasMenu({ x: e.clientX, y: e.clientY, at: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
-        }}
-        onPaneClick={clicks.onPaneClick}
+        style={FLOW_STYLE}
+        {...handlers}
       >
         {snapToGrid && (
           <Background

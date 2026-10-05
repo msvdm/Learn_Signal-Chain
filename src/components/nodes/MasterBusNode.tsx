@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/shallow'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ChannelRow, SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
@@ -13,7 +14,9 @@ import type { SignalEdge, TypeKey } from '../../data/nodeRegistry'
 import { matrixSendParam } from '../../data/nodeRegistry'
 import { matrixSendKey } from '../../graph/queries'
 import { useParams } from '../../hooks/useParams'
-import { SILENT_WIRE, levelOf } from '../../signal/engine'
+import { SILENT_WIRE, graphSignal, levelOf } from '../../signal/engine'
+import { graphOf } from '../../graph/graph'
+import type { GraphView } from '../../graph/graph'
 import { TAPER_UNITY } from '../../signal/levels'
 import { chainSourcesOfEdge } from '../../utils/chainColors'
 import { nodeName } from '../../utils/nodeName'
@@ -24,20 +27,21 @@ import { nodeName } from '../../utils/nodeName'
  * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
-export function MasterBusNode({ id, type }: CardProps) {
-  const { stages } = useGraphSignal()
-  const nodes         = useSignalStore((s) => s.nodes)
-  const allEdges      = useSignalStore((s) => s.edges)
-  const incomingEdges = useMemo(() => allEdges.filter((e) => e.target === id), [allEdges, id])
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
-  const { t, fmt }    = useTranslation()
+const NO_GRAPH: GraphView = { nodes: [], edges: [] }
 
+export function MasterBusNode({ id, type }: CardProps) {
   const typeKey  = type as TypeKey
   const isAux    = typeKey === 'aux-bus'
   const isMatrix = typeKey === 'matrix-bus'
+
+  const result        = useStage(id)
+  const incomingEdges = useSignalStore(useShallow((s) => graphOf(s).into(id)))
+  // Only the Matrix Bus needs the whole graph (the buses feeding it, their names and chains)
+  const { nodes, edges: allEdges } = useSignalStore(useShallow((s): GraphView => isMatrix ? { nodes: s.nodes, edges: s.edges } : NO_GRAPH))
+  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
+  const { t, fmt }    = useTranslation()
   const p        = useParams(id, typeKey)
-  const result   = stages[id]
   const out      = result?.out ?? SILENT_WIRE
   const level    = levelOf(out)
   const stereo   = result ? out.kind === 'stereo' : !isAux
@@ -93,7 +97,7 @@ export function MasterBusNode({ id, type }: CardProps) {
                     ))}
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' }}>
-                    {nodeName(t, from, from && stages[from.id])}
+                    {nodeName(t, from, from && graphSignal(nodes, allEdges).stages[from.id])}
                   </span>
                 </span>
                 <KnobControl

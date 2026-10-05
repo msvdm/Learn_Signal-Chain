@@ -6,7 +6,7 @@ import { OverviewIcon } from './OverviewFace'
 import { KnobControl } from '../controls/KnobControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 import { FaceNote, WithNote } from './FaceNote'
 
@@ -35,12 +35,12 @@ function BlownSpeakerIcon() {
 export function ActiveSpeakerNode({ id }: CardProps) {
   const p                = useParams(id, 'active-speaker')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { stages }       = useGraphSignal()
+  const stage            = useStage(id)
   const { t }            = useTranslation()
 
   const volumeDb = p('volumeDb')
-  const blown    = stages[id]?.condition === 'blown'
-  const hum      = stages[id]?.hum !== undefined
+  const blown    = stage?.condition === 'blown'
+  const hum      = stage?.hum !== undefined
 
   return (
     <NodeWrapper

@@ -3,7 +3,7 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -44,13 +44,12 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
  * in the same space. The right side copies the left until it is first touched.
  */
 export function GraphicEQNode({ id }: CardProps) {
-  const { stages }       = useGraphSignal()
   const p                = useParams(id, 'graphic-eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const levels = useStereoLevels(id)
-  const result = stages[id]
+  const result = useStage(id)
   const stereo = levels.stereo
   const left   = GEQ_CENTERS.map((_, i) => p(`b${i}`))
   const right  = GEQ_CENTERS.map((_, i) => p(`r${i}`) ?? left[i])

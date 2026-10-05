@@ -12,11 +12,17 @@ import { wirePassesThroughNode } from '../utils/wireValidation'
 import { chainOfEdge } from '../utils/chainColors'
 import type { ChainEdgeData } from '../components/ChainEdge'
 import { useGraphSignal } from './useGraphSignal'
+import { keepSame } from '../utils/sameShape'
 
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
 const OVERVIEW_WIRE_WIDTH = 8
 
 type MeasuredSize = { width: number; height: number; ports: string }
+
+// What React Flow was handed last time: a card or wire that comes out the same is handed over as the
+// same object, and React Flow does not redraw it (one canvas, so one of each)
+const lastFlowNodes = new Map<string, FlowNode>()
+const lastFlowEdges = new Map<string, Edge>()
 
 /**
  * What a card's outputs are (a stereo Aux's L / R, a bus or fader taken over by a Main Fader …;
@@ -64,12 +70,14 @@ export function useFlowElements() {
     }
   }, [highlightEdgeIds, graphEdges])
 
-  // These objects are rebuilt on every store change. Without `measured`, React Flow treats each
-  // rebuilt node as new: it hides the card until it is measured again on the next frame, and a
-  // click in that gap lands on the pane (a knob drag would pan the canvas instead).
-  // A card whose ports changed is left unmeasured on purpose, so React Flow re-reads its ports.
+  // These objects are rebuilt on every store change; the ones that come out the same are swapped
+  // back for last time's (keepSame), so React Flow redraws only the cards that changed. A rebuilt
+  // card is handed over with its `measured` size: without it React Flow hides the card until it is
+  // measured again on the next frame, and a click in that gap lands on the pane (a knob drag would
+  // pan the canvas instead). A card whose ports changed is left unmeasured on purpose, so React Flow
+  // re-reads its ports.
   const nodes: FlowNode[] = useMemo(
-    () =>
+    () => keepSame(lastFlowNodes,
       graphNodes.map((node) => {
         const size = measuredSizes[node.id]
         return {
@@ -83,7 +91,7 @@ export function useFlowElements() {
           className: highlight && !highlight.nodeIds.has(node.id) ? 'lsc-dimmed' : undefined,
           data:      {},
         }
-      }),
+      })),
     [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes]
   )
 
@@ -107,7 +115,7 @@ export function useFlowElements() {
       return wirePassesThroughNode(points, cards, [edge.source, edge.target])
     }
 
-    return graphEdges.map((edge) => {
+    return keepSame(lastFlowEdges, graphEdges.map((edge): Edge => {
       const sourceStage = stages[edge.source]
       const key         = `${edge.source}:${edge.sourceHandle}`
       const db          = levelOf(wires.get(key) ?? sourceStage?.out)
@@ -142,7 +150,7 @@ export function useFlowElements() {
         },
         data,
       }
-    })
+    }))
   }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes])
 
   return { nodes, edges, keepSizes }

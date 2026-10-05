@@ -1,7 +1,7 @@
 import type { NodePort as Port, TypeKey } from '../../data/nodeRegistry'
 import { availableAt } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { formatDb, humStrength } from '../../signal/levels'
 import { useTranslation } from '../../i18n/useTranslation'
 import { portName } from '../../utils/nodeName'
@@ -59,8 +59,7 @@ export function WireTargetBadge({ label }: { label: string }) {
  */
 export function HumTag({ nodeId, overview }: { nodeId: string; overview: boolean }) {
   const { t }      = useTranslation()
-  const { stages } = useGraphSignal()
-  const stage      = stages[nodeId]
+  const stage      = useStage(nodeId)
   if (stage?.hum === undefined) return null
 
   const size = Math.round((overview ? 28 : 12) * (1 + humStrength(stage.hum)))

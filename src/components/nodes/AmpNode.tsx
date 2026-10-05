@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { useSignalStore } from '../../store/signalStore'
@@ -15,13 +15,12 @@ import { useParams } from '../../hooks/useParams'
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
 export function AmpNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
   const p                   = useParams(id, 'amp')
   const updateNodeParams    = useSignalStore((s) => s.updateNodeParams)
   const { t }               = useTranslation()
 
   const levels = useStereoLevels(id)
-  const result = stages[id]
+  const result = useStage(id)
   const gainDb  = Math.min(p('gainDb'), 0)
   const gainDbR = Math.min(p('gainDbR') ?? gainDb, 0)
   // Fed a stereo wire it is a two-channel amp: a Volume knob for each side

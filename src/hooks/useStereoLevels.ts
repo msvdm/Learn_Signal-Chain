@@ -1,4 +1,4 @@
-import { useGraphSignal } from './useGraphSignal'
+import { useStage } from './useGraphSignal'
 import { SILENT_WIRE, levelOf } from '../signal/engine'
 
 /**
@@ -9,7 +9,7 @@ import { SILENT_WIRE, levelOf } from '../signal/engine'
  * `inPeak` is the louder input side — what a linked stereo compressor or gate reacts to.
  */
 export function useStereoLevels(id: string) {
-  const stage    = useGraphSignal().stages[id]
+  const stage    = useStage(id)
   const arriving = stage?.in ?? SILENT_WIRE
   const leaving  = stage?.out ?? SILENT_WIRE
   const stereoIn = arriving.kind === 'stereo'

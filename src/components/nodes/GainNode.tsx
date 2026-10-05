@@ -5,7 +5,7 @@ import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { widestFormat } from '../../utils/readout'
 
@@ -24,9 +24,9 @@ const formatGain   = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v > 0 ? '+
 export function GainNode({ id }: CardProps) {
   const p                = useParams(id, 'gain')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { stages }       = useGraphSignal()
+  const stage            = useStage(id)
 
-  const preamp = stages[id]?.role === 'preamp'
+  const preamp = stage?.role === 'preamp'
   const label  = useNodeName(id, 'gain')
 
   const knob = preamp

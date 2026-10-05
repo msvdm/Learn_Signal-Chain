@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -13,7 +13,6 @@ import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
 
 export function DeesserNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
   const p                = useParams(id, 'deesser')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -21,7 +20,7 @@ export function DeesserNode({ id }: CardProps) {
   const threshold  = p('thresholdDb')
   const frequency  = p('frequencyHz')
   const levels     = useStereoLevels(id)
-  const result     = stages[id]
+  const result     = useStage(id)
   const gr         = result?.gainReductionDb ?? 0
   const isActive   = gr > 0.1
 

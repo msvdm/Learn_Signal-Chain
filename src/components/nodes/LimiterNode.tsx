@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
-import { useGraphSignal } from '../../hooks/useGraphSignal'
+import { useStage } from '../../hooks/useGraphSignal'
 import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -14,7 +14,6 @@ import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { limiter } from '../../signal/process'
 
 export function LimiterNode({ id }: CardProps) {
-  const { stages }          = useGraphSignal()
   const p                = useParams(id, 'limiter')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
@@ -22,7 +21,7 @@ export function LimiterNode({ id }: CardProps) {
   const ceiling       = p('thresholdDb')
   const makeupGain    = p('makeupGainDb')
   const levels        = useStereoLevels(id)
-  const result        = stages[id]
+  const result        = useStage(id)
   const gainReduction = result?.gainReductionDb ?? 0
   const limiting      = gainReduction > 0
 
