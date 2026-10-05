@@ -33,11 +33,12 @@ here. Update CLAUDE.md when a step changes what it describes.
 - **D4 — Clipping is judged on the peaks**: the bar (average) keeps today's colours, but a card
   clips as soon as its peaks reach the clip level. A drum sound at +10 dBu average now clips,
   where today it is only "hot". That is the lesson.
-- **D5 — open (follows from D3 + D4):** at Beginner nobody sees the peaks, but D4 still makes a
-  card red when they clip — so a voice turns red about 12 dB earlier than today, with no mark
-  explaining why. Proposed: keep it (a red bar means "too loud", which is true, and the help text
-  can say "the loudest moments are clipping"). The alternative is judging Beginner on the
-  average as today, which makes the engine depend on the level.
+- **D5 — Beginner clips on the peaks too** (decided 2026-10-05, after step 3): at Beginner nobody
+  sees the peaks, but D4 still makes a card red when they clip — a voice turns red at about
+  +8 dBu average instead of +20, with no peak mark. Kept: red means "this distorts", which is
+  true; the card's note / help text says "the loudest moments are clipping — turn it down". The
+  engine works the same at every level (no level in the maths). Rejected: judging Beginner on the
+  average as today — it calls a distorting signal fine, and the engine would depend on the level.
 
 ---
 
@@ -132,6 +133,8 @@ Bun is not installed on this machine, so `npm run test:node` runs the same files
 `bun:test` for `test/bun-test.ts`, a ~60-line stand-in on `node:test` with only the matchers the
 tests use (Bun's meaning: `toEqual` skips undefined fields, `toBeCloseTo` to 2 decimals). CI runs
 the real `bun test` (build-check.yml). `tsconfig.test.json` type-checks the tests in `tsc -b`.
+Checked once with real Bun too (`npx bun@1.4.2 test`, an 86 MB download into npm's cache): 201
+pass, 0 fail — the stand-in and Bun agree.
 
 Checked that the tests bite: adding signals as power instead of voltage fails 14 of them. Writing
 the tables found two stale lines in CLAUDE.md (HPF and EQ were described as a placeholder / a plain
@@ -154,7 +157,8 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
   (the gap shrinks) and its makeup gain lifts the noise; a gate closes in the pauses, so the
   noise drops by its Range when the threshold sits between the noise and the signal; a limiter
   caps the peaks.
-- Health (decision D4): clipping from the peaks; the rest from the average as today.
+- Health (decision D4): clipping from the peaks; the rest from the average as today — at every
+  level, Beginner too (D5).
 - Signal-to-noise = average − noise. Headroom = clip level − peak.
 - Pick the noise numbers so that a well-set chain ends near 60 dB signal-to-noise and the
   classic mistake (preamp 30 dB too low, made up later with a fader / gain) loses at least 20 dB.
