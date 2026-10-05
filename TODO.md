@@ -415,7 +415,70 @@ Original plan:
 
 ## Step B — the signal moves
 
-## 10. The time engine
+## ~~10. The time engine~~ — done (2026-10-05), one decision open (D6, below)
+
+- **The engine split in two** (`signal/engine.ts`): `planChain` — what the wiring makes of each card,
+  once per change (its mode, the wires it adds up, what its outputs carry, Preamp, role …) — and
+  `runChain` — the levels at one moment. The still picture is `runChain` once; the time engine runs
+  it every millisecond with a `Moment` that changes only two things: what the sources play and how
+  the dynamics react. Every other card is the same code, so the two pictures cannot drift apart.
+  The 323 old tests pass unchanged (one rule moved without changing a number: an active speaker
+  after an amplifier blows as soon as anything reaches it — its noise in a pause too).
+- **The sounds** (`signal/sounds.ts`): one loop of 4 s (two bars at 120 BPM) per sound, a level and
+  its peaks every millisecond, built from a fixed list of hits — a voice (two phrases of syllables,
+  pauses after each), keys (chords and a melody, never silent), drums (kick, snare, hi-hats),
+  a guitar (a pluck a beat), and the Generator's sine (steady), noise (wandering, from a seeded
+  random generator) and clicks (a 10 ms burst a beat, silence between). Each is tuned: average 0 dB
+  over the loop, its loudest moment exactly the still picture's peaks (12 / 18 / 15 / 3 / 12 / 18),
+  and every sound's loudest moment on the first beat, so on a bus the peaks meet as the still
+  picture adds them. Repeatable: the same chain plays the same every time.
+- **The time engine** (`signal/time.ts`): `startTime(nodes, edges)` → `tick()` (the next millisecond),
+  `dynamicsOf(id)` (a compressor's reduction, a gate open / holding), `update(nodes, edges)` (a knob
+  turned while it plays: the sound and the dynamics carry on). Dynamics react over time: a compressor
+  moves toward its curve with its Attack / Release, a gate opens while over the threshold and for
+  Hold after (opening takes Attack, closing Release), a limiter catches peaks at once and lets go
+  over 50 ms, a de-esser like a quick compressor (1 / 50 ms). `measureChain()` measures what leaves
+  each card over a loop; the noise comes from a second run with the music silent — "what you hear
+  when the music stops", as the still picture means it.
+- **Agreement** (`time.test.ts`, 33 tests): over a loop, every card of 12 reference chains has the
+  still picture's peak, average, noise and hum to 0.005 dB — channel strip, the Preamp too low and
+  made up later, stereo bus with Pan / Balance / Main Fader, a DI ground loop (the hum), a mic on a
+  Guitar Amp, ADC / DAC / amp / passive speakers, Pre / Post, Aux and Matrix Bus, the Generator,
+  drums, two voices on a bus. Only close: different sounds on one bus (they do not rise and fall
+  together — the peaks exact, the average up to 1 dB lower, 0.55 dB for voice + keys + guitar + sine),
+  clipping (moments above the clip level lose power: the peaks as the still picture, the average
+  lower), a gate between the noise and the music (exact noise, the music within 0.1 dB).
+- **Attack, Release and Hold finally do something** (tests): a compressor gets 63 % of the way in its
+  Attack time and lets go to 37 % in its Release time; a slow Attack lets the start of each drum hit
+  through (6 dB and more higher peaks than 1 ms); a gate stays open for exactly its Hold, then closes
+  over its Release, and opens within its Attack; a limiter's peaks never pass its ceiling, not for
+  one millisecond. The tests bite: an engine ignoring Attack fails 4, sounds 0.05 dB off fail 19.
+- **Speed**: 0.67 µs per card per millisecond — the 75-card stress chain of step 1 takes 5 % of one
+  core here (Bun). Two cheap fixes on the way, for the still picture too: the filters' level
+  changes (a pink-noise sweep) are worked out once per setting (`levelChange`), and the level sums
+  use plain loops. Weak devices: step 13.
+
+Checked in the browser: the app works as before on the split engine (an Advanced chain with
+compressor, gate, stereo Line In and Pan: the same readings; an HPF knob change moves the level and
+back), no console errors. The time engine is not drawn yet (step 11).
+
+**D6 — open: dynamics in the two pictures.** The still picture puts each reading through a dynamics
+card's curve on its own; no real compressor can do that — it gives one gain to the whole moment. So
+after a compressor or de-esser the moving peaks come out higher than the still ones (voice, default
+2:1 at −20, Attack 10 ms: +9.7 dB; 4:1 at −30: +21 dB; drums: +19 dB; even with a 1 ms Attack:
++6 dB) and the average 1–2 dB lower; a limiter's peaks agree but its average drops (a voice it
+catches: −6 dB). Step 11 would show it: after a compressor the peak-hold mark well above "Peaks …
+above the average". Options:
+  - (a) Keep both: the still picture is the curve "as if it reacted at once", the moving one the
+    real thing — and say so on the card (Attack lets the start of each hit through).
+  - (b) The cards' readings after a dynamics card come from the moving picture (measured over a
+    loop): they never disagree, and Attack / Release change the readings too. Costs: ~0.1 s per
+    change for a 10-card chain (needs speeding up or a worker); step 7's marks and step 9's
+    texts ("12 in, about 6 out") change with it.
+  - (c) The moving picture copies the still one (each reading its own gain with its own Attack /
+    Release): not how a compressor works, and the average still 1–5 dB off on drums.
+
+Original plan:
 
 - Pure, testable, no drawing: every source plays its sound as a level that changes over time
   (sine = steady, click = short pulses on a beat, drums = sharp attack and decay, voice = phrases with

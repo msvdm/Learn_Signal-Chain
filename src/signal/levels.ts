@@ -55,6 +55,7 @@ export function louder(a: SideLevels, b: SideLevels): SideLevels {
 
 /** Sides added together: the music as voltages (+6 dB for two equal ones), the noise as noise (+3 dB). */
 export function sumSides(sides: SideLevels[]): SideLevels {
+  if (sides.length === 1) return sides[0]
   return {
     peak:  sumSignalsToDb(sides.map((s) => s.peak)),
     rms:   sumSignalsToDb(sides.map((s) => s.rms)),
@@ -132,12 +133,24 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
   return `${db >= 0 ? '+' : ''}${db.toFixed(1)} ${unit}`
 }
 
+/** `dbs` added as amplitudes (`per` 20) or powers (10). Silent ones add nothing; one alone comes out exactly as it went in. */
+function sumDb(dbs: number[], per: number): number {
+  // Plain loops: the time engine adds up every bus a thousand times a second
+  let only = -Infinity
+  let count = 0
+  let sum = 0
+  for (const db of dbs) {
+    if (!isFinite(db)) continue
+    only = db
+    count++
+    sum += Math.pow(10, db / per)
+  }
+  return count <= 1 ? only : per * Math.log10(sum)
+}
+
 /** Signals added together (voltages: two identical signals give +6 dB). Silent ones add nothing. */
 export function sumSignalsToDb(dbs: number[]): number {
-  const finite = dbs.filter((db) => isFinite(db))
-  if (finite.length === 0) return -Infinity
-  const linearSum = finite.reduce((acc, db) => acc + Math.pow(10, db / 20), 0)
-  return 20 * Math.log10(linearSum)
+  return sumDb(dbs, 20)
 }
 
 /**
@@ -145,9 +158,7 @@ export function sumSignalsToDb(dbs: number[]): number {
  * lines up). Silent ones add nothing; one alone comes out exactly as it went in.
  */
 export function sumNoiseToDb(dbs: number[]): number {
-  const finite = dbs.filter((db) => isFinite(db))
-  if (finite.length <= 1) return finite[0] ?? -Infinity
-  return 10 * Math.log10(finite.reduce((acc, db) => acc + Math.pow(10, db / 10), 0))
+  return sumDb(dbs, 10)
 }
 
 /** Knob position of unity (0 dB) on an audio-taper knob. */

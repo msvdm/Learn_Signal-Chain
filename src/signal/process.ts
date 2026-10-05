@@ -190,6 +190,20 @@ export const deesser = (thresholdDb: number): Transfer => (input) => {
   return { out: input - gainReductionDb, gainReductionDb }
 }
 
+/**
+ * A filter's level change, worked out once per setting: it samples the whole frequency range, and
+ * the time engine (signal/time.ts) asks a thousand times a second. A card's params are replaced,
+ * never changed in place, so they key it.
+ */
+const levelChanges = new WeakMap<object, Map<string, number>>()
+function levelChange(node: SignalNode, key: string, work: () => number): number {
+  let known = levelChanges.get(node.params)
+  if (!known) levelChanges.set(node.params, known = new Map())
+  let db = known.get(key)
+  if (db === undefined) known.set(key, db = work())
+  return db
+}
+
 /** What one type does to one channel (`input` already carries the card's own hiss). */
 type Process = (node: SignalNode, input: SideLevels, ctx: SideContext) => SideResult
 
@@ -254,15 +268,18 @@ const PROCESS: Record<TypeKey, Process> = {
     const gainDb = Math.min(raw, 0)
     return pass(shifted(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb), ctx)
   }),
-  hpf: (node, input, ctx) => pass(shifted(input, hpfLevelChange(param(node, 'cutoffHz'))), ctx),
-  eq:  (node, input, ctx) => pass(shifted(input, eqLevelChange(param(node, 'bands'))), ctx),
+  hpf: (node, input, ctx) =>
+    pass(shifted(input, levelChange(node, 'hpf', () => hpfLevelChange(param(node, 'cutoffHz')))), ctx),
+  eq: (node, input, ctx) =>
+    pass(shifted(input, levelChange(node, 'eq', () => eqLevelChange(param(node, 'bands')))), ctx),
   'graphic-eq': (node, input, ctx) => {
     // In stereo the right side has its own sliders (r0…r30); untouched, they copy the left
-    const gains = GEQ_CENTERS.map((_, i) => {
+    const right = ctx.side === 'r'
+    const db = levelChange(node, right ? 'r' : 'l', () => graphicEqLevelChange(GEQ_CENTERS.map((_, i) => {
       const left = param(node, `b${i}`)
-      return ctx.side === 'r' ? (param(node, `r${i}`) ?? left) : left
-    })
-    return pass(shifted(input, graphicEqLevelChange(gains)), ctx)
+      return right ? (param(node, `r${i}`) ?? left) : left
+    })))
+    return pass(shifted(input, db), ctx)
   },
   comp: (node, input, ctx) =>
     dynamics(compressor(param(node, 'thresholdDb'), param(node, 'ratio'), param(node, 'makeupGainDb')), input, ctx),
