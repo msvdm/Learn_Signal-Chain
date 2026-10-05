@@ -1,5 +1,6 @@
 import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/nodeRegistry'
 import { initialParams, isTypeKey } from '../data/nodeRegistry'
+import { ONLINE_URL } from '../data/site'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
 import type { NodeGroup } from './nodeGroup'
@@ -169,10 +170,11 @@ export async function readLink(hash: string): Promise<ParsedChain | 'broken' | n
   return (await decodeChain(decodeURIComponent(hash.slice(LINK_PREFIX.length)))) ?? 'broken'
 }
 
-/** A share link that opens this app with the chain. */
+/** A share link that opens this app with the chain — the app online when this is a downloaded copy. */
 export async function shareLink(chain: ChainFile): Promise<string> {
-  const { origin, pathname, search } = window.location
-  return `${origin}${pathname}${search}${LINK_PREFIX}${await encodeChain(chain)}`
+  const { protocol, origin, pathname, search } = window.location
+  const app = protocol === 'file:' ? ONLINE_URL : `${origin}${pathname}${search}`
+  return `${app}${LINK_PREFIX}${await encodeChain(chain)}`
 }
 
 /** A chain from a saved .json file or a picture saved by this app. */

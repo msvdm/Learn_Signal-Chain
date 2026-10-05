@@ -21,6 +21,14 @@ No test suite exists yet. Manual browser testing is the current approach.
 
 The app is a **pure client-side React SPA** — no backend, no API calls. All signal processing is arithmetic on numbers in the browser.
 
+### Offline (no extra packages)
+
+`vite-offline.ts` (a Vite plugin, build only) adds two files to `dist/`:
+- **`sw.js`** — a service worker listing every file of the build (its cache name is a hash of that list). It keeps them all on the first visit; the page itself comes from the network first and falls back to the kept copy, everything else from the copy (file names carry a content hash, so a copy is never stale). `main.tsx` registers it in production over http(s) only. After one visit the site opens with no internet, and browsers offer to install it (`public/manifest.webmanifest`, icons `public/icon*.png` / `icon.svg`).
+- **`learn-signal-chain.html`** (`OFFLINE_FILE`) — the whole app in one file: the script and styles inlined, the icon as a data URI. File → *Download the app…* saves it; double-clicked, it runs from disk. The build fails if the bundle ever has more than one script chunk or a stylesheet loads a file (`url(…)`) — the one-file copy could not hold them.
+
+A copy running from disk (`location.protocol === 'file:'`) hides *Download the app* and makes share links point to `ONLINE_URL` (`src/data/site.ts`). Test the offline parts with the `preview` launch config (production build on port 4173) — the dev server registers no service worker.
+
 ### Interaction model (SmartDraw-style)
 
 The canvas works like a drawing app and **follows the mouse** — there is no mode toolbar and no mode keys:
@@ -118,6 +126,8 @@ Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `sig
 | `src/utils/geometry.ts` | `Pt`, `Size`, `Box` (an element: id, position, size), `Rect`, `rectOf`, `rectsOverlap` (with a clearance) and `segmentTouchesRect` — the shapes and tests every layout helper shares. |
 | `src/utils/fitText.ts` | `fitText()` — the largest font size at which a text fits a box, on one line or two (broken at a space), measured on a cached canvas; `textWidth()`, `cssVar()`. Used by the overview face. |
 | `src/utils/nodeGroup.ts` | Copy / paste / duplicate: `takeGroup()` (a snapshot of elements, the wires between them and their wires out), `cloneGroup()` (fresh ids, Matrix send params remapped, wires into a bus that still takes them), `duplicateOffset()` / `pasteOffset()` / `besideOffset()` (placement clear of other cards, whole grid steps; beside = next to everything on the canvas, for an opened chain). |
+| `src/data/site.ts` | `ONLINE_URL` (where the app lives; share links from a downloaded copy point there), `OFFLINE_FILE` / `OFFLINE_FILE_SAVE_AS` (the one-file download). Plain constants: the build reads it too. |
+| `vite-offline.ts` | The build plugin behind *Offline*: `sw.js` and the one-file copy. |
 | `src/utils/chainFile.ts` | The saved-chain format (`ChainFile`): `toChainFile`, `parseChainFile` (validates, drops unknown types), `chainToGroup`, `encodeChain` / `decodeChain` (deflate-raw + base64url), `shareLink` / `readLink`, `readChainFrom(file)` (.json or PNG), `downloadBlob`, `pickChainFile`, `fileNameOf`. |
 | `src/utils/pngText.ts` | `addPngText` / `readPngText` — a `tEXt` chunk in a PNG (CRC-32), so a saved picture carries its chain. |
 | `src/utils/twoColumns.ts` | `twoColumns` (two 170px columns: In meter \| Out meter, then controls \| graph) and `twoColumnCard` (min height so a 398px card is never wider than 3:2). |
@@ -135,7 +145,7 @@ Layers: `data/` (types, registry) ← `graph/` (pure queries and edits) ← `sig
 | `src/i18n/translations.ts` | The `Translations` type, derived from `en.json` (a new key there is typed automatically; `bg.json` must have every key — `satisfies LocaleStrings` in `locales/index.ts` fails the build otherwise, so no `?.` / English fallbacks are needed), `fmt()` for `{placeholder}` strings and `withLevelNames()` (names that change with the level). `palette.items` and `theory` must have every `TypeKey`. |
 | `src/App.tsx` | Header (see above), the `ConfirmDialog` for New / level change and the `NoticeToast`. `ReactFlowProvider` wraps the whole app: the File menu needs React Flow (card sizes, the picture). |
 | `src/hooks/useChainFile.ts` | `useChainFile()` — `saveFile`, `savePicture`, `copyShareLink`, `openChain` / `pickChain` / `readFile` (with notices), `skippedNotice`. |
-| `src/components/FileMenu.tsx` | The header's File menu, its name dialog (Save / picture) and the Ctrl/⌘+S / O keys. |
+| `src/components/FileMenu.tsx` | The header's File menu, its name dialog (Save / picture), *Download the app…* with its explaining dialog, and the Ctrl/⌘+S / O keys. |
 | `src/components/NoticeToast.tsx` | Bottom-centre notice ("Link copied", "This file isn't a saved signal chain…"), gone after 4s (problems 8s). |
 | `src/components/DirectionArrows.tsx` | The ← → ↑ ↓ buttons of Duplicate (node menu) and of the open dialog's "add it beside". |
 | `src/components/SignalChain.tsx` | React Flow canvas: puts the canvas hooks above together, switches the overview from the zoom, resets the camera on a blank canvas, zoom `<Controls>`, `CanvasTools`, the right-click menus' state. |

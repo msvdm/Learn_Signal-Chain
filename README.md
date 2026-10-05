@@ -10,6 +10,11 @@ No installation needed:
 
 Runs entirely in your browser. No account, no backend, no cost.
 
+## Use It Offline
+
+- **Download it:** File → *Download the app…* saves the whole app as one `.html` file. Double-click it and it opens in your web browser — no internet, nothing to install. Put it on a USB stick or a shared drive for a class.
+- **Or just visit once:** after your first visit, your browser keeps a copy, so the link above opens without internet too. Most browsers also offer to install it as an app (an icon on your desktop or home screen).
+
 ## What is it?
 
 Learn Signal Chain lets you drag and connect audio elements on a canvas and watch the signal flow in real time. Every element you add or adjust changes the signal path immediately, with colour-coded feedback showing whether your gain staging is healthy (green), hot (yellow), or clipping (red).

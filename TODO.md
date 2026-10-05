@@ -82,19 +82,29 @@ Checked in the browser: knob drags, card drag (with snapping), right-click menu,
 a bus (two −20 dBu wires → −14 dBu), unplugging from an input's ×, a Fader on a bus's L output
 taking over L / R as Main Fader, undo. No console warnings; lint and build clean.
 
-## 2. Use it offline
+## ~~2. Use it offline~~ — done (2026-10-05), one check left for the user
 
-- **Installable app** (PWA): a web-app manifest and a service worker that stores every file on
-  first visit (`vite-plugin-pwa`). Then the browser offers "Install", and the app opens with no
-  internet — on phones and tablets too. Shows a quiet "new version available — reload" note when
-  the site was updated.
-- **One-file download**: a second build that packs the whole app into a single `.html` file
-  (`vite-plugin-singlefile`). Double-click it — it runs from a USB stick, no internet, no install.
-  File menu → "Download the app" links to it on the GitHub Pages site.
-- Check: share links and File → Open still work offline; nothing loads from another site (fonts,
-  icons are already local).
-- Done when: after one visit, the app opens with the network off (installed and in a tab), and the
-  downloaded file opens from disk in Chrome, Edge, Firefox and Safari.
+No new packages (CI installs with `bun install --frozen-lockfile`, and `bun.lock` cannot be
+updated on this machine): a small build plugin, `vite-offline.ts`, writes both files.
+- **Keeps a copy** (`sw.js` + `public/manifest.webmanifest`): every file of the build is kept on
+  the first visit; the page comes from the network first (so a new release shows at once — no
+  "new version" note needed), the copy when offline. Browsers offer to install it.
+- **One-file download** (`dist/learn-signal-chain.html`, ~820 kB, ~250 kB zipped): script, styles
+  and icon inlined. File → *Download the app…* explains it in a dialog, then saves it as
+  "Learn Signal Chain.html". In that copy the item is hidden and share links point to the site
+  online (`ONLINE_URL`, `src/data/site.ts`).
+- App icon: the header's green radio-waves tile (`public/icon.svg`, PNGs for phones). The old
+  `favicon.svg` was Vite's default logo and is gone.
+
+Checked with the production build (`preview` launch config): the service worker keeps all 10
+files; **with the server shut down the app still opens fully**. (First try failed: the page asks
+for its script and styles as cross-origin requests and the preview server answers
+`Vary: Origin`, so the kept copies never matched — fixed with `ignoreVary`.) The one-file copy
+renders with zero network requests. File menu item and dialog in place.
+
+**Left for the user:** the browser pane cannot open files from disk, so double-click
+`dist/learn-signal-chain.html` once (Chrome / Edge, and Firefox if at hand) and check that it opens
+and works with Wi-Fi off.
 
 ## Step A — the signal carries peak, average and noise
 

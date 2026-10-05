@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { FilePlus, FolderOpen, Save, Link, ImageDown } from 'lucide-react'
+import { FilePlus, FolderOpen, Save, Link, ImageDown, Download } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainFile } from '../hooks/useChainFile'
@@ -10,12 +10,25 @@ import { useDismiss } from '../hooks/useDismiss'
 import { MOD, pressedInside } from '../utils/shortcut'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MenuItem, MenuDivider } from './NodeMenu'
+import { OFFLINE_FILE, OFFLINE_FILE_SAVE_AS } from '../data/site'
 
 type Saving = 'file' | 'picture' | null
 
+/** This is the downloaded one-file copy, opened from disk: it has nothing to download. */
+const isDownloadedCopy = window.location.protocol === 'file:'
+
+/** Save the one-file copy of the app (built next to the site's index.html). */
+function downloadApp() {
+  const a = document.createElement('a')
+  a.href     = `${import.meta.env.BASE_URL}${OFFLINE_FILE}`
+  a.download = OFFLINE_FILE_SAVE_AS
+  a.click()
+}
+
 /**
  * The header's File menu: New (empty canvas), Open…, Save to a file…, Copy a share link,
- * Save as a picture…. Ctrl / ⌘ + S saves and Ctrl / ⌘ + O opens from anywhere.
+ * Save as a picture…, Download the app… (not in the downloaded copy itself). Ctrl / ⌘ + S saves
+ * and Ctrl / ⌘ + O opens from anywhere.
  */
 export function FileMenu({ onNew, buttonStyle }: {
   /** Ask before clearing the canvas (the header's confirm dialog) */
@@ -27,6 +40,7 @@ export function FileMenu({ onNew, buttonStyle }: {
   const chainFile  = useChainFile()
   const [open, setOpen]     = useState(false)
   const [saving, setSaving] = useState<Saving>(null)
+  const [offerApp, setOfferApp] = useState(false)
   const [name, setName]     = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
@@ -107,7 +121,24 @@ export function FileMenu({ onNew, buttonStyle }: {
             icon={<ImageDown size={15} />} label={t.file.picture} disabled={empty}
             onClick={act(() => startSave('picture'))}
           />
+          {!isDownloadedCopy && (
+            <>
+              <MenuDivider />
+              <MenuItem icon={<Download size={15} />} label={t.file.download} onClick={act(() => setOfferApp(true))} />
+            </>
+          )}
         </div>
+      )}
+
+      {offerApp && (
+        <ConfirmDialog
+          title={t.file.downloadTitle}
+          body={t.file.downloadBody}
+          confirmLabel={t.file.downloadConfirm}
+          cancelLabel={t.dialog.cancel}
+          onConfirm={() => { downloadApp(); setOfferApp(false) }}
+          onCancel={() => setOfferApp(false)}
+        />
       )}
 
       {saving && (
