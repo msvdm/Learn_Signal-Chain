@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/nodeRegistry'
-import { initialParams, isTypeKey } from '../data/nodeRegistry'
+import { PARAM_CHOICES, initialParams, isTypeKey } from '../data/nodeRegistry'
 import { ONLINE_URL } from '../data/site'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
@@ -73,9 +73,10 @@ function readParams(typeKey: TypeKey, level: ComplexityLevel, saved: unknown): R
   if (!isObj(saved)) return params
   for (const [key, value] of Object.entries(saved)) {
     const known = params[key]
-    // A value of the wrong kind would break the card — keep the default
-    const ok = known === undefined
-      ? isNum(value) || isStr(value) || typeof value === 'boolean'
+    // A value of the wrong kind (or a word the setting does not know) would break the card — keep the default
+    const choices = PARAM_CHOICES[key]
+    const ok = choices ? isStr(value) && choices.includes(value)
+      : known === undefined ? isNum(value) || isStr(value) || typeof value === 'boolean'
       : Array.isArray(known) ? Array.isArray(value) : typeof value === typeof known
     if (ok) params[key] = value as NodeParamValue
   }

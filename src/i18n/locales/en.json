@@ -123,7 +123,7 @@
   },
   "hum": {
     "tag": "Hum",
-    "tip": "A hum from the DI Box's ground loop rides along with the signal. Every boost after it makes the hum louder, and nothing later in the chain takes it away — only Ground Lift on the DI Box does."
+    "tip": "A hum from the DI Box's ground loop rides along with the signal, like any noise: a boost lifts it with the music, a fader turns both down together — the gap between them stays. Only Ground Lift on the DI Box takes it away."
   },
   "tooltip": {
     "whatIsThis": "What is this?",
@@ -223,6 +223,23 @@
     "instrument": {
       "needsDi": "No DI Box: the high notes get lost"
     },
+    "generator": {
+      "label": "Generator",
+      "sound": "Sound",
+      "level": "Level",
+      "sounds": {
+        "sine": "Sine",
+        "noise": "Noise",
+        "pad": "Chord",
+        "hits": "Hits"
+      },
+      "hints": {
+        "sine": "Sine: a steady test tone. Its loudest moments are only 3 dB above its average — it is the last to clip.",
+        "noise": "Noise: hiss across every pitch. Its loudest moments are about 12 dB above its average, like a voice.",
+        "pad": "Chord: a soft held chord that swells in slowly (a \"pad\" in synth language). Its loudest moments are about 6 dB above its average.",
+        "hits": "Hits: drum-like hits. Each one jumps about 18 dB above the average — at the same level, these clip first."
+      }
+    },
     "noise-gate": {
       "label": "Noise Gate",
       "threshold": "Threshold",
@@ -309,6 +326,15 @@
     "stereo": "Stereo",
     "toggleHint": "Mono = one channel. Stereo = Left and Right travel together on one wire (drawn as a double line)."
   },
+  "character": {
+    "label": "What it picks up",
+    "melodic": "Melodic",
+    "percussive": "Percussive",
+    "hints": {
+      "melodic": "Melodic: a voice, keys, strings. The loudest moments are about 12 dB above the average.",
+      "percussive": "Percussive: drums. Sharp hits jump about 18 dB above the average — at the same level, they reach the clip level sooner."
+    }
+  },
   "ports": {
     "in": "Input",
     "out": "Output",
@@ -369,6 +395,7 @@
       "instrument": "Instrument",
       "di-box": "DI Box",
       "guitar-amp": "Guitar Amp",
+      "generator": "Generator",
       "gain": "Gain",
       "hpf": "High-Pass Filter",
       "eq": "Parametric Equalizer",
@@ -396,12 +423,12 @@
     "mic": {
       "what": "The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.",
       "why": "Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.",
-      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone."
+      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Melodic (a voice) or Percussive (drums). Drum hits jump much further above the average, so they reach the clip level sooner."
     },
     "line-in": {
       "what": "A line input accepts signals that are already at \"line level\" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.",
       "why": "Line-level signals are strong enough to drive mixing and processing gear directly without a preamp. They sit well above the noise floor and well below the clipping point.",
-      "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire."
+      "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire. From Intermediate on, choose what it plays: Melodic (keys, a song) or Percussive (a drum machine). Drum hits jump much further above the average, so they reach the clip level sooner."
     },
     "instrument": {
       "what": "An electric guitar, bass or keyboard. Its signal is stronger than a microphone's (about −30 dBu) but still well below line level.",
@@ -497,6 +524,11 @@
       "what": "A guitar amplifier with its own speaker: it takes a guitar straight in and plays it out loud on stage. Its sound is what a microphone in front of it picks up.",
       "why": "Guitarists shape much of their sound with their amp. To get it to the audience, put a Microphone in front of it (a dotted line: sound through the air, not a cable) and send the microphone to a Preamp like any other.",
       "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too."
+    },
+    "generator": {
+      "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise), a soft held chord (Chord) or drum-like hits (Hits). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around.",
+      "why": "Engineers send a known sound through a chain to check every stage before the musicians arrive. Every sound has loudest moments (its peaks) above its average level, and the gap depends on the sound: about 3 dB for a sine, 18 dB for hits. The meters show the average; the peaks are what clip.",
+      "tip": "Try this: set Sine at +10 dBu — its wire is yellow (hot). Switch to Hits at the same level and the wire turns red: the hits' peaks reach the clip level (+20 dBu) while their average has not moved."
     },
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",

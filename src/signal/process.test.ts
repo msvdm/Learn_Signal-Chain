@@ -276,6 +276,37 @@ describe('sources: their peaks above the average, their noise below it', () => {
     expect(levels('instrument', SILENT)).toEqual(sig(-15, -30, -100))
   })
 
+  it('set to Percussive, a microphone or Line Input picks up drums: peaks 18 dB up, the same average and noise', () => {
+    expect(levels('mic', SILENT, { character: 'percussive' }, { fed: false })).toEqual(sig(-42, -60, -126))
+    expect(levels('line-in', SILENT, { character: 'percussive' })).toEqual(sig(8, -10, -90))
+    expect(levels('line-in', SILENT, { character: 'melodic' })).toEqual(sig(2, -10, -90))
+  })
+
+  it('a percussive microphone in front of a Guitar Amp hears the guitar: the amp decides the peaks', () => {
+    expect(levels('mic', sig(-15, -30, -80), { character: 'percussive' }).peak).toBe(-45)
+  })
+
+  it('a Generator: its sound at its level (0 dBu), its noise 90 dB down', () => {
+    expect(levels('generator', SILENT)).toEqual(sig(3, 0, -90))
+    expect(levels('generator', SILENT, { levelDb: -20 })).toEqual(sig(-17, -20, -110))
+  })
+
+  it('each Generator sound has its own peaks: a sine 3 dB up, a chord 6, noise 12, hits 18', () => {
+    const peakAbove = (sound: string) => {
+      const out = levels('generator', SILENT, { sound })
+      return out.peak - out.rms
+    }
+    expect(peakAbove('sine')).toBe(3)
+    expect(peakAbove('pad')).toBe(6)
+    expect(peakAbove('noise')).toBe(12)
+    expect(peakAbove('hits')).toBe(18)
+  })
+
+  it('hits at +10 dBu would peak at +28: flattened at the clip level, where a sine passes', () => {
+    expect(levels('generator', SILENT, { sound: 'hits', levelDb: 10 })).toEqual(sig(20, 10, -80))
+    expect(levels('generator', SILENT, { sound: 'sine', levelDb: 10 })).toEqual(sig(13, 10, -80))
+  })
+
   it('a microphone in front of a Guitar Amp: what the amp plays, at mic level, and the room on top', () => {
     const heard = levels('mic', sig(-15, -30, -80))
     expect(heard.peak).toBe(-45)

@@ -21,6 +21,7 @@ import { DeesserNode }        from './DeesserNode'
 import { RelayNode }          from './RelayNode'
 import { PanNode }            from './PanNode'
 import { AdcDacNode }         from './AdcDacNode'
+import { GeneratorNode }      from './GeneratorNode'
 
 /**
  * What each type is drawn as on the canvas (React Flow's `nodeTypes`). Defined once, outside any
@@ -30,6 +31,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   mic:               MicNode,
   'line-in':         MicNode,
   instrument:        MicNode,
+  generator:         GeneratorNode,
   'di-box':          DIBoxNode,
   'guitar-amp':      GuitarAmpNode,
   gain:              GainNode,

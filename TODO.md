@@ -200,12 +200,41 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
   classic mistake (preamp 30 dB too low, made up later with a fader / gain) loses at least 20 dB.
   Tests for both.
 
-## 5. Sources: the Generator and the Melodic / Percussive switch
+## ~~5. Sources: the Generator and the Melodic / Percussive switch~~ — done (2026-10-05)
 
-- Decision D2 / D3. A Generator element (Sine / Noise / Pad / Hits, a level knob), Intermediate
-  and up. Microphone and Line Input get a Melodic / Percussive switch (Intermediate and up;
-  melodic at Beginner). Instrument and Guitar Amp keep a fixed guitar character.
-- Palette, registry, `NODE_LOOK`, card, both locales, help text (`theory`).
+- **Generator** (Intermediate and up, `generator`): a full card — its Sound as four buttons in a
+  2 × 2 grid, each with a picture of the sound (a sine wave, noise, a slow swell, two hits), and a
+  Level knob, −60 … +20 dBu, default 0 dBu (unity). Peaks above the average: Sine 3 dB, Chord 6,
+  Noise 12, Hits 18; its own noise 90 dB below (cleaner than any player). Zoomed out: its icon, a
+  circle with a sine in it (the circuit-drawing symbol of a generator).
+- **Melodic / Percussive** (`character`) on Microphone and Line Input, from Intermediate
+  (`CHARACTER_LEVEL`): two buttons, ♪ and a drum. Percussive = drums, peaks 18 dB above the
+  average instead of 12; the average and the noise stay. The Microphone (face-only) shows them
+  beside its icon, the Line Input in its body under Mono / Stereo. At Beginner nothing shows and
+  both stay melodic (D3). Instrument and Guitar Amp keep the guitar (15 dB).
+- **One word changed from D2, for beginners:** the Generator's "Pad" is labelled **Chord**
+  ("Акорд") on the card — the palette already has "Pad (−20 dB)", and two different Pads would
+  confuse a beginner. Its tooltip says it is a "pad" in synth language; inside it is still `pad`.
+  Easy to change back (`nodes.generator.sounds.pad` in both locales).
+- Engine: `soundOf(typeKey, params)` — peaks by what it plays (`PEAKS_ABOVE`), noise by source
+  (`NOISE_BELOW`) — replaces `SOURCE_SOUND`. Old files get `melodic` / `sine`; a saved word
+  the app does not know falls back to the default (`PARAM_CHOICES`, also for the Pre / Post
+  switch's `selectedInput`).
+- Help texts (en + bg): the Generator's own ("Try this: Sine at +10 dBu is yellow, Hits at the
+  same level red"), and a sentence on the switch for Microphone and Line Input. Fixed on the way:
+  the hum tag's tooltip still said "nothing later takes it away" (wrong since D1).
+- Tests: 18 new (281 in all, Bun and Node) — each sound's peaks, Percussive on both sources, a
+  percussive mic in front of a Guitar Amp (the amp decides), and a reference chain where the same
+  +10 dBu average is hot as a sine and clipping as hits, +4 dBu keys hot and a drum machine
+  clipping. No old reading changed.
+
+Checked in the browser (Intermediate): a Generator dragged from the palette (default Sine, 0 dBu,
+its chain colour); real clicks on Hits / Chord turn its +10 dBu wire red / back to yellow; the Level
+knob drags (canvas does not pan); the Microphone's and Line Input's buttons (a +4 dBu Line Input
+turns red on Percussive); overview faces; Bulgarian (every word fits its button); help popover;
+Beginner shows no switch and no Generator in the palette; a file with `sound: "trumpet"` opens
+as Sine. No console errors from the new cards (only the first load in the hidden browser pane logs React
+Flow's zero-size warnings and NaN background dots, as before any of this).
 
 ## 6. Meters show peak and noise
 

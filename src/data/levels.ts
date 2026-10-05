@@ -5,3 +5,8 @@ export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
 
 /** The levels from easiest to hardest */
 export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
+
+/** Is `level` at least as hard as `min`? */
+export function atLeast(level: ComplexityLevel, min: ComplexityLevel): boolean {
+  return LEVELS.indexOf(level) >= LEVELS.indexOf(min)
+}

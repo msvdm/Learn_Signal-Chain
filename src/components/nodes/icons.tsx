@@ -85,3 +85,44 @@ export function DullToneIcon({ size = 24 }: { size?: number }) {
     </svg>
   )
 }
+
+/** A signal generator: a circle with a sine wave inside, the way circuit drawings show one. */
+export function GeneratorIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M5 12C6.8 6 10.2 6 12 12S17.2 18 19 12" />
+    </svg>
+  )
+}
+
+// What a sound looks like over time, for the buttons that pick one (the Generator's Sound). Wider
+// than tall (24 × 14): a sine and noise as their wave, a chord and hits as how loud they get.
+
+function SoundPicture({ size = 24, d }: { size?: number; d: string }) {
+  return (
+    <svg width={size} height={Math.round(size * 14 / 24)} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  )
+}
+
+/** A steady tone: an even wave, its peaks barely above its average. */
+export function SineIcon({ size }: { size?: number }) {
+  return <SoundPicture size={size} d="M2 7C3.7 1.5 5.3 1.5 7 7S10.3 12.5 12 7S15.3 1.5 17 7S20.3 12.5 22 7" />
+}
+
+/** Hiss: a wave with no pattern. */
+export function NoiseIcon({ size }: { size?: number }) {
+  return <SoundPicture size={size} d="M2 8L3.5 4L5 10L6.5 2.5L8 11L9.5 5L11 12L12.5 3L14 9.5L15.5 1.5L17 10.5L18.5 4.5L20 11.5L22 6" />
+}
+
+/** A soft held chord: it swells in slowly, holds, and fades away. */
+export function PadIcon({ size }: { size?: number }) {
+  return <SoundPicture size={size} d="M2 12C5 12 6 3 9 3H15C18 3 19 12 22 12" />
+}
+
+/** Hits: each one jumps up at once and dies away. */
+export function HitsIcon({ size }: { size?: number }) {
+  return <SoundPicture size={size} d="M2 12H3V2C4.5 8.5 6.5 11.5 11 12H12V2C13.5 8.5 15.5 11.5 20 12H22" />
+}

@@ -2,7 +2,7 @@
 // No imports from the rest of the app (only the levels); safe to import from anywhere.
 
 import type { ComplexityLevel } from './levels'
-import { LEVELS } from './levels'
+import { atLeast } from './levels'
 
 /** A connection point. Its tooltip is in the locales (`ports`, utils/nodeName.ts portName). */
 export type NodePort = {
@@ -31,7 +31,7 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 
 /** Every kind of element on the canvas. */
 export type TypeKey =
-  | 'mic' | 'line-in' | 'instrument' | 'guitar-amp'
+  | 'mic' | 'line-in' | 'instrument' | 'guitar-amp' | 'generator'
   | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
@@ -110,6 +110,21 @@ export const DI_DIRECT_PORT = 'direct'
 /** A Guitar Amp's sound in the room: a dotted wire that only a microphone can take. */
 export const SOUND_PORT = 'sound'
 
+/**
+ * What a Microphone or Line Input picks up (param `character`): melodic — a voice, keys — or
+ * percussive — drums, whose hits reach far above their average. Chosen from Intermediate up; at
+ * Beginner they stay melodic.
+ */
+export const CHARACTERS = ['melodic', 'percussive'] as const
+export type Character = typeof CHARACTERS[number]
+
+/** The easiest level whose Microphones and Line Inputs show the Melodic / Percussive switch. */
+export const CHARACTER_LEVEL: ComplexityLevel = 'intermediate'
+
+/** What the Generator plays (param `sound`): a steady tone, hiss, a soft held chord, drum-like hits. */
+export const GENERATOR_SOUNDS = ['sine', 'noise', 'pad', 'hits'] as const
+export type GeneratorSound = typeof GENERATOR_SOUNDS[number]
+
 const IN: NodePort[]    = [{ id: 'in' }]
 const OUT: NodePort[]   = [{ id: 'out' }]
 const SIDES: NodePort[] = [
@@ -124,17 +139,23 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
     category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
     minLevel: 'beginner', bypass: false,
-    defaultParams: { sensitivityDb: -60 },
+    defaultParams: { sensitivityDb: -60, character: 'melodic' },
   },
   'line-in': {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
     minLevel: 'beginner', bypass: false,
-    defaultParams: { levelDb: -10, stereo: false },
+    defaultParams: { levelDb: -10, stereo: false, character: 'melodic' },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
     minLevel: 'beginner', bypass: false,
     defaultParams: { levelDb: -30 },
+  },
+  generator: {
+    // A test sound of its own, at the level its knob sets (0 dBu: unity)
+    category: 'source', inputs: [], outputs: OUT, stereo: 'never',
+    minLevel: 'intermediate', bypass: false,
+    defaultParams: { sound: 'sine', levelDb: 0 },
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -302,7 +323,7 @@ export function isTypeKey(key: string): key is TypeKey {
 
 /** Is this element in the palette at this level? */
 export function availableAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
-  return LEVELS.indexOf(NODE_REGISTRY[typeKey].minLevel) <= LEVELS.indexOf(level)
+  return atLeast(level, NODE_REGISTRY[typeKey].minLevel)
 }
 
 /**
@@ -331,6 +352,10 @@ export function initialParams(
 export interface ParamTypes {
   sensitivityDb: number
   levelDb: number
+  /** Microphone, Line Input: what it picks up (CHARACTERS) */
+  character: Character
+  /** Generator: what it plays (GENERATOR_SOUNDS) */
+  sound: GeneratorSound
   /** The Mono | Stereo switch (Line In, Aux Bus) */
   stereo: boolean
   preampDb: number
@@ -365,6 +390,13 @@ export interface ParamTypes {
 }
 
 export type ParamKey = keyof ParamTypes
+
+/** Settings that take one of a few words: any other word (from a file) falls back to the default. */
+export const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
+  character:     CHARACTERS,
+  sound:         GENERATOR_SOUNDS,
+  selectedInput: ['a', 'b'],
+}
 
 /** A node's setting: its own value, else its type's default. */
 export function param<K extends ParamKey>(

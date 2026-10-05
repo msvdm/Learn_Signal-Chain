@@ -8,7 +8,7 @@ import {
   ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon } from './icons'
+import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon, GeneratorIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -37,6 +37,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   instrument:        { icon: Guitar,            group: 'source' },
   'di-box':          { icon: Plug,              group: 'source' },
   'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
+  generator:         { icon: GeneratorIcon,     group: 'source', headerSize: 18 },
   // Processing
   gain:              { icon: KnobIcon,          group: 'processing' },
   // "HPF" in capitals looks much bigger than mixed-case names at the same size
