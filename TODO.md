@@ -358,7 +358,55 @@ No panel under the canvas: the app is crowded enough and a chain can get complic
 meters (step 6) and the moving meters (step 11) show the peaks, the average and the noise. Whether
 any more monitoring is needed is decided once this TODO is done and the readings all work.
 
-## 9. Words and docs
+## ~~9. Words and docs~~ — done (2026-10-05)
+
+- **Watch the readings**: a new section in the help popover (right-click → What is this?), from
+  Intermediate up — Beginner's popover is as before (D3) — between *Why is it here?* and *Pro tip*:
+  `theory.<key>.readings` (optional, en + bg). It points at the card's own readings, with the
+  numbers the engine gives there, so each idea is taught where it shows:
+  - **noise floor** — Microphone (Hiss 66 dB: the cleanest this signal will ever be; every powered
+    card after it can only shrink the gap), Line Input (80), Instrument (70), Generator (90: any
+    hiss further along was added by the chain);
+  - **peaks vs average** — Microphone / Line Input (12, Percussive 18: 6 dB less room while the bar
+    does not move), Instrument (15), Generator (3 / 12 / 18: at 0 dBu, 17 / 8 / 2 dB of room),
+    Compressor (12 in, about 6 out; the room it makes is what makeup gain fills), Limiter;
+  - **why gain early** — Preamp (at +50 the hiss stays clean to the end, 55 dB or more; at +20 made
+    up later it ends at 40 or less and the card after the Preamp gets the hiss tag), Gain, Fader,
+    HPF, EQ (the classic place for the tag), Pad (no hiss of its own, but 64 → 48 dB after the
+    Preamp);
+  - **headroom** — Master Bus (every wire makes the mix louder, at 0 the bus distorts and nothing
+    after it brings the peaks back), Main Fader (cannot undo a clipping bus), ADC (2 dB less room
+    against 0 dBFS; digital cards add no hiss);
+  - **signal-to-noise** — Speaker / Active Speaker (what the audience hears: 50–60 dB well set,
+    40 or less after the classic mistake; the Volume knob cannot clean up a noisy chain), Noise Gate
+    (the Hiss reading jumps up while the peaks and the room stay — if they move, it cuts the music).
+
+  None where a card shows no readings (DI Box, the switches, Pan / Balance) or has nothing of its
+  own to add (Aux / Matrix Bus, De-esser, Graphic EQ, Amplifier, DAC, Guitar Amp).
+- The readings' tooltips name the terms (headroom, signal-to-noise ratio); the peaks tip says the
+  average is how loud it sounds, the peaks what clips first.
+- Old texts brought in line with D4 and step 6: the Preamp's tip now aims "well inside the green —
+  about −20 to −10 dBu for a voice" (at −40, the bottom of the green, the next card's hiss is
+  audible); the Master Bus's tip says its loudest moments clip at +20 dBu. Two Bulgarian typos fixed
+  on the way.
+- **Fixed on the way** (older): the help popover opened under the palette, cut off, for a card near
+  the left edge — it now stays right of it (`usePaletteWidth`), and "bring into view" centres the
+  card in the part of the canvas the palette leaves free.
+- CLAUDE.md (locales, help popover, adding a new node) and README: *What's New*; the levels table
+  (it listed a "potentiometer" and missed most elements); the translation snippet (`satisfies
+  LocaleStrings`); help is right-click → *What is this?*, not a tooltip.
+
+Every number in the texts checked against the engine (a script over chains: Beginner's default, the
+full channel strip with Preamp +40 / +50 / +20 made up later, a Pad, an ADC, a compressor fed hot) —
+ranges where the chain changes the result. Checked in the browser: the tour Microphone → Preamp →
+EQ → Fader → Active Speaker (the classic mistake) in English and Bulgarian, the popover clear of the
+palette, Beginner without the section; no console errors.
+
+Choices made here, to review: the section's name ("Watch the readings" / "Следи показанията") and
+place (before the Pro tip); which elements got one; "noise floor" taught as the Microphone's Hiss
+reading (the grey fog on the meters is the same noise).
+
+Original plan:
 
 - Help texts (`theory`) for peak vs average, noise floor, headroom, signal-to-noise, why gain
   early — en + bg. They point at what is on the cards (step 6's readings, the meters), e.g. "set

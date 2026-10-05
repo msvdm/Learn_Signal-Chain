@@ -8,6 +8,8 @@ import { chainOrder } from '../graph/graph'
 import { helpKeyOf, titleOf } from '../utils/nodeName'
 import { nodeDims } from '../utils/layoutHelpers'
 import { useGraphSignal } from '../hooks/useGraphSignal'
+import { useReadingsShown } from '../hooks/useReadingsShown'
+import { usePaletteWidth } from '../hooks/usePaletteWidth'
 
 const WIDTH  = 380
 const ARROW  = 12
@@ -26,10 +28,13 @@ export function HelpPopover() {
   const setSelected = useSignalStore((s) => s.setSelectedNode)
   const { t, fmt } = useTranslation()
   const { stages } = useGraphSignal()
+  const readingsShown = useReadingsShown()
   const { setViewport, getViewport } = useReactFlow()
   const { x: vx, y: vy, zoom } = useViewport()
   const paneW = useStore((s) => s.width)
   const paneH = useStore((s) => s.height)
+  // The palette slides over the canvas's left side: the popover and its card stay right of it
+  const paneLeft = usePaletteWidth()
   const activeId = help?.nodeId ?? null
   const helpKey  = help?.key ?? null
   const anchor   = useInternalNode(activeId ?? '')
@@ -41,7 +46,7 @@ export function HelpPopover() {
   useLayoutEffect(() => {
     // Natural height (before any max-height clamp) + the 1px border top and bottom
     if (scrollRef.current) setHeight(scrollRef.current.scrollHeight + 2)
-  }, [activeId, helpKey, t, hasAnchor])
+  }, [activeId, helpKey, t, hasAnchor, readingsShown])
 
   // Bring the stage and its popover into view: once per opened stage, so it never
   // fights the learner's own panning afterwards.
@@ -55,7 +60,7 @@ export function HelpPopover() {
     let   top   = anchor.internals.positionAbsolute.y * vp.zoom + vp.y
 
     let dx = 0
-    if (left < MARGIN || left + w > paneW - MARGIN) dx = paneW / 2 - (left + w / 2)
+    if (left < paneLeft + MARGIN || left + w > paneW - MARGIN) dx = (paneLeft + paneW) / 2 - (left + w / 2)
 
     let dy = 0
     if (top < TOOLBAR_CLEARANCE || top > paneH - MARGIN) dy = TOOLBAR_CLEARANCE - top
@@ -94,8 +99,8 @@ export function HelpPopover() {
   const nodeTop  = anchor.internals.positionAbsolute.y * zoom + vy
   const centerX  = nodeLeft + nodeW / 2
 
-  const width = Math.min(WIDTH, paneW - MARGIN * 2)
-  const left  = Math.max(MARGIN, Math.min(paneW - width - MARGIN, centerX - width / 2))
+  const width = Math.min(WIDTH, paneW - paneLeft - MARGIN * 2)
+  const left  = Math.max(paneLeft + MARGIN, Math.min(paneW - width - MARGIN, centerX - width / 2))
   const below = nodeTop + nodeH + ARROW
   // Flip above the node when there is no room underneath
   const placeAbove = height > 0 && below + height > paneH - MARGIN && nodeTop - ARROW - height > MARGIN
@@ -178,6 +183,12 @@ export function HelpPopover() {
             <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whyIsItHere}</h4>
             <p style={paragraph}>{entry.why}</p>
           </section>
+          {readingsShown && entry.readings && (
+            <section>
+              <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.readings}</h4>
+              <p style={paragraph}>{entry.readings}</p>
+            </section>
+          )}
           <section
             style={{
               borderRadius: 12, background: 'var(--lsc-tip-bg)', border: '1px solid var(--lsc-tip-bd)',
