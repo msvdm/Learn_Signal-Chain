@@ -245,6 +245,9 @@ Flow's zero-size warnings and NaN background dots, as before any of this).
   its peaks shows yellow there while the health word says "Clipping". Give them the peaks.
 - Plain-language readings, never a bare number (the #1 rule): "Peaks 14 dB above the average",
   "Room before clipping: 6 dB — careful", "Hiss: 58 dB below the signal — clean".
+- These readings carry the gain-staging lesson on their own (no level map, step 8 dropped): card
+  by card along a chain, "Room before clipping" and "Hiss below the signal" show where the gain
+  was made well or badly — the Preamp 30 dB too low ends 37 dB above its hiss instead of 60.
 - Intermediate and up only (decision D3): Beginner meters look as they do today. Cards keep their
   size while values change (`StableText`, reserved space).
 - A new note on a card when the noise becomes audible ("You can hear hiss here"), like the
@@ -265,7 +268,8 @@ any more monitoring is needed is decided once this TODO is done and the readings
 ## 9. Words and docs
 
 - Help texts (`theory`) for peak vs average, noise floor, headroom, signal-to-noise, why gain
-  early — en + bg.
+  early — en + bg. They point at what is on the cards (step 6's readings, the meters), e.g. "set
+  the Preamp low and make it up later: watch the Hiss reading on the last card drop".
 - CLAUDE.md: signal maths, health zones, the new readings. README: what's new.
 
 ## Step B — the signal moves
