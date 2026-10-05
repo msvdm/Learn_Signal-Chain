@@ -4,7 +4,6 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
-import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -39,7 +38,7 @@ export function DeesserNode({ id }: CardProps) {
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
-          health={getHealth(levels.inPeak, levels.inDomain)}
+          health={levels.inHealth}
           domain={levels.inDomain}
           label={t.meters.input}
         />

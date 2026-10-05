@@ -4,15 +4,17 @@ import { initialParams } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { GraphSignalResult, StageRole, WireSignal } from './engine'
 import { graphSignal } from './engine'
-import type { SignalDomain, SignalHealth } from './levels'
+import type { SideLevels, SignalDomain, SignalHealth } from './levels'
+import { headroomOf, louder, snrOf } from './levels'
 import type { StageCondition } from './process'
 
-// Reference chains: the level, health, domain and condition at every card, as the engine works
-// them out today. The signal upgrade (TODO.md, step 4) gives every wire a peak and a noise reading
-// too, but the average — today's number — must stay what it is here, so old chains keep their
-// levels. Where a decision changes a reading on purpose, the line says so:
-// - D1: a hum follows the signal (a fader turns it down too); today it only ever grows
-// - D4: a card clips as soon as its peaks reach the clip level; today a hot average stays "hot"
+// Reference chains: the level, health, domain and condition at every card. Since step 4 (TODO.md)
+// every wire carries a peak and a noise reading too, but the average — the one number before it —
+// stays what it was, so old chains keep their levels. Where a decision changed a reading on
+// purpose (step 4), the line says so:
+// - D1: a hum follows the signal (a fader turns it down too); before, it only ever grew
+// - D4: a card clips as soon as its peaks reach the clip level; before, a hot average stayed "hot"
+// Peaks, noise and the hum: the tests after the reference chains.
 
 // ── Building a chain ────────────────────────────────────────────────────────────
 
@@ -56,8 +58,8 @@ interface Expected {
   hum?: number
 }
 
-/** A side's level. Step 4 makes it { peak, rms, noise }: then this reads its average (rms). */
-const average = (w: WireSignal, side: 'l' | 'r'): number => w[side]
+/** A side's average (rms): the level the tables lock. Its peaks and noise are checked further down. */
+const average = (w: WireSignal, side: 'l' | 'r'): number => w[side].rms
 
 /** dB to two decimals; silence exactly. */
 function expectDb(actual: number | undefined, expected: number | undefined) {
@@ -267,9 +269,10 @@ describe('a DI Box in a ground loop (Ground Lift off): the hum', () => {
     micPre: { in: -60, out: -20, health: 'good', role: 'preamp' },
     // The Preamp lifts the hum with the guitar: +40 dB
     pre:    { in: -50, out: -10, health: 'good', role: 'preamp', hum: -40 },
-    // D1: the fader turns the hum down with the guitar (−50); today it stays at −40
-    fader:  { in: -10, out: -20, health: 'good', hum: -40 },
-    spk:    { in: -20, out: -20, health: 'good', hum: -40 },
+    // D1: the fader turns the hum down with the guitar, 10 dB (it was −40: a hum never went down)
+    fader:  { in: -10, out: -20, health: 'good', hum: -50 },
+    // D1: the hum the fader left (it was −40)
+    spk:    { in: -20, out: -20, health: 'good', hum: -50 },
   })
 
   it('sends the instrument on unchanged from the Direct Out, without the hum', () => {
@@ -375,10 +378,10 @@ describe('digital levels near the ceiling (0 dBFS)', () => {
     wire('b', 'gainB'), wire('gainB', 'adcB'),
   ]), {
     a:     { out: 0, health: 'good' },
-    // D4: a line's peaks above +15 dBu reach the clip level
-    gainA: { in: 0, out: 15, health: 'hot' },
-    // D4: likewise, its peaks reach 0 dBFS
-    adcA:  { in: 15, out: -3, health: 'hot', domain: 'digital' },
+    // D4: the average is hot, but a line's peaks (12 dB above it) reach the clip level (it was 'hot')
+    gainA: { in: 0, out: 15, health: 'clipping' },
+    // D4: likewise, its peaks reach 0 dBFS (it was 'hot')
+    adcA:  { in: 15, out: -3, health: 'clipping', domain: 'digital' },
     b:     { out: 0, health: 'good' },
     // +20 dBu: the clip level
     gainB: { in: 0, out: 20, health: 'clipping' },
@@ -459,8 +462,8 @@ describe('a limiter: nothing above its ceiling (−3), then the makeup gain', ()
     wire('line2', 'lim2'),
   ]), {
     line:  { out: 0, health: 'good' },
-    // D4: a line's peaks above +10 dBu reach the clip level
-    gain:  { in: 0, out: 10, health: 'hot' },
+    // D4: a line's peaks (12 dB above +10 dBu) reach the clip level (it was 'hot')
+    gain:  { in: 0, out: 10, health: 'clipping' },
     lim:   { in: 10, out: -3, health: 'good', reduction: 13 },
     line2: { out: -10, health: 'good' },
     // Under the ceiling: untouched, then +2 dB
@@ -602,6 +605,247 @@ describe('speakers: a passive one needs an amplifier, an active one is blown by 
     passive2: { in: -16, out: -16, health: 'good' },
     // Speaker level, 40 dB over the line level it expects
     active:   { in: -16, out: 24, health: 'clipping', condition: 'blown' },
+  })
+})
+
+// ── Peaks, noise and the hum ────────────────────────────────────────────────────
+
+/** What leaves a card: its peak, average and noise (the louder side). */
+const leaving = (result: GraphSignalResult, id: string): SideLevels =>
+  louder(result.stages[id].out.l, result.stages[id].out.r)
+
+/** Each card's [peak, average, noise] leaving it, one test per card. */
+function expectReadings(result: GraphSignalResult, cards: Record<string, readonly [peak: number, rms: number, noise: number]>) {
+  for (const [id, [peak, rms, noise]] of Object.entries(cards)) {
+    it(`${id}: peaks ${peak}, average ${rms}, noise ${noise}`, () => {
+      const s = leaving(result, id)
+      expectDb(s.peak, peak)
+      expectDb(s.rms, rms)
+      expectDb(s.noise, noise)
+    })
+  }
+}
+
+/**
+ * Mic → Preamp → EQ → Gain → Fader → Master Bus → speaker, ending at −10 dBu either way: the gain
+ * made early, or the classic mistake — the Preamp 30 dB too low, made up later with a gain and the
+ * fader. A voice: peaks 12 dB above its average, the room's noise 66 dB under it.
+ */
+const gainStaging = (preampDb: number, gainDb: number, faderDb: number) => signalOf([
+  card('mic', 'mic'),
+  card('pre', 'gain', { preampDb }),
+  card('eq', 'eq'),
+  card('gain', 'gain', { gainDb }),
+  card('fader', 'fader', { faderDb }),
+  card('bus', 'master-bus'),
+  card('spk', 'active-speaker'),
+], [
+  wire('mic', 'pre'), wire('pre', 'eq'), wire('eq', 'gain'), wire('gain', 'fader'), wire('fader', 'bus'),
+  wire('bus:out-l', 'spk'),
+])
+
+describe('gain staging, well set: the Preamp makes the gain (+50 dB)', () => {
+  const result = gainStaging(50, 0, 0)
+
+  expectReadings(result, {
+    mic:   [-48, -60, -126],
+    // Its own hiss (−128 dBu) joins before its gain: 64 dB between the voice and the noise
+    pre:   [2, -10, -73.88],
+    // Every other card adds a hiss at −80 dBu: little next to a voice at −10
+    eq:    [2, -10, -72.93],
+    gain:  [2, -10, -72.15],
+    fader: [2, -10, -71.49],
+    bus:   [2, -10, -70.92],
+    spk:   [2, -10, -70.41],
+  })
+
+  it('ends near 60 dB above its noise, its peaks 18 dB under the clip level', () => {
+    expectDb(snrOf(leaving(result, 'spk')), 60.41)
+    expectDb(headroomOf(leaving(result, 'spk')), 18)
+  })
+})
+
+describe('gain staging, the classic mistake: Preamp +20, made up later (Gain +20, Fader +10)', () => {
+  const result = gainStaging(20, 20, 10)
+
+  expectReadings(result, {
+    mic:   [-48, -60, -126],
+    pre:   [-28, -40, -103.88],
+    // The EQ's hiss lands on a voice 30 dB too weak: only 40 dB under it
+    eq:    [-28, -40, -79.98],
+    // Making it up later lifts that hiss with the voice
+    gain:  [-8, -20, -56.98],
+    fader: [2, -10, -46.96],
+    bus:   [2, -10, -46.96],
+    spk:   [2, -10, -46.95],
+  })
+
+  it('ends at the same level with the same peaks, but more than 20 dB more hiss', () => {
+    const good = leaving(gainStaging(50, 0, 0), 'spk')
+    const bad  = leaving(result, 'spk')
+    expectDb(bad.rms, good.rms)
+    expectDb(bad.peak, good.peak)
+    expectDb(snrOf(bad), 36.95)
+    expect(snrOf(good) - snrOf(bad)).toBeGreaterThan(20)
+  })
+})
+
+describe('peaks: the loudest moments, above the average', () => {
+  expectReadings(signalOf([
+    card('line', 'line-in'),
+    card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
+    card('lim', 'limiter'),
+    card('loud', 'line-in', { levelDb: 0 }),
+    card('gain', 'gain', { gainDb: 15 }),
+    card('fader', 'fader', { faderDb: -20 }),
+  ], [
+    wire('line', 'comp'), wire('line', 'lim'),
+    wire('loud', 'gain'), wire('gain', 'fader'),
+  ]), {
+    // Keys: peaks 12 dB above the average
+    line:  [2, -10, -90],
+    // 4:1 from −20: the average comes down 7.5 dB, the peaks 16.5 — the gap shrinks from 12 dB to 3
+    comp:  [-14.5, -17.5, -79.59],
+    // A limiter at −3: the average passes untouched, the peaks are capped
+    lim:   [-3, -10, -79.59],
+    loud:  [12, 0, -80],
+    // +15 dB: the peaks would reach +27, an analog stage flattens them at the clip level (+20)
+    gain:  [20, 15, -61.99],
+    // Turned down 20 dB, the gap stays 5 dB: flattened peaks do not come back
+    fader: [0, -5, -81.92],
+  })
+})
+
+describe('noise: what is left when the music stops', () => {
+  describe('a noise gate with its threshold between the noise and the signal', () => {
+    const result = signalOf([
+      card('mic', 'mic'),
+      card('pre', 'gain', { preampDb: 50 }),
+      // Threshold −40 (its default): under the voice (−10), over the noise (−74)
+      card('gate', 'noise-gate'),
+      card('gate20', 'noise-gate', { rangeDb: -20 }),
+      // Threshold under the noise: open all the time
+      card('open', 'noise-gate', { thresholdDb: -100 }),
+    ], [
+      wire('mic', 'pre'), wire('pre', 'gate'), wire('pre', 'gate20'), wire('pre', 'open'),
+    ])
+
+    expectReadings(result, {
+      pre:    [2, -10, -73.88],
+      // Open, the noise passes with the gate's own hiss
+      open:   [2, -10, -72.93],
+      gate:   [2, -10, -152.93],
+      gate20: [2, -10, -92.93],
+    })
+
+    it('drops the noise by its Range and leaves the music alone', () => {
+      expectDb(leaving(result, 'open').noise - leaving(result, 'gate').noise, 80)
+      expectDb(leaving(result, 'open').noise - leaving(result, 'gate20').noise, 20)
+      expectDb(result.stages.gate.gainReductionDb, 0)
+    })
+  })
+
+  it('a compressor costs as much as it turns the average down: the noise stays under its threshold', () => {
+    const result = signalOf([
+      card('line', 'line-in'),
+      card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
+      card('comp6', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
+    ], [wire('line', 'comp'), wire('line', 'comp6')])
+    // The line (80 dB), the compressor's hiss (69.59), then 7.5 dB of gain reduction
+    expectDb(snrOf(leaving(result, 'comp')), 62.09)
+    expectDb(result.stages.comp.gainReductionDb, 7.5)
+    // The makeup gain lifts the noise with the music
+    expectDb(leaving(result, 'comp6').noise - leaving(result, 'comp').noise, 6)
+    expectDb(leaving(result, 'comp6').rms - leaving(result, 'comp').rms, 6)
+  })
+
+  it('a bus adds the music as voltages (+6 dB per doubling) and the noise as noise (+3 dB)', () => {
+    // Digital, so the buses add no hiss of their own and the sums show alone
+    const result = signalOf([
+      card('a', 'line-in'), card('adcA', 'adc'),
+      card('b', 'line-in'), card('adcB', 'adc'),
+      card('c', 'line-in'), card('adcC', 'adc'),
+      card('d', 'line-in'), card('adcD', 'adc'),
+      card('one', 'aux-bus'), card('two', 'aux-bus'), card('four', 'aux-bus'),
+    ], [
+      wire('a', 'adcA'), wire('b', 'adcB'), wire('c', 'adcC'), wire('d', 'adcD'),
+      wire('adcA', 'one'),
+      wire('adcA', 'two'), wire('adcB', 'two'),
+      wire('adcA', 'four'), wire('adcB', 'four'), wire('adcC', 'four'), wire('adcD', 'four'),
+    ])
+    const one  = leaving(result, 'one')
+    const two  = leaving(result, 'two')
+    const four = leaving(result, 'four')
+    expectDb(one.noise, -97.59)
+    expectDb(two.noise - one.noise, 3.01)
+    expectDb(four.noise - two.noise, 3.01)
+    expectDb(two.rms - one.rms, 6.02)
+    expectDb(four.rms - two.rms, 6.02)
+  })
+
+  it('an analog bus adds its own hiss on top of what it sums', () => {
+    const result = signalOf([
+      card('a', 'line-in'), card('b', 'line-in'), card('aux', 'aux-bus'),
+    ], [wire('a', 'aux'), wire('b', 'aux')])
+    // Two line noises at −90 (−86.99 together) and the bus's −80
+    expectDb(leaving(result, 'aux').noise, -79.21)
+  })
+
+  describe('digital stages add none; converters add theirs on their analog side', () => {
+    expectReadings(signalOf([
+      card('line', 'line-in'),
+      card('adc', 'adc'),
+      card('fader', 'fader', { faderDb: -6 }),
+      card('dac', 'dac'),
+    ], [
+      wire('line', 'adc'), wire('adc', 'fader'), wire('fader', 'dac'),
+    ]), {
+      line:  [2, -10, -90],
+      // The line's noise and the ADC's hiss (−79.59 dBu), on the digital scale
+      adc:   [-16, -28, -97.59],
+      // A digital fader: exactly 6 dB down, no hiss of its own
+      fader: [-22, -34, -103.59],
+      // Back to dBu (−85.59) and the DAC's hiss
+      dac:   [-4, -16, -78.94],
+    })
+  })
+})
+
+describe('D1: a hum is part of the noise and follows the signal', () => {
+  const rig = (groundLift: boolean) => signalOf([
+    card('gtr', 'instrument'),
+    card('di', 'di-box', { groundLift }),
+    card('amp', 'guitar-amp'),
+    card('pre', 'gain'),
+    card('fader', 'fader', { faderDb: -10 }),
+    // Threshold −30: under the guitar (−10), over the hum (−40)
+    card('gate', 'noise-gate', { thresholdDb: -30 }),
+  ], [
+    wire('gtr', 'di'), wire('di:direct', 'amp'), wire('di', 'pre'), wire('pre', 'fader'), wire('pre', 'gate'),
+  ])
+  const hum = rig(false)
+
+  it('starts on the XLR Out and drowns the guitar\'s own noise', () => {
+    expectDb(leaving(hum, 'di').hum, -80)
+    expectDb(leaving(hum, 'di').noise, -80)
+    // A guitar 30 dB over the hum
+    expectDb(snrOf(leaving(hum, 'pre')), 30)
+  })
+
+  it('a fader turns it down with the guitar: the gap between them stays', () => {
+    expectDb(hum.stages.fader.hum, -50)
+    expectDb(snrOf(leaving(hum, 'fader')), 30)
+  })
+
+  it('a gate shuts it off in the pauses, with the rest of the noise', () => {
+    expectDb(hum.stages.gate.hum, -120)
+    expectDb(leaving(hum, 'gate').noise, -120)
+  })
+
+  it('Ground Lift takes it away: only the hiss is left', () => {
+    const lifted = rig(true)
+    expect(lifted.stages.pre.hum).toBeUndefined()
+    expectDb(snrOf(leaving(lifted, 'pre')), 69.36)
   })
 })
 

@@ -4,7 +4,6 @@ import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
-import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -32,7 +31,7 @@ export function LimiterNode({ id }: CardProps) {
       label={useNodeName(id, 'limiter')}
     >
       <div style={twoColumns}>
-        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={levels.inHealth} domain={levels.inDomain} label={t.meters.input} />
         <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
         <KnobStack>
@@ -67,7 +66,7 @@ export function LimiterNode({ id }: CardProps) {
           <TransferCurve
             transfer={limiter(ceiling, makeupGain)}
             thresholdDb={ceiling}
-            inputDb={levels.inPeak}
+            inputDb={levels.inLevel}
             outMaxDb={20}
             ceilingDb={ceiling + makeupGain}
             badge={limiting

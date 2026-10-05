@@ -52,9 +52,9 @@ export function MeterBar({ db, color, height = 6, domain = 'analog' }: { db: num
   )
 }
 
-/** One labelled channel bar (L or R) with its level, coloured by its own health. */
-export function ChannelRow({ ch, db, domain = 'analog' }: { ch: string; db: number; domain?: SignalDomain }) {
-  const color = isFinite(db) ? healthColor(getHealth(db, domain)) : 'var(--lsc-border)'
+/** One labelled channel bar (L or R) with its level (the average), coloured by its own health (clipping from `peak`). */
+export function ChannelRow({ ch, db, peak, domain = 'analog' }: { ch: string; db: number; peak?: number; domain?: SignalDomain }) {
+  const color = isFinite(db) ? healthColor(getHealth(db, domain, peak)) : 'var(--lsc-border)'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
       <span style={{ fontWeight: 700, width: 10, color: 'var(--lsc-fg-muted)' }}>{ch}</span>

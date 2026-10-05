@@ -4,7 +4,7 @@ import { useStore } from '@xyflow/react'
 import { MeterBar } from '../SignalMeter'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { getHealth, healthColor, formatDb } from '../../signal/levels'
+import { healthColor, formatDb } from '../../signal/levels'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
 import type { TypeKey } from '../../data/nodeRegistry'
@@ -89,7 +89,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
   // The level leaving the card; a speaker's is the sound it plays (its stage result)
   const db     = Math.max(levels.out, hasOutput ? (levels.outR ?? -Infinity) : -Infinity)
-  const state  = getHealth(db, levels.outDomain)
+  const state  = levels.outHealth
   const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
   const healthWord = (
     <StableText

@@ -123,8 +123,8 @@ export function MasterBusNode({ id, type }: CardProps) {
 
       {stereo ? (
         <>
-          <ChannelRow ch="L" db={out.l} />
-          <ChannelRow ch="R" db={out.r} />
+          <ChannelRow ch="L" db={out.l.rms} peak={out.l.peak} domain={domain} />
+          <ChannelRow ch="R" db={out.r.rms} peak={out.r.peak} domain={domain} />
         </>
       ) : (
         <>

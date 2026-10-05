@@ -3,7 +3,7 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { SignalMeter } from '../SignalMeter'
 import { useStage, useWire } from '../../hooks/useGraphSignal'
-import { formatDb, getHealth } from '../../signal/levels'
+import { formatDb } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
@@ -58,7 +58,7 @@ export function DIBoxNode({ id }: CardProps) {
         <SignalMeter
           db={levels.in}
           dbR={levels.inR}
-          health={getHealth(levels.inPeak, levels.inDomain)}
+          health={levels.inHealth}
           domain={levels.inDomain}
           label={t.meters.input}
         />

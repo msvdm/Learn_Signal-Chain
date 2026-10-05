@@ -1,11 +1,12 @@
 import type { SignalNode, TypeKey } from '../data/nodeRegistry'
 import { param } from '../data/nodeRegistry'
-import type { SignalDomain } from './levels'
-import { CLIP_DBU } from './levels'
+import type { SideLevels, SignalDomain } from './levels'
+import { CLIP_DBU, SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
 
-// What each card does to the level of one channel (the engine, signal/engine.ts, runs it once per
-// side in stereo). Simplified on purpose: it teaches the idea, not the filter maths.
+// What each card does to one channel (the engine, signal/engine.ts, runs it once per side in
+// stereo): to its peaks, its average and its noise (SideLevels). Simplified on purpose: it teaches
+// the idea, not the filter maths.
 
 /**
  * Why a card sends nothing out, or what is wrong with what it sends (`blown`: far too much,
@@ -24,10 +25,10 @@ export type StageCondition =
 
 /** One channel through a card. */
 export interface SideResult {
-  out: number
+  out: SideLevels
   /** Analog (dBu) or digital (dBFS), leaving the card */
   domain: SignalDomain
-  /** How far a dynamics card turns the signal down right now */
+  /** How far a dynamics card turns the signal (its average) down right now */
   gainReductionDb?: number
   condition?: StageCondition
 }
@@ -41,7 +42,7 @@ export interface SideContext {
   side: 'l' | 'r' | null
   /** This Gain is a Preamp (after a microphone or a DI Box's XLR Out) */
   preamp: boolean
-  /** Something is plugged in (a microphone hearing a Guitar Amp) */
+  /** Something is plugged in (a microphone hearing a Guitar Amp; a card hisses only then) */
   fed: boolean
 }
 
@@ -63,9 +64,64 @@ export const DI_DROP_DB = 20
  */
 export const GUITAR_REF_DB = -30
 
+// ── Sources and noise ─────────────────────────────────────────────────────────
+
+/** How a source sounds: its peaks above its average (dB), its noise below it (dB). */
+export interface SourceSound {
+  peakDb: number
+  noiseDb: number
+}
+
+/** Each source's sound. Step 5 (TODO.md) adds a Percussive switch: drums, 18 dB of peaks. */
+export const SOURCE_SOUND = {
+  /** A voice; the noise is the room and the mic's own hiss */
+  mic:        { peakDb: 12, noiseDb: 66 },
+  /** Keys, a phone, a player */
+  'line-in':  { peakDb: 12, noiseDb: 80 },
+  /** A guitar: plucks, sharper than a voice, softer than drums; the pickups' hiss and buzz */
+  instrument: { peakDb: 15, noiseDb: 70 },
+} as const satisfies Partial<Record<TypeKey, SourceSound>>
+
+/** A source playing at `level` (its average). */
+export function sourceLevels(level: number, sound: SourceSound): SideLevels {
+  return { peak: level + sound.peakDb, rms: level, noise: level - sound.noiseDb, hum: -Infinity }
+}
+
+/**
+ * The hiss a powered card adds to what arrives, before it does its job (so a make-up gain after it
+ * lifts it, and a gate can shut it off). A Preamp is built for tiny signals: far quieter.
+ */
+export const HISS_DBU = -80
+export const PREAMP_HISS_DBU = -128
+
+/**
+ * Cards with no power of their own add no hiss: a transformer, a resistor, a switch, a pan pot, a
+ * passive speaker. Sources bring their own noise (SOURCE_SOUND); digital stages add none.
+ */
+const PASSIVE = new Set<TypeKey>(['mic', 'line-in', 'instrument', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker'])
+
+/** The hiss this card adds to what arrives (−∞: none). The DAC adds its own on its analog side. */
+function hissOf(node: SignalNode, ctx: SideContext): number {
+  if (!ctx.fed || ctx.domain === 'digital' || PASSIVE.has(node.typeKey)) return -Infinity
+  return ctx.preamp ? PREAMP_HISS_DBU : HISS_DBU
+}
+
+/** `s` with a hiss at `db` added to its noise. */
+const withHiss = (s: SideLevels, db: number): SideLevels => ({ ...s, noise: sumNoiseToDb([s.noise, db]) })
+
+/**
+ * Peaks no stage can pass are flattened at the clip level (+20 dBu) or the digital ceiling (0 dBFS):
+ * the gap between peak and average shrinks — that is the distortion — and turning down later does
+ * not bring it back. A peak is never below the average.
+ */
+export function flattenPeaks(s: SideLevels, domain: SignalDomain): SideLevels {
+  return { ...s, peak: Math.max(s.rms, Math.min(s.peak, ceilingOf(domain))) }
+}
+
 // ── Dynamics ─────────────────────────────────────────────────────────────────
 // What a compressor, noise gate or limiter does to a level: the level out and how far it turned the
-// signal down. The cards draw their curves from the same functions (TransferCurve).
+// signal down. The cards draw their curves from the same functions (TransferCurve), and every
+// reading goes through them on its own: the peaks, the average and the noise in the pauses.
 
 export interface Dynamics {
   out: number
@@ -94,11 +150,24 @@ export const noiseGate = (thresholdDb: number, rangeDb: number): Transfer => (in
 export const limiter = (ceilingDb: number, makeupGainDb: number): Transfer => (input) =>
   ({ out: Math.min(input, ceilingDb) + makeupGainDb, gainReductionDb: Math.max(0, input - ceilingDb) })
 
-/** What one type does to one channel. */
-type Process = (node: SignalNode, input: number, ctx: SideContext) => SideResult
+/** 8:1 on the sibilant frequencies above its threshold — simplified to the overall level. */
+export const deesser = (thresholdDb: number): Transfer => (input) => {
+  const gainReductionDb = Math.max(0, (input - thresholdDb) * (1 - 1 / 8))
+  return { out: input - gainReductionDb, gainReductionDb }
+}
 
-const pass    = (level: number, ctx: SideContext): SideResult => ({ out: level, domain: ctx.domain })
-const blocked = (condition: StageCondition, domain: SignalDomain): SideResult => ({ out: -Infinity, domain, condition })
+/** What one type does to one channel (`input` already carries the card's own hiss). */
+type Process = (node: SignalNode, input: SideLevels, ctx: SideContext) => SideResult
+
+const pass    = (levels: SideLevels, ctx: SideContext): SideResult => ({ out: levels, domain: ctx.domain })
+const blocked = (condition: StageCondition, domain: SignalDomain): SideResult => ({ out: SILENT, domain, condition })
+
+/** Every reading through a level curve; the gain reduction shown is the average's. */
+const dynamics = (curve: Transfer, input: SideLevels, ctx: SideContext): SideResult => ({
+  out: eachReading((k) => curve(input[k]).out),
+  domain: ctx.domain,
+  gainReductionDb: curve(input.rms).gainReductionDb,
+})
 
 /** A bus cannot add analog and digital signals together. */
 const summing = (process: Process): Process => (node, input, ctx) =>
@@ -108,70 +177,59 @@ const summing = (process: Process): Process => (node, input, ctx) =>
 const analogOnly = (condition: StageCondition, process: Process): Process => (node, input, ctx) =>
   ctx.domain === 'digital' ? blocked(condition, ctx.domain) : process(node, input, ctx)
 
-const busFader: Process = summing((node, input, ctx) =>
-  pass(isFinite(input) ? input + param(node, 'faderDb') : -Infinity, ctx))
+const busFader: Process = summing((node, input, ctx) => pass(shifted(input, param(node, 'faderDb')), ctx))
 
-const sourceLevel: Process = (node) => ({ out: param(node, 'levelDb'), domain: 'analog' })
+/** A gain that stops at the clip level (−∞ dB: off). */
+const gainUpToClip = (input: SideLevels, gainDb: number) => eachReading((k) => Math.min(input[k] + gainDb, CLIP_DBU))
 
 /** What each type does to one channel (every type has one: a new type without it does not compile). */
 const PROCESS: Record<TypeKey, Process> = {
   // On its own it picks up a voice or an instrument at its usual level; in front of a Guitar Amp,
-  // it follows how loud the amp plays (silent when the amp is)
+  // it hears what the amp plays (silent when the amp is), and the room on top
   mic: (node, input, ctx) => {
     const usual = param(node, 'sensitivityDb')
-    if (!ctx.fed) return { out: usual, domain: 'analog' }
-    return { out: isFinite(input) ? usual + input - GUITAR_REF_DB : -Infinity, domain: 'analog' }
+    const own   = sourceLevels(usual, SOURCE_SOUND.mic)
+    if (!ctx.fed) return { out: own, domain: 'analog' }
+    const heard = shifted(input, usual - GUITAR_REF_DB)
+    return { out: { ...heard, noise: sumNoiseToDb([heard.noise, own.noise]) }, domain: 'analog' }
   },
-  'line-in':    sourceLevel,
-  instrument:   sourceLevel,
+  'line-in':    (node) => ({ out: sourceLevels(param(node, 'levelDb'), SOURCE_SOUND['line-in']), domain: 'analog' }),
+  instrument:   (node) => ({ out: sourceLevels(param(node, 'levelDb'), SOURCE_SOUND.instrument), domain: 'analog' }),
   // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
-  'di-box':     (_, input) => ({ out: isFinite(input) ? input - DI_DROP_DB : -Infinity, domain: 'analog' }),
+  'di-box':     (_, input) => ({ out: shifted(input, -DI_DROP_DB), domain: 'analog' }),
   // What it plays: the guitar turned up or down by its Volume
-  'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) =>
-    pass(isFinite(input) ? input + param(node, 'volumeDb') : -Infinity, ctx)),
+  'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx)),
   gain: (node, input, ctx) => {
     // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
-    if (ctx.preamp) return pass(Math.min(input + param(node, 'preampDb'), CLIP_DBU), ctx)
+    if (ctx.preamp) return pass(gainUpToClip(input, param(node, 'preampDb')), ctx)
     const gainDb = param(node, 'gainDb')
-    return pass(gainDb <= GAIN_OFF_DB ? -Infinity : Math.min(input + gainDb, CLIP_DBU), ctx)
+    return pass(gainUpToClip(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb), ctx)
   },
   amp: analogOnly('digitalToAmp', (node, input, ctx) => {
     // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel
     // (a two-channel amp): Left uses gainDb, Right gainDbR (until turned, it follows gainDb).
     const raw    = ctx.side === 'r' ? (param(node, 'gainDbR') ?? param(node, 'gainDb')) : param(node, 'gainDb')
     const gainDb = Math.min(raw, 0)
-    return pass(gainDb <= GAIN_OFF_DB ? -Infinity : input + gainDb, ctx)
+    return pass(shifted(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb), ctx)
   }),
-  hpf: (node, input, ctx) => pass(input + hpfLevelChange(param(node, 'cutoffHz')), ctx),
-  eq:  (node, input, ctx) => pass(input + eqLevelChange(param(node, 'bands')), ctx),
+  hpf: (node, input, ctx) => pass(shifted(input, hpfLevelChange(param(node, 'cutoffHz'))), ctx),
+  eq:  (node, input, ctx) => pass(shifted(input, eqLevelChange(param(node, 'bands'))), ctx),
   'graphic-eq': (node, input, ctx) => {
     // In stereo the right side has its own sliders (r0…r30); untouched, they copy the left
     const gains = GEQ_CENTERS.map((_, i) => {
       const left = param(node, `b${i}`)
       return ctx.side === 'r' ? (param(node, `r${i}`) ?? left) : left
     })
-    return pass(input + graphicEqLevelChange(gains), ctx)
+    return pass(shifted(input, graphicEqLevelChange(gains)), ctx)
   },
-  comp: (node, input, ctx) => ({
-    ...compressor(param(node, 'thresholdDb'), param(node, 'ratio'), param(node, 'makeupGainDb'))(input),
-    domain: ctx.domain,
-  }),
-  'noise-gate': (node, input, ctx) => ({
-    ...noiseGate(param(node, 'thresholdDb'), param(node, 'rangeDb'))(input),
-    domain: ctx.domain,
-  }),
-  limiter: (node, input, ctx) => ({
-    ...limiter(param(node, 'thresholdDb'), param(node, 'makeupGainDb'))(input),
-    domain: ctx.domain,
-  }),
-  deesser: (node, input, ctx) => {
-    // 8:1 ratio on sibilant frequencies — simplified to overall level reduction
-    const gainReductionDb = Math.max(0, (input - param(node, 'thresholdDb')) * (1 - 1 / 8))
-    return { out: input - gainReductionDb, domain: ctx.domain, gainReductionDb }
-  },
-  pad:    (node, input, ctx) => pass(param(node, 'engaged') ? input - 20 : input, ctx),
-  fader:  (node, input, ctx) => pass(input + param(node, 'faderDb'), ctx),
-  switch: (node, input, ctx) => pass(param(node, 'on') ? input : -Infinity, ctx),
+  comp: (node, input, ctx) =>
+    dynamics(compressor(param(node, 'thresholdDb'), param(node, 'ratio'), param(node, 'makeupGainDb')), input, ctx),
+  'noise-gate': (node, input, ctx) => dynamics(noiseGate(param(node, 'thresholdDb'), param(node, 'rangeDb')), input, ctx),
+  limiter: (node, input, ctx) => dynamics(limiter(param(node, 'thresholdDb'), param(node, 'makeupGainDb')), input, ctx),
+  deesser: (node, input, ctx) => dynamics(deesser(param(node, 'thresholdDb')), input, ctx),
+  pad:    (node, input, ctx) => pass(param(node, 'engaged') ? shifted(input, -20) : input, ctx),
+  fader:  (node, input, ctx) => pass(shifted(input, param(node, 'faderDb')), ctx),
+  switch: (node, input, ctx) => pass(param(node, 'on') ? input : SILENT, ctx),
   // The Relay passes on its selected input (the engine hands it only that one)
   relay:  (_, input, ctx) => pass(input, ctx),
   // Pan / Balance spread the signal over L / R in the engine (panSides, balanceSides)
@@ -179,27 +237,30 @@ const PROCESS: Record<TypeKey, Process> = {
   adc: (node, input, ctx) => {
     if (ctx.domain === 'digital') return blocked('adcExpectsAnalog', 'digital')
     // Unity (0 dBu) lands at −18 dBFS, leaving headroom up to the digital ceiling (0 dBFS)
-    return { out: isFinite(input) ? input - param(node, 'alignmentDb') : -Infinity, domain: 'digital' }
+    return { out: shifted(input, -param(node, 'alignmentDb')), domain: 'digital' }
   },
   dac: (node, input, ctx) => {
     if (ctx.domain === 'analog') return blocked('dacExpectsDigital', 'analog')
-    return { out: isFinite(input) ? input + param(node, 'alignmentDb') : -Infinity, domain: 'analog' }
+    // Its analog side hisses like any powered card
+    const out = shifted(input, param(node, 'alignmentDb'))
+    return { out: ctx.fed ? withHiss(out, HISS_DBU) : out, domain: 'analog' }
   },
   'master-bus':      busFader,
   'aux-bus':         busFader,
   'matrix-bus':      busFader,
   // Only runs with an amplifier before it (the engine checks); otherwise it is silent
-  speaker: analogOnly('digitalToSpeaker', (node, input, ctx) => pass(input + param(node, 'outputTrimDb'), ctx)),
-  'active-speaker': analogOnly('digitalToSpeaker', (node, input, ctx) =>
-    pass(isFinite(input) ? input + param(node, 'volumeDb') : -Infinity, ctx)),
+  speaker: analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'outputTrimDb')), ctx)),
+  'active-speaker': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx)),
 }
 
 /**
  * One channel of `node` with `input` arriving (dBu, or dBFS after an ADC). A bus gets everything
- * plugged into it already added up.
+ * plugged into it already added up. The card adds its hiss to what arrives, does its job, and
+ * flattens the peaks it cannot pass.
  */
-export function processSide(node: SignalNode, input: number, ctx: SideContext): SideResult {
-  return PROCESS[node.typeKey](node, input, ctx)
+export function processSide(node: SignalNode, input: SideLevels, ctx: SideContext): SideResult {
+  const result = PROCESS[node.typeKey](node, withHiss(input, hissOf(node, ctx)), ctx)
+  return { ...result, out: flattenPeaks(result.out, result.domain) }
 }
 
 /** Pan knob (0 = full left, 50 = centre, 100 = full right): equal-power, −3 dB each side at centre. */

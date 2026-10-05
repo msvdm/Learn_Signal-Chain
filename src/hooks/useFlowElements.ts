@@ -3,9 +3,9 @@ import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { getPorts } from '../graph/queries'
-import { getHealth, healthColor, humStrength } from '../signal/levels'
+import { healthColor, humStrength } from '../signal/levels'
 import { SOUND_PORT } from '../data/nodeRegistry'
-import { levelOf } from '../signal/engine'
+import { healthOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
@@ -118,8 +118,8 @@ export function useFlowElements() {
     return keepSame(lastFlowEdges, graphEdges.map((edge): Edge => {
       const sourceStage = stages[edge.source]
       const key         = `${edge.source}:${edge.sourceHandle}`
-      const db          = levelOf(wires.get(key) ?? sourceStage?.out)
-      const health      = sourceStage ? getHealth(db, sourceStage.domain) : null
+      // Clipping from the peaks, the rest from the average — as the card it leaves
+      const health      = sourceStage ? healthOf(wires.get(key) ?? sourceStage.out, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
       // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine

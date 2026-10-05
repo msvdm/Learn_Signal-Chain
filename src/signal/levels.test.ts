@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, TAPER_UNITY, UNITY_DBU,
-  dbToPercent, formatDb, getHealth, healthColor, humStrength, sumSignalsToDb, taperToDb,
+  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, UNITY_DBU,
+  ceilingOf, dbToPercent, formatDb, getHealth, headroomOf, healthColor, humStrength, louder, shifted, snrOf,
+  sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
 
-// The dB scale: its fixed points, the health zones, how a reading is written, how signals add up.
+// The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,
+// and the readings one side of a signal carries (peak, average, noise, hum).
 
 const S = -Infinity
 
@@ -37,6 +39,22 @@ describe('getHealth', () => {
     expect(getHealth(-17.9, 'digital')).toBe('hot')
     expect(getHealth(-0.1, 'digital')).toBe('hot')
     expect(getHealth(0, 'digital')).toBe('clipping')
+  })
+
+  it('clips as soon as the peaks reach the clip level, whatever the average', () => {
+    // A voice at +8 dBu: its peaks (12 dB above) at +20
+    expect(getHealth(8, 'analog', 20)).toBe('clipping')
+    expect(getHealth(8, 'analog', 19.9)).toBe('hot')
+    expect(getHealth(-10, 'analog', 2)).toBe('good')
+    expect(getHealth(-12, 'digital', 0)).toBe('clipping')
+    expect(getHealth(-12, 'digital', -0.1)).toBe('hot')
+    // Left out, the peaks are the average
+    expect(getHealth(19.9, 'analog', undefined)).toBe('hot')
+  })
+
+  it('has a ceiling per domain: +20 dBu analog, 0 dBFS digital', () => {
+    expect(ceilingOf('analog')).toBe(CLIP_DBU)
+    expect(ceilingOf('digital')).toBe(0)
   })
 
   it('gives each zone its colour', () => {
@@ -73,6 +91,51 @@ describe('sumSignalsToDb', () => {
     expect(sumSignalsToDb([-10, S])).toBeCloseTo(-10, 2)
     expect(sumSignalsToDb([S, S])).toBe(S)
     expect(sumSignalsToDb([])).toBe(S)
+  })
+})
+
+describe('sumNoiseToDb', () => {
+  it('adds powers: two equal noises give +3 dB, four +6 dB — noise from different places never lines up', () => {
+    expect(sumNoiseToDb([-80, -80])).toBeCloseTo(-76.99, 2)
+    expect(sumNoiseToDb([-80, -80, -80, -80])).toBeCloseTo(-73.98, 2)
+    expect(sumNoiseToDb([-80, -90])).toBeCloseTo(-79.59, 2)
+  })
+
+  it('passes one noise on exactly, and adds nothing for silence', () => {
+    expect(sumNoiseToDb([-80])).toBe(-80)
+    expect(sumNoiseToDb([-80, S])).toBe(-80)
+    expect(sumNoiseToDb([S])).toBe(S)
+    expect(sumNoiseToDb([])).toBe(S)
+  })
+})
+
+describe('one side of a signal: peak, average, noise and hum', () => {
+  const voice = { peak: 2, rms: -10, noise: -74, hum: S }
+  const humming = { peak: -8, rms: -20, noise: -40, hum: -40 }
+
+  it('turned up or down, everything moves together', () => {
+    expect(shifted(voice, -6)).toEqual({ peak: -4, rms: -16, noise: -80, hum: S })
+    expect(shifted(voice, S)).toEqual(SILENT)
+  })
+
+  it('added on a bus: the music as voltages, the noise and the hum as noise', () => {
+    const sum = sumSides([voice, voice])
+    expect(sum.peak).toBeCloseTo(8.02, 2)
+    expect(sum.rms).toBeCloseTo(-3.98, 2)
+    expect(sum.noise).toBeCloseTo(-70.99, 2)
+    expect(sum.hum).toBe(S)
+    expect(sumSides([voice, humming]).hum).toBe(-40)
+    expect(sumSides([])).toEqual(SILENT)
+  })
+
+  it('the louder of two sides, reading by reading', () => {
+    expect(louder(voice, humming)).toEqual({ peak: 2, rms: -10, noise: -40, hum: -40 })
+  })
+
+  it('signal-to-noise: the average over the noise; headroom: the peaks under the ceiling', () => {
+    expect(snrOf(voice)).toBe(64)
+    expect(headroomOf(voice)).toBe(18)
+    expect(headroomOf({ ...voice, peak: -6 }, 'digital')).toBe(6)
   })
 })
 

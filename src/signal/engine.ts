@@ -3,50 +3,70 @@ import { NODE_REGISTRY, DI_DIRECT_PORT, isNodeStereo, matrixSendParam, param } f
 import { graphOf, drivingWire, fedBy, flowOrder } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
 import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, preampSourceOf } from '../graph/queries'
-import type { SignalDomain, SignalHealth } from './levels'
-import { CLIP_DBU, HUM_DBU, TAPER_UNITY, getHealth, sumSignalsToDb, taperToDb } from './levels'
+import type { SideLevels, SignalDomain, SignalHealth } from './levels'
+import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideResult, StageCondition } from './process'
-import { SPEAKER_LEVEL_DB, balanceSides, panSides, processSide } from './process'
+import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processSide } from './process'
 import { sameShape } from '../utils/sameShape'
 
-// The signal engine: walks the graph in signal order and works out the level at every card and on
-// every wire. What each wire carries (mono, stereo, one side) comes from the graph
-// (graph/queries.ts outputKind); this only works out how loud it is. Pure — no React, no store.
+// The signal engine: walks the graph in signal order and works out the levels at every card and on
+// every wire — per side, the peaks, the average and the noise (SideLevels). What each wire carries
+// (mono, stereo, one side) comes from the graph (graph/queries.ts outputKind); this only works out
+// how loud it is. Pure — no React, no store.
 
 /**
- * A signal on a wire, or arriving at / leaving a card: what it carries and how loud each side is.
- * mono: l = r · left: r = −∞ · right: l = −∞ · stereo: both sides.
+ * A signal on a wire, or arriving at / leaving a card: what it carries and each side's levels.
+ * mono: l = r · left: r silent · right: l silent · stereo: both sides.
  */
 export interface WireSignal {
   kind: WireKind
-  l: number
-  r: number
+  l: SideLevels
+  r: SideLevels
 }
 
-export const SILENT_WIRE: WireSignal = { kind: 'mono', l: -Infinity, r: -Infinity }
+export const SILENT_WIRE: WireSignal = { kind: 'mono', l: SILENT, r: SILENT }
 
-/** How loud a signal is: its louder side (−∞ when there is none). */
+/** How loud a signal is: its louder side's average (−∞ when there is none). */
 export function levelOf(w: WireSignal | undefined): number {
-  return w ? Math.max(w.l, w.r) : -Infinity
+  return w ? Math.max(w.l.rms, w.r.rms) : -Infinity
 }
 
-const mono   = (db: number): WireSignal => ({ kind: 'mono', l: db, r: db })
-const stereo = (l: number, r: number): WireSignal => ({ kind: 'stereo', l, r })
+/** How loud its loudest moments are: its louder side's peaks. */
+export function peakOf(w: WireSignal | undefined): number {
+  return w ? Math.max(w.l.peak, w.r.peak) : -Infinity
+}
+
+/** Its hum (louder side; −∞: none). */
+export function humOf(w: WireSignal | undefined): number {
+  return w ? Math.max(w.l.hum, w.r.hum) : -Infinity
+}
+
+/** The health of a signal, judged in `domain`: clipping from its peaks, the rest from its average. */
+export function healthOf(w: WireSignal | undefined, domain: SignalDomain = 'analog'): SignalHealth {
+  return getHealth(levelOf(w), domain, peakOf(w))
+}
+
+const mono   = (s: SideLevels): WireSignal => ({ kind: 'mono', l: s, r: s })
+const stereo = (l: SideLevels, r: SideLevels): WireSignal => ({ kind: 'stereo', l, r })
 
 /** The wire as one channel: a stereo wire's two sides are added (about +6 dB when they match). */
-function foldToMono(w: WireSignal): number {
-  return w.kind === 'mono' ? w.l : sumSignalsToDb([w.l, w.r])
+function foldToMono(w: WireSignal): SideLevels {
+  return w.kind === 'mono' ? w.l : sumSides([w.l, w.r])
 }
 
 /** What an output that carries `kind` sends of the card's signal. */
 function onPort(kind: WireKind, out: WireSignal): WireSignal {
   switch (kind) {
-    case 'left':   return { kind, l: out.l, r: -Infinity }
-    case 'right':  return { kind, l: -Infinity, r: out.r }
+    case 'left':   return { kind, l: out.l, r: SILENT }
+    case 'right':  return { kind, l: SILENT, r: out.r }
     case 'stereo': return { kind, l: out.l, r: out.r }
-    default:       return mono(levelOf(out))
+    default:       return mono(louder(out.l, out.r))
   }
 }
+
+/** A ground-loop hum joins the noise (and is kept apart for its glow). */
+const humming = (s: SideLevels): SideLevels =>
+  ({ ...s, noise: sumNoiseToDb([s.noise, HUM_DBU]), hum: sumNoiseToDb([s.hum, HUM_DBU]) })
 
 /** A card working as something more than its type: it changes its name and its help text. */
 export type StageRole =
@@ -60,20 +80,21 @@ export interface StageResult {
   in: WireSignal
   /** What it sends out: both sides when it works in stereo, else one channel (l = r). */
   out: WireSignal
-  /** Health of what leaves, judged in `domain` */
+  /** Health of what leaves, judged in `domain`: clipping when its peaks reach the ceiling, else from its average */
   health: SignalHealth
   /** Analog (dBu) or digital (dBFS), leaving — an ADC / DAC changes it */
   domain: SignalDomain
   /** Analog or digital, arriving */
   inDomain: SignalDomain
-  /** How far a dynamics card turns the signal down right now */
+  /** How far a dynamics card turns the signal (its average) down right now */
   gainReductionDb?: number
   condition?: StageCondition
   role?: StageRole
   /**
    * The level of the hum leaving it (dBu, dBFS after an ADC): a ground loop through a DI Box (its
    * Direct Out on a Guitar Amp, its XLR Out on the desk, Ground Lift off) starts one at HUM_DBU on
-   * the XLR Out, and it rides along to the end of the chain. Undefined: no hum.
+   * the XLR Out. It is part of the noise and follows the signal to the end of the chain — a fader
+   * turns it down with the music; only Ground Lift takes it away. Undefined: no hum.
    */
   hum?: number
 }
@@ -170,62 +191,67 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       : 0
 
     /**
-     * The level arriving, all wires added up. side = 'l' / 'r': that side of every wire (a mono
+     * The levels arriving, all wires added up. side = 'l' / 'r': that side of every wire (a mono
      * wire counts on both sides, a left wire only on the left). null: every wire folded into one.
      */
-    const arriving = (side: 'l' | 'r' | null) => sumSignalsToDb(used.map((e) => {
-      const w    = wireOf(e)
-      const send = sendDb(e)
-      return isFinite(send) ? (side ? w[side] : foldToMono(w)) + send : -Infinity
+    const arriving = (side: 'l' | 'r' | null) => sumSides(used.map((e) => {
+      const w = wireOf(e)
+      return shifted(side ? w[side] : foldToMono(w), sendDb(e))
     }))
 
     /** One side (or the only channel) of this node. */
     const runSide = (side: 'l' | 'r' | null): SideResult => {
       const input = arriving(side)
-      if (node.bypassed && fed) return { out: input, domain: inputDomain }
+      // Bypassed: passed on as it is, with no hiss of its own (a bus still adds its wires up)
+      if (node.bypassed && fed) return { out: flattenPeaks(input, inputDomain), domain: inputDomain }
       return processSide(node, input, { domain: inputDomain, mixedDomains, side, preamp, fed })
     }
 
     // `side` gives the stage its domain, gain reduction and condition
-    let side: SideResult
+    let side: Omit<SideResult, 'out'>
     let inSig: WireSignal
     let outSig: WireSignal
 
     if (node.typeKey === 'speaker' && incoming.length > 0 && !fedBy(node.id, 'amp', graph)) {
       // A passive speaker needs a power amplifier somewhere before it
-      side   = { out: -Infinity, domain: inputDomain, condition: 'needsAmp' }
+      side   = { domain: inputDomain, condition: 'needsAmp' }
       inSig  = mono(arriving(null))
       outSig = SILENT_WIRE
     } else if (node.typeKey === 'pan') {
-      // Mono wire in → Pan knob spreads it over L / R. Stereo wire in → Balance knob.
+      // Mono wire in → Pan knob spreads it over L / R. Stereo wire in → Balance knob. Each side is
+      // turned down as a whole: its peaks, average and noise alike.
       const position = param(node, 'panPosition')
-      let spread: { l: number; r: number }
+      let gain: { l: number; r: number }
       if (followKind === 'stereo') {
         const l = arriving('l')
         const r = arriving('r')
         inSig  = stereo(l, r)
-        spread = node.bypassed ? { l, r } : balanceSides(position, l, r)
+        gain   = node.bypassed ? { l: 0, r: 0 } : balanceSides(position, 0, 0)
+        outSig = stereo(shifted(l, gain.l), shifted(r, gain.r))
       } else {
         const v = arriving(null)
         inSig  = mono(v)
-        spread = node.bypassed && incoming.length > 0 ? { l: v, r: v } : panSides(position, v)
+        gain   = node.bypassed && incoming.length > 0 ? { l: 0, r: 0 } : panSides(position, 0)
+        outSig = stereo(shifted(v, gain.l), shifted(v, gain.r))
       }
-      outSig = stereo(spread.l, spread.r)
-      side   = { out: levelOf(outSig), domain: inputDomain }
+      side = { domain: inputDomain }
     } else if (def.category === 'source') {
       // Line In set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
-      side   = runSide(null)
+      const only = runSide(null)
+      side   = only
       inSig  = SILENT_WIRE
-      outSig = isStereo ? stereo(side.out, side.out) : mono(side.out)
+      outSig = isStereo ? stereo(only.out, only.out) : mono(only.out)
     } else if (isStereo && def.linked && !node.bypassed) {
-      // The louder side drives the detector; the same gain change goes to both sides
+      // The louder side drives the detector (reading by reading); the same change goes to both sides
       const l = arriving('l')
       const r = arriving('r')
-      const detector = Math.max(l, r)
-      side = processSide(node, detector, { domain: inputDomain, mixedDomains, side: null, preamp: false, fed })
-      const gain = isFinite(detector) ? side.out - detector : -Infinity
+      const detector = louder(l, r)
+      const result   = processSide(node, detector, { domain: inputDomain, mixedDomains, side: null, preamp: false, fed })
+      const linked   = (s: SideLevels) => eachReading((k) =>
+        isFinite(detector[k]) ? s[k] + (result.out[k] - detector[k]) : s[k])
+      side   = result
       inSig  = stereo(l, r)
-      outSig = stereo(isFinite(l) ? l + gain : -Infinity, isFinite(r) ? r + gain : -Infinity)
+      outSig = stereo(linked(l), linked(r))
     } else if (isStereo) {
       // Run the node once per side
       const left  = runSide('l')
@@ -235,34 +261,29 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       outSig = stereo(left.out, right.out)
     } else {
       // One channel
-      side   = runSide(null)
+      const only = runSide(null)
+      side   = only
       inSig  = mono(arriving(null))
-      outSig = mono(side.out)
+      outSig = mono(only.out)
     }
 
     let condition = side.condition
     // An amplifier's output is speaker level — far too strong for an active speaker's input
     if (node.typeKey === 'active-speaker' && isFinite(levelOf(outSig)) && fedBy(node.id, 'amp', graph)) {
-      outSig    = mono(Math.max(levelOf(outSig) + SPEAKER_LEVEL_DB, CLIP_DBU))
+      const loud = shifted(outSig.l, SPEAKER_LEVEL_DB)
+      outSig    = mono({ ...loud, rms: Math.max(loud.rms, CLIP_DBU), peak: Math.max(loud.peak, CLIP_DBU) })
       condition = 'blown'
     }
     // A guitar straight into a desk input: the level is fine, the high notes are lost
     if (node.typeKey === 'instrument' && needsDi(node.id, graph)) condition = 'needsDi'
 
-    // A hum arrives with any wire it uses (the strongest one counts); a DI Box in a ground loop
-    // starts one on its XLR Out. It grows with every boost and never goes down — a cut, a mute or a
-    // fader pulled down leave it as it is; only a converter's change of scale (ADC / DAC) moves it
-    // both ways. Only Ground Lift on the DI takes it away.
-    const humsIn = used.flatMap((e) => hums.get(`${e.source}:${e.sourceHandle}`) ?? [])
-    const humIn  = humsIn.length > 0 ? Math.max(...humsIn) : undefined
-    const loop   = node.typeKey === 'di-box' && groundLoop(node.id, graph)
-    let hum = humIn
-    if (hum !== undefined) {
-      const change = levelOf(outSig) - levelOf(inSig)
-      const scale  = node.typeKey === 'adc' || node.typeKey === 'dac'
-      if (isFinite(change)) hum += scale ? change : Math.max(0, change)
+    // A DI Box in a ground loop starts a hum on its XLR Out. It is part of the noise from there on:
+    // every card treats it as it treats the noise (a fader turns it down with the music, a gate
+    // shuts it off in the pauses); only Ground Lift on the DI takes it away.
+    if (node.typeKey === 'di-box' && groundLoop(node.id, graph)) {
+      outSig = { ...outSig, l: humming(outSig.l), r: humming(outSig.r) }
     }
-    if (loop) hum = Math.max(hum ?? -Infinity, HUM_DBU)
+    const hum = humOf(outSig)
 
     const role: StageRole | undefined = preamp ? 'preamp'
       : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
@@ -273,21 +294,21 @@ function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSign
       in: inSig,
       out: outSig,
       // Judged in the domain the signal leaves in
-      health: getHealth(levelOf(outSig), side.domain),
+      health: healthOf(outSig, side.domain),
       domain: side.domain,
       inDomain: inputDomain,
       gainReductionDb: side.gainReductionDb,
       condition,
       role,
-      ...(hum !== undefined ? { hum } : {}),
+      ...(isFinite(hum) ? { hum } : {}),
     }
     for (const port of getPorts(node, graph).outputs) {
       const key = `${node.id}:${port.id}`
       // A DI Box's Direct Out passes on what arrives, at instrument level; the rest is its XLR Out
       const direct = node.typeKey === 'di-box' && port.id === DI_DIRECT_PORT
-      wires.set(key, onPort(outputKind(node.id, port.id, graph), direct ? inSig : outSig))
-      const portHum = direct ? humIn : hum
-      if (portHum !== undefined) hums.set(key, portHum)
+      const wire   = onPort(outputKind(node.id, port.id, graph), direct ? inSig : outSig)
+      wires.set(key, wire)
+      if (isFinite(humOf(wire))) hums.set(key, humOf(wire))
     }
   }
 

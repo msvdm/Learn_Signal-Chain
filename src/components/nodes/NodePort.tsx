@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
-import { graphSignal, levelOf } from '../../signal/engine'
+import { graphSignal, levelOf, peakOf } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -55,13 +55,15 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
     const plugged = wiresOn(s, nodeId, portId, type)
     if (plugged.length === 0) return 'var(--lsc-border)'
     const { wires, stages } = graphSignal(s.nodes, s.edges)
-    // An input holding several wires shows the health of their sum
-    const db = type === 'source'
-      ? levelOf(wires.get(`${nodeId}:${portId}`))
-      : sumSignalsToDb(plugged.map((e) => levelOf(wires.get(`${e.source}:${e.sourceHandle}`))))
+    // An input holding several wires shows the health of their sum (clipping from the peaks)
+    const signals = type === 'source'
+      ? [wires.get(`${nodeId}:${portId}`)]
+      : plugged.map((e) => wires.get(`${e.source}:${e.sourceHandle}`))
+    const db   = sumSignalsToDb(signals.map(levelOf))
+    const peak = sumSignalsToDb(signals.map(peakOf))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)
     const from = type === 'source' ? nodeId : plugged[0].source
-    return healthColor(getHealth(db, stages[from]?.domain))
+    return healthColor(getHealth(db, stages[from]?.domain, peak))
   })
 
   const wiring        = useSignalStore((s) => s.wire !== null)

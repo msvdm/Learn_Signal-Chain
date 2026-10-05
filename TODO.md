@@ -140,7 +140,43 @@ Checked that the tests bite: adding signals as power instead of voltage fails 14
 the tables found two stale lines in CLAUDE.md (HPF and EQ were described as a placeholder / a plain
 sum; both are pink-noise level changes) — fixed.
 
-## 4. Three readings per wire: peak, average, noise
+## ~~4. Three readings per wire: peak, average, noise~~ — done (2026-10-05)
+
+Every side of every wire carries `SideLevels` (`signal/levels.ts`): `peak`, `rms` (the old
+number), `noise` — and `hum`, the hum part of the noise, kept apart for its glow (agreed with the
+user: without it a gate or a fader would treat the hum unlike the noise). The numbers, agreed
+before writing code:
+
+| | Peaks above the average | Noise below the average |
+|---|---|---|
+| Microphone (a voice) | 12 dB | 66 dB (−126 dBu: the room and its own hiss) |
+| Line Input (keys) | 12 dB | 80 dB |
+| Instrument (a guitar) | 15 dB | 70 dB |
+
+- Hiss added by each powered card to what arrives, before it does its job: −80 dBu, a Preamp
+  −128 dBu. None from passive cards (DI Box, Pad, the switches, Pan, passive Speaker), digital
+  stages, bypassed or unplugged cards; ADC / DAC on their analog side.
+- Gains, faders, filters move all readings alike; dynamics put each reading through their curve;
+  buses add the music as voltages, the noise as powers; peaks are flattened at +20 dBu / 0 dBFS.
+- Well set (Mic → Preamp +50 → EQ → Gain → Fader → Master Bus → speaker): **60.4 dB**
+  signal-to-noise, 18 dB headroom. Preamp 30 dB too low, made up with Gain +20 and Fader +10:
+  **37.0 dB** — 23.4 dB lost. Beginner's default chain: 56 dB.
+- D1: the hum follows the signal (−40 after the Preamp, −50 after a fader at −10). D4 / D5:
+  `health` clips from the peaks — `getHealth(db, domain, peakDb)`, `healthOf(wire)` — at every
+  level. Only the 5 marked test lines changed (2 × D1, 3 × D4); 62 new tests (263 in all, Node
+  and real Bun).
+- So the two ends of a wire agree, the UI judges health the same way: wire colours, port rings,
+  input meters (`useStereoLevels`: `inHealth` / `outHealth`; `inPeak` → `inLevel`, the louder
+  side's average), the overview face, the Master Bus / Pan L / R rows (`ChannelRow peak`).
+  Nothing else on the cards changed.
+
+Checked in the browser (an Advanced chain: guitar through a DI in a ground loop, voice through a
+compressor and Pan, a line pushed to +10 dBu, Master Bus → Main Fader → speakers and Matrix
+Bus): Pan knob drag, hum tags −80 → −40 → −50 → −53 with the glow, Ground Lift clears them all,
+the +10 dBu line and the Master Bus red (peaks), the Main Fader hot, a limiter's input meter
+"Clipping!" after the clipping Gain, overview faces; no console errors.
+
+Original plan:
 
 The engine (`signal/engine.ts`, `process.ts`) carries, per side, `{ peak, rms, noise }` instead
 of one number. Today's number becomes `rms` (the average) — the tests from step 3 still pass.
@@ -175,6 +211,9 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
 
 - Every meter gets a peak mark over the average bar, and the noise as a grey "fog" from the left
   when it is loud enough to reach the scale.
+- Left from step 4: the stereo bars inside `SignalMeter` (`ChannelRow` without `peak`) and the
+  Main Fader's `VerticalMeterPair` still colour each bar by its average alone — a side clipping on
+  its peaks shows yellow there while the health word says "Clipping". Give them the peaks.
 - Plain-language readings, never a bare number (the #1 rule): "Peaks 14 dB above the average",
   "Room before clipping: 6 dB — careful", "Hiss: 58 dB below the signal — clean".
 - Intermediate and up only (decision D3): Beginner meters look as they do today. Cards keep their

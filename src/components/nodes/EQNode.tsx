@@ -5,7 +5,6 @@ import { SignalMeter } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
 import { EQGraph, type GraphBand } from '../controls/EQGraph'
 import { useStage } from '../../hooks/useGraphSignal'
-import { getHealth } from '../../signal/levels'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import type { EQBand } from '../../data/nodeRegistry'
@@ -240,7 +239,7 @@ export function EQNode({ id }: CardProps) {
   const graphBands: GraphBand[] = specs.map((s) => ({
     band: bands[s.index], name: s.name, color: BAND_COLORS[s.index], freqRange: s.freqRange,
   }))
-  const meterIn  = <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
+  const meterIn  = <SignalMeter db={levels.in} dbR={levels.inR} health={levels.inHealth} domain={levels.inDomain} label={t.meters.input} />
   const meterOut = <SignalMeter db={levels.out} dbR={levels.outR} domain={levels.outDomain} health={result?.health ?? 'too-quiet'} label={t.meters.output} />
 
   return (

@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'bun:test'
 import type { EQBand, NodeParamValue, TypeKey } from '../data/nodeRegistry'
 import { initialParams } from '../data/nodeRegistry'
+import type { SideLevels } from './levels'
+import { SILENT } from './levels'
 import type { SideContext, SideResult } from './process'
-import { balanceSides, compressor, limiter, noiseGate, panSides, processSide } from './process'
+import { balanceSides, compressor, flattenPeaks, limiter, noiseGate, panSides, processSide } from './process'
 
 // What each card does to one channel, on its own (the engine tests, engine.test.ts, put the cards
-// together). Step 4 (TODO.md) hands processSide a peak, an average and a noise instead of one number:
-// `run` then passes the average in and reads it out, and the numbers here stay.
+// together). processSide works on a peak, an average and a noise: `run` passes the average in and
+// reads it out, so the numbers here are the averages. Peaks and noise: `levels` and the tests at the end.
 
 const S = -Infinity
 
 const CTX: SideContext = { domain: 'analog', mixedDomains: false, side: null, preamp: false, fed: true }
+
+/** A card of this type with its starting params (`params` on top). */
+const cardOf = (typeKey: TypeKey, params: Record<string, NodeParamValue>) =>
+  ({ id: typeKey, typeKey, position: { x: 0, y: 0 }, params: { ...initialParams(typeKey, 'advanced'), ...params }, bypassed: false })
 
 /** One channel through a card of this type, with its starting params (`params` on top). */
 function run(
@@ -18,10 +24,23 @@ function run(
   input: number,
   params: Record<string, NodeParamValue> = {},
   ctx: Partial<SideContext> = {},
-): SideResult {
-  const node = { id: typeKey, typeKey, position: { x: 0, y: 0 }, params: { ...initialParams(typeKey, 'advanced'), ...params }, bypassed: false }
-  return processSide(node, input, { ...CTX, ...ctx })
+): Omit<SideResult, 'out'> & { out: number } {
+  const result = processSide(cardOf(typeKey, params), { peak: input, rms: input, noise: S, hum: S }, { ...CTX, ...ctx })
+  return { ...result, out: result.out.rms }
 }
+
+/** Every reading of one channel through a card: what leaves it. */
+function levels(
+  typeKey: TypeKey,
+  input: SideLevels,
+  params: Record<string, NodeParamValue> = {},
+  ctx: Partial<SideContext> = {},
+): SideLevels {
+  return processSide(cardOf(typeKey, params), input, { ...CTX, ...ctx }).out
+}
+
+/** [peak, average, noise], no hum. */
+const sig = (peak: number, rms: number, noise: number): SideLevels => ({ peak, rms, noise, hum: S })
 
 const out = (...args: Parameters<typeof run>) => run(...args).out
 
@@ -240,5 +259,103 @@ describe('Pan and Balance', () => {
     expect(right.r).toBe(-12)
     expect(balanceSides(0, -10, -12)).toEqual({ l: -10, r: S })
     expect(balanceSides(100, -10, -12)).toEqual({ l: S, r: -12 })
+  })
+})
+
+describe('sources: their peaks above the average, their noise below it', () => {
+  it('a microphone: a voice (peaks 12 dB up), the room and its own hiss 66 dB down', () => {
+    expect(levels('mic', SILENT, {}, { fed: false })).toEqual(sig(-48, -60, -126))
+    expect(levels('mic', SILENT, { sensitivityDb: -50 }, { fed: false })).toEqual(sig(-38, -50, -116))
+  })
+
+  it('a Line Input: keys (peaks 12 dB up), its noise 80 dB down', () => {
+    expect(levels('line-in', SILENT)).toEqual(sig(2, -10, -90))
+  })
+
+  it('an Instrument: a guitar (plucks, peaks 15 dB up), the noise of its pickups 70 dB down', () => {
+    expect(levels('instrument', SILENT)).toEqual(sig(-15, -30, -100))
+  })
+
+  it('a microphone in front of a Guitar Amp: what the amp plays, at mic level, and the room on top', () => {
+    const heard = levels('mic', sig(-15, -30, -80))
+    expect(heard.peak).toBe(-45)
+    expect(heard.rms).toBe(-60)
+    // The amp's noise at mic level (−110) and the room (−126)
+    expect(heard.noise).toBeCloseTo(-109.89, 2)
+  })
+})
+
+describe('hiss: every powered card adds its own to what arrives, before it does its job', () => {
+  const quiet = sig(-48, -60, S)
+
+  it('a plain Gain: −80 dBu, lifted by its gain with the rest', () => {
+    expect(levels('gain', quiet, { gainDb: 20 }).noise).toBe(-60)
+    expect(levels('fader', sig(2, -10, S)).noise).toBe(-80)
+  })
+
+  it('a Preamp is far quieter: −128 dBu', () => {
+    expect(levels('gain', quiet, { preampDb: 40 }, { preamp: true }).noise).toBe(-88)
+  })
+
+  it('added to the noise that arrives as noise (+3 dB for two equal ones)', () => {
+    expect(levels('eq', sig(2, -10, -80)).noise).toBeCloseTo(-76.99, 2)
+  })
+
+  it('passive cards add none: DI Box, Pad, the switches, Pan, a passive speaker', () => {
+    for (const typeKey of ['di-box', 'pad', 'switch', 'relay', 'pan', 'speaker'] as const) {
+      expect(levels(typeKey, sig(2, -10, S)).noise).toBe(S)
+    }
+  })
+
+  it('none with nothing plugged in, none working digitally — but a DAC hisses on its analog side', () => {
+    expect(levels('fader', SILENT, {}, { fed: false }).noise).toBe(S)
+    expect(levels('fader', sig(-16, -28, S), {}, { domain: 'digital' }).noise).toBe(S)
+    expect(levels('adc', sig(2, -10, S)).noise).toBe(-98)
+    expect(levels('dac', sig(-16, -28, S), {}, { domain: 'digital' }).noise).toBe(-80)
+  })
+
+  it('a Gain turned all the way down sends nothing, its hiss neither', () => {
+    expect(levels('gain', sig(2, -10, -80), { gainDb: -60 })).toEqual(SILENT)
+  })
+})
+
+describe('peaks', () => {
+  it('are flattened at the clip level (+20 dBu) or the digital ceiling (0 dBFS), never below the average', () => {
+    expect(flattenPeaks(sig(27, 15, -60), 'analog')).toEqual(sig(20, 15, -60))
+    expect(flattenPeaks(sig(5, -3, -80), 'digital')).toEqual(sig(0, -3, -80))
+    expect(flattenPeaks(sig(25, 25, -60), 'analog')).toEqual(sig(25, 25, -60))
+    expect(flattenPeaks(sig(2, -10, -80), 'analog')).toEqual(sig(2, -10, -80))
+  })
+
+  it('by every card: a gain pushing a line too far, a digital fader past 0 dBFS', () => {
+    expect(levels('gain', sig(12, 0, S), { gainDb: 15 }).peak).toBe(20)
+    expect(levels('fader', sig(-6, -18, S), { faderDb: 12 }, { domain: 'digital' }).peak).toBe(0)
+  })
+
+  it('move with the average through gains, faders and filters: the gap stays', () => {
+    const out = levels('fader', sig(2, -10, S), { faderDb: -6 })
+    expect(out.peak - out.rms).toBe(12)
+  })
+})
+
+describe('dynamics work on every reading: the peaks, the average and the noise in the pauses', () => {
+  it('a compressor turns the peaks down more than the average; the noise only gets the makeup gain', () => {
+    const out = processSide(cardOf('comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 3 }), sig(2, -10, -90), CTX)
+    expect(out.out.peak).toBe(-11.5)
+    expect(out.out.rms).toBe(-14.5)
+    // The line's noise and the compressor's hiss (−79.59), under the threshold: +3 dB
+    expect(out.out.noise).toBeCloseTo(-76.59, 2)
+    expect(out.gainReductionDb).toBe(7.5)
+  })
+
+  it('a noise gate between the noise and the signal: open for the music, closed in the pauses', () => {
+    const out = levels('noise-gate', sig(2, -10, S))
+    expect(out.rms).toBe(-10)
+    // Its own hiss (−80), turned down by the Range
+    expect(out.noise).toBe(-160)
+  })
+
+  it('a limiter caps the peaks and leaves an average under its ceiling alone', () => {
+    expect(levels('limiter', sig(2, -10, S))).toEqual(sig(-3, -10, -80))
   })
 })

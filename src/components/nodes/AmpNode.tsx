@@ -4,7 +4,6 @@ import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
 import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
-import { getHealth } from '../../signal/levels'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -33,7 +32,7 @@ export function AmpNode({ id }: CardProps) {
       label={useNodeName(id, 'amp')}
     >
       <div className="space-y-3">
-        <SignalMeter db={levels.in} dbR={levels.inR} health={getHealth(levels.inPeak, levels.inDomain)} domain={levels.inDomain} label={t.meters.input} />
+        <SignalMeter db={levels.in} dbR={levels.inR} health={levels.inHealth} domain={levels.inDomain} label={t.meters.input} />
 
         <ControlSlider
           value={gainDb}
