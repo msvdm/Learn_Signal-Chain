@@ -18,23 +18,26 @@ here. Update CLAUDE.md when a step changes what it describes.
 
 ---
 
-## Decisions to confirm before Step A
+## Decisions for Step A — decided 2026-10-05
 
-Proposed answers in **bold**; change them here if you disagree.
-
-- **D1 — Hum follows the signal.** Today a hum "grows with every boost and never drops": pulling a
-  fader down leaves the hum where it was. In the new noise model all noise, hum included, goes up
-  and down with the signal (a fader turns both down — the gap between them stays). Only fixing
-  the cause (Ground Lift) removes it. Proposed: **hum follows the signal, like all noise.**
-- **D2 — Test signals.** Proposed: **a new Generator element** (Beginner level) with
-  Sine / Noise / Pad / Hits. The existing sources keep a fixed, natural character: Microphone =
-  a voice, Instrument = a guitar, Line Input = music. Alternative: a Sound switch on Line Input.
-- **D3 — What Beginner sees.** Proposed: **a peak mark on every meter and a plain word for the
-  noise ("clean" / "some hiss" / "noisy")**. The dB numbers for peak, noise, headroom and
-  signal-to-noise from Intermediate up.
-- **D4 — Clipping is judged on the peaks.** Proposed: **yes** — the bar (average) keeps today's
-  colours, but a card clips as soon as its peaks reach the clip level. Changes old chains: a drum
-  sound at +10 dBu average now clips, where today it is only "hot". That is the lesson.
+- **D1 — Hum follows the signal**, like all noise: a fader turns signal and hum down together and
+  the gap between them stays. Only fixing the cause (Ground Lift) removes it. (Today it "grows
+  with every boost and never drops" — that rule goes.)
+- **D2 — Sources.** A new **Generator** element (Sine / Noise / Pad / Hits). **Microphone and Line
+  Input get a Melodic / Percussive switch** (melodic: a voice, keys — a smaller gap between peak
+  and average; percussive: drums — a big gap). **Instrument and Guitar Amp are guitars**: a fixed
+  character, no switch.
+- **D3 — Beginner shows nothing new.** No peak marks, noise or extra readings at Beginner; they
+  start at Intermediate. So the Generator and the Melodic / Percussive switch are Intermediate
+  too (at Beginner, Microphone and Line Input are melodic).
+- **D4 — Clipping is judged on the peaks**: the bar (average) keeps today's colours, but a card
+  clips as soon as its peaks reach the clip level. A drum sound at +10 dBu average now clips,
+  where today it is only "hot". That is the lesson.
+- **D5 — open (follows from D3 + D4):** at Beginner nobody sees the peaks, but D4 still makes a
+  card red when they clip — so a voice turns red about 12 dB earlier than today, with no mark
+  explaining why. Proposed: keep it (a red bar means "too loud", which is true, and the help text
+  can say "the loudest moments are clipping"). The alternative is judging Beginner on the
+  average as today, which makes the engine depend on the level.
 
 ---
 
@@ -126,10 +129,11 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
   classic mistake (preamp 30 dB too low, made up later with a fader / gain) loses at least 20 dB.
   Tests for both.
 
-## 5. Sources: the Generator and natural characters
+## 5. Sources: the Generator and the Melodic / Percussive switch
 
-- Decision D2. A Generator element (sine / noise / pad / hits, a level knob), level gating as
-  decided. Microphone, Instrument and Line Input get their fixed character (gap and noise).
+- Decision D2 / D3. A Generator element (Sine / Noise / Pad / Hits, a level knob), Intermediate
+  and up. Microphone and Line Input get a Melodic / Percussive switch (Intermediate and up;
+  melodic at Beginner). Instrument and Guitar Amp keep a fixed guitar character.
 - Palette, registry, `NODE_LOOK`, card, both locales, help text (`theory`).
 
 ## 6. Meters show peak and noise
@@ -138,8 +142,8 @@ of one number. Today's number becomes `rms` (the average) — the tests from ste
   when it is loud enough to reach the scale.
 - Plain-language readings, never a bare number (the #1 rule): "Peaks 14 dB above the average",
   "Room before clipping: 6 dB — careful", "Hiss: 58 dB below the signal — clean".
-- Level gating (decision D3). Cards keep their size while values change (`StableText`, reserved
-  space).
+- Intermediate and up only (decision D3): Beginner meters look as they do today. Cards keep their
+  size while values change (`StableText`, reserved space).
 - A new note on a card when the noise becomes audible ("You can hear hiss here"), like the
   hum note today.
 
