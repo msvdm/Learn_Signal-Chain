@@ -11,6 +11,7 @@ drawing and an offline version come first, because Step B needs the first and th
   audio interface or pro gear may ever be needed.
 - No server, no accounts, no user data. Chains are shared as files and links, as today.
 - Sounds (later, Step C) are generated only: sine, noise, clicks. No samples, no recording.
+- No new panels or modules around the canvas: the readings live on the cards and wires.
 
 **How to work a step:** one step per session, on branch `signal-upgrade`. Run `bun run lint` +
 `bun run build` (+ `bun test` once it exists), check the app in the browser, commit, tick the step
@@ -255,12 +256,11 @@ Flow's zero-size warnings and NaN background dots, as before any of this).
   noise dot drops when the threshold is set between noise and signal.
 - Gate help text: "set the threshold between the noise and the quietest part of the signal".
 
-## 8. The level map
+## ~~8. The level map~~ — dropped (user, 2026-10-05)
 
-The textbook gain-staging drawing, live from the user's own chain: a panel under the canvas, one
-column per card in signal order, lines for peak, average and noise, the clip level at the top and
-the noise zone at the bottom. Opens for the chain of the selected card. The distance between the
-lines *is* the headroom and the signal-to-noise — the picture teachers draw on the board today.
+No panel under the canvas: the app is crowded enough and a chain can get complicated. The cards'
+meters (step 6) and the moving meters (step 11) show the peaks, the average and the noise. Whether
+any more monitoring is needed is decided once this TODO is done and the readings all work.
 
 ## 9. Words and docs
 
