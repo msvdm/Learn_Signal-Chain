@@ -10,7 +10,8 @@ drawing and an offline version come first, because Step B needs the first and th
 - Runs on anything that opens a web page — phone, tablet, cheap school laptop. No headphones,
   audio interface or pro gear may ever be needed.
 - No server, no accounts, no user data. Chains are shared as files and links, as today.
-- Sounds (later, Step C) are generated only: sine, noise, clicks. No samples, no recording.
+- Sounds: short generated audio loops (made for the app, no recordings of real people or
+  copyrighted music) — see D7. Not heard until Step C.
 - No new panels or modules around the canvas: the readings live on the cards and wires.
 
 **How to work a step:** one step per session, on branch `signal-upgrade`. Run `bun run lint` +
@@ -415,7 +416,54 @@ Original plan:
 
 ## Step B — the signal moves
 
-## ~~10. The time engine~~ — done (2026-10-05); D6 decided (b) and done in 10b
+### D7 — Step B is real audio (user, 2026-10-05) — replaces the plan below steps 10 / 10b
+
+Steps 10 and 10b built a homemade imitation of audio processing: hand-drawn loudness shapes at
+1 kHz, hand-written Attack / Release, and a measuring + caching system to keep the moving numbers
+in line with the still ones (~1,600 lines). The browser already has real audio processing (Web
+Audio API), so Step B is rebuilt on it:
+
+- **Sound material**: five generated audio loops, 10–15 s each, shipped with the app — soft lounge
+  music, a drum beat, a guitar string, a speaking voice, a singing voice. "Generated" = made for the
+  app (synthesis / generation tools), not recordings of real people or copyrighted music. Mono,
+  compressed (Opus or MP3), small: the one-file offline copy must inline them (check the size —
+  aim under ~1 MB for all five). The Generator keeps sine / noise / click, generated in code.
+  Which loop each source plays: Microphone → speech or singing, Line Input → lounge music or drum
+  beat, Instrument / Guitar Amp → guitar (the Melodic / Percussive switch maps onto these; decide in step 10c).
+- **Every card is a real audio stage**: gain / fader / preamp = gain, HPF / EQ / Graphic EQ = biquad
+  filters, Pan / Balance = panner, buses = summing, ADC / DAC = level shift, clipping = a waveshaper
+  at the clip level. Compressor, limiter, noise gate, de-esser: small processors of our own (a few
+  dozen lines each), written as plain functions on a buffer of samples so Bun can test them, run in
+  the browser through an AudioWorklet (or the offline render). Not the built-in DynamicsCompressor:
+  it adds its own makeup gain and has a fixed knee.
+- **Hiss and hum stay real too**: each powered card adds a quiet noise source at its hiss level, a
+  DI ground loop a 50 Hz hum — the noise floor is then measured, not computed.
+- **Measuring**: an OfflineAudioContext renders one loop of the chain (off the main thread, faster
+  than real time, no sound, no user click needed) and measures what leaves each card — peak,
+  average, noise (the noise from a render with the music muted). The cards' readings after a
+  dynamics card come from there (D6 = b, kept), later the live meters too. The Step A number
+  engine stays for the instant readings everywhere else (it agrees exactly where there are no
+  dynamics; keep the agreement test against the renders).
+- **dBu ↔ digital**: one fixed mapping (e.g. the +20 dBu clip level = 1.0 in the render, so a
+  −60 dBu microphone is 0.0001 and the −128 dBu preamp hiss still well inside float precision).
+- Tests: the processors and the mapping as plain functions in Bun; the rendering checked in the
+  browser (Web Audio does not run in Bun).
+
+## 10c. Replace the homemade time engine with real audio (next)
+
+- Produce the five loops (and decide the Melodic / Percussive mapping); add them to the build
+  (inlined in the one-file copy; check `vite-offline.ts` still passes).
+- Build the audio graph from the plan (`chain.ts` `planChain` stays: what the wiring makes of each
+  card), the dynamics processors, hiss / hum sources, the clip waveshapers.
+- Offline render + measure per card; feed the readings after dynamics (replaces `measureMusic` and
+  its caching). Rendering is async: the cards keep their last readings until the new ones arrive.
+- Remove what this replaces: `signal/sounds.ts`, most of `signal/time.ts` and their tests; keep the
+  decisions they tested as checks on the new processors (a slow Attack lets the start of a hit
+  through, a gate opens on peaks, a limiter's peaks never pass the ceiling, the noise in the pauses).
+- Re-measure the numbers the help texts quote (compressor "12 in, 14 out / 10 with 1 ms" etc.) and
+  update them in en + bg.
+
+## ~~10. The time engine~~ — done (2026-10-05), to be replaced by real audio (D7, step 10c)
 
 - **The engine split in two** (`signal/engine.ts`): `planChain` — what the wiring makes of each card,
   once per change (its mode, the wires it adds up, what its outputs carry, Preamp, role …) — and
@@ -492,7 +540,7 @@ Original plan:
 - Over a few seconds its peak, average and noise agree with Step A's numbers (a test), so the
   still picture and the moving picture never disagree.
 
-## ~~10b. The still picture measures the dynamics (D6 = b)~~ — done (2026-10-05)
+## ~~10b. The still picture measures the dynamics (D6 = b)~~ — done (2026-10-05); the decision stays, the homemade engine goes (D7)
 
 - **From a dynamics card at work on** (Compressor, Noise Gate, Limiter, De-esser, not bypassed — and
   every card after one), the still picture takes the peaks and the average of what arrives, leaves
@@ -536,9 +584,10 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
 
 ## 11. The fast lane: live meters
 
-- One animation loop outside React writes the moving values straight into the meters, gain
-  reduction bars and transfer-curve dots — no card redraws for movement (step 1 makes this
-  possible).
+- The chain plays in a real AudioContext (silent — no output to the speakers until Step C);
+  AnalyserNodes / a metering worklet give each card's level. One animation loop outside React
+  writes the moving values straight into the meters, gain reduction bars and transfer-curve dots —
+  no card redraws for movement (step 1 makes this possible).
 - Real meter behaviour: a fast peak with a peak-hold mark, a slower average (like a VU meter) —
   the two visibly split on drums and almost touch on a sine. That is "peak vs RMS".
 - Play / Pause in the header (a teacher freezes the picture to explain). Starts paused when the
@@ -554,15 +603,12 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
 - Chrome dev tools: CPU 6× slower, phone screen size, the stress chain from step 1. Must stay
   smooth (drop to 30 updates a second on slow devices if needed). Battery: nothing runs while
   paused, hidden, or with an empty canvas.
-- Since 10b the still picture plays the dynamics' part of the chain on every change: a compressor
-  knob costs ~20 ms (one strip) … ~50 ms (the stress chain) on a desktop — 6× slower is 120–300 ms
-  a step. If it drags: a faster core (no objects made per card per millisecond), or measuring in a
-  worker / in slices between frames while the cards keep the last readings.
+- Real audio for 75 cards at 48 kHz, live and in the offline renders: check the cost on a slow
+  device; if needed render at a lower sample rate for measuring, or measure only what a change reaches.
 
 ---
 
 ## Later — Step C: hear it (not planned yet)
 
-Generated sounds only (sine, noise, clicks) through the browser's built-in audio, on laptop or
-phone speakers. Muted until switched on, low volume by default, a safety limiter on the output.
-Built on Step B's time engine.
+The same audio graph as Step B, routed to the speakers (laptop or phone). Muted until switched
+on, low volume by default, a safety limiter on the output. A "listen here" point on any card.
