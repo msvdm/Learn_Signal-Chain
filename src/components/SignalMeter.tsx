@@ -13,7 +13,7 @@ import { LEVEL_SAMPLE } from '../utils/readout'
 interface SignalMeterProps {
   /** The signal, or its left side when `r` is set */
   l: SideLevels
-  /** Right side. When set, the meter shows two bars: L and R. */
+  /** Right side. When set, the meter shows two bars, L and R, each with its level (the health word beside the label). */
   r?: SideLevels
   health: SignalHealth
   label?: string
@@ -125,40 +125,56 @@ export function SignalMeter({ l, r, health, label, showValue = true, domain = 'a
   const { t }    = useTranslation()
   const detailed = useReadingsShown()
 
-  return (
-    <div className="flex flex-col" style={{ gap: 4 }}>
-      {label && (
-        <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)' }}>
-          {label}
-        </span>
-      )}
-      {r ? (
-        <>
+  const name = label && (
+    <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)' }}>
+      {label}
+    </span>
+  )
+  const healthWord = (
+    <StableText
+      reserve={Object.values(t.health)}
+      align="end"
+      style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color }}
+    >
+      {t.health[health]}
+    </StableText>
+  )
+
+  if (r) {
+    // Stereo: each bar shows its own level, so the health word goes up beside the label and the two
+    // rows sit close — 56px in all, 6 more than one bar, so a two-column card stays landscape
+    return (
+      <div className="flex flex-col" style={{ gap: 4 }}>
+        {(name || showValue) && (
+          <div className="flex items-center justify-between" style={{ gap: 8 }}>
+            {name || <span />}
+            {showValue && healthWord}
+          </div>
+        )}
+        <div className="flex flex-col" style={{ gap: 2, lineHeight: '16px' }}>
           <ChannelRow ch="L" side={l} domain={domain} />
           <ChannelRow ch="R" side={r} domain={domain} />
-        </>
-      ) : (
-        <MeterBar
-          db={l.rms} color={color} domain={domain}
-          peak={detailed ? l.peak : undefined} noise={detailed ? l.noise : undefined}
-        />
-      )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col" style={{ gap: 4 }}>
+      {name}
+      <MeterBar
+        db={l.rms} color={color} domain={domain}
+        peak={detailed ? l.peak : undefined} noise={detailed ? l.noise : undefined}
+      />
       {showValue && (
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
-          {/* In stereo each bar shows its own level, so only the health word stays here */}
           <StableText
             reserve={[domain === 'digital' ? '+00.0 dBFS' : '+00.0 dBu']}
             style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color }}
           >
-            {r ? '' : formatDb(l.rms, domain)}
+            {formatDb(l.rms, domain)}
           </StableText>
-          <StableText
-            reserve={Object.values(t.health)}
-            align="end"
-            style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color }}
-          >
-            {t.health[health]}
-          </StableText>
+          {healthWord}
         </div>
       )}
     </div>

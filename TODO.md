@@ -336,8 +336,15 @@ Choices made here, to review: the scale (120 dB, so the music's part of the curv
 than before); marks as shapes (triangle / ring / dot) rather than colours, which already mean
 health; the faint copy on the diagonal instead of arrows.
 
-**Found on the way, not fixed** (older than this step): a dynamics card fed a stereo wire is
-taller than wide — 438 × 462 — because its In / Out meters show two bars each (84 px instead of 50).
+**Found on the way, then fixed** (older than this step): a Compressor or Noise Gate fed a stereo
+wire was taller than wide — 438 × 462 — because its In / Out meters show two bars each (84 px
+instead of 50, and these cards had 10 px to spare). A stereo meter now puts its health word beside
+the label (the row under the bars only held that word in stereo) and its L / R rows closer (16 px
+lines, 2 apart): 56 px. Stereo Compressor / Noise Gate 438 × 434, Limiter 378, De-esser 322, DI Box
+339, Intermediate Equalizer 300, Amplifier 338, Graphic EQ and Parametric Equalizer 682 × 611 (the
+Parametric 627 in Bulgarian); mono sizes unchanged. Checked at Beginner, Intermediate and Advanced, English and Bulgarian (the longest
+health word, "Изкривяване!", fits beside "Вход"), Too Quiet → Good → Clipping! with no size change,
+and switching the Line Input between Mono and Stereo.
 
 Original plan:
 
