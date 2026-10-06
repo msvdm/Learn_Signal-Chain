@@ -449,19 +449,103 @@ Audio API), so Step B is rebuilt on it:
 - Tests: the processors and the mapping as plain functions in Bun; the rendering checked in the
   browser (Web Audio does not run in Bun).
 
-## 10c. Replace the homemade time engine with real audio (next)
+## ~~10c. Replace the homemade time engine with real audio~~ — done (2026-10-06)
 
-- Produce the five loops (and decide the Melodic / Percussive mapping); add them to the build
-  (inlined in the one-file copy; check `vite-offline.ts` still passes).
-- Build the audio graph from the plan (`chain.ts` `planChain` stays: what the wiring makes of each
-  card), the dynamics processors, hiss / hum sources, the clip waveshapers.
-- Offline render + measure per card; feed the readings after dynamics (replaces `measureMusic` and
-  its caching). Rendering is async: the cards keep their last readings until the new ones arrive.
-- Remove what this replaces: `signal/sounds.ts`, most of `signal/time.ts` and their tests; keep the
-  decisions they tested as checks on the new processors (a slow Attack lets the start of a hit
-  through, a gate opens on peaks, a limiter's peaks never pass the ceiling, the noise in the pauses).
-- Re-measure the numbers the help texts quote (compressor "12 in, 14 out / 10 with 1 ms" etc.) and
-  update them in en + bg.
+### D8, D9 — decided (user, 2026-10-05, at the start of 10c)
+
+- **D8 — the loops onto the sources.** Microphone: **Speech · Singing · Drums** (three buttons; it was
+  Melodic / Percussive). Line Input: **Music · Drums**. Instrument and Guitar Amp: the guitar. Beginner
+  shows no buttons: Speech / Music. Older files: `melodic` opens as Speech / Music, `percussive` as Drums.
+- **D9 — every card's readings come from the render**, not only from a dynamics card on (as D7 said).
+  Real filters do not change a voice's level the way the number engine guesses (pink noise: an 80 Hz
+  HPF −1.0 dB; a real voice −0.4), so the level would have jumped along the wire from a filter into a
+  compressor. The number engine stays as the instant picture: between a change and the render, the
+  last render's readings move by the number engine's step (a fader is exact at once).
+
+### What it is now
+
+- **Five loops** (`scripts/make-loops.py` → `src/audio/loops/*.mp3`, all made here: synthesis, and
+  flite's speech synthesizer for the speaking voice): a speaking voice ("Good evening, and welcome to
+  the show. This is a quick sound check. One, two, three. Can everyone hear me?", pauses between —
+  31 % near silence), a singing voice (formants on a sung tone, "la / ah / ooh", two phrases with a
+  breath), lounge music (FM electric piano, bass, a shaker, a little room), a drum beat, a guitar
+  (plucked strings, fingerpicked). One piece of music: 4 bars of | Dmaj7 | Bm7 | Em7 | A7 | at 96 BPM,
+  10 s — on a bus they play together (Step C). Each tuned to `PEAKS_ABOVE` as decoded again (speech
+  11.86, singing 12.02, music 12.02, drums 18.01, guitar 14.98), 96 kbps mono 48 kHz, 124 kB each
+  (620 kB; 64 kbps rounding added ~2 dB to a voice's loudest moments). Each file holds a little of its
+  own end before the loop and of its start after it, so a decoder's delay never cuts the loop.
+- **The render** (`src/audio/`): the number engine's plan built as Web Audio nodes (`chainAudio.ts`) —
+  gains, real biquad filters, Pan / Balance, bus sums, a white hiss on every powered card, a 50 Hz
+  oscillator for a ground loop, clippers where the peaks could reach the ceiling — and our processors
+  in an AudioWorklet (`processors.ts`: compressor on the level of the moment, gate on its peaks with
+  Hold, limiter with no sample past its ceiling, a **split-band de-esser** that turns down only what
+  is above its Frequency; the meter). `measure.ts`: two OfflineAudioContexts at 48 kHz at once — the
+  music (one loop, after the dynamics have settled) and the quiet (2 s of noise and hum) — one meter
+  node taking every tap. The Generator's sounds and the hiss are made in code (`sounds.ts`).
+- **When**: `store/measuring.ts` renders once a change has been quiet for 100 ms (nothing while a knob
+  is being turned), one at a time; `signal/measured.ts` puts the readings in (`withMeasured`).
+- **The number engine** goes back to putting each reading through a dynamics card's curve (the `D6`
+  test lines → `D9`, the pre-10b values); its de-esser now leaves the signal as a whole alone (only
+  the sibilance's reduction is guessed). Gone: `signal/time.ts`, `signal/sounds.ts`, `time.test.ts`
+  and chain.ts's `Moment` / `GivenLevels` (~1,000 lines); new: ~1,200 lines of `src/audio/` (the
+  processors 410, the chain 410, the measuring 200), the merge 90, the scheduler 80, the loop script
+  510, ~400 of tests.
+- **Offline**: the one-file copy holds the loops as data: URLs (1.74 MB; was 0.89); the AudioWorklet's
+  code is in the script as text (`vite-worklet.ts`, a Blob URL at run time). The service worker keeps
+  the loops with the rest.
+- Tests: 360 (Bun; 356 before) — the processors 19, the Generator's sounds and the hiss 7, the merge 7,
+  old files' words 3 (the time engine's 33 went); the render itself is checked in the browser (no
+  Web Audio in Bun).
+
+### What real sound says (measured, now in the help texts, en + bg)
+
+- Linear chains read as the number engine to ~0.05 dB (Mic −60 → Preamp −10, the noise −126 →
+  −73.88 → −72.94; the ground-loop hum −80 → −40 → −50 exactly).
+- **Compressor** (default 2:1 at −20, a speaking voice at −10 dBu): 6.8 dB down on average; the peaks
+  12 dB above it in, **17 out** with Attack 10 ms (the start of each word gets through), 16 with 1 ms.
+  A singing voice (notes start softly): 12 → 12, **10 at 1 ms**. Drums 18 → 22. So the help now says a
+  quick Attack catches *more* of the start, the peaks come closer only on soft starts, and a
+  **limiter** after it stops the loudest moments. (A faster detector — 1 ms, or peak-sensing — changes
+  this by under 1 dB: compressing loudness raises the crest unless the attack is instant.)
+- **De-esser** (default −20, 6 kHz): a speaking voice's "s" down 5.7 dB, the voice as a whole 0.07; a
+  singing voice: nothing. A new *Watch the readings* for it.
+- **Limiter** (default −3) on a voice peaking at +2: peaks exactly at −3, the average 3.5 dB down.
+- **Gain staging**: Beginner's default 56 dB at the speaker; well set 62 (53 with the default
+  Compressor in the strip — the Preamp's text now says "50 dB or more", it said 55); the Preamp 30 dB
+  too low and made up later 38 (34 with HPF and Compressor), the hiss tag on the card after the Preamp;
+  the Pad 64 → 48; the ADC 2 dB less room. All as the texts said.
+- Different sounds on one bus add up to less than the number engine's voltage sum (the stress chain's
+  8 channels: 2.3 dB less); clicks clipped at +10 dBu lose 4 dB of average.
+
+Checked in the browser (dev and the production build): the cards switch to the render's readings a
+moment after a change (a Threshold drag: the number engine's step at once, the render 200 ms after
+the knob stops); Speech / Singing / Drums and Music / Drums in English and Bulgarian (every word fits,
+the card sizes equal); the De-esser's "Sibilance reduction −5.7 dB", the gate's hiss 142 dB below;
+stereo bus with Pan / Balance / Main Fader, DI ground loop, ADC → DAC → amp → passive speaker, a speaker
+without an amp, a blown one, Pre / Post, Aux and Matrix Bus, the Generator, a bus fed analog and
+digital — no NaN, no console errors. The production page fetches only the loops a chain needs; the
+one-file copy (opened over http) measures with **zero network requests**. Render times (desktop, dev
+build, the hidden browser pane): 30 ms for 4 cards, 130 for a channel strip, 1.4 s for the 75-card
+stress chain (24 dynamics cards) — step 13.
+
+Choices made here, to review:
+- The loops' sound: synthetic and simple — flite's voice is robotic, the guitar bright (−7 dB above
+  6 kHz). Fine to measure; worth a better pass before Step C makes them heard.
+- The compressor hears the level of the moment over 3 ms (an RMS detector), so its marks sit on the
+  drawn curve for a steady sound; the Attack lesson changed with real sound (above).
+- The de-esser is split-band (only the band above its Frequency comes down) and its readout is that
+  band's reduction; the number engine's first guess puts a speaking voice's "s" 6 dB under its average.
+- The limiter has no look-ahead: it turns a peak down on the very sample (fine for measuring; for
+  listening, Step C may want a millisecond of look-ahead).
+- The noise is measured over 2 s (steady: ±0.02 dB), the music over the whole loop.
+- Several sources set to the same sound play the same loop: two "singers" add up to exactly +6 dB, as
+  the number engine says — and as two identical recordings would.
+
+**Left for the user:** double-click `dist/learn-signal-chain.html` (Chrome / Edge, Firefox if at
+hand) with Wi-Fi off, build Mic → Preamp +50 → Compressor 4:1: a moment after the chain is built the
+Compressor's "Turning down" goes from −7.5 to about −10 dB and its Peaks reading from 3 to 19 — that is
+the AudioWorklet running from a file (the browser pane cannot open files). Listening to the loops is
+up to you (`src/audio/loops/*.mp3`): the app does not play them until Step C.
 
 ## ~~10. The time engine~~ — done (2026-10-05), to be replaced by real audio (D7, step 10c)
 
@@ -584,8 +668,9 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
 
 ## 11. The fast lane: live meters
 
-- The chain plays in a real AudioContext (silent — no output to the speakers until Step C);
-  AnalyserNodes / a metering worklet give each card's level. One animation loop outside React
+- The chain plays in a real AudioContext (silent — no output to the speakers until Step C): the same
+  graph as the measuring render (`audio/chainAudio.ts` `buildChain` into an AudioContext instead of
+  an OfflineAudioContext), the meter worklet sending each card's level as it plays. One animation loop outside React
   writes the moving values straight into the meters, gain reduction bars and transfer-curve dots —
   no card redraws for movement (step 1 makes this possible).
 - Real meter behaviour: a fast peak with a peak-hold mark, a slower average (like a VU meter) —
@@ -605,6 +690,8 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
   paused, hidden, or with an empty canvas.
 - Real audio for 75 cards at 48 kHz, live and in the offline renders: check the cost on a slow
   device; if needed render at a lower sample rate for measuring, or measure only what a change reaches.
+  From 10c (desktop, dev build): 30 ms for 4 cards, 130 for a channel strip, 1.4 s for the 75-card
+  stress chain — a render is mostly nodes (~0.75 ms per node per loop) and the dynamics worklets.
 
 ---
 

@@ -54,7 +54,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const ringColor = useSignalStore((s) => {
     const plugged = wiresOn(s, nodeId, portId, type)
     if (plugged.length === 0) return 'var(--lsc-border)'
-    const { wires, stages } = graphSignal(s.nodes, s.edges)
+    const { wires, stages } = graphSignal(s.nodes, s.edges, s.measured)
     // An input holding several wires shows the health of their sum (clipping from the peaks)
     const signals = type === 'source'
       ? [wires.get(`${nodeId}:${portId}`)]
@@ -77,7 +77,7 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
   const showUnplug = canUnplug && (hovered || menuAt !== null)
   // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
   const isSend     = type === 'source' && portId === MATRIX_PORT
-  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
+  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + index * PORT_GAP
 

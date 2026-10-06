@@ -7,7 +7,11 @@ import { OFFLINE_FILE } from './src/data/site'
 // The app without internet, two ways, made at build time (no extra packages):
 // - sw.js: a service worker that keeps a copy of every file of this build, so the site opens
 //   offline after one visit (and can be installed as an app).
-// - OFFLINE_FILE: the whole app in one .html file — download it, double-click it, no internet.
+// - OFFLINE_FILE: the whole app in one .html file — download it, double-click it, no internet. The
+//   sound loops the script fetches are in it too, as data: URLs.
+
+/** Files the script fetches, and their media types: in the one-file download they are data: URLs. */
+const FETCHED: Record<string, string> = { '.mp3': 'audio/mpeg' }
 
 /** Every file in the public folder, as paths relative to it ('icon.svg', 'sub/x.png'). */
 function publicFiles(dir: string): string[] {
@@ -86,6 +90,13 @@ export function offline(): Plugin {
         throw new Error(`vite-offline: the one-file download needs one script, the build made ${chunks.length}`)
       }
       const script = chunks[0]
+      let code = script.code
+      for (const file of Object.values(bundle)) {
+        const type = Object.entries(FETCHED).find(([ext]) => file.fileName.endsWith(ext))?.[1]
+        if (file.type !== 'asset' || !type) continue
+        code = code.replaceAll(config.base + file.fileName, `data:${type};base64,${Buffer.from(file.source).toString('base64')}`)
+      }
+      if (code.includes(`${config.base}assets/`)) throw new Error('vite-offline: the script loads a file the one-file download does not hold')
       const styles = Object.values(bundle).filter((f) => f.type === 'asset' && f.fileName.endsWith('.css'))
       const css    = styles.map((f) => (f.type === 'asset' ? String(f.source) : '')).join('\n')
       if (/<\/style/i.test(css)) throw new Error('vite-offline: a stylesheet contains "</style"')
@@ -95,7 +106,7 @@ export function offline(): Plugin {
       const icon = readFileSync(join(config.publicDir, 'icon.svg')).toString('base64')
       let page = String(html.source)
       page = page.replace(/<script\b[^>]*\bsrc="[^"]*"[^>]*><\/script>/, () =>
-        `<script type="module">${escapeScript(script.code)}</script>`)
+        `<script type="module">${escapeScript(code)}</script>`)
       page = page.replace(/<link\b[^>]*rel="modulepreload"[^>]*>\s*/g, () => '')
       page = page.replace(/<link\b[^>]*rel="stylesheet"[^>]*>/, () => `<style>${css}</style>`)
       page = page.replace(/<link\b[^>]*rel="stylesheet"[^>]*>\s*/g, () => '')

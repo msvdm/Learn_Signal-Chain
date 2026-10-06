@@ -9,10 +9,11 @@ import type { SideContext, SideResult, StageCondition } from './process'
 import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processSide, withOwnHiss } from './process'
 
 // The walk through a chain: what the wiring makes of each card (planChain, once per change of the
-// graph) and the levels at every card and on every wire at one moment (runChain) — per side, the
-// peaks, the average and the noise (SideLevels). What each wire carries (mono, stereo, one side)
-// comes from the graph (graph/queries.ts outputKind); this only works out how loud it is. The still
-// picture (engine.ts) and the moving one (time.ts) both run it. Pure — no React, no store.
+// graph) and the levels the number engine gives every card and every wire (runChain) — per side,
+// the peaks, the average and the noise (SideLevels). What each wire carries (mono, stereo, one
+// side) comes from the graph (graph/queries.ts outputKind); this only works out how loud it is.
+// The render on real sound (audio/chainAudio.ts) builds its graph from the same plan. Pure — no
+// React, no store.
 /**
  * A signal on a wire, or arriving at / leaving a card: what it carries and each side's levels.
  * mono: l = r · left: r silent · right: l silent · stereo: both sides.
@@ -54,7 +55,7 @@ function foldToMono(w: WireSignal): SideLevels {
 }
 
 /** What an output that carries `kind` sends of the card's signal. */
-function onPort(kind: WireKind, out: WireSignal): WireSignal {
+export function onPort(kind: WireKind, out: WireSignal): WireSignal {
   switch (kind) {
     case 'left':   return { kind, l: out.l, r: SILENT }
     case 'right':  return { kind, l: SILENT, r: out.r }
@@ -85,8 +86,8 @@ type CardMode =
 
 /**
  * What the wiring makes of one card: everything about it that does not depend on the levels,
- * worked out once per change of the graph — the time engine (signal/time.ts) runs the same chain
- * every millisecond.
+ * worked out once per change of the graph — the number engine (runChain) and the render on real
+ * sound (audio/chainAudio.ts) both work from it.
  */
 export interface CardPlan {
   node: SignalNode
@@ -180,9 +181,9 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
   return plans
 }
 
-// ── The levels at one moment ──────────────────────────────────────────────────
+// ── The levels ─────────────────────────────────────────────────────────────────
 
-/** One card's signal at one moment. */
+/** One card's signal, as the number engine reads it. */
 export interface CardLevels {
   in: WireSignal
   out: WireSignal
@@ -201,27 +202,6 @@ export interface ChainLevels {
   wires: Map<string, WireSignal>
 }
 
-/** What a dynamics card does at one moment: the gain it gives everything, and how far that turns it down. */
-export interface DynamicsGain {
-  gainDb: number
-  gainReductionDb: number
-}
-
-/**
- * How one moment differs from the still picture (which leaves both out): what the sources play
- * right now, and how the dynamics react. Everything else is worked out the same way.
- */
-export interface Moment {
-  /** A source playing its own sound: its levels now, from its levels over time (peaks, average, noise) */
-  play?: (node: SignalNode, levels: SideLevels) => SideLevels
-  /**
-   * A dynamics card at work (not bypassed): the gain it gives now, from what it works on — one
-   * channel, or both sides of a stereo signal (linked) — its own hiss included. Without it each
-   * reading goes through the card's level curve on its own.
-   */
-  dynamics?: (card: CardPlan, sides: SideLevels[], domain: SignalDomain) => DynamicsGain
-}
-
 /** The context a card's maths gets for one side. */
 export function contextOf(card: CardPlan, domain: SignalDomain, mixedDomains: boolean, side: 'l' | 'r' | null): SideContext {
   return { domain, mixedDomains, side, preamp: card.preamp, fed: card.fed }
@@ -233,7 +213,7 @@ export function contextOf(card: CardPlan, domain: SignalDomain, mixedDomains: bo
  */
 function arrivingAt(card: CardPlan, wires: Map<string, WireSignal>, side: 'l' | 'r' | null): SideLevels {
   const { used } = card
-  // One plain wire (most cards): what it carries, nothing to add up (run a thousand times a second)
+  // One plain wire (most cards): what it carries, nothing to add up
   if (used.length === 1 && used[0].sendDb === 0) {
     const w = wires.get(used[0].from) ?? SILENT_WIRE
     return side ? w[side] : foldToMono(w)
@@ -247,25 +227,16 @@ function arrivingAt(card: CardPlan, wires: Map<string, WireSignal>, side: 'l' | 
 }
 
 /**
- * Cards left out of a run, and what they send at this moment: a run of only part of the chain
- * (the time engine re-playing what a change reaches) takes the rest from here.
+ * The levels at every card and on every wire, as the number engine reads them: each card's maths
+ * on the readings (signal/process.ts) — a dynamics card's curve on each reading on its own.
  */
-export interface GivenLevels {
-  /** What their outputs send, keyed `${nodeId}:${portId}` (the run adds its own wires to it) */
-  wires: Map<string, WireSignal>
-  /** Their domain, by node id */
-  domains: Map<string, SignalDomain>
-}
-
-/** The levels at every card and on every wire, at one moment (by default: the still picture). */
-export function runChain(plans: CardPlan[], moment: Moment = {}, given?: GivenLevels): ChainLevels {
+export function runChain(plans: CardPlan[]): ChainLevels {
   const cards  = new Map<string, CardLevels>()
-  const wires  = given?.wires ?? new Map<string, WireSignal>()
-  const domainOf = (id: string) => cards.get(id)?.domain ?? given?.domains.get(id) ?? 'analog'
+  const wires  = new Map<string, WireSignal>()
+  const domainOf = (id: string) => cards.get(id)?.domain ?? 'analog'
 
   for (const card of plans) {
     const { node } = card
-    const def = NODE_REGISTRY[node.typeKey]
 
     // Analog or digital: what arrives decides (the Relay: its selected input). A bus can't mix them.
     const relay        = node.typeKey === 'relay'
@@ -314,20 +285,9 @@ export function runChain(plans: CardPlan[], moment: Moment = {}, given?: GivenLe
     } else if (card.mode === 'source') {
       // Line In set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
       const only = runSide(null)
-      const out  = card.plays && moment.play ? flattenPeaks(moment.play(node, only.out), only.domain) : only.out
       side   = only
       inSig  = SILENT_WIRE
-      outSig = isNodeStereo(node) ? stereo(out, out) : mono(out)
-    } else if (moment.dynamics && def.linked && !node.bypassed) {
-      // Dynamics over time: one gain at a time for the whole signal (both sides when linked)
-      const raw    = card.mode === 'linked' ? [arriving('l'), arriving('r')] : [arriving(null)]
-      const ctx    = contextOf(card, inputDomain, mixedDomains, null)
-      const sides  = raw.map((s) => withOwnHiss(node, s, ctx))
-      const gain   = moment.dynamics(card, sides, inputDomain)
-      const out    = sides.map((s) => flattenPeaks(shifted(s, gain.gainDb), inputDomain))
-      side   = { domain: inputDomain, gainReductionDb: gain.gainReductionDb }
-      inSig  = raw.length === 2 ? stereo(raw[0], raw[1]) : mono(raw[0])
-      outSig = out.length === 2 ? stereo(out[0], out[1]) : mono(out[0])
+      outSig = isNodeStereo(node) ? stereo(only.out, only.out) : mono(only.out)
     } else if (card.mode === 'linked') {
       // The louder side drives the detector (reading by reading); the same change goes to both
       // sides, each with the card's own hiss

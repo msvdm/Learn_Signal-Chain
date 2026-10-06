@@ -14,7 +14,7 @@ import type { SignalEdge, TypeKey } from '../../data/nodeRegistry'
 import { matrixSendParam } from '../../data/nodeRegistry'
 import { matrixSendKey } from '../../graph/queries'
 import { useParams } from '../../hooks/useParams'
-import { SILENT_WIRE, graphSignal, levelOf } from '../../signal/engine'
+import { SILENT_WIRE, levelOf, stillPicture } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { TAPER_UNITY, louder } from '../../signal/levels'
@@ -97,7 +97,7 @@ export function MasterBusNode({ id, type }: CardProps) {
                     ))}
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' }}>
-                    {nodeName(t, from, from && graphSignal(nodes, allEdges).stages[from.id])}
+                    {nodeName(t, from, from && stillPicture(nodes, allEdges).result.stages[from.id])}
                   </span>
                 </span>
                 <KnobControl

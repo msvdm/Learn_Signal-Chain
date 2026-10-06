@@ -1,8 +1,8 @@
-import { Drum, Music } from 'lucide-react'
+import { Drum, Music, Speech } from 'lucide-react'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import type { Character, TypeKey } from '../../data/nodeRegistry'
-import { CHARACTERS, CHARACTER_LEVEL } from '../../data/nodeRegistry'
+import { CHARACTERS_OF, CHARACTER_LEVEL } from '../../data/nodeRegistry'
 import { atLeast } from '../../data/levels'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
@@ -16,7 +16,7 @@ import { useParams } from '../../hooks/useParams'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
-// A Microphone's face: its icon, then the Melodic / Percussive buttons beside it
+// A Microphone's face: its icon, then the Speech / Singing / Drums buttons beside it
 const GAP       = 16
 const BUTTONS_W = 124
 const MAX_BUTTONS_H = 104
@@ -24,8 +24,8 @@ const MAX_BUTTONS_H = 104
 /**
  * Microphone, Line Input and Instrument. Microphone and Instrument show only their face, at every
  * zoom: a big icon and the level they send out. From Intermediate up a Microphone and a Line Input
- * also pick what they pick up — Melodic (a voice, keys) or Percussive (drums, whose hits reach far
- * above their average); a Microphone shows the buttons beside its icon. An Instrument going into
+ * also pick what they pick up — a Microphone Speech, Singing or Drums (whose hits reach far above
+ * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon. An Instrument going into
  * the desk without a DI Box says so (condition 'needsDi': a dull-tone curve and a note). Line
  * Input keeps a full card: it has a Mono / Stereo switch.
  */
@@ -84,9 +84,9 @@ export function MicNode({ id, type }: CardProps) {
   )
 }
 
-const CHARACTER_ICONS: Record<Character, typeof Music> = { melodic: Music, percussive: Drum }
+const CHARACTER_ICONS: Record<Character, typeof Music> = { speech: Speech, singing: Music, music: Music, drums: Drum }
 
-/** Melodic | Percussive: what a Microphone or Line Input picks up. */
+/** What a Microphone picks up (Speech | Singing | Drums) or a Line Input plays (Music | Drums). */
 function CharacterButtons({ nodeId, typeKey, columns, height }: {
   nodeId: string
   typeKey: TypeKey
@@ -98,7 +98,7 @@ function CharacterButtons({ nodeId, typeKey, columns, height }: {
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
-  const choices: Choice<Character>[] = CHARACTERS.map((value) => {
+  const choices: Choice<Character>[] = CHARACTERS_OF[typeKey === 'mic' ? 'mic' : 'line-in'].map((value) => {
     const CharacterIcon = CHARACTER_ICONS[value]
     return { value, label: t.character[value], hint: t.character.hints[value], icon: <CharacterIcon size={16} /> }
   })

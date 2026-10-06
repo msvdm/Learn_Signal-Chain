@@ -1,18 +1,19 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { SILENT, louder } from './levels'
 import type { StageCondition } from './process'
 import { withOwnHiss } from './process'
-import type { CardPlan, StageRole, WireSignal } from './chain'
-import { contextOf, healthOf, humOf, levelOf, planChain, runChain } from './chain'
-import type { MeasuredMusic, MusicSides, MusicTake } from './time'
-import { cardOfKey, measureMusic } from './time'
+import type { CardPlan, ChainLevels, StageRole, WireSignal } from './chain'
+import { contextOf, healthOf, humOf, planChain, runChain } from './chain'
+import type { MeasuredChain } from './measured'
+import { withMeasured } from './measured'
 import { sameShape } from '../utils/sameShape'
 
-// The still picture: the levels at every card and on every wire — per side, the peaks, the average
-// and the noise — worked out once per change of the graph and shared by every card (graphSignal).
-// Pure — no React, no store.
+// The levels at every card and on every wire — per side, the peaks, the average and the noise —
+// shared by every card (graphSignal): the number engine's picture (stillPicture, worked out at once
+// on every change of the graph), with the readings of the last render on real sound put in
+// (signal/measured.ts, decision D9). Pure — no React, no store.
 
 // What the cards import from here; the walk itself is chain.ts
 export type { StageRole, WireSignal } from './chain'
@@ -39,9 +40,9 @@ export interface StageResult {
    */
   curveIn?: SideLevels
   /**
-   * What leaves it (with `curveIn`): the louder side's peaks and average measured over a loop, its
-   * noise when the music stops — where the marks sit, bottom to top. A peak above the curve got
-   * through before the Attack turned it down.
+   * What leaves it (with `curveIn`): the louder side's peaks and average over a loop, its noise when
+   * the music stops — where the marks sit, bottom to top. Measured on real sound (until the first
+   * render: through the curve); a peak above the curve got through before the Attack turned it down.
    */
   curveOut?: SideLevels
   condition?: StageCondition
@@ -70,21 +71,41 @@ export interface GraphSignalResult {
   hums: Map<string, number>
 }
 
-// Every node card, port and edge reads the graph result. The store replaces the
-// nodes/edges arrays on every change, so one shared single-entry cache keyed on
-// those references lets all callers reuse a single computation per change.
-let lastGraph: { nodes: SignalNode[]; edges: SignalEdge[]; result: GraphSignalResult } | null = null
+/** The number engine's picture of a graph: the plan, the levels it gives, and what the cards show from them. */
+export interface StillPicture {
+  plans: CardPlan[]
+  levels: ChainLevels
+  result: GraphSignalResult
+}
+
+// Every node card, port and edge reads the graph result. The store replaces the nodes / edges
+// arrays on every change, so a single-entry cache keyed on those references lets all callers reuse
+// one computation per change.
+let lastStill: { nodes: SignalNode[]; edges: SignalEdge[]; still: StillPicture } | null = null
+let lastShown: { still: GraphSignalResult; measured: MeasuredChain | null; result: GraphSignalResult } | null = null
+
+/** The number engine's picture (computed once per change of the graph). */
+export function stillPicture(nodes: SignalNode[], edges: SignalEdge[]): StillPicture {
+  if (lastStill && lastStill.nodes === nodes && lastStill.edges === edges) return lastStill.still
+  const plans  = planChain(nodes, edges)
+  const levels = runChain(plans)
+  const still  = { plans, levels, result: pictureOf(plans, levels) }
+  lastStill = { nodes, edges, still }
+  return still
+}
 
 /**
- * The signal at every card and on every wire (computed once per change of the graph). A card's
- * stage and a wire's signal that came out the same as last time are last time's objects, so a
- * card that reads only its own (useStage) is redrawn only when its own result changed.
+ * The signal at every card and on every wire: the number engine's, the last render's readings put
+ * in (`measured`). A card's stage and a wire's signal that came out the same as last time are last
+ * time's objects, so a card that reads only its own (useStage) is redrawn only when its own result
+ * changed.
  */
-export function graphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSignalResult {
-  if (lastGraph && lastGraph.nodes === nodes && lastGraph.edges === edges) return lastGraph.result
-  const fresh  = computeGraphSignal(nodes, edges)
-  const result = lastGraph ? keepUnchanged(fresh, lastGraph.result) : fresh
-  lastGraph = { nodes, edges, result }
+export function graphSignal(nodes: SignalNode[], edges: SignalEdge[], measured: MeasuredChain | null = null): GraphSignalResult {
+  const still = stillPicture(nodes, edges).result
+  if (lastShown && lastShown.still === still && lastShown.measured === measured) return lastShown.result
+  const fresh  = withMeasured(still, measured)
+  const result = lastShown ? keepUnchanged(fresh, lastShown.result) : fresh
+  lastShown = { still, measured, result }
   return result
 }
 
@@ -115,90 +136,35 @@ function keepUnchanged(fresh: GraphSignalResult, before: GraphSignalResult): Gra
     hums:   humsSame ? before.hums : fresh.hums,
   }
 }
-// ── The still picture ─────────────────────────────────────────────────────────
+// ── The number engine's picture ─────────────────────────────────────────────────
 
-/** A dynamics card at work (Compressor, Noise Gate, Limiter, De-esser — not bypassed): it reacts over time. */
-const reactsOverTime = (node: SignalNode) => Boolean(NODE_REGISTRY[node.typeKey].linked) && !node.bypassed
+/** A dynamics card at work (Compressor, Noise Gate, Limiter, De-esser — not bypassed). */
+const atWork = (node: SignalNode) => Boolean(NODE_REGISTRY[node.typeKey].linked) && !node.bypassed
 
-/**
- * The cards whose readings come from the moving picture (decision D6): every dynamics card at work
- * and every card after one. A real one gives one gain to the whole moment, over its Attack and
- * Release, which no level curve can tell from the readings alone. Before them, and on chains
- * without one, the two pictures agree exactly (time.test.ts), so nothing needs playing.
- */
-function afterDynamics(plans: CardPlan[]): Set<string> {
-  const ids = new Set<string>()
-  for (const card of plans) {
-    if (reactsOverTime(card.node) || card.used.some((u) => ids.has(cardOfKey(u.from)))) ids.add(card.node.id)
-  }
-  return ids
-}
-
-/** The last measurement: a change plays again only what it reaches; a card dragged across the canvas, nothing. */
-let lastTake: MusicTake | undefined
-
-function musicOf(plans: CardPlan[], ids: Set<string>): MeasuredMusic {
-  lastTake = measureMusic(plans, ids, lastTake)
-  return lastTake.music
-}
-
-/** `still` with the peaks and the average measured over time (the noise stays: the two pictures agree on it). */
-function withMusic(still: WireSignal, music: MusicSides | undefined): WireSignal {
-  if (!music) return still
-  return {
-    kind: still.kind,
-    l: { ...still.l, peak: music.l.peak, rms: music.l.rms },
-    r: { ...still.r, peak: music.r.peak, rms: music.r.rms },
-  }
-}
-
-/** A dynamics card's makeup gain: it lifts everything after turning it down. */
-const makeupOf = (node: SignalNode) =>
-  node.typeKey === 'comp' || node.typeKey === 'limiter' ? param(node, 'makeupGainDb') : 0
-
-function computeGraphSignal(nodes: SignalNode[], edges: SignalEdge[]): GraphSignalResult {
-  const plans = planChain(nodes, edges)
-  const { cards, wires } = runChain(plans)
-  // After a dynamics card at work, the peaks and the average come from the moving picture (D6)
-  const moving = afterDynamics(plans)
-  const music  = moving.size > 0 ? musicOf(plans, moving) : null
+function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
+  const { cards, wires } = levels
   const stages: Record<string, StageResult> = {}
   const hums   = new Map<string, number>()
 
   for (const card of plans) {
     const { node } = card
-    const levels   = cards.get(node.id)!
-    const measured = music?.cards.get(node.id)
-    // What arrives is measured too when it comes from a measured card
-    const inSig  = card.used.some((u) => moving.has(cardOfKey(u.from))) ? withMusic(levels.in, measured?.in) : levels.in
-    const outSig = withMusic(levels.out, measured?.out)
-    for (const o of card.outputs) {
-      const sent = music?.wires.get(o.key)
-      if (sent) wires.set(o.key, withMusic(wires.get(o.key)!, sent))
-    }
-
-    // The dynamics run linked: one curve for both sides, driven by the louder one. What leaves it,
-    // measured over time, places the marks on the card's curve.
-    const curveIn = reactsOverTime(node)
-      ? withOwnHiss(node, louder(levels.in.l, levels.in.r), contextOf(card, levels.inDomain, levels.mixedDomains, null))
+    const at = cards.get(node.id)!
+    // The dynamics run linked: one curve for both sides, driven by the louder one
+    const curveIn = atWork(node)
+      ? withOwnHiss(node, louder(at.in.l, at.in.r), contextOf(card, at.inDomain, at.mixedDomains, null))
       : undefined
-    const curveOut = curveIn ? louder(outSig.l, outSig.r) : undefined
-    // How far it turns the average down, over the loop
-    const gainReductionDb = curveIn && measured
-      ? Math.max(0, levelOf(inSig) + makeupOf(node) - levelOf(outSig))
-      : levels.gainReductionDb
-    const hum = humOf(outSig)
+    const hum = humOf(at.out)
 
     stages[node.id] = {
-      in: inSig,
-      out: outSig,
+      in: at.in,
+      out: at.out,
       // Judged in the domain the signal leaves in
-      health: healthOf(outSig, levels.domain),
-      domain: levels.domain,
-      inDomain: levels.inDomain,
-      gainReductionDb,
-      ...(curveIn ? { curveIn, curveOut } : {}),
-      condition: levels.condition,
+      health: healthOf(at.out, at.domain),
+      domain: at.domain,
+      inDomain: at.inDomain,
+      gainReductionDb: at.gainReductionDb,
+      ...(curveIn ? { curveIn, curveOut: louder(at.out.l, at.out.r) } : {}),
+      condition: at.condition,
       role: card.role,
       ...(isFinite(hum) ? { hum } : {}),
     }

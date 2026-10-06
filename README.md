@@ -27,10 +27,11 @@ Right-click any element and choose *What is this?*: it explains what the element
 
 ## What's New
 
+- **The readings come from real sound.** Every source plays a short loop made for the app — a speaking voice, a singing voice, lounge music, a drum beat, a guitar, all parts of one little song — and the whole chain is played silently in your browser and measured card by card: real filters, a real compressor, noise gate, limiter and de-esser. An 80 Hz high-pass barely touches a voice but cuts a hum; a compressor with a slow attack lets the start of each word through; the de-esser turns down only the "s". Nothing is heard yet, and nothing leaves your computer.
 - **See the whole signal, not just its level.** From Intermediate on, every meter shows the loudest moments (the peaks) above the average, and the noise as a grey fog. Every card says in plain words what leaves it: *Peaks 12 dB above the average*, *Room before clipping: 18 dB — fine*, *Hiss: 60 dB below the signal — clean*. Follow them card by card and you see where the gain was made well, and where the hiss crept in: set the preamp too low and make it up later, and the card where it went wrong says *You can hear hiss here*.
 - **Clipping comes from the peaks.** A drum hit reaches the clip level long before its average does, so a card turns red as soon as its loudest moments distort.
-- **A signal generator** (Sine, Noise or Click) and a **Melodic / Percussive** switch on the microphone and line input: the same level, very different peaks.
-- **Dynamics you can read:** the compressor's, noise gate's and limiter's curves show what they do to the peaks, the average and the noise.
+- **A signal generator** (Sine, Noise or Click), and buttons for what the microphone picks up (**Speech, Singing or Drums**) and what the line input plays (**Music or Drums**): the same level, very different peaks.
+- **Dynamics you can read:** the compressor's, noise gate's and limiter's curves show what they do to the peaks, the average and the noise — measured on the sound.
 - **Help that points at the card:** from Intermediate on, *What is this?* also says which reading to watch on that element — noise floor, headroom, signal-to-noise, and why gain is made early.
 - **Works offline** (see above).
 
@@ -50,7 +51,7 @@ Switch levels from the header at any time.
 bun install
 bun dev        # dev server at http://localhost:5173
 bun run build  # production build → dist/
-bun test       # tests of the signal maths (without Bun: npm run test:node)
+bun test       # tests of the signal maths and the audio processors (without Bun: npm run test:node)
 ```
 
 (npm/yarn work too if you don't have Bun installed.)
@@ -62,6 +63,7 @@ bun test       # tests of the signal maths (without Bun: npm run test:node)
 - **Zustand** — state management
 - **Tailwind CSS v4**
 - **Lucide React** — icons
+- **Web Audio API** — the chain played on real sound, measured in an OfflineAudioContext (the sound loops are made by `scripts/make-loops.py`)
 
 ## Contributing
 

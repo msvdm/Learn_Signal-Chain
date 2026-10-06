@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/nodeRegistry'
-import { PARAM_CHOICES, initialParams, isTypeKey } from '../data/nodeRegistry'
+import { initialParams, isTypeKey, paramChoices } from '../data/nodeRegistry'
 import { ONLINE_URL } from '../data/site'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
@@ -67,14 +67,24 @@ const isNum   = (v: unknown): v is number => typeof v === 'number' && Number.isF
 const isStr   = (v: unknown): v is string => typeof v === 'string'
 const isPoint = (v: unknown): v is { x: number; y: number } => isObj(v) && isNum(v.x) && isNum(v.y)
 
+/**
+ * Words older versions saved, as this one says them (undefined: the type's default). Melodic was a
+ * voice or keys: now a Microphone's Speech, a Line Input's Music; Percussive was drums.
+ */
+const OLD_WORDS: Partial<Record<string, Record<string, string | undefined>>> = {
+  character: { melodic: undefined, percussive: 'drums' },
+}
+
 /** Saved params over the type's defaults: a file from an older version gets the newer knobs. */
 function readParams(typeKey: TypeKey, level: ComplexityLevel, saved: unknown): Record<string, NodeParamValue> {
   const params = initialParams(typeKey, level)
   if (!isObj(saved)) return params
-  for (const [key, value] of Object.entries(saved)) {
+  for (const [key, raw] of Object.entries(saved)) {
     const known = params[key]
+    const old   = OLD_WORDS[key]
+    const value = isStr(raw) && old && Object.hasOwn(old, raw) ? (old[raw] ?? known) : raw
     // A value of the wrong kind (or a word the setting does not know) would break the card — keep the default
-    const choices = PARAM_CHOICES[key]
+    const choices = paramChoices(typeKey, key)
     const ok = choices ? isStr(value) && choices.includes(value)
       : known === undefined ? isNum(value) || isStr(value) || typeof value === 'boolean'
       : Array.isArray(known) ? Array.isArray(value) : typeof value === typeof known

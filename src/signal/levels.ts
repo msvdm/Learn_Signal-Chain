@@ -135,7 +135,7 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
 
 /** `dbs` added as amplitudes (`per` 20) or powers (10). Silent ones add nothing; one alone comes out exactly as it went in. */
 function sumDb(dbs: number[], per: number): number {
-  // Plain loops: the time engine adds up every bus a thousand times a second
+  // Plain loops: every bus on every change adds up a list of these
   let only = -Infinity
   let count = 0
   let sum = 0

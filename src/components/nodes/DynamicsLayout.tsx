@@ -55,8 +55,8 @@ export function ReductionReadout({ db, maxDb, label, style }: {
 // X = level in, Y = level out. The grey dashed diagonal is 1:1 (nothing changes); where the curve
 // leaves it, the card is at work: a shallower slope (compressor), a flat top (limiter), a drop
 // below the threshold (noise gate). Three marks — the peaks, the average and the noise of what
-// arrives (left to right) — sit where the card sends them (bottom to top): what leaves it over a few
-// seconds of the sound, measured (decision D6); one the card moves keeps a faint mark on the
+// arrives (left to right) — sit where the card sends them (bottom to top): what leaves it over a loop
+// of real sound, measured (decision D9); one the card moves keeps a faint mark on the
 // diagonal, where it would be untouched. A gate drops the noise when its threshold sits between the
 // noise and the music; a Peaks mark above the curve got through before the Attack turned it down.
 

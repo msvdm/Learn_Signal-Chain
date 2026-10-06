@@ -9,6 +9,6 @@ import { graphSignal } from '../signal/engine'
 export function useNodeName(nodeId: string, typeKey: TypeKey): string {
   const { t }  = useTranslation()
   const label  = useSignalStore((s) => graphOf(s).node(nodeId)?.label)
-  const role   = useSignalStore((s) => graphSignal(s.nodes, s.edges).stages[nodeId]?.role)
+  const role   = useSignalStore((s) => graphSignal(s.nodes, s.edges, s.measured).stages[nodeId]?.role)
   return nodeName(t, { typeKey, label }, { role })
 }

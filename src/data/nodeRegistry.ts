@@ -111,14 +111,18 @@ export const DI_DIRECT_PORT = 'direct'
 export const SOUND_PORT = 'sound'
 
 /**
- * What a Microphone or Line Input picks up (param `character`): melodic — a voice, keys — or
- * percussive — drums, whose hits reach far above their average. Chosen from Intermediate up; at
- * Beginner they stay melodic.
+ * What a Microphone picks up (param `character`): someone speaking, someone singing, or drums; what
+ * a Line Input plays: music or drums. Drums' hits reach far above their average. Chosen from
+ * Intermediate up; at Beginner a Microphone hears speech and a Line Input plays music (the first of each).
  */
-export const CHARACTERS = ['melodic', 'percussive'] as const
-export type Character = typeof CHARACTERS[number]
+export const MIC_CHARACTERS = ['speech', 'singing', 'drums'] as const
+export const LINE_CHARACTERS = ['music', 'drums'] as const
+export type Character = typeof MIC_CHARACTERS[number] | typeof LINE_CHARACTERS[number]
 
-/** The easiest level whose Microphones and Line Inputs show the Melodic / Percussive switch. */
+/** The choices of a Microphone or Line Input. */
+export const CHARACTERS_OF = { mic: MIC_CHARACTERS, 'line-in': LINE_CHARACTERS } as const satisfies Partial<Record<TypeKey, readonly Character[]>>
+
+/** The easiest level whose Microphones and Line Inputs show what they pick up. */
 export const CHARACTER_LEVEL: ComplexityLevel = 'intermediate'
 
 /** What the Generator plays (param `sound`): a steady tone, hiss, short pulses. */
@@ -139,12 +143,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
     category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
     minLevel: 'beginner', bypass: false,
-    defaultParams: { sensitivityDb: -60, character: 'melodic' },
+    defaultParams: { sensitivityDb: -60, character: 'speech' },
   },
   'line-in': {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
     minLevel: 'beginner', bypass: false,
-    defaultParams: { levelDb: -10, stereo: false, character: 'melodic' },
+    defaultParams: { levelDb: -10, stereo: false, character: 'music' },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
@@ -352,7 +356,7 @@ export function initialParams(
 export interface ParamTypes {
   sensitivityDb: number
   levelDb: number
-  /** Microphone, Line Input: what it picks up (CHARACTERS) */
+  /** Microphone, Line Input: what it picks up (CHARACTERS_OF) */
   character: Character
   /** Generator: what it plays (GENERATOR_SOUNDS) */
   sound: GeneratorSound
@@ -392,10 +396,15 @@ export interface ParamTypes {
 export type ParamKey = keyof ParamTypes
 
 /** Settings that take one of a few words: any other word (from a file) falls back to the default. */
-export const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
-  character:     CHARACTERS,
+const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
   sound:         GENERATOR_SOUNDS,
   selectedInput: ['a', 'b'],
+}
+
+/** The words a type's setting can take (undefined: it is not a word). */
+export function paramChoices(typeKey: TypeKey, key: string): readonly string[] | undefined {
+  if (key === 'character') return (CHARACTERS_OF as Partial<Record<TypeKey, readonly string[]>>)[typeKey] ?? []
+  return PARAM_CHOICES[key]
 }
 
 /** A node's setting: its own value, else its type's default. */

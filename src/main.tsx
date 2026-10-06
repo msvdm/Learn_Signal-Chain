@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+// The chain is measured on real sound after every change (decision D9)
+import './store/measuring'
 
 // Keep a copy of the app in the browser, so the site opens without internet after one visit.
 // Not while developing, and not in the downloaded one-file copy (a file needs no copy).

@@ -233,8 +233,9 @@ describe('dynamics', () => {
   })
 
   it('de-esser: 8:1 above its threshold', () => {
-    expect(run('deesser', 0)).toEqual({ out: -17.5, domain: 'analog', gainReductionDb: 17.5 })
-    expect(run('deesser', -30)).toEqual({ out: -30, domain: 'analog', gainReductionDb: 0 })
+    // Only the sibilance (its "s" sounds 6 dB under the average) is turned down, 8:1 over the threshold (−20)
+    expect(run('deesser', 10)).toEqual({ out: 10, domain: 'analog', gainReductionDb: 21 })
+    expect(run('deesser', -20)).toEqual({ out: -20, domain: 'analog', gainReductionDb: 0 })
   })
 })
 
@@ -276,14 +277,19 @@ describe('sources: their peaks above the average, their noise below it', () => {
     expect(levels('instrument', SILENT)).toEqual(sig(-15, -30, -100))
   })
 
-  it('set to Percussive, a microphone or Line Input picks up drums: peaks 18 dB up, the same average and noise', () => {
-    expect(levels('mic', SILENT, { character: 'percussive' }, { fed: false })).toEqual(sig(-42, -60, -126))
-    expect(levels('line-in', SILENT, { character: 'percussive' })).toEqual(sig(8, -10, -90))
-    expect(levels('line-in', SILENT, { character: 'melodic' })).toEqual(sig(2, -10, -90))
+  it('set to Drums, a microphone or Line Input picks up drums: peaks 18 dB up, the same average and noise', () => {
+    expect(levels('mic', SILENT, { character: 'drums' }, { fed: false })).toEqual(sig(-42, -60, -126))
+    expect(levels('line-in', SILENT, { character: 'drums' })).toEqual(sig(8, -10, -90))
+    expect(levels('line-in', SILENT, { character: 'music' })).toEqual(sig(2, -10, -90))
   })
 
-  it('a percussive microphone in front of a Guitar Amp hears the guitar: the amp decides the peaks', () => {
-    expect(levels('mic', sig(-15, -30, -80), { character: 'percussive' }).peak).toBe(-45)
+  it('a voice, speaking or singing, peaks 12 dB above its average', () => {
+    expect(levels('mic', SILENT, { character: 'speech' }, { fed: false })).toEqual(sig(-48, -60, -126))
+    expect(levels('mic', SILENT, { character: 'singing' }, { fed: false })).toEqual(sig(-48, -60, -126))
+  })
+
+  it('a microphone set to Drums in front of a Guitar Amp hears the guitar: the amp decides the peaks', () => {
+    expect(levels('mic', sig(-15, -30, -80), { character: 'drums' }).peak).toBe(-45)
   })
 
   it('a Generator: its sound at its level (0 dBu), its noise 90 dB down', () => {

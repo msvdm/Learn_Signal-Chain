@@ -14,6 +14,7 @@ import type { NodeGroup } from '../utils/nodeGroup'
 import type { Pt } from '../utils/geometry'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
 import { parseChainFile, toChainFile } from '../utils/chainFile'
+import type { MeasuredChain } from '../signal/measured'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
 export type { ToolMode, LeftTool } from '../types'
@@ -136,6 +137,12 @@ interface SignalChainStore {
   chainOffer: ParsedChain | null
   /** A short message at the bottom of the screen ("Link copied"); `id` restarts its timer */
   notice: { text: string; error: boolean; id: number } | null
+  /**
+   * The readings of the last render of the chain on real sound (store/measuring.ts), with the
+   * number engine's picture it was made from; the cards read them through graphSignal. Not
+   * persisted, not in the history; a new canvas starts without.
+   */
+  measured: MeasuredChain | null
 
   nodes: SignalNode[]
   edges: SignalEdge[]
@@ -169,6 +176,7 @@ interface SignalChainStore {
   raiseLevel: (level: ComplexityLevel) => void
   showNotice: (text: string, error?: boolean) => void
   clearNotice: () => void
+  setMeasured: (measured: MeasuredChain | null) => void
   resetAll: () => void
 
   addNode: (node: SignalNode) => void
@@ -214,6 +222,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   capturing: false,
   chainOffer: null,
   notice: null,
+  measured: null,
 
   ...initialCanvas,
 
@@ -306,6 +315,8 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   showNotice: (text, error = false) => set({ notice: { text, error, id: Date.now() } }),
 
   clearNotice: () => set({ notice: null }),
+
+  setMeasured: (measured) => set({ measured }),
 
   resetAll: () =>
     set((s) => ({ ...commitGraph(s, EMPTY_GRAPH, { newCanvas: true }), chainName: '' })),
@@ -401,7 +412,7 @@ function commitGraph(
     ? graph.edges
     : settled
   const next = { nodes: graph.nodes, edges }
-  return { ...next, ...pruneRefs(s, newCanvas ? EMPTY_GRAPH : next), ...(newCanvas ? NO_WIRE : {}) }
+  return { ...next, ...pruneRefs(s, newCanvas ? EMPTY_GRAPH : next), ...(newCanvas ? { ...NO_WIRE, measured: null } : {}) }
 }
 
 /**

@@ -355,11 +355,15 @@
   },
   "character": {
     "label": "What it picks up",
-    "melodic": "Melodic",
-    "percussive": "Percussive",
+    "speech": "Speech",
+    "singing": "Singing",
+    "music": "Music",
+    "drums": "Drums",
     "hints": {
-      "melodic": "Melodic: a voice, keys, strings. The loudest moments are about 12 dB above the average.",
-      "percussive": "Percussive: drums. Sharp hits jump about 18 dB above the average — at the same level, they reach the clip level sooner."
+      "speech": "Speech: someone talking, with pauses between the sentences. The loudest moments are about 12 dB above the average.",
+      "singing": "Singing: a voice holding notes. The loudest moments are about 12 dB above the average.",
+      "music": "Music: keys, a bass and a shaker playing a song. The loudest moments are about 12 dB above the average.",
+      "drums": "Drums: sharp hits jump about 18 dB above the average — at the same level, they reach the clip level sooner."
     }
   },
   "ports": {
@@ -450,14 +454,14 @@
     "mic": {
       "what": "The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.",
       "why": "Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.",
-      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Melodic (a voice) or Percussive (drums). Drum hits jump much further above the average, so they reach the clip level sooner.",
-      "readings": "The Hiss reading starts at 66 dB below the signal: the quiet hiss of the room and of the microphone itself. Engineers call it the noise floor — the cleanest this signal will ever be. Every powered card after it adds a little hiss of its own, so on the way to the speakers this gap can only shrink (a Noise Gate can hide it in the pauses); your job is to keep it big. The Peaks reading says 12 dB for a voice, 18 for Percussive (drums)."
+      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Speech, Singing or Drums. Drum hits jump much further above the average, so they reach the clip level sooner.",
+      "readings": "The Hiss reading starts at 66 dB below the signal: the quiet hiss of the room and of the microphone itself. Engineers call it the noise floor — the cleanest this signal will ever be. Every powered card after it adds a little hiss of its own, so on the way to the speakers this gap can only shrink (a Noise Gate can hide it in the pauses); your job is to keep it big. The Peaks reading says 12 dB for a voice, speaking or singing, and 18 for Drums."
     },
     "line-in": {
       "what": "A line input accepts signals that are already at \"line level\" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.",
       "why": "Line-level signals are strong enough to drive mixing and processing gear directly without a preamp. They sit well above the noise floor and well below the clipping point.",
-      "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire. From Intermediate on, choose what it plays: Melodic (keys, a song) or Percussive (a drum machine). Drum hits jump much further above the average, so they reach the clip level sooner.",
-      "readings": "The Hiss reading starts at 80 dB below the signal: a line source is very clean, and it needs no Preamp to reach a healthy level. Switch to Percussive and the Peaks reading goes from 12 to 18 dB above the average: Room before clipping shrinks by those 6 dB, while the meter's bar does not move."
+      "tip": "If your line-level signal looks green (-40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire. From Intermediate on, choose what it plays: Music (a song) or Drums (a drum machine). Drum hits jump much further above the average, so they reach the clip level sooner.",
+      "readings": "The Hiss reading starts at 80 dB below the signal: a line source is very clean, and it needs no Preamp to reach a healthy level. Switch to Drums and the Peaks reading goes from 12 to 18 dB above the average: Room before clipping shrinks by those 6 dB, while the meter's bar does not move."
     },
     "instrument": {
       "what": "An electric guitar, bass or keyboard. Its signal is stronger than a microphone's (about −30 dBu) but still well below line level.",
@@ -475,7 +479,7 @@
       "what": "The preamplifier (preamp) boosts a weak mic-level signal up to \"line level\" — strong enough for the rest of the chain to work with. Typical gain: +20 to +60 dB. It is what the Gain card becomes when you place it right after a microphone, or after a DI Box's XLR Out.",
       "why": "Without enough gain here, all downstream processors — EQ, compressor, fader — work with a weak signal and introduce more noise. Too much gain causes distortion before anything else can help.",
       "tip": "Aim for the output to land well inside the green zone — about −20 to −10 dBu for a voice. This is called gain staging, and it starts right here at the preamp. At the bottom of the green (−40 dBu) the signal is so weak that the hiss of the devices after it can be heard; turn up much further and the loudest moments come close to clipping.",
-      "readings": "Follow the Hiss reading card by card to the speaker: with the Preamp at +50 dB it stays clean all the way (55 dB or more). Now try the classic mistake: the Preamp at +20, made up later with a Gain or the Fader. The level at the end is the same, but the hiss ends 40 dB or less below the music, and the card after the Preamp says “You can hear hiss here”: its own hiss landed on a signal 30 dB too weak. That is why gain is made early, at the Preamp — as long as Room before clipping stays above 6 dB."
+      "readings": "Follow the Hiss reading card by card to the speaker: with the Preamp at +50 dB it stays clean all the way (50 dB or more). Now try the classic mistake: the Preamp at +20, made up later with a Gain or the Fader. The level at the end is the same, but the hiss ends 40 dB or less below the music, and the card after the Preamp says “You can hear hiss here”: its own hiss landed on a signal 30 dB too weak. That is why gain is made early, at the Preamp — as long as Room before clipping stays above 6 dB."
     },
     "hpf": {
       "what": "The High-Pass Filter (HPF) removes frequencies below a chosen cutoff point. Everything below that frequency is rolled off — \"blocked\". Everything above it \"passes\" through unchanged.",
@@ -497,8 +501,8 @@
     "comp": {
       "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter.",
       "why": "Live performances and recordings have wide dynamic ranges. Without compression, loud notes clip and quiet notes get lost. Compression makes the signal more consistent and controlled.",
-      "tip": "Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a quick Attack (1–5 ms) catches the start of each note and the peaks come closer to the average; a slower one lets the start of each note through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right.",
-      "readings": "The Average comes down here by the gain reduction. Watch the Peaks reading: with the starting Attack (10 ms) the start of each syllable gets through, so the peaks hardly come down — about 12 dB above the average going in, 14 coming out. Turn the Attack down to 1 ms and it drops to about 10: now the compressor catches them. The Hiss reading shrinks by as much as the average is turned down (the gain-reduction meter)."
+      "tip": "Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a slower Attack lets the start of each note or word through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). A quick Attack (1–5 ms) catches more of it; on a sound whose notes start softly, like singing, the peaks then come closer to the average. A compressor evens out how loud the music is — to stop its loudest moments, put a Limiter after it. Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right.",
+      "readings": "The Average comes down here by the gain reduction. Watch the Peaks reading: on a speaking voice the start of each word gets through before the Attack (10 ms) acts, so the peaks hardly come down — about 12 dB above the average going in, 17 coming out. At 1 ms it catches a little more (16). Switch the Microphone to Singing: its notes start softly, and with a 1 ms Attack the peaks come closer to the average (10). The Hiss reading shrinks by as much as the average is turned down (the gain-reduction meter)."
     },
     "fader": {
       "what": "The channel fader controls the volume of this signal as it enters the mix. Unity gain (0 dB) means the signal passes through unchanged. Moving it down attenuates the signal.",
@@ -592,7 +596,8 @@
     "deesser": {
       "what": "A de-esser is a frequency-selective compressor. It listens for harsh sibilance — the sharp hissing sounds of letters like 'S', 'SH', and 'CH' in vocal recordings — and automatically reduces only those frequencies when they get too loud. You set the frequency and threshold; the de-esser does the rest automatically.",
       "why": "Microphones and certain processing (especially EQ boosts in the 5–10 kHz range) can exaggerate sibilance until it becomes painful to listen to. A broadband compressor would make everything quieter, which is not the goal. The de-esser targets only the problem frequencies, leaving the rest of the voice untouched.",
-      "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy."
+      "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy.",
+      "readings": "The Average and the Peaks hardly move here: only the “s” sounds come down, and the gain-reduction meter shows how far. On a speaking voice the starting threshold takes them down about 6 dB; switch the Microphone to Singing, with hardly any “s”, and it has almost nothing to do."
     },
     "relay": {
       "what": "A relay switch: two inputs, one output. Press a button and the signal comes from that input; the other one is cut off.",

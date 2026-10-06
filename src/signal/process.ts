@@ -4,9 +4,11 @@ import type { SideLevels, SignalDomain } from './levels'
 import { CLIP_DBU, SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
 
-// What each card does to one channel (the engine, signal/engine.ts, runs it once per side in
-// stereo): to its peaks, its average and its noise (SideLevels). Simplified on purpose: it teaches
-// the idea, not the filter maths.
+// What each card does to one channel, as the number engine reads it (signal/chain.ts runChain runs
+// it once per side in stereo): to its peaks, its average and its noise (SideLevels). It answers at
+// once, on every change; the render on real sound (audio/measure.ts) then measures what the card
+// really does, and the cards show that (decision D9). Simplified on purpose: its filters change the
+// level of pink noise, its dynamics put each reading through their curve on its own.
 
 /**
  * Why a card sends nothing out, or what is wrong with what it sends (`blown`: far too much,
@@ -72,21 +74,43 @@ export interface SourceSound {
   noiseDb: number
 }
 
-/** How far the loudest moments of each kind of sound reach above its average (dB). */
+/**
+ * What a source plays: a Microphone hears speech, singing or drums, a Line Input plays music or
+ * drums (their `character`), an Instrument a guitar, the Generator its Sound. Each but the
+ * Generator's is a loop of real sound (src/audio/loops).
+ */
+export type SoundKind = Character | GeneratorSound | 'guitar'
+
+/** What a source plays (a Guitar Amp plays what reaches it; a Microphone in front of one hears that). */
+export function soundKindOf(node: Pick<SignalNode, 'typeKey' | 'params'>): SoundKind {
+  switch (node.typeKey) {
+    case 'instrument': return 'guitar'
+    case 'generator':  return param(node, 'sound')
+    default:           return param(node, 'character')
+  }
+}
+
+/**
+ * How far the loudest moments of each kind of sound reach above its average over its loop (dB) —
+ * the loops are made so (scripts/make-loops.py), the Generator's sounds too (audio/sounds.ts).
+ */
 export const PEAKS_ABOVE = {
-  /** A voice, keys (a Microphone or Line Input set to Melodic) */
-  melodic:    12,
-  /** Drums: sharp hits far above the average (set to Percussive) */
-  percussive: 18,
+  /** A voice: someone speaking, someone singing */
+  speech:  12,
+  singing: 12,
+  /** Music from a player: keys, a bass, a shaker */
+  music:   12,
+  /** Drums: sharp hits far above the average */
+  drums:   18,
   /** A guitar (the Instrument): plucks, sharper than a voice, softer than drums */
-  guitar:     15,
+  guitar:  15,
   // The Generator's sounds
   /** A steady tone: a sine wave's peaks are 3 dB above its average */
-  sine:       3,
-  noise:      12,
+  sine:    3,
+  noise:   12,
   /** Short pulses, like a metronome: as far above the average as drums */
-  click:      18,
-} as const satisfies Record<Character | GeneratorSound | 'guitar', number>
+  click:   18,
+} as const satisfies Record<SoundKind, number>
 
 /** How far each source's own noise sits below its average (dB). */
 export const NOISE_BELOW = {
@@ -102,13 +126,9 @@ export const NOISE_BELOW = {
 
 type Source = keyof typeof NOISE_BELOW
 
-/** A source's sound: what it plays (the Generator's Sound, a Melodic / Percussive switch, a guitar) and its own noise. */
+/** A source's sound: what it plays (soundKindOf) and its own noise. */
 export function soundOf(typeKey: Source, params: SignalNode['params']): SourceSound {
-  const node = { typeKey, params }
-  const kind = typeKey === 'instrument' ? 'guitar'
-    : typeKey === 'generator' ? param(node, 'sound')
-    : param(node, 'character')
-  return { peakDb: PEAKS_ABOVE[kind], noiseDb: NOISE_BELOW[typeKey] }
+  return { peakDb: PEAKS_ABOVE[soundKindOf({ typeKey, params })], noiseDb: NOISE_BELOW[typeKey] }
 }
 
 /** A source playing at `level` (its average). */
@@ -130,7 +150,7 @@ export const PREAMP_HISS_DBU = -128
 const PASSIVE = new Set<TypeKey>(['mic', 'line-in', 'instrument', 'generator', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker'])
 
 /** The hiss this card adds to what arrives (−∞: none). The DAC adds its own on its analog side. */
-function hissOf(node: SignalNode, ctx: SideContext): number {
+export function hissDbOf(node: SignalNode, ctx: Pick<SideContext, 'domain' | 'preamp' | 'fed'>): number {
   if (!ctx.fed || ctx.domain === 'digital' || PASSIVE.has(node.typeKey)) return -Infinity
   return ctx.preamp ? PREAMP_HISS_DBU : HISS_DBU
 }
@@ -138,14 +158,14 @@ function hissOf(node: SignalNode, ctx: SideContext): number {
 /** `s` with a hiss at `db` added to its noise. */
 const withHiss = (s: SideLevels, db: number): SideLevels => {
   if (!isFinite(db)) return s
-  // Written out, not spread: the time engine runs this a thousand times a second for every card
+  // Written out, not spread: every powered card on every change
   const noise = isFinite(s.noise) ? 10 * Math.log10(Math.pow(10, s.noise / 10) + Math.pow(10, db / 10)) : db
   return { peak: s.peak, rms: s.rms, noise, hum: s.hum }
 }
 
 /** What a card works on: `input` with the hiss it adds to what arrives (a dynamics card's curve shows it). */
 export function withOwnHiss(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
-  return withHiss(input, hissOf(node, ctx))
+  return withHiss(input, hissDbOf(node, ctx))
 }
 
 /**
@@ -190,16 +210,24 @@ export const noiseGate = (thresholdDb: number, rangeDb: number): Transfer => (in
 export const limiter = (ceilingDb: number, makeupGainDb: number): Transfer => (input) =>
   ({ out: Math.min(input, ceilingDb) + makeupGainDb, gainReductionDb: Math.max(0, input - ceilingDb) })
 
-/** 8:1 on the sibilant frequencies above its threshold — simplified to the overall level. */
-export const deesser = (thresholdDb: number): Transfer => (input) => {
-  const gainReductionDb = Math.max(0, (input - thresholdDb) * (1 - 1 / 8))
-  return { out: input - gainReductionDb, gainReductionDb }
-}
+/**
+ * How far below a speaking voice's average its "s" sounds reach (dB): the number engine's guess,
+ * for the moment before a render measures it (audio/processors.ts turns the sibilant band down
+ * for real — on a singing voice, with hardly any "s", far less).
+ */
+export const SIBILANCE_BELOW_DB = 6
+
+/**
+ * 8:1 on the sibilant frequencies above its threshold: they are a small part of the sound, so the
+ * signal as a whole hardly changes; the gain reduction is the sibilance's.
+ */
+export const deesser = (thresholdDb: number): Transfer => (input) =>
+  ({ out: input, gainReductionDb: Math.max(0, (input - SIBILANCE_BELOW_DB - thresholdDb) * (1 - 1 / 8)) })
 
 /**
  * A filter's level change, worked out once per setting: it samples the whole frequency range, and
- * the time engine (signal/time.ts) asks a thousand times a second. A card's params are replaced,
- * never changed in place, so they key it.
+ * every change of the graph asks again. A card's params are replaced, never changed in place, so
+ * they key it.
  */
 const levelChanges = new WeakMap<object, Map<string, number>>()
 function levelChange(node: SignalNode, key: string, work: () => number): number {

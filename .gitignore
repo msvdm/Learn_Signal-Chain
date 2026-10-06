@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python (scripts/make-loops.py)
+__pycache__/
