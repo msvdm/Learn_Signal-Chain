@@ -122,30 +122,35 @@ export function ClickIcon({ size }: { size?: number }) {
   return <SoundPicture size={size} d="M2 12H5L6 2L7 12H11L12 2L13 12H17L18 2L19 12H22" />
 }
 
-// The converters: a wave (analog) and the digits 1 0 1 (digital), in the order the signal goes
+// The converters, as their symbol is drawn: a box cut by a diagonal, a wave (analog) in one half
+// and a line over a dashed line (digital) in the other — what comes in at the top left, what goes
+// out at the bottom right.
 
-/** "1 0 1": two ones with their flags, a zero between, from `x` (9.4 wide). */
-const bits = (x: number) => `M${x} 9.4L${x + 1.6} 8V16M${x + 7.8} 9.4L${x + 9.4} 8V16`
+/** A wave from `x`, `y` (its start; 8.4 wide): up, then down. */
+const wave = (x: number, y: number) => {
+  const at = (dx: number, dy: number) => `${(x + dx * 0.923).toFixed(2)} ${(y + dy).toFixed(2)}`
+  return `M${at(0, 0)}C${at(0.6, -0.8)} ${at(1.3, -1.3)} ${at(2.1, -1.3)}C${at(3.2, -1.3)} ${at(3.9, -0.6)} ${at(4.6, 0)}`
+    + `S${at(6, 1.2)} ${at(7.1, 1.2)}C${at(7.9, 1.2)} ${at(8.6, 0.7)} ${at(9.1, 0)}`
+}
 
-/** A wave from `x` (8.5 wide): one hump up, one down. */
-const wave = (x: number) => `M${x} 12C${x + 1.4} 6.5 ${x + 2.8} 6.5 ${x + 4.25} 12S${x + 7.1} 17.5 ${x + 8.5} 12`
+/** The digital mark from `x`, `y` (6.7 wide): a line, and a dashed line under it — gaps as wide as the lines. */
+const digital = (x: number, y: number) => `M${x} ${y}H${x + 6.7}M${x} ${y + 3.2}H${x + 2.55}M${x + 4.15} ${y + 3.2}H${x + 6.7}`
 
-/** Analog to Digital Converter: a wave in, digits out. */
-export function AdcIcon({ size = 24 }: { size?: number }) {
+function ConverterIcon({ size = 24, inside }: { size?: number; inside: string }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={`${wave(1.5)}${bits(12.6)}`} />
-      <ellipse cx="17.6" cy="12" rx="1.9" ry="4" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+      <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="3" />
+      <path d={`M20.5 3.5L3.5 20.5${inside}`} />
     </svg>
   )
 }
 
-/** Digital to Analog Converter: digits in, a wave out. */
-export function DacIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={`${bits(2)}${wave(14)}`} />
-      <ellipse cx="7" cy="12" rx="1.9" ry="4" />
-    </svg>
-  )
+/** Analog to Digital Converter: a wave in, the digital mark out. */
+export function AdcIcon({ size }: { size?: number }) {
+  return <ConverterIcon size={size} inside={`${wave(4.4, 6.8)}${digital(12.4, 14.6)}`} />
+}
+
+/** Digital to Analog Converter: the digital mark in, a wave out. */
+export function DacIcon({ size }: { size?: number }) {
+  return <ConverterIcon size={size} inside={`${digital(4.8, 5.4)}${wave(11, 17)}`} />
 }
