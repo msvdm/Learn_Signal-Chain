@@ -154,6 +154,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
         <MeterBar
           db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain}
           peak={detailed ? side.peak : undefined} noise={detailed ? side.noise : undefined}
+          // Moves only while it is shown (zoomed out, or a face-only card)
+          source={shown ? { nodeId, at: 'out', side: 'louder' } : undefined}
         />
         <div
           style={{

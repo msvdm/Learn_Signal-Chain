@@ -44,8 +44,8 @@ export function PanNode({ id }: CardProps) {
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
       footer={
         <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <ChannelRow ch="L" side={stage?.out.l ?? SILENT} domain={stage?.domain} />
-          <ChannelRow ch="R" side={stage?.out.r ?? SILENT} domain={stage?.domain} />
+          <ChannelRow ch="L" side={stage?.out.l ?? SILENT} domain={stage?.domain} source={{ nodeId: id, at: 'out', side: 'l' }} />
+          <ChannelRow ch="R" side={stage?.out.r ?? SILENT} domain={stage?.domain} source={{ nodeId: id, at: 'out', side: 'r' }} />
         </div>
       }
     >

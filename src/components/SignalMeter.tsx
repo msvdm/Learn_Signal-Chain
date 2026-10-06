@@ -1,26 +1,22 @@
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
 import { healthColor, dbToPercent, formatDb, getHealth, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useReadingsShown } from '../hooks/useReadingsShown'
+import { useLiveMeter } from '../hooks/useLiveMeter'
+import { useSignalStore } from '../store/signalStore'
 import { StableText } from './controls/StableText'
 import { LEVEL_SAMPLE } from '../utils/readout'
+import type { MeterAt, MeterSide, MeterSource } from './meterPaint'
+import { alongScale, paintBar, readingOf } from './meterPaint'
 
-// The meters. The bar is the average; from Intermediate up (useReadingsShown) a thin mark in the
-// bar's colour shows the peaks — the loudest moments — and a grey fog from the quiet end shows the
-// noise, once it is loud enough to reach the scale (−60 dBu). Beginner sees the bar alone.
-
-interface SignalMeterProps {
-  /** The signal, or its left side when `r` is set */
-  l: SideLevels
-  /** Right side. When set, the meter shows two bars, L and R, each with its level (the health word beside the label). */
-  r?: SideLevels
-  health: SignalHealth
-  label?: string
-  showValue?: boolean
-  /** Analog (dBu, the default) or digital (dBFS): sets the zones, the ticks and the unit */
-  domain?: SignalDomain
-}
+// The meters, as a DAW draws them: three readings in one bar. The solid bar is the average (RMS);
+// from Intermediate up (useReadingsShown) a mark in the bar's colour shows the peaks and a grey fog
+// from the quiet end the noise, once it is loud enough to reach the scale (−60 dBu). Beginner sees
+// the bar alone. React draws the still picture — the render's readings over the whole loop; while
+// the chain plays (from Intermediate, hooks/useLiveMeter.ts) the bar moves as an RMS over 300 ms,
+// a light bar shows the peak falling back, and the mark becomes the peak hold (audio/meters.ts).
 
 /**
  * Tick marks at the zone edges: where "too quiet" ends and unity (the strong one). Digital also
@@ -32,75 +28,122 @@ function zoneTicks(domain: SignalDomain): { db: number; strong: boolean }[] {
   return domain === 'digital' ? [...ticks, { db: 0, strong: false }] : ticks
 }
 
-const SPRING = { type: 'spring', stiffness: 300, damping: 30 } as const
-/** Thickness of an upright meter's peak mark (px) */
-const PEAK_MARK = 3
-
 /** On the scale: louder than its quiet end (−60). */
 const onScale = (db: number | undefined): db is number => db !== undefined && dbToPercent(db) > 0
 
+/** Thickness of a peak mark across an upright bar (px) */
+const PEAK_MARK = 3
+
 /**
- * One level bar on the −60…+20 dB scale, with tick marks at the zone edges. `height` includes the
- * border. `peak` draws the peak mark, `noise` the fog (leave them out: the bar alone).
+ * Width of a card's upright meter (px): the same in every language, so a card's size and its
+ * controls' room never change with it — the longest health word, "Изкривяване!", fits in 11px bold.
  */
-export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise }: {
+export const STRIP_W = 76
+
+/**
+ * One meter bar on the −60…+20 dB scale: `up` from the bottom (a desk's or a DAW's meter) or
+ * `right` from the left. The still picture: `side.rms` (the bar), its peaks and noise when
+ * `detailed`. With a `source` it moves while the chain plays.
+ */
+function MeterTrack({ side, color, domain, detailed, direction, thickness, length, source, style }: {
+  side: SideLevels
+  color: string
+  domain: SignalDomain
+  detailed: boolean
+  direction: 'up' | 'right'
+  /** Across the bar (px, its border in) */
+  thickness: number
+  /** Along it (px); none: it fills its box */
+  length?: number
+  source?: MeterSource
+  style?: CSSProperties
+}) {
+  const ref  = useRef<HTMLDivElement>(null)
+  const rms  = useRef<HTMLDivElement>(null)
+  const peak = useRef<HTMLDivElement>(null)
+  const hold = useRef<HTMLDivElement>(null)
+  const up = direction === 'up'
+  useLiveMeter(source && detailed ? source.nodeId : undefined, ref, (live, i) => {
+    if (source) paintBar({ rms: rms.current, peak: peak.current, hold: hold.current }, up, readingOf(live, source.at, source.side, i))
+  })
+  // Ticks widen with a thick bar (the overview meter), so they stay visible zoomed out
+  const tick = Math.max(1, Math.round(thickness / 8))
+  const mark = up ? PEAK_MARK : tick * 3
+  const vars = {
+    '--rms': alongScale(side.rms),
+    '--peak': alongScale(side.peak),
+    '--peak-on': detailed && onScale(side.peak) ? 1 : 0,
+    '--mark': `${mark}px`,
+    '--bar': color,
+  } as CSSProperties
+  return (
+    <div
+      ref={ref}
+      className={`relative overflow-hidden ${up ? 'lsc-meter-up' : 'lsc-meter-right'}`}
+      style={{
+        ...(up ? { width: thickness, height: length ?? '100%' } : { height: thickness, width: length ?? '100%' }),
+        borderRadius: up ? 4 : 9999, background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
+        ...vars, ...style,
+      }}
+    >
+      {detailed && source && <div ref={peak} aria-hidden className="lsc-meter-fill lsc-meter-peak" />}
+      <div ref={rms} className="lsc-meter-fill lsc-meter-rms" />
+      {detailed && onScale(side.noise) && (
+        <div
+          aria-hidden
+          className="lsc-meter-fog"
+          style={{
+            [up ? 'height' : 'width']: `${dbToPercent(side.noise)}%`,
+            background: `linear-gradient(to ${up ? 'top' : 'right'}, var(--lsc-noise-fog) 75%, transparent)`,
+          }}
+        />
+      )}
+      {zoneTicks(domain).map(({ db: at, strong }) => (
+        <div
+          key={at}
+          className="absolute"
+          style={{
+            ...(up
+              ? { left: 0, right: 0, bottom: `${dbToPercent(at)}%`, height: 2 }
+              : { top: 0, bottom: 0, left: `${dbToPercent(at)}%`, width: tick }),
+            background: strong ? 'var(--lsc-fg-muted)' : 'var(--lsc-border)',
+          }}
+        />
+      ))}
+      {detailed && (
+        // Slides along the bar less the mark's own size: the mark stays inside the bar at both ends
+        <div aria-hidden className="lsc-meter-hold-track"><div ref={hold} className="lsc-meter-hold" /></div>
+      )}
+    </div>
+  )
+}
+
+/** A horizontal level bar (the overview face): the average, and from Intermediate its peaks and noise (`peak` / `noise` set). */
+export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise, source }: {
   db: number
   color: string
   height?: number
   domain?: SignalDomain
   peak?: number
   noise?: number
+  source?: MeterSource
 }) {
-  // Ticks widen with a tall bar (the overview meter), so they stay visible zoomed out
-  const tick = Math.max(1, Math.round(height / 8))
-  const mark = tick * 3
+  const detailed = peak !== undefined
   return (
-    <div
-      className="relative w-full overflow-hidden"
-      style={{ height, borderRadius: 9999, background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)' }}
-    >
-      <motion.div
-        className="absolute left-0 top-0 h-full"
-        style={{ backgroundColor: color, borderRadius: 9999 }}
-        animate={{ width: `${dbToPercent(db)}%` }}
-        transition={SPRING}
-      />
-      {onScale(noise) && (
-        <motion.div
-          aria-hidden
-          className="absolute left-0 top-0 h-full"
-          style={{ background: 'linear-gradient(to right, var(--lsc-noise-fog) 75%, transparent)' }}
-          initial={false}
-          animate={{ width: `${dbToPercent(noise)}%` }}
-          transition={SPRING}
-        />
-      )}
-      {zoneTicks(domain).map(({ db: at, strong }) => (
-        <div
-          key={at}
-          className="absolute top-0 h-full"
-          style={{ width: tick, left: `${dbToPercent(at)}%`, background: strong ? 'var(--lsc-fg-muted)' : 'var(--lsc-border)' }}
-        />
-      ))}
-      {onScale(peak) && (
-        // Centred on the peak, inside the bar at both ends: the track is inset by half the mark
-        <div className="absolute top-0 h-full" style={{ left: mark / 2, right: mark / 2 }}>
-          <motion.div
-            aria-hidden
-            className="absolute top-0 h-full"
-            style={{ width: mark, marginLeft: -mark / 2, background: color }}
-            initial={false}
-            animate={{ left: `${dbToPercent(peak)}%` }}
-            transition={SPRING}
-          />
-        </div>
-      )}
-    </div>
+    <MeterTrack
+      side={{ rms: db, peak: peak ?? -Infinity, noise: noise ?? -Infinity, hum: -Infinity }}
+      color={color} domain={domain} detailed={detailed} direction="right" thickness={height} source={source}
+    />
   )
 }
 
 /** One labelled channel bar (L or R) with its level (the average), coloured by its own health (clipping from its peaks). */
-export function ChannelRow({ ch, side, domain = 'analog' }: { ch: string; side: SideLevels; domain?: SignalDomain }) {
+export function ChannelRow({ ch, side, domain = 'analog', source }: {
+  ch: string
+  side: SideLevels
+  domain?: SignalDomain
+  source?: MeterSource
+}) {
   const detailed = useReadingsShown()
   const db       = side.rms
   const color    = isFinite(db) ? healthColor(getHealth(db, domain, side.peak)) : 'var(--lsc-border)'
@@ -108,10 +151,7 @@ export function ChannelRow({ ch, side, domain = 'analog' }: { ch: string; side: 
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
       <span style={{ fontWeight: 700, width: 10, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
       <div style={{ flex: 1 }}>
-        <MeterBar
-          db={db} color={color} domain={domain}
-          peak={detailed ? side.peak : undefined} noise={detailed ? side.noise : undefined}
-        />
+        <MeterTrack side={side} color={color} domain={domain} detailed={detailed} direction="right" thickness={6} source={source} />
       </div>
       <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)' }}>
         {isFinite(db) ? db.toFixed(1) : '−∞'}
@@ -120,63 +160,87 @@ export function ChannelRow({ ch, side, domain = 'analog' }: { ch: string; side: 
   )
 }
 
-export function SignalMeter({ l, r, health, label, showValue = true, domain = 'analog' }: SignalMeterProps) {
-  const color    = healthColor(health)
+/** A level as the meters print it (formatDb): its number and its unit. */
+const levelParts = (db: number, domain: SignalDomain) => formatDb(db, domain).split(' ')
+
+/**
+ * A card's upright meter, on its side of the card: what arrives (left) or leaves (right). Its name,
+ * the bar — two, L and R, for a stereo signal — then the level (the average over the loop) and the
+ * health word. It takes the height its card gives it; its width is its longest word.
+ */
+export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at }: {
+  /** The signal, or its left side when `r` is set */
+  l: SideLevels
+  /** Right side: two bars */
+  r?: SideLevels
+  health: SignalHealth
+  domain?: SignalDomain
+  label: string
+  /** The card and which of its signals: it moves while the chain plays */
+  nodeId: string
+  at: MeterAt
+}) {
   const { t }    = useTranslation()
   const detailed = useReadingsShown()
-
-  const name = label && (
-    <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)' }}>
-      {label}
-    </span>
-  )
-  const healthWord = (
-    <StableText
-      reserve={Object.values(t.health)}
-      align="end"
-      style={{ fontSize: 'var(--node-text-sm)', fontWeight: 600, color }}
-    >
-      {t.health[health]}
-    </StableText>
-  )
-
-  if (r) {
-    // Stereo: each bar shows its own level, so the health word goes up beside the label and the two
-    // rows sit close — 56px in all, 6 more than one bar, so a two-column card stays landscape
-    return (
-      <div className="flex flex-col" style={{ gap: 4 }}>
-        {(name || showValue) && (
-          <div className="flex items-center justify-between" style={{ gap: 8 }}>
-            {name || <span />}
-            {showValue && healthWord}
-          </div>
-        )}
-        <div className="flex flex-col" style={{ gap: 2, lineHeight: '16px' }}>
-          <ChannelRow ch="L" side={l} domain={domain} />
-          <ChannelRow ch="R" side={r} domain={domain} />
-        </div>
-      </div>
-    )
-  }
+  // Zoomed out the card shows its face, and this meter is hidden: it need not move
+  const shown    = !useSignalStore((s) => s.overview)
+  const color    = healthColor(health)
+  const sides: [string, SideLevels, MeterSide][] = r ? [['L', l, 'l'], ['R', r, 'r']] : [['', l, 'l']]
+  const [value, unit] = levelParts(l.rms, domain)
+  const words    = Object.values(t.health)
 
   return (
-    <div className="flex flex-col" style={{ gap: 4 }}>
-      {name}
-      <MeterBar
-        db={l.rms} color={color} domain={domain}
-        peak={detailed ? l.peak : undefined} noise={detailed ? l.noise : undefined}
-      />
-      {showValue && (
-        <div className="flex items-center justify-between" style={{ gap: 8 }}>
-          <StableText
-            reserve={[domain === 'digital' ? '+00.0 dBFS' : '+00.0 dBu']}
-            style={{ fontSize: 'var(--node-text-sm)', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, color }}
-          >
-            {formatDb(l.rms, domain)}
-          </StableText>
-          {healthWord}
-        </div>
-      )}
+    <div
+      className="lsc-meter-strip"
+      title={detailed ? t.meters.tip : t.meters.tipBeginner}
+      style={{ width: STRIP_W, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}
+    >
+      <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+
+      {/* The bars: one, or L and R — each with its letter under it (kept, unseen, in mono: the same height) */}
+      <div style={{ flex: 1, minHeight: 110, display: 'flex', gap: 4 }}>
+        {sides.map(([ch, side, which]) => (
+          <div key={which} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <MeterTrack
+              side={side}
+              // Two sides: each in the colour of its own health (clipping from its own peaks)
+              color={r ? (isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'var(--lsc-border)') : color}
+              domain={domain} detailed={detailed} direction="up" thickness={r ? 11 : 16}
+              source={shown ? { nodeId, at, side: which } : undefined}
+              style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
+            />
+            <span style={{ fontSize: 10, fontWeight: 700, lineHeight: '11px', color: 'var(--lsc-fg-muted)', visibility: ch ? 'visible' : 'hidden' }}>
+              {ch || 'L'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* The level: one line in mono, an L and an R line in stereo — the same height either way */}
+      <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        {r ? sides.map(([ch, side]) => (
+          <div key={ch} style={{ color: 'var(--lsc-fg-muted)' }}>
+            <span style={{ fontWeight: 700 }}>{ch}</span>{' '}
+            <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelParts(side.rms, domain)[0]}</StableText>
+          </div>
+        )) : <>
+          <div style={{ color }}><StableText reserve={[LEVEL_SAMPLE]} align="center">{value}</StableText></div>
+          <div style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{unit}</div>
+        </>}
+      </div>
+
+      {/* The health word: as tall as the tallest of them (a long one wraps), so a new one never resizes the card */}
+      <Reserved words={words} style={{ fontSize: 11, lineHeight: '14px', fontWeight: 700, color }}>{t.health[health]}</Reserved>
+    </div>
+  )
+}
+
+/** A word in the space of the biggest of `words` (each may wrap onto lines of its own). */
+function Reserved({ words, style, children }: { words: string[]; style: CSSProperties; children: ReactNode }) {
+  return (
+    <div style={{ display: 'grid', justifyItems: 'center', width: '100%', ...style }}>
+      <span style={{ gridArea: '1 / 1' }}>{children}</span>
+      {words.map((w) => <span key={w} aria-hidden style={{ gridArea: '1 / 1', visibility: 'hidden' }}>{w}</span>)}
     </div>
   )
 }
@@ -184,63 +248,31 @@ export function SignalMeter({ l, r, health, label, showValue = true, domain = 'a
 /**
  * Two upright level bars, Left and Right, like a mixing desk's master meters (beside the Main
  * Fader). Each coloured by its own health (clipping from its peaks); from Intermediate up with its
- * peak mark and the noise rising from the bottom.
+ * peak mark and the noise rising from the bottom — and moving while the chain plays.
  */
-export function VerticalMeterPair({ l, r, height, domain = 'analog' }: { l: SideLevels; r: SideLevels; height: number; domain?: SignalDomain }) {
+export function VerticalMeterPair({ l, r, height, domain = 'analog', nodeId }: {
+  l: SideLevels
+  r: SideLevels
+  height: number
+  domain?: SignalDomain
+  /** Its Main Fader: what leaves it moves while the chain plays */
+  nodeId?: string
+}) {
   const detailed = useReadingsShown()
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      {([['L', l], ['R', r]] as const).map(([ch, side]) => {
-        const color = isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'transparent'
-        return (
-          <div key={ch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <div
-              className="relative overflow-hidden"
-              style={{
-                width: 12, height, borderRadius: 9999,
-                background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
-              }}
-            >
-              <motion.div
-                className="absolute left-0 bottom-0 w-full"
-                style={{ borderRadius: 9999, backgroundColor: color }}
-                animate={{ height: `${dbToPercent(side.rms)}%` }}
-                transition={SPRING}
-              />
-              {detailed && onScale(side.noise) && (
-                <motion.div
-                  aria-hidden
-                  className="absolute left-0 bottom-0 w-full"
-                  style={{ background: 'linear-gradient(to top, var(--lsc-noise-fog) 75%, transparent)' }}
-                  initial={false}
-                  animate={{ height: `${dbToPercent(side.noise)}%` }}
-                  transition={SPRING}
-                />
-              )}
-              {zoneTicks(domain).map(({ db: at, strong }) => (
-                <div
-                  key={at}
-                  className="absolute left-0 w-full"
-                  style={{ bottom: `${dbToPercent(at)}%`, height: 2, background: strong ? 'var(--lsc-fg-muted)' : 'var(--lsc-border)' }}
-                />
-              ))}
-              {detailed && onScale(side.peak) && (
-                <div className="absolute left-0 w-full" style={{ top: PEAK_MARK / 2, bottom: PEAK_MARK / 2 }}>
-                  <motion.div
-                    aria-hidden
-                    className="absolute left-0 w-full"
-                    style={{ height: PEAK_MARK, marginBottom: -PEAK_MARK / 2, background: color }}
-                    initial={false}
-                    animate={{ bottom: `${dbToPercent(side.peak)}%` }}
-                    transition={SPRING}
-                  />
-                </div>
-              )}
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
-          </div>
-        )
-      })}
+      {([['L', l, 'l'], ['R', r, 'r']] as const).map(([ch, side, which]) => (
+        <div key={ch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <MeterTrack
+            side={side}
+            color={isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'transparent'}
+            domain={domain} detailed={detailed} direction="up" thickness={12} length={height}
+            source={nodeId ? { nodeId, at: 'out', side: which } : undefined}
+            style={{ borderRadius: 9999 }}
+          />
+          <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
+        </div>
+      ))}
     </div>
   )
 }

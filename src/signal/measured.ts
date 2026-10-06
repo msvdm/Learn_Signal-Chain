@@ -3,6 +3,7 @@ import { ceilingOf, eachReading, louder } from './levels'
 import type { WireSignal } from './chain'
 import { healthOf, humOf } from './chain'
 import type { GraphSignalResult, StageResult } from './engine'
+import type { MovingStage } from './moving'
 
 // The readings of real sound (decision D9): a render of the chain (audio/measure.ts) measures what
 // arrives at and leaves every card — the peaks, the average, the noise when the music stops, the
@@ -26,6 +27,8 @@ export interface MeasuredChain {
   at: GraphSignalResult
   stages: Map<string, MeasuredStage>
   wires: Map<string, WireSignal>
+  /** How each card's signal moved over the loop (signal/moving.ts); none: nothing moves */
+  moving?: Map<string, MovingStage>
 }
 
 /**

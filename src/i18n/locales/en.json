@@ -107,11 +107,13 @@
     "analogOut": "Analog out",
     "digitalOut": "Digital out",
     "axisIn": "0 dB in",
+    "tipBeginner": "How strong the signal is: the taller the bar, the louder. Blue: too quiet. Green: good. Yellow: getting hot. Red: it distorts.",
+    "tip": "A meter like a recording program's. The solid bar is the average over the last 0.3 seconds — how loud it sounds. The light bar shows the peaks, the loudest moments, falling back slowly. The mark is the loudest peak of the last 3 seconds. The grey fog at the bottom is the noise you hear when the music stops. The number under it is the average over the whole 10 seconds of sound.",
     "curve": {
       "peak": "Peaks",
       "rms": "Average",
       "noise": "Noise",
-      "tip": "Left to right: the level coming in. Bottom to top: the level going out. On the dashed diagonal nothing changes; where the curve leaves it, this card is at work. The marks show what really comes out over a few seconds of the sound; a faint mark on the diagonal shows where the peaks, the average or the noise would be without the card. A Peaks mark above the curve: the start of each note got through before the card reacted (its Attack)."
+      "tip": "Left to right: the level coming in. Bottom to top: the level going out. On the dashed diagonal nothing changes; where the curve leaves it, this card is at work. The Peaks and Average marks move with the sound as it plays; the Noise mark shows what comes out when the music stops. A faint mark on the diagonal shows where a mark would be without the card. A Peaks mark above the curve: the start of a note got through before the card reacted (its Attack)."
     }
   },
   "health": {
@@ -146,7 +148,7 @@
       "loud": "very noisy"
     },
     "tips": {
-      "peaks": "The bar shows the average level — how loud it sounds; the thin line beyond it shows the loudest moments (the peaks) — what clips first. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
+      "peaks": "The solid bar shows the average level — how loud it sounds; the light bar and the thin line beyond it show the loudest moments (the peaks) — what clips first. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
       "room": "How far the loudest moments are below the clip level (+20 dBu, or 0 dBFS after an ADC), where every stage distorts. Engineers call this room headroom. {careful} dB or less: careful, a louder note will distort.",
       "hiss": "Every powered device adds a little hiss. This is how far it sits below the music — engineers call it the signal-to-noise ratio: {audible} dB or more and you won't notice it; less, and you hear it in the quiet moments. Make the gain early, at the Preamp: turning up later lifts the hiss too. The grey fog on the meter is the noise."
     },

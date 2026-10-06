@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
-import { SignalMeter } from '../SignalMeter'
+import { MeterSides } from './MeterSides'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -10,7 +10,7 @@ import { useParams } from '../../hooks/useParams'
 import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import { GEQ_CENTERS, GEQ_RANGE, geqShortLabel, geqLongLabel } from '../../signal/eqMath'
 
-// Same body width as the Parametric EQ, so both EQ cards are the same size
+// The sliders' panel: wide enough for 31 sliders and their frequencies (the meters stand beside it)
 const BODY_W    = 640
 const PANEL_PAD = 10
 const AXIS_W    = 30                 // +12 … −12 dB labels
@@ -37,7 +37,7 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
 /**
  * 31-band graphic EQ, a third of an octave per slider (20 Hz … 20 kHz), like the one on a
  * PA system's master output. Each slider boosts or cuts its band by up to 12 dB in 0.5 dB steps;
- * the line through the caps shows the curve. Same size as the Parametric EQ.
+ * the line through the caps shows the curve. Its In and Out meters stand at its sides.
  * Fed a stereo wire it is a two-channel EQ: the sliders split into L (top) and R (bottom),
  * in the same space. The right side copies the left until it is first touched.
  */
@@ -88,92 +88,85 @@ export function GraphicEQNode({ id }: CardProps) {
       typeKey="graphic-eq"
       label={useNodeName(id, 'graphic-eq')}
     >
-      <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <SignalMeter {...levels.input} label={t.meters.input} />
+      <MeterSides nodeId={id}>
+        <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* The band being touched, or how to use it — fixed height, so the card never resizes */}
+          <div style={{ height: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span
+              style={{
+                flex: 1, minWidth: 0, fontSize: 12, lineHeight: '16px', maxHeight: 32, overflow: 'hidden',
+                color: active === null ? 'var(--lsc-fg-dim)' : 'var(--lsc-fg)',
+              }}
+            >
+              {active === null ? t.nodes['graphic-eq'].hint : (
+                <>
+                  <span style={{ fontWeight: 700 }}>{geqLongLabel(GEQ_CENTERS[active.band])}</span>
+                  {stereo && <span style={{ fontWeight: 700, marginLeft: 10, color: 'var(--lsc-fg-muted)' }}>{active.side.toUpperCase()}</span>}
+                  <span style={{ fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, marginLeft: 10, color: 'var(--lsc-accent)' }}>
+                    {formatGain(gainsOf(active.side)[active.band])}
+                  </span>
+                </>
+              )}
+            </span>
+            <button
+              className="nodrag nopan lsc-btn-outline"
+              title={t.nodes['graphic-eq'].flatHint}
+              disabled={isFlat}
+              onClick={flat}
+              style={{
+                height: 26, padding: '0 10px', borderRadius: 6, flexShrink: 0,
+                border: '1px solid var(--lsc-border)', background: 'transparent',
+                color: isFlat ? 'var(--lsc-fg-fainter)' : 'var(--lsc-fg)',
+                fontSize: 12, fontWeight: 600, cursor: isFlat ? 'default' : 'pointer',
+              }}
+            >
+              {t.nodes['graphic-eq'].flat}
+            </button>
           </div>
-          <div style={{ flex: 1 }}>
-            <SignalMeter {...levels.output} label={t.meters.output} />
-          </div>
-        </div>
 
-        {/* The band being touched, or how to use it — fixed height, so the card never resizes */}
-        <div style={{ height: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span
+          {/* Slider panel: one bank, or L above R in stereo — the same height either way */}
+          <div
+            className="nodrag nopan"
             style={{
-              flex: 1, minWidth: 0, fontSize: 12, lineHeight: '16px', maxHeight: 32, overflow: 'hidden',
-              color: active === null ? 'var(--lsc-fg-dim)' : 'var(--lsc-fg)',
+              padding: PANEL_PAD, borderRadius: 8,
+              background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)',
             }}
           >
-            {active === null ? t.nodes['graphic-eq'].hint : (
-              <>
-                <span style={{ fontWeight: 700 }}>{geqLongLabel(GEQ_CENTERS[active.band])}</span>
-                {stereo && <span style={{ fontWeight: 700, marginLeft: 10, color: 'var(--lsc-fg-muted)' }}>{active.side.toUpperCase()}</span>}
-                <span style={{ fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, marginLeft: 10, color: 'var(--lsc-accent)' }}>
-                  {formatGain(gainsOf(active.side)[active.band])}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: BANK_GAP, height: SLIDER_H }}>
+              {sides.map((side) => (
+                <SliderBank
+                  key={side}
+                  gains={gainsOf(side)}
+                  height={bankH}
+                  channel={stereo ? side.toUpperCase() : null}
+                  activeBand={active?.side === side ? active.band : null}
+                  onDown={(e) => onBankDown(side, e)}
+                  onHover={(band) => { if (!drag.active()) setActive(band === null ? null : { side, band }) }}
+                  onReset={(band) => setGain(side, band, 0)}
+                />
+              ))}
+            </div>
+
+            {/* Frequencies, in two staggered rows */}
+            <div style={{ position: 'relative', marginLeft: AXIS_W, height: LABEL_ROW * 2, marginTop: 6 }}>
+              {GEQ_CENTERS.map((hz, i) => (
+                <span
+                  key={hz}
+                  style={{
+                    position: 'absolute', left: capX(i), top: (i % 2) * LABEL_ROW, transform: 'translateX(-50%)',
+                    fontSize: 11, fontFamily: 'var(--lsc-font-mono)', lineHeight: `${LABEL_ROW}px`, whiteSpace: 'nowrap',
+                    fontWeight: active?.band === i ? 700 : 400,
+                    color: active?.band === i ? 'var(--lsc-accent)' : 'var(--lsc-fg-dim)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {geqShortLabel(hz)}
                 </span>
-              </>
-            )}
-          </span>
-          <button
-            className="nodrag nopan lsc-btn-outline"
-            title={t.nodes['graphic-eq'].flatHint}
-            disabled={isFlat}
-            onClick={flat}
-            style={{
-              height: 26, padding: '0 10px', borderRadius: 6, flexShrink: 0,
-              border: '1px solid var(--lsc-border)', background: 'transparent',
-              color: isFlat ? 'var(--lsc-fg-fainter)' : 'var(--lsc-fg)',
-              fontSize: 12, fontWeight: 600, cursor: isFlat ? 'default' : 'pointer',
-            }}
-          >
-            {t.nodes['graphic-eq'].flat}
-          </button>
-        </div>
-
-        {/* Slider panel: one bank, or L above R in stereo — the same height either way */}
-        <div
-          className="nodrag nopan"
-          style={{
-            padding: PANEL_PAD, borderRadius: 8,
-            background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border)',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: BANK_GAP, height: SLIDER_H }}>
-            {sides.map((side) => (
-              <SliderBank
-                key={side}
-                gains={gainsOf(side)}
-                height={bankH}
-                channel={stereo ? side.toUpperCase() : null}
-                activeBand={active?.side === side ? active.band : null}
-                onDown={(e) => onBankDown(side, e)}
-                onHover={(band) => { if (!drag.active()) setActive(band === null ? null : { side, band }) }}
-                onReset={(band) => setGain(side, band, 0)}
-              />
-            ))}
-          </div>
-
-          {/* Frequencies, in two staggered rows */}
-          <div style={{ position: 'relative', marginLeft: AXIS_W, height: LABEL_ROW * 2, marginTop: 6 }}>
-            {GEQ_CENTERS.map((hz, i) => (
-              <span
-                key={hz}
-                style={{
-                  position: 'absolute', left: capX(i), top: (i % 2) * LABEL_ROW, transform: 'translateX(-50%)',
-                  fontSize: 11, fontFamily: 'var(--lsc-font-mono)', lineHeight: `${LABEL_ROW}px`, whiteSpace: 'nowrap',
-                  fontWeight: active?.band === i ? 700 : 400,
-                  color: active?.band === i ? 'var(--lsc-accent)' : 'var(--lsc-fg-dim)',
-                  pointerEvents: 'none',
-                }}
-              >
-                {geqShortLabel(hz)}
-              </span>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </MeterSides>
     </NodeWrapper>
   )
 }

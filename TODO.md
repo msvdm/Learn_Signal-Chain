@@ -666,7 +666,152 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
 −6.3 dB", "Peaks 14 dB above the average", the Peaks mark above the curve; Attack to 1 ms: "Peaks
 10 dB" — as the help says; a knob step 20 ms (dev build); no console errors.
 
-## 11. The fast lane: live meters
+## ~~11. The fast lane: live meters~~ — done (2026-10-06)
+
+### D10 — decided (user, 2026-10-06, at the start of step 11)
+
+- **The meters replay the render** — not a live AudioContext. Every sound is one loop long, so after
+  its dynamics settle a chain repeats exactly every 10 s: the music render (10c) records that loop slice
+  by slice and the meters play it back in time with the clock. Asked because the plan's live context
+  would not move before the learner's first click (browsers keep audio suspended until then), would run
+  every card in real time while playing, and needed a second way of building the chain to take knob
+  changes. The real AudioContext waits for Step C, where the sound is heard.
+- **No Play / Pause**: "when a source is connected — play the loop on repeat. Simple and straight forward!"
+- **Nothing moves at Beginner** (D3 holds).
+- **DAW meter maths**: "look up real sound meters on real DAW software to get the math right and show
+  Peak, RMS and Noise floor in the same meter" — a light bar for the peak, the mark the peak hold.
+- **Meters upright at the card's sides**, In on the left, Out on the right; the 4:3 rule goes ("the
+  dynamic processing cards have enough room on the left and right to grow"). **The Parametric EQ keeps
+  its size** ("waaay oversized"): its content shrinks, its sliders become knobs.
+
+### What it is now
+
+- **The meter maths** (`src/audio/meters.ts`, what DAWs and the standards do — Logic, Reaper and
+  Ableton Live can draw Peak and RMS in one meter): **RMS** over the last 300 ms (a VU meter's
+  integration time and the DAWs' RMS window; plain RMS — a sine reads 3 dB under its peaks, as the cards'
+  readings say — not the AES17 +3 dB of K-meters), **peak** — the loudest sample at once, falling back
+  20 dB in 1.7 s (IEC 60268-18, the EBU digital peak meter) — and its **hold**, 3 s (Pro Tools, the EBU;
+  Logic 2–6 s), then falling like the peak. The **noise floor** is the grey fog, as before: measured with
+  the music stopped, it does not move. The loop runs into itself (worked out twice round).
+- **Recorded by the render** (`audio/processors.ts` `Meter` with `slice`, `audio/measure.ts`): the music
+  render keeps every tap's loudest sample and power per 10 ms slice, from a slice boundary of the loop;
+  `measureChain` turns them round to the loop's start and hands over each card's movement (in / out, side
+  by side; a dynamics card's curve in / out and its turning down) with the same in / out mapping as the
+  readings. `signal/moving.ts` moves it by the number engine's step between a change and the next render,
+  as D9 moves the readings: a fader moves the meters at once.
+- **Played back outside React** (`hooks/useLiveMeter.ts`): one `requestAnimationFrame` loop, 30 pictures
+  a second, writes each moving part's own `transform` (`components/meterPaint.ts`) — only meters on screen
+  (an IntersectionObserver), not hidden ones (a card's body zoomed out, a face zoomed in), only what
+  changed. It plays from Intermediate for every card a wired source reaches (an unwired source stays
+  still), unless the system asks for reduced motion; a hidden tab gets no frames; stopping puts the still
+  picture back. React still draws the still picture (the loop's average and loudest peak — what Beginner
+  and reduced motion see) and the numbers, health words and colours, which stay the render's: the bar
+  moves around its number, its colour never flickers.
+- **What moves**: every meter — the cards' upright strips, the overview faces (and the Microphone's,
+  Instrument's, Guitar Amp's and speakers' faces), Pan's L / R rows, the Main Fader's pair; a dynamics
+  card's turning-down bar (in against out over 30 ms — the gain of the moment), its curve's Peaks and
+  Average marks with their faint copies (the Noise mark stays), and the Gate's OPEN / CLOSED and the
+  Limiter's LIMITING / PASS word and ring (a gate is open while it turns down under 3 dB, a limiter
+  limiting over 0.5 dB), so the word never contradicts the moving dot.
+- **Meters at the sides** (`components/nodes/MeterSides.tsx`, `MeterStrip`): an upright strip, 76 px in
+  every language — its name, the bar (L and R in stereo, each with its letter), the level (mono: number
+  and unit; stereo: an L and an R line) and the health word, the same height mono or stereo. Sizes (en):
+
+  | Card (English, mono; measured before and after) | Before | Now |
+  |---|---|---|
+  | Compressor, Noise Gate | 438 × 428 | 618 × 366 |
+  | Limiter | 438 × 372 | 618 × 344 |
+  | De-esser (one column: knobs, then its reading) | 438 × 316 | 412 × 344 |
+  | Amplifier | 438 × 292 | 412 × 344 |
+  | Intermediate Equalizer | 438 × 294 | 425 × 344 |
+  | Parametric Equalizer (knobs: Gain, Freq on a log scale, Width) | 682 × 604 | 682 × 540 |
+  | Graphic EQ (sliders as they were) | 682 × 605 | 862 × 545 |
+  | DI Box (In only; its outputs stay level rows) | 438 × 333 | 432 × 309 |
+  | Master / Aux / Matrix Bus (Out only) | 398 × 298 | 398 × 344 (Aux 380: its Mono / Stereo switch) |
+
+  No card changes size between mono and stereo any more (before: 6 px taller in stereo; checked: every
+  card with meters, both languages, both levels). Bulgarian is up to 14 px taller where the meters set the
+  height ("Прекалено тихо" takes two lines), the DI Box 70 (its description); the Parametric Equalizer
+  569 (was 620).
+- Words (en + bg): each meter's tooltip (`meters.tip`, Beginner `meters.tipBeginner`: what the solid
+  bar, the light bar, the mark and the fog are); the curve's tooltip (its marks move with the sound, the
+  Noise is the music stopped) and the Peaks reading's (the light bar).
+- Stale comments fixed on the way: the Compressor's and the Gate's Attack / Release "not part of the
+  sound yet" (true before 10c).
+- Tests: 379 (360 before): the meter maths 10, the moving picture 7, the meter's slices 2.
+
+### Measured (headless Chromium in the cloud container: Inter and DejaVu fonts, software painting, ~2× slower than the desktop of 10c)
+
+- **The recording agrees with the readings**: a voice's moving RMS averages (as power) to the still
+  reading exactly (−10.000 dBu), its loudest moving peak is the still peak (+1.855 dBu); two renders of
+  different chains give the same card the same frames (0 dB apart — the loop's start lines up); a panned
+  bus keeps its sides 9.76 dB apart, as the still readings. Speech at −10 dBu: the peak 7 / 10 / 18 dB
+  above the RMS (10 / 50 / 90 % of the time); the Generator's clicks over 14; a sine 3 — "visibly split
+  on drums, almost touching on a sine".
+- **Render time**, before → after (three runs, twice): a 9-card strip 245–318 → 282–358 ms (+10 %), the
+  75-card stress chain 2.1–2.6 s either way.
+- **The moving meters' cost on the main thread** (stress chain, a second of it): all 75 cards on screen
+  (zoomed out) 552 ms (451 of it painting), one channel strip on screen 182 ms (143), reduced motion 0.
+  First tries: CSS variables on each meter's box, 1,039 ms (852 restyling everything in the boxes);
+  `will-change: transform` on the moving parts made it worse (947: masked layers). A GPU paints this far
+  more cheaply — step 13 checks a real weak device.
+- Checked in the dev app, the production build and the one-file copy (opened over http: one request, the
+  page itself): the meters move at Intermediate and Advanced, light and dark, English and Bulgarian, mono
+  and stereo; a 20 dB Preamp turn moves the Compressor's input meter at once (−30 shown, −10 measured,
+  before the next render); an unwired Microphone stays still; Beginner and reduced motion stand still.
+- **Smaller bundle**: the meters were framer-motion's only user — the script 859 → 750 kB (gzip 270 →
+  235), the one-file copy 1.74 → 1.64 MB.
+
+### Choices made here, to review
+
+- The numbers: RMS 300 ms (plain), peak falling 20 dB in 1.7 s, hold 3 s then falling, 30 pictures a
+  second; the light peak bar at 38 % of the bar's colour.
+- "When a source is connected and mode is selected": a source plays once it is wired to something, and
+  every card it reaches moves; "mode" read as the level (Intermediate and up) — a source always has a
+  sound selected.
+- Reduced motion keeps the meters still (the loop's picture): with no Pause, it is the only way to stop
+  them, for those who asked their system for less motion.
+- The moving bar keeps the loop's colour, and the level number and health word under it stay the loop's.
+- The Gate's and the Limiter's word and ring follow the moment while it plays (the "Turning down" number
+  stays the loop's, its bar moves).
+- Upright meters on: the dynamics cards, both Equalizers, the Graphic EQ, the Amplifier, the DI Box (In)
+  and the buses (Out). As they were (horizontal): the overview faces — so the Microphone's, Instrument's,
+  Guitar Amp's and speakers' faces — and Pan's L / R rows; the Main Fader's upright pair. Should the
+  face-only cards' meters stand upright too?
+- The Graphic EQ grew sideways (862) rather than squeeze its 31 sliders; only the Parametric EQ kept its
+  width (it came out shorter: 540).
+- The Parametric EQ's bands as one table (the row names once, a column per band), 28 px knobs; a shelf's
+  Width greyed in place. The De-esser in one column; the DI Box's text 300 px wide.
+- framer-motion is no longer used but still in `package.json` (removing it changes `bun.lock`: your call).
+
+### Left for the user
+
+1. `bun dev`, Intermediate: Microphone → Gain (the Preamp, +50) → Compressor → Active Speaker. Half a second
+   after the chain is built the meters move: on the Compressor, the In meter on its left and the Out meter on
+   its right — the solid bar jumping with the words, a lighter bar above it falling back slowly, a thin mark
+   (the loudest of the last 3 s); the Average ring and the Peaks triangle ride the curve; the "Turning down"
+   bar moves while its number stays. The Microphone's and the speaker's faces move too.
+2. Turn the Preamp from +50 to +30: every meter after it drops a quarter of its scale at once, and half a
+   second after you let go it carries on without a jump.
+3. Drop a second Microphone, unwired: its meter stands still. Wire it into anything: it moves.
+4. Advanced: Generator (Click) → Noise Gate: OPEN / CLOSED flips with the clicks, the ring jumps between the
+   curve and its floor; on the Generator's meter the light bar stands far above the solid one. Switch it to
+   Sine: the two almost touch (3 dB).
+5. Line Input set to Stereo → Compressor: two bars on each side, L and R; the card is the same size as in mono.
+6. The Parametric Equalizer: as wide as before, shorter; its Gain, Freq and Width knobs turn (Freq: each
+   octave the same turn); the curve's dots still drag. The Graphic EQ: wider, its sliders as before.
+7. Beginner: nothing moves; the DI Box's meter stands upright, a bar alone.
+8. Ask your system for less motion (macOS: Accessibility → Display → Reduce motion; Windows: Accessibility
+   → Visual effects → Animation effects off): the meters stand still, showing the loop's average and loudest
+   peak. Turn it back: they move again.
+9. Bulgarian, light and dark: the meters' words fit ("Изкривяване!" in its 76 px).
+10. With your own fonts: does every meter's health word fit? (Checked here with Inter.)
+11. The one-file copy from disk (double-click `dist/learn-signal-chain.html`, Wi-Fi off): the meters move
+    there too (checked here over http only).
+12. A phone or an old laptop: the 75-card stress chain zoomed out cost half of a slow core here, painting in
+    software — how does it feel on a real one? (Step 13.)
+
+Original plan:
 
 - The chain plays in a real AudioContext (silent — no output to the speakers until Step C): the same
   graph as the measuring render (`audio/chainAudio.ts` `buildChain` into an AudioContext instead of
@@ -689,14 +834,20 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
 
 - Wires brighten and pulse with the level they carry; the flow animation already there keeps the
   direction. A clipped peak flashes red on the wire where it happens.
+- From 11: the render's movement is kept per card (in / out); `measure.ts` already works it out per
+  output on the way (`movingWires`) — keep it for the wires, and paint them through `useLiveMeter`.
 
 ## 13. Check on a weak device
 
 - Chrome dev tools: CPU 6× slower, phone screen size, the stress chain from step 1. Must stay
   smooth (drop to 30 updates a second on slow devices if needed). Battery: nothing runs while
   paused, hidden, or with an empty canvas.
-- Real audio for 75 cards at 48 kHz, live and in the offline renders: check the cost on a slow
-  device; if needed render at a lower sample rate for measuring, or measure only what a change reaches.
+- Real audio for 75 cards at 48 kHz in the offline renders (nothing plays live until Step C — D10): check
+  the cost on a slow device; if needed render at a lower sample rate for measuring, or measure only what a
+  change reaches.
+- The moving meters (step 11): in the cloud container (software painting) the 75-card chain zoomed out cost
+  552 ms of main thread a second, one strip on screen 182 — mostly painting. If a weak device struggles:
+  fewer pictures a second zoomed out, or the faces' meters without their peak bar.
   From 10c (desktop, dev build): 30 ms for 4 cards, 130 for a channel strip, 1.4 s for the 75-card
   stress chain — a render is mostly nodes (~0.75 ms per node per loop) and the dynamics worklets.
 

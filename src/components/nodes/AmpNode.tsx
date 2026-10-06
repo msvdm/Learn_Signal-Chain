@@ -2,13 +2,13 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ControlSlider } from './ControlSlider'
-import { SignalMeter } from '../SignalMeter'
+import { MeterSides } from './MeterSides'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
-import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
+import { COLUMN_W } from '../../utils/twoColumns'
 
 // The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
@@ -29,14 +29,10 @@ export function AmpNode({ id }: CardProps) {
       nodeId={id}
       typeKey="amp"
       label={useNodeName(id, 'amp')}
-      style={twoColumnCard}
     >
-      {/* Landscape: In | Out meters side by side, the Volume slider(s) under them */}
-      <div style={twoColumns}>
-        <SignalMeter {...levels.input} label={t.meters.input} />
-        <SignalMeter {...levels.output} label={t.meters.output} />
-
-        <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* In | the Volume slider(s) | Out */}
+      <MeterSides nodeId={id}>
+        <div style={{ width: COLUMN_W, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <ControlSlider
             value={gainDb}
             min={GAIN_OFF_DB}
@@ -56,7 +52,7 @@ export function AmpNode({ id }: CardProps) {
             />
           )}
         </div>
-      </div>
+      </MeterSides>
     </NodeWrapper>
   )
 }

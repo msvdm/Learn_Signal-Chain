@@ -270,12 +270,23 @@ export interface MeterOptions {
   end: number
   /** Measure the hum at this frequency too (a whole number of its waves must fit the stretch) */
   humHz?: number
+  /**
+   * Also keep, slice by slice of this many frames (from `start`), each channel's loudest sample
+   * and its power: how the signal moves, for the meters to play back (audio/meters.ts)
+   */
+  slice?: number
+}
+
+/** One channel, slice by slice: its loudest sample and its mean square (amplitudes, as the samples). */
+export interface ChannelSlices {
+  peak: Float32Array
+  power: Float32Array
 }
 
 /**
  * Measures many signals at once, over the same stretch of frames: each channel's loudest sample,
  * its average (RMS) and — when asked — its hum, the one frequency of a mains hum (a single bin of a
- * Fourier transform: the hiss around it adds nearly nothing).
+ * Fourier transform: the hiss around it adds nearly nothing) and how it moves, slice by slice.
  */
 export class Meter {
   private readonly peak: Float64Array
@@ -286,6 +297,9 @@ export class Meter {
   private readonly cos: Float64Array
   private readonly sin: Float64Array
   private readonly options: MeterOptions
+  /** Each slot's slices (made when the slot first gets a channel) */
+  private readonly slicePeak: (Float32Array | undefined)[]
+  private readonly slicePower: (Float64Array | undefined)[]
 
   constructor(options: MeterOptions, sampleRate: number) {
     this.options  = options
@@ -298,11 +312,20 @@ export class Meter {
     const wave    = options.humHz ? Math.round(sampleRate / options.humHz) : 0
     this.cos      = Float64Array.from({ length: wave }, (_, n) => Math.cos(2 * Math.PI * n / wave))
     this.sin      = Float64Array.from({ length: wave }, (_, n) => Math.sin(2 * Math.PI * n / wave))
+    this.slicePeak  = new Array(slots)
+    this.slicePower = new Array(slots)
+  }
+
+  /** How many slices the stretch holds (0: no slices asked for). */
+  private get sliceCount() {
+    const { slice, start, end } = this.options
+    return slice ? Math.ceil((end - start) / slice) : 0
   }
 
   /** A block of every input, its first frame at `frame`. */
   add(frame: number, inputs: Float32Array[][]) {
     const { start, end } = this.options
+    const slice  = this.options.slice ?? 0
     const length = inputs.find((input) => input.length > 0)?.[0].length ?? 0
     const from = Math.max(start, frame) - frame
     const to   = Math.min(end, frame + length) - frame
@@ -317,11 +340,33 @@ export class Meter {
         const data = input[c]
         let peak = this.peak[slot]
         let power = 0
-        for (let i = from; i < to; i++) {
-          const v = data[i]
-          const a = v < 0 ? -v : v
-          if (a > peak) peak = a
-          power += v * v
+        if (slice > 0) {
+          const peaks  = (this.slicePeak[slot] ??= new Float32Array(this.sliceCount))
+          const powers = (this.slicePower[slot] ??= new Float64Array(this.sliceCount))
+          // Slice by slice: a block may end one and start the next
+          for (let i = from; i < to;) {
+            const s    = Math.floor((frame + i - start) / slice)
+            const stop = Math.min(to, start + (s + 1) * slice - frame)
+            let p = peaks[s]
+            let sum = 0
+            for (; i < stop; i++) {
+              const v = data[i]
+              const a = v < 0 ? -v : v
+              if (a > p) p = a
+              sum += v * v
+            }
+            peaks[s] = p
+            powers[s] += sum
+            if (p > peak) peak = p
+            power += sum
+          }
+        } else {
+          for (let i = from; i < to; i++) {
+            const v = data[i]
+            const a = v < 0 ? -v : v
+            if (a > peak) peak = a
+            power += v * v
+          }
         }
         this.peak[slot] = peak
         this.power[slot] += power
@@ -351,6 +396,22 @@ export class Meter {
         }
       }))
   }
+
+  /** Each input's channels slice by slice (none without `slice`; the last slice may be shorter). */
+  slices(): ChannelSlices[][] {
+    const { slice, start, end } = this.options
+    if (!slice) return []
+    const count = this.sliceCount
+    return Array.from({ length: this.options.inputs }, (_, n) =>
+      Array.from({ length: this.channels[n] }, (_, c) => {
+        const slot  = 2 * n + c
+        const peak  = this.slicePeak[slot] ?? new Float32Array(count)
+        const sums  = this.slicePower[slot]
+        const power = new Float32Array(count)
+        for (let s = 0; s < count; s++) power[s] = sums ? sums[s] / (Math.min(end, start + (s + 1) * slice) - (start + s * slice)) : 0
+        return { peak, power }
+      }))
+  }
 }
 
 // ── In the audio thread ─────────────────────────────────────────────────────────
@@ -362,10 +423,12 @@ export const METER_PROCESSOR = 'lsc-meter'
 /** A meter's message when its stretch is over. */
 export interface MeterMessage {
   readings: ChannelReading[][]
+  /** With `slice`: each input's channels, slice by slice */
+  slices: ChannelSlices[][]
 }
 
 interface WorkletProcessor {
-  readonly port: { postMessage(message: unknown): void }
+  readonly port: { postMessage(message: unknown, transfer?: unknown[]): void }
 }
 
 declare const registerProcessor: ((name: string, processor: unknown) => void) | undefined
@@ -400,7 +463,10 @@ if (typeof registerProcessor === 'function') {
       this.meter.add(currentFrame, inputs)
       if (currentFrame + 128 >= this.end) {
         this.done = true
-        this.port.postMessage({ readings: this.meter.read() } satisfies MeterMessage)
+        const slices = this.meter.slices()
+        // Handed over, not copied: a big chain's slices are a few megabytes
+        const transfer = slices.flatMap((input) => input.flatMap((c) => [c.peak.buffer, c.power.buffer]))
+        this.port.postMessage({ readings: this.meter.read(), slices } satisfies MeterMessage, transfer)
       }
       return true
     }

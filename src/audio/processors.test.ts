@@ -221,5 +221,37 @@ describe('the meter', () => {
     meter.add(0, [[]])
     meter.add(128, [[]])
     expect(meter.read()).toEqual([[]])
+    expect(new Meter({ inputs: 1, start: 0, end: 256, slice: 64 }, RATE).slices()).toEqual([[]])
+  })
+
+  it('keeps how the signal moves, slice by slice from its start, whatever the blocks', () => {
+    // 10 ms slices (480 frames: a 128-frame block often ends one and starts the next), from frame 1000
+    const meter = new Meter({ inputs: 1, start: 1000, end: 1000 + 4 * 480, slice: 480 }, RATE)
+    const x = sine(-20, 1)
+    // A click in the third slice, and one before the stretch the meter must not see
+    x[1000 + 2 * 480 + 7] = ampOf(10)
+    x[500] = 1
+    for (let at = 0; at < x.length; at += 128) meter.add(at, [[x.subarray(at, at + 128)]])
+    const [[slices]] = meter.slices()
+    expect(slices.peak.length).toBe(4)
+    for (const s of [0, 1, 3]) {
+      expect(dbOf(slices.peak[s])).toBeCloseTo(-20 + 10 * Math.log10(2), 1)
+      expect(dbOf(Math.sqrt(slices.power[s]))).toBeCloseTo(-20, 1)
+    }
+    expect(dbOf(slices.peak[2])).toBeCloseTo(10, 3)
+    // The stretch as a whole reads the same as without slices
+    const [[whole]] = meter.read()
+    expect(dbOf(whole.peak)).toBeCloseTo(10, 3)
+    const power = slices.power.reduce((sum, p) => sum + p, 0) / 4
+    expect(dbOf(Math.sqrt(power))).toBeCloseTo(dbOf(whole.rms), 4)
+  })
+
+  it('a last slice cut short by the stretch is averaged over what it holds', () => {
+    const meter = new Meter({ inputs: 1, start: 0, end: 600, slice: 480 }, RATE)
+    const x = sine(-10, 0.1)
+    for (let at = 0; at < 640; at += 128) meter.add(at, [[x.subarray(at, at + 128)]])
+    const [[slices]] = meter.slices()
+    expect(slices.power.length).toBe(2)
+    expect(dbOf(Math.sqrt(slices.power[1]))).toBeCloseTo(-10, 0)
   })
 })

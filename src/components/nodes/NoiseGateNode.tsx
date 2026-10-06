@@ -2,7 +2,6 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
-import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
 import { curveInputOf } from '../../signal/engine'
 import { useSignalStore } from '../../store/signalStore'
@@ -11,7 +10,11 @@ import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
+import { MeterSides } from './MeterSides'
 import { noiseGate } from '../../signal/process'
+
+/** At a moment of the loop the gate is open while it turns down less than this (dB) */
+const GATE_OPEN_DB = 3
 
 export function NoiseGateNode({ id }: CardProps) {
   const p                = useParams(id, 'noise-gate')
@@ -21,7 +24,6 @@ export function NoiseGateNode({ id }: CardProps) {
 
   const threshold  = p('thresholdDb')
   const range      = p('rangeDb')
-  // Shown and stored, but timings are not part of the sound yet
   const holdMs     = p('holdMs')
   const attackMs   = p('attackMs')
   const releaseMs  = p('releaseMs')
@@ -36,93 +38,95 @@ export function NoiseGateNode({ id }: CardProps) {
       typeKey="noise-gate"
       label={useNodeName(id, 'noise-gate')}
     >
-      <div style={twoColumns}>
-        <SignalMeter {...levels.input} label={t.meters.input} />
-        <SignalMeter {...levels.output} label={t.meters.output} />
+      <MeterSides nodeId={id}>
+        <div style={twoColumns}>
+          <KnobStack>
+            <KnobControl
+              value={threshold}
+              min={-80}
+              max={0}
+              step={1}
+              label={tg.threshold}
+              formatValue={(v) => `${v} dB`}
+              onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
+              color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
+              size={44}
+              layout="side"
+            />
+            {/* How far it turns down when closed: −80 dB = silence */}
+            <KnobControl
+              value={range}
+              min={-80}
+              max={0}
+              step={1}
+              label={tg.range}
+              formatValue={(v) => `${v} dB`}
+              onChange={(v) => updateNodeParams(id, { rangeDb: v })}
+              color="var(--signal-hot)"
+              size={44}
+              layout="side"
+            />
+            <KnobControl
+              value={holdMs}
+              min={0}
+              max={500}
+              step={5}
+              label={tg.hold}
+              formatValue={(v) => `${v} ms`}
+              onChange={(v) => updateNodeParams(id, { holdMs: v })}
+              color="var(--lsc-accent)"
+              size={44}
+              layout="side"
+            />
+          </KnobStack>
 
-        <KnobStack>
+          <div>
+            {/* Below the threshold turned down by the Range, from it on 1:1: the hard step is the gate */}
+            <TransferCurve
+              nodeId={id}
+              transfer={noiseGate(threshold, range)}
+              thresholdDb={threshold}
+              signal={curveInputOf(result)}
+              leaving={result?.curveOut}
+              domain={levels.inDomain}
+              state={{
+                on:  { text: tg.statusOpen, color: 'var(--signal-good)', opacity: 1, ring: 'var(--signal-good)' },
+                off: { text: tg.statusClosed, color: 'var(--lsc-fg)', opacity: 0.45, ring: 'var(--lsc-fg)', ringOpacity: 0.5 },
+                active: isOpen,
+                // Open at a moment: letting the sound through, turned down hardly at all
+                activeAt: (reductionDb) => reductionDb < GATE_OPEN_DB,
+              }}
+            />
+            <ReductionReadout nodeId={id} db={result?.gainReductionDb ?? 0} maxDb={80} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
+          </div>
+
+          {/* How fast it opens (Attack) and closes again (Release) */}
           <KnobControl
-            value={threshold}
-            min={-80}
-            max={0}
+            value={attackMs}
+            min={1}
+            max={50}
             step={1}
-            label={tg.threshold}
-            formatValue={(v) => `${v} dB`}
-            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-            color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
-            size={44}
-            layout="side"
-          />
-          {/* How far it turns down when closed: −80 dB = silence */}
-          <KnobControl
-            value={range}
-            min={-80}
-            max={0}
-            step={1}
-            label={tg.range}
-            formatValue={(v) => `${v} dB`}
-            onChange={(v) => updateNodeParams(id, { rangeDb: v })}
-            color="var(--signal-hot)"
-            size={44}
-            layout="side"
-          />
-          <KnobControl
-            value={holdMs}
-            min={0}
-            max={500}
-            step={5}
-            label={tg.hold}
+            label={t.nodes.comp.attack}
             formatValue={(v) => `${v} ms`}
-            onChange={(v) => updateNodeParams(id, { holdMs: v })}
+            onChange={(v) => updateNodeParams(id, { attackMs: v })}
             color="var(--lsc-accent)"
             size={44}
             layout="side"
           />
-        </KnobStack>
-
-        <div>
-          {/* Below the threshold turned down by the Range, from it on 1:1: the hard step is the gate */}
-          <TransferCurve
-            transfer={noiseGate(threshold, range)}
-            thresholdDb={threshold}
-            signal={curveInputOf(result)}
-            leaving={result?.curveOut}
-            domain={levels.inDomain}
-            badge={isOpen
-              ? { text: tg.statusOpen, color: 'var(--signal-good)', opacity: 1 }
-              : { text: tg.statusClosed, color: 'var(--lsc-fg)', opacity: 0.45 }}
-            pointColor={isOpen ? 'var(--signal-good)' : 'var(--lsc-fg)'}
-            pointOpacity={isOpen ? 1 : 0.5}
+          <KnobControl
+            value={releaseMs}
+            min={10}
+            max={1000}
+            step={10}
+            label={t.nodes.comp.release}
+            formatValue={(v) => `${v} ms`}
+            onChange={(v) => updateNodeParams(id, { releaseMs: v })}
+            color="var(--lsc-accent)"
+            size={44}
+            layout="side"
           />
-          <ReductionReadout db={result?.gainReductionDb ?? 0} maxDb={80} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />
         </div>
-
-        {/* How fast it opens (Attack) and closes again (Release) */}
-        <KnobControl
-          value={attackMs}
-          min={1}
-          max={50}
-          step={1}
-          label={t.nodes.comp.attack}
-          formatValue={(v) => `${v} ms`}
-          onChange={(v) => updateNodeParams(id, { attackMs: v })}
-          color="var(--lsc-accent)"
-          size={44}
-          layout="side"
-        />
-        <KnobControl
-          value={releaseMs}
-          min={10}
-          max={1000}
-          step={10}
-          label={t.nodes.comp.release}
-          formatValue={(v) => `${v} ms`}
-          onChange={(v) => updateNodeParams(id, { releaseMs: v })}
-          color="var(--lsc-accent)"
-          size={44}
-          layout="side"
-        />
-      </div>
+      </MeterSides>
     </NodeWrapper>
   )
 }

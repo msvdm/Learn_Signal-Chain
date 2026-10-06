@@ -2,14 +2,13 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
-import { SignalMeter } from '../SignalMeter'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
-import { twoColumnCard, twoColumns } from '../../utils/twoColumns'
+import { COLUMN_W } from '../../utils/twoColumns'
 import { KnobStack, ReductionReadout } from './DynamicsLayout'
+import { MeterSides } from './MeterSides'
 
 export function DeesserNode({ id }: CardProps) {
   const p                = useParams(id, 'deesser')
@@ -18,7 +17,6 @@ export function DeesserNode({ id }: CardProps) {
 
   const threshold  = p('thresholdDb')
   const frequency  = p('frequencyHz')
-  const levels     = useStereoLevels(id)
   const result     = useStage(id)
   const gr         = result?.gainReductionDb ?? 0
   const isActive   = gr > 0.1
@@ -31,41 +29,40 @@ export function DeesserNode({ id }: CardProps) {
     <NodeWrapper
       nodeId={id}
       typeKey="deesser"
-      style={twoColumnCard}
       label={useNodeName(id, 'deesser')}
     >
-      <div style={twoColumns}>
-        <SignalMeter {...levels.input} label={t.meters.input} />
-        <SignalMeter {...levels.output} label={t.meters.output} />
+      <MeterSides nodeId={id}>
+        {/* Its knobs, then how far it turns the "s" down */}
+        <div style={{ width: COLUMN_W, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <KnobStack>
+            <KnobControl
+              value={threshold}
+              min={-60}
+              max={0}
+              label={t.nodes.deesser.threshold}
+              formatValue={(v) => `${v} dB`}
+              onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
+              color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
+              size={44}
+              layout="side"
+            />
+            <KnobControl
+              value={frequency}
+              min={2000}
+              max={12000}
+              step={100}
+              label={t.nodes.deesser.frequency}
+              formatValue={(v) => `${formatFreq(v)} Hz`}
+              onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
+              color="var(--lsc-accent)"
+              size={44}
+              layout="side"
+            />
+          </KnobStack>
 
-        <KnobStack>
-          <KnobControl
-            value={threshold}
-            min={-60}
-            max={0}
-            label={t.nodes.deesser.threshold}
-            formatValue={(v) => `${v} dB`}
-            onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
-            color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
-            size={44}
-            layout="side"
-          />
-          <KnobControl
-            value={frequency}
-            min={2000}
-            max={12000}
-            step={100}
-            label={t.nodes.deesser.frequency}
-            formatValue={(v) => `${formatFreq(v)} Hz`}
-            onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
-            color="var(--lsc-accent)"
-            size={44}
-            layout="side"
-          />
-        </KnobStack>
-
-        <ReductionReadout db={gr} maxDb={12} label={t.nodes.deesser.gainReduction} />
-      </div>
+          <ReductionReadout nodeId={id} db={gr} maxDb={12} label={t.nodes.deesser.gainReduction} />
+        </div>
+      </MeterSides>
     </NodeWrapper>
   )
 }

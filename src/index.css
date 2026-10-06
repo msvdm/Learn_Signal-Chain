@@ -234,6 +234,56 @@ kbd {
   animation: clip-pulse 0.5s ease-in-out infinite;
 }
 
+/* ── Meters (components/SignalMeter.tsx) ─────────────────────────────────────
+   Each moving part sits at a share (0 … 1) of its bar: React draws the still picture into
+   --rms / --peak / --peak-on. While the chain plays, the painters write each part's own
+   transform over it (components/meterPaint.ts); removing it puts the still picture back. The parts
+   are full-size and slide along the bar (the track clips them), so a picture lays nothing out. */
+.lsc-meter-fill { position: absolute; inset: 0; background: var(--bar); }
+.lsc-meter-peak { opacity: 0.38; }
+.lsc-meter-up .lsc-meter-rms     { transform: translateY(calc((1 - var(--rms)) * 100%)); }
+.lsc-meter-up .lsc-meter-peak    { transform: translateY(100%); }
+.lsc-meter-right .lsc-meter-fill { border-radius: 9999px; }
+.lsc-meter-right .lsc-meter-rms  { transform: translateX(calc((var(--rms) - 1) * 100%)); }
+.lsc-meter-right .lsc-meter-peak { transform: translateX(-100%); }
+.lsc-meter-fog { position: absolute; left: 0; bottom: 0; }
+.lsc-meter-up .lsc-meter-fog    { right: 0; }
+.lsc-meter-right .lsc-meter-fog { top: 0; }
+
+/* The peak mark — the loudest peak over the loop; while the chain plays, the peak hold. It slides
+   over the bar less its own size, so it stays inside at both ends. */
+.lsc-meter-hold-track { position: absolute; inset: 0; pointer-events: none; }
+.lsc-meter-up .lsc-meter-hold-track    { top: var(--mark); }
+.lsc-meter-right .lsc-meter-hold-track { right: var(--mark); }
+.lsc-meter-hold { position: absolute; inset: 0; opacity: var(--peak-on); }
+.lsc-meter-up .lsc-meter-hold    { transform: translateY(calc(var(--peak) * -100%)); }
+.lsc-meter-right .lsc-meter-hold { transform: translateX(calc(var(--peak) * 100%)); }
+.lsc-meter-hold::after { content: ''; position: absolute; background: var(--bar); }
+.lsc-meter-up .lsc-meter-hold::after    { left: 0; right: 0; bottom: 0; height: var(--mark); }
+.lsc-meter-right .lsc-meter-hold::after { top: 0; bottom: 0; left: 0; width: var(--mark); }
+
+/* A dynamics card's turning-down bar (components/nodes/DynamicsLayout.tsx) */
+.lsc-reduction-fill { background: var(--signal-hot); border-radius: 3px; transform: translateX(calc((var(--gr) - 1) * 100%)); }
+
+/* The marks on a dynamics card's curve: each group at its point (--x, --y in the SVG's pixels), a
+   faint copy on the diagonal and a line between them while the card moves it 2 px or more; the word
+   and the ring for being at work, or not, one over the other (--live-active while it plays) */
+.lsc-curve-at, .lsc-curve-copy { transform: translate(calc(var(--x) * 1px), calc(var(--y) * 1px)); }
+.lsc-curve-copy { opacity: calc(var(--moved) * 0.3); }
+.lsc-curve-line {
+  transform: translate(calc(var(--x) * 1px), calc(var(--top) * 1px)) scale(1, var(--len));
+  opacity: var(--moved);
+}
+.lsc-curve-on  { opacity: calc(var(--live-active, var(--active)) * var(--word)); }
+.lsc-curve-off { opacity: calc((1 - var(--live-active, var(--active))) * var(--word)); }
+
+/* A still reading glides to a new one; a moving meter follows the sound at once */
+.lsc-meter-fill, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.lsc-meter-fog { transition: width 0.3s ease-out, height 0.3s ease-out; }
+.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
+
 /* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
    and at the start when showing, so nothing hidden stays clickable. */
 .lsc-fade {
@@ -257,6 +307,7 @@ kbd {
   .signal-line-animated { animation: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
+  .lsc-meter-fill, .lsc-meter-hold, .lsc-meter-fog, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
 }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */
