@@ -208,7 +208,7 @@ kbd {
 
 /* ── Animations ─────────────────────────────────────────────────────────── */
 
-/* Animated dashed signal flow line */
+/* Animated dashed signal flow line: it shows the direction, so it runs with reduced motion too (D12) */
 @keyframes signal-flow {
   to { stroke-dashoffset: -24; }
 }
@@ -304,7 +304,6 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .lsc-palette-slide    { transition: none; }
   .react-flow__panel.lsc-left-tools { transition: none; }
-  .signal-line-animated { animation: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
   .lsc-meter-fill, .lsc-meter-hold, .lsc-meter-fog, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }

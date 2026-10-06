@@ -348,7 +348,7 @@ Made with the user (the code cites them by number):
 - **D9 — Every card's readings come from the render** on real sound; the number engine is the instant picture, moving the last render's readings by its step until the next one.
 - **D10 — The meters replay the render**, not a live AudioContext: every sound is one loop long, so the render records the loop slice by slice and the meters play it back on the clock. No Play / Pause; DAW meter maths (RMS 300 ms, peak and hold, the noise floor as the fog); meters upright at the cards' sides (In left, Out right), the 4:3 rule gone; nothing moves at Beginner (D3). Nothing more on the wires than the flow animation that shows the direction (steps 12 and 13 of the plan were dropped).
 - **D11 — Meters only where a meter belongs**: face-only cards show their icon, buttons or knob and notes, no level; Pan a dot on an L–R track; the Pad a bare button; zoomed out the other cards keep their meter; a source with nothing wired shows "Not connected" — no connection, no signal. The numbers, health words and colours stay the whole loop's while the meters move.
-- **D12 — Reduced motion does not stop the meters** (2026-10-06): with it they stood still on the user's computer, in every mode.
+- **D12 — Reduced motion does not stop the meters** (2026-10-06): with it they stood still on the user's computer, in every mode. Nor the wires' flow animation (`.signal-line-animated`), which shows the direction.
 
 (D2 and D6 were replaced by D8 and D9.)
 
