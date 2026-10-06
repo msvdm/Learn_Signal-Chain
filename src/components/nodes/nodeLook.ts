@@ -48,7 +48,6 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   deesser:           { icon: AudioWaveform,     group: 'processing' },
   'noise-gate':      { icon: GateIcon,          group: 'processing' },
   limiter:           { icon: LimiterIcon,       group: 'processing' },
-  amp:               { icon: Radio,             group: 'processing' },
   'graphic-eq':      { icon: Sliders,           group: 'processing' },
   // Routing — level controls, switches, panning, conversion, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
@@ -62,5 +61,6 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'matrix-bus':      { icon: Merge,             group: 'routing' },
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
+  amp:               { icon: Radio,             group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },
 }

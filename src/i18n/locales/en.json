@@ -183,8 +183,8 @@
     },
     "amp": {
       "level": "Volume",
-      "levelL": "Left volume",
-      "levelR": "Right volume"
+      "levelA": "Channel A volume",
+      "levelB": "Channel B volume"
     },
     "hpf": {
       "label": "HPF",
@@ -523,7 +523,7 @@
       "readings": "It moves the whole mix and its hiss together: the Hiss reading stays about the same, Room before clipping changes. But if the bus before it already reads “it distorts”, this fader cannot fix it — the peaks were cut off on the bus, and turning down afterwards does not bring them back (the Peaks reading stays smaller). Turn the channels down instead."
     },
     "amp": {
-      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, each side gets its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",
+      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, channel A takes the left side and channel B the right, each with its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",
       "why": "Line-level signals are powerful enough for mixing and processing, but not powerful enough to physically move a speaker cone. The power amp provides the current needed to do the work.",
       "tip": "Power amps are rated in watts. For studio monitors you typically need 50–100 W. For live PA systems, 500–2000 W per side is common. More wattage = more headroom before clipping, not necessarily more loudness."
     },

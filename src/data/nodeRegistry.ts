@@ -365,7 +365,7 @@ export interface ParamTypes {
   stereo: boolean
   preampDb: number
   gainDb: number
-  /** A stereo Amplifier's Right volume; until it is turned, it follows gainDb */
+  /** A stereo Amplifier's channel B (the right side) volume; until it is turned, it follows gainDb (channel A) */
   gainDbR: number | undefined
   cutoffHz: number
   bands: EQBand[]

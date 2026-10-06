@@ -21,8 +21,11 @@ export function AmpNode({ id }: CardProps) {
   const levels = useStereoLevels(id)
   const gainDb  = Math.min(p('gainDb'), 0)
   const gainDbR = Math.min(p('gainDbR') ?? gainDb, 0)
-  // Fed a stereo wire it is a two-channel amp: a Volume knob for each side
+  // Fed a stereo wire it is a two-channel amp: channel A takes the left side, B the right, each
+  // with its own Volume. Until B is turned it follows A, so A's first turn keeps B where it is.
   const stereo  = levels.stereo
+  const setA    = (v: number) =>
+    updateNodeParams(id, stereo && p('gainDbR') === undefined ? { gainDb: v, gainDbR: gainDb } : { gainDb: v })
 
   return (
     <NodeWrapper
@@ -37,16 +40,16 @@ export function AmpNode({ id }: CardProps) {
             value={gainDb}
             min={GAIN_OFF_DB}
             max={0}
-            label={stereo ? t.nodes.amp.levelL : t.nodes.amp.level}
+            label={stereo ? t.nodes.amp.levelA : t.nodes.amp.level}
             formatValue={formatLevel}
-            onChange={(v) => updateNodeParams(id, { gainDb: v })}
+            onChange={setA}
           />
           {stereo && (
             <ControlSlider
               value={gainDbR}
               min={GAIN_OFF_DB}
               max={0}
-              label={t.nodes.amp.levelR}
+              label={t.nodes.amp.levelB}
               formatValue={formatLevel}
               onChange={(v) => updateNodeParams(id, { gainDbR: v })}
             />

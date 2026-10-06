@@ -297,7 +297,7 @@ const PROCESS: Record<TypeKey, Process> = {
   },
   amp: analogOnly('digitalToAmp', (node, input, ctx) => {
     // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel
-    // (a two-channel amp): Left uses gainDb, Right gainDbR (until turned, it follows gainDb).
+    // (a two-channel amp): channel A, the left side, uses gainDb; B, the right, gainDbR (until turned, it follows gainDb).
     const raw    = ctx.side === 'r' ? (param(node, 'gainDbR') ?? param(node, 'gainDb')) : param(node, 'gainDb')
     const gainDb = Math.min(raw, 0)
     return pass(shifted(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb), ctx)
