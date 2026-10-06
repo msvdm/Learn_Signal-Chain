@@ -26,7 +26,8 @@ const MAX_BUTTONS_H = 104
  * zoom: a big icon (no level — D11), "Not connected" under it until something is wired to their
  * output (NodeWrapper). From Intermediate up a Microphone and a Line Input
  * also pick what they pick up — a Microphone Speech, Singing or Drums (whose hits reach far above
- * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon. An Instrument going into
+ * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon —
+ * not while it hears a Guitar Amp (it picks up the amp, not a sound of its own). An Instrument going into
  * the desk without a DI Box says so (condition 'needsDi': a dull-tone curve and a note). Line
  * Input keeps a full card: it has a Mono / Stereo switch.
  */
@@ -36,7 +37,9 @@ export function MicNode({ id, type }: CardProps) {
   const p        = useParams(id, typeKey)
   const stage    = useStage(id)
   const { t }    = useTranslation()
-  const choosing = useSignalStore((s) => typeKey !== 'instrument' && atLeast(s.complexityLevel, CHARACTER_LEVEL))
+  // A Microphone in front of a Guitar Amp (something wired to its input) hears the amp: no choice
+  const choosing = useSignalStore((s) => typeKey !== 'instrument' && atLeast(s.complexityLevel, CHARACTER_LEVEL)
+    && !(typeKey === 'mic' && s.edges.some((e) => e.target === id)))
   const levelDb  = typeKey === 'mic' ? p('sensitivityDb') : p('levelDb')
   const needsDi  = stage?.condition === 'needsDi'
   const Icon     = NODE_LOOK[typeKey].icon
