@@ -4,7 +4,7 @@ import {
   ceilingOf, crestOf, dbToPercent, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
   sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
-import { GUITAR_REF_DB } from './process'
+import { AT_THE_MIC_DB, GUITAR_REF_DB } from './process'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 // The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,
@@ -184,14 +184,21 @@ describe('meters', () => {
 })
 
 describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a speaker', () => {
-  it('a Microphone at its usual −60 dBu hears a voice at 86 dB SPL', () => {
+  it('a Microphone hears speech at 86 dB SPL (its usual −60 dBu), singing at 96, drums at 110', () => {
     expect(formatSpl(-60, SPL_DB.mic!)).toBe('86 dB SPL')
+    expect(formatSpl(-60 + AT_THE_MIC_DB.singing, SPL_DB.mic!)).toBe('96 dB SPL')
+    expect(formatSpl(-60 + AT_THE_MIC_DB.drums, SPL_DB.mic!)).toBe('110 dB SPL')
   })
 
-  it('a speaker fed −10 dBu plays 85 dB SPL, the level studios mix at; Headphones the same', () => {
-    expect(formatSpl(-10, SPL_DB['active-speaker']!)).toBe('85 dB SPL')
-    expect(SPL_DB.headphones).toBe(SPL_DB['active-speaker'])
+  it('a speaker fed −10 dBu plays 100 dB SPL, at the clip level 130 — a powerful PA speaker; passive the same', () => {
+    expect(formatSpl(-10, SPL_DB['active-speaker']!)).toBe('100 dB SPL')
+    expect(formatSpl(20, SPL_DB['active-speaker']!)).toBe('130 dB SPL')
     expect(SPL_DB.speaker).toBe(SPL_DB['active-speaker'])
+  })
+
+  it('Headphones fed −10 dBu play 85 dB SPL, the level studios mix at; 115 at most', () => {
+    expect(formatSpl(-10, SPL_DB.headphones!)).toBe('85 dB SPL')
+    expect(formatSpl(20, SPL_DB.headphones!)).toBe('115 dB SPL')
   })
 
   it('a Guitar Amp reads as loud as the Microphone in front of it hears it', () => {

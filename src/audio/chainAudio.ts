@@ -5,7 +5,7 @@ import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, HISS_DBU, NOISE_BELOW, balanceSides, hissDbOf, panSides, soundKindOf } from '../signal/process'
+import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, HISS_DBU, NOISE_BELOW, balanceSides, hissDbOf, loudnessOf, panSides, soundKindOf } from '../signal/process'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -313,7 +313,8 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       if (both) return plus(atLevel(level, playing(both, loop.start, loop.end)), gain(0, noise, 2))
       sound = playing(loop.mono, loop.start, loop.end)
     }
-    return plus(atLevel(level, sound), noise)
+    // A Microphone hears singing and drums louder than speech; its noise stays where it is
+    return plus(atLevel(level + loudnessOf(node), sound), noise)
   }
 
   /** What a card does to what it works on (its own hiss in). */

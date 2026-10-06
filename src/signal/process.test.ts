@@ -277,15 +277,20 @@ describe('sources: their peaks above the average, their noise below it', () => {
     expect(levels('instrument', SILENT)).toEqual(sig(-15, -30, -100))
   })
 
-  it('set to Drums, a microphone or Line Input picks up drums: peaks 18 dB up, the same average and noise', () => {
-    expect(levels('mic', SILENT, { character: 'drums' }, { fed: false })).toEqual(sig(-42, -60, -126))
+  it('set to Drums, a Line Input plays drums: peaks 18 dB up, the same average and noise', () => {
     expect(levels('line-in', SILENT, { character: 'drums' })).toEqual(sig(8, -10, -90))
     expect(levels('line-in', SILENT, { character: 'music' })).toEqual(sig(2, -10, -90))
   })
 
-  it('a voice, speaking or singing, peaks 12 dB above its average', () => {
+  // Changed on purpose (2026-10-06): a Microphone's level follows how loud what it picks up is —
+  // singing 10 dB above speech, drums 24 (AT_THE_MIC_DB); the room and its own hiss stay at −126
+  it('a microphone hears drums 24 dB louder than speech, peaks 18 dB up; the room and its hiss stay', () => {
+    expect(levels('mic', SILENT, { character: 'drums' }, { fed: false })).toEqual(sig(-18, -36, -126))
+  })
+
+  it('a voice peaks 12 dB above its average; singing reaches the microphone 10 dB louder than speech', () => {
     expect(levels('mic', SILENT, { character: 'speech' }, { fed: false })).toEqual(sig(-48, -60, -126))
-    expect(levels('mic', SILENT, { character: 'singing' }, { fed: false })).toEqual(sig(-48, -60, -126))
+    expect(levels('mic', SILENT, { character: 'singing' }, { fed: false })).toEqual(sig(-38, -50, -126))
   })
 
   it('a microphone set to Drums in front of a Guitar Amp hears the guitar: the amp decides the peaks', () => {

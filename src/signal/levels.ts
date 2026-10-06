@@ -140,16 +140,18 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
 /**
  * Where a card turns sound into a signal or a signal into sound, its meter reads dB SPL — how loud
  * the sound is in the air: its level in dBu plus this. A Microphone: a typical dynamic mic sends
- * −52 dBu at 94 dB SPL (1 pascal), so its usual −60 dBu is a voice at 86. A speaker or headphones:
- * 0 dBu in plays 95 dB SPL where you listen (−10 dBu: 85, the level studios mix at). A Guitar Amp:
- * as loud as the Microphone in front of it hears it (process.ts GUITAR_REF_DB, a mic at −60 dBu).
+ * −52 dBu at 94 dB SPL (1 pascal), so its usual −60 dBu is a voice at 86 (singing and drums reach
+ * it louder: process.ts AT_THE_MIC_DB). A speaker, a metre away: 0 dBu in plays 110 dB SPL, the clip
+ * level (+20 dBu) 130 — a powerful PA speaker's most. Headphones: 0 dBu plays 95 (−10 dBu: 85, the
+ * level studios mix at; 115 at most). A Guitar Amp: as loud as the Microphone in front of it hears
+ * it (process.ts GUITAR_REF_DB, a mic at −60 dBu).
  */
 export const SPL_DB: Partial<Record<TypeKey, number>> = {
-  mic: 146, 'guitar-amp': 116, speaker: 95, 'active-speaker': 95, headphones: 95,
+  mic: 146, 'guitar-amp': 116, speaker: 110, 'active-speaker': 110, headphones: 95,
 }
 
-/** A dB SPL meter's bar runs 40 … 120 dB SPL: the dBu scale (−60 … +20) moved up by this. */
-export const SPL_SCALE_DB = 100
+/** A dB SPL meter's bar runs 50 … 130 dB SPL: the dBu scale (−60 … +20) moved up by this. */
+export const SPL_SCALE_DB = 110
 
 /** A level as dB SPL (`spl`: its card's SPL_DB), in whole dB: "86 dB SPL"; −∞ below silence. */
 export function formatSpl(db: number, spl: number): string {

@@ -1,5 +1,5 @@
 import type { Character, GeneratorSound, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { param } from '../data/nodeRegistry'
+import { MIC_CHARACTERS, param } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain } from './levels'
 import { CLIP_DBU, SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
@@ -134,6 +134,19 @@ export function soundOf(typeKey: Source, params: SignalNode['params']): SourceSo
 /** A source playing at `level` (its average). */
 export function sourceLevels(level: number, sound: SourceSound): SideLevels {
   return { peak: level + sound.peakDb, rms: level, noise: level - sound.noiseDb, hum: -Infinity }
+}
+
+/**
+ * How much louder than speech each sound reaches a Microphone, close up (dB): someone speaking gives
+ * its usual level (sensitivityDb, −60 dBu: 86 dB SPL), someone singing 10 dB more (96), a drum 24
+ * (110). The signal it sends follows, as a real microphone's does.
+ */
+export const AT_THE_MIC_DB = { speech: 0, singing: 10, drums: 24 } as const satisfies Record<typeof MIC_CHARACTERS[number], number>
+
+/** How far a source's sound is above its usual level: a Microphone's by what it picks up, anything else 0. */
+export function loudnessOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
+  if (node.typeKey !== 'mic') return 0
+  return AT_THE_MIC_DB[param(node, 'character') as keyof typeof AT_THE_MIC_DB] ?? 0
 }
 
 /**
@@ -276,11 +289,13 @@ const poweredSpeaker: Process = analogOnly('digitalToSpeaker', (node, input, ctx
 
 /** What each type does to one channel (every type has one: a new type without it does not compile). */
 const PROCESS: Record<TypeKey, Process> = {
-  // On its own it picks up a voice (or drums) at its usual level; in front of a Guitar Amp, it
-  // hears what the amp plays (silent when the amp is), and the room on top
+  // On its own it picks up a voice or drums, as loud as they reach it (AT_THE_MIC_DB) — the room and
+  // its own hiss stay at its usual level's; in front of a Guitar Amp, it hears what the amp plays
+  // (silent when the amp is), and the room on top
   mic: (node, input, ctx) => {
     const usual = param(node, 'sensitivityDb')
-    const own   = sourceLevels(usual, soundOf('mic', node.params))
+    const sound = soundOf('mic', node.params)
+    const own   = { ...sourceLevels(usual + loudnessOf(node), sound), noise: usual - sound.noiseDb }
     if (!ctx.fed) return { out: own, domain: 'analog' }
     const heard = shifted(input, usual - GUITAR_REF_DB)
     return { out: { ...heard, noise: sumNoiseToDb([heard.noise, own.noise]) }, domain: 'analog' }
