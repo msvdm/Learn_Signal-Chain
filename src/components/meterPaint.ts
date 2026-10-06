@@ -49,8 +49,11 @@ export function paintStyle(el: HTMLElement | SVGElement | null | undefined, prop
   else el.style.setProperty(prop, value)
 }
 
-/** How often a moving number may change (ms): about 8 times a second, slow enough to read its digits. */
-export const TEXT_EVERY_MS = 125
+/**
+ * How often a moving number may change (ms): twice a second, slow enough for a learner to read it
+ * (a DAW's change about 8 times a second; the bars still move 30 times a second).
+ */
+export const TEXT_EVERY_MS = 500
 
 /** When each element's text was last written. */
 const textWritten = new WeakMap<Element, number>()
