@@ -221,35 +221,3 @@ function Reserved({ words, style, children }: { words: string[]; style: CSSPrope
     </div>
   )
 }
-
-/**
- * Two upright level bars, Left and Right, like a mixing desk's master meters (beside the Main
- * Fader). Each coloured by its own health (clipping from its peaks); from Intermediate up with its
- * peak mark and the noise rising from the bottom — and moving while the chain plays.
- */
-export function VerticalMeterPair({ l, r, height, domain = 'analog', nodeId }: {
-  l: SideLevels
-  r: SideLevels
-  height: number
-  domain?: SignalDomain
-  /** Its Main Fader: what leaves it moves while the chain plays */
-  nodeId?: string
-}) {
-  const detailed = useReadingsShown()
-  return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      {([['L', l, 'l'], ['R', r, 'r']] as const).map(([ch, side, which]) => (
-        <div key={ch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <MeterTrack
-            side={side}
-            color={isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'transparent'}
-            domain={domain} detailed={detailed} direction="up" thickness={12} length={height}
-            source={nodeId ? { nodeId, at: 'out', side: which } : undefined}
-            style={{ borderRadius: 9999 }}
-          />
-          <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
