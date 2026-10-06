@@ -613,16 +613,18 @@ describe('an aux send: the Pre / Post switch takes its copy before or after the 
   })
 })
 
-describe('speakers: a passive one needs an amplifier, an active one is blown by it', () => {
+describe('speakers: a passive one needs an amplifier, an active one (or headphones) is blown by it', () => {
   expectCards(signalOf([
     card('line', 'line-in'),
     card('passive', 'speaker'),
     card('amp', 'amp', { gainDb: -6 }),
     card('passive2', 'speaker'),
     card('active', 'active-speaker'),
+    card('phones', 'headphones', { volumeDb: -6 }),
+    card('phones2', 'headphones'),
   ], [
-    wire('line', 'passive'),
-    wire('line', 'amp'), wire('amp', 'passive2'), wire('amp', 'active'),
+    wire('line', 'passive'), wire('line', 'phones'),
+    wire('line', 'amp'), wire('amp', 'passive2'), wire('amp', 'active'), wire('amp', 'phones2'),
   ]), {
     line:     { out: -10, health: 'good' },
     passive:  { in: -10, out: S, health: 'too-quiet', condition: 'needsAmp' },
@@ -630,6 +632,9 @@ describe('speakers: a passive one needs an amplifier, an active one is blown by 
     passive2: { in: -16, out: -16, health: 'good' },
     // Speaker level, 40 dB over the line level it expects
     active:   { in: -16, out: 24, health: 'clipping', condition: 'blown' },
+    // Headphones work as an Active Speaker: their Volume, and blown by an amplifier
+    phones:   { in: -10, out: -16, health: 'good' },
+    phones2:  { in: -16, out: 24, health: 'clipping', condition: 'blown' },
   })
 })
 

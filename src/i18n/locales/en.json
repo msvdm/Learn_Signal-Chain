@@ -240,6 +240,11 @@
       "volume": "Volume",
       "blown": "Blown! An amplifier's output is far too strong for it."
     },
+    "headphones": {
+      "label": "Headphones",
+      "volume": "Volume",
+      "blown": "Blown! An amplifier's output is far too strong for them."
+    },
     "di-box": {
       "label": "DI Box",
       "groundLift": "Ground Lift",
@@ -453,6 +458,7 @@
       "aux-bus": "Aux Bus",
       "matrix-bus": "Matrix Bus",
       "active-speaker": "Active Speaker",
+      "headphones": "Headphones",
       "speaker": "Speaker (passive)"
     }
   },
@@ -564,6 +570,12 @@
       "why": "Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.",
       "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. Never plug it into an Amplifier's output: that signal is already strong enough to drive a passive speaker, far too much for the line input of a speaker with its own amp inside — it blows.",
       "readings": "These readings are what the audience hears. The Hiss reading here is the signal-to-noise ratio of your whole chain: well set, 50 to 60 dB (clean); with the Preamp too low and made up later, 40 or less (you can hear it). The Volume knob moves the music and the hiss together — it cannot clean up a noisy chain."
+    },
+    "headphones": {
+      "what": "Headphones let one person listen to the chain: the engineer checking a channel, or a musician hearing their monitor mix. Here they work like an Active Speaker — a line-level signal in, a Volume knob for how loud.",
+      "why": "In a studio or on stage not everyone can listen on the speakers. Headphones put the sound right at one person's ears, without the room around it.",
+      "tip": "Like an Active Speaker, never plug them into an Amplifier's output: a power amp's signal is meant for a passive speaker and is far too strong for them — they blow.",
+      "readings": "What reaches them is what that listener hears: the same Hiss and Room before clipping as the card before. The Volume knob moves the music and the hiss together."
     },
     "di-box": {
       "what": "A DI box (Direct Injection) takes a guitar, bass or keyboard and turns it into a mic-level signal for the desk: its XLR Out is about 20 dB quieter than what goes in, so a Gain after it works as a Preamp, just like after a microphone. Its Direct Out passes the instrument on unchanged, for a guitar amp on stage.",

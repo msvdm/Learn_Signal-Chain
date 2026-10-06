@@ -35,7 +35,7 @@ export type TypeKey =
   | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
-  | 'speaker' | 'active-speaker'
+  | 'speaker' | 'active-speaker' | 'headphones'
 
 export type Size = { w: number; h: number }
 
@@ -315,6 +315,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'active-speaker': {
     // Active/powered speaker — has built-in amplification, works directly from line level
+    category: 'sink', inputs: IN, outputs: [], stereo: 'never',
+    minLevel: 'beginner', bypass: false,
+    defaultParams: { volumeDb: 0 },
+  },
+  headphones: {
+    // Works as an Active Speaker does (amplifier built in): there to show where a listener plugs in
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
     minLevel: 'beginner', bypass: false,
     defaultParams: { volumeDb: 0 },

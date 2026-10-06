@@ -271,6 +271,9 @@ const source = (node: SignalNode, typeKey: Exclude<Source, 'mic'>): SideResult =
 /** A gain that stops at the clip level (−∞ dB: off). */
 const gainUpToClip = (input: SideLevels, gainDb: number) => eachReading((k) => Math.min(input[k] + gainDb, CLIP_DBU))
 
+/** An Active Speaker, or Headphones (the same, amplifier built in): its Volume. */
+const poweredSpeaker: Process = analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx))
+
 /** What each type does to one channel (every type has one: a new type without it does not compile). */
 const PROCESS: Record<TypeKey, Process> = {
   // On its own it picks up a voice (or drums) at its usual level; in front of a Guitar Amp, it
@@ -343,7 +346,8 @@ const PROCESS: Record<TypeKey, Process> = {
   'matrix-bus':      busFader,
   // Only runs with an amplifier before it (the engine checks); otherwise it is silent
   speaker: analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'outputTrimDb')), ctx)),
-  'active-speaker': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx)),
+  'active-speaker': poweredSpeaker,
+  headphones:       poweredSpeaker,
 }
 
 /**

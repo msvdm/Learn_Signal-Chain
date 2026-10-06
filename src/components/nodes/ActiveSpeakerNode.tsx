@@ -8,8 +8,6 @@ import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 import { FaceNote, WithNote } from './FaceNote'
 
-const Icon = NODE_LOOK['active-speaker'].icon
-
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
 function BlownSpeakerIcon() {
   return (
@@ -23,13 +21,16 @@ function BlownSpeakerIcon() {
 }
 
 /**
- * Active speaker (amplifier built in): a card with a big icon and its Volume knob, at every zoom (no
- * level — D11). Fed from an Amplifier it blows (condition 'blown'): the icon cracks and smokes, and a
- * note says why. A hum from a DI Box ground loop shows under it.
+ * Active speaker (amplifier built in), and Headphones, which work the same: a card with a big icon
+ * and its Volume knob, at every zoom (no level — D11). Fed from an Amplifier it blows (condition
+ * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why. A hum from a DI
+ * Box ground loop shows under it.
  */
-export function ActiveSpeakerNode({ id }: CardProps) {
-  const stage = useStage(id)
-  const { t } = useTranslation()
+export function ActiveSpeakerNode({ id, type }: CardProps) {
+  const typeKey = type as 'active-speaker' | 'headphones'
+  const Icon    = NODE_LOOK[typeKey].icon
+  const stage   = useStage(id)
+  const { t }   = useTranslation()
 
   const blown = stage?.condition === 'blown'
   const hum   = stage?.hum !== undefined
@@ -37,21 +38,21 @@ export function ActiveSpeakerNode({ id }: CardProps) {
   return (
     <NodeWrapper
       nodeId={id}
-      typeKey="active-speaker"
-      label={useNodeName(id, 'active-speaker')}
+      typeKey={typeKey}
+      label={useNodeName(id, typeKey)}
       faceOnly
       overviewArt={(box) => {
         if (blown) {
           return (
             <WithNote
               box={box} lines={2}
-              face={(h) => <OverviewIcon icon={<BlownSpeakerIcon />} box={{ w: box.w, h }} color="var(--signal-clipping-text)" />}
-              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes['active-speaker'].blown}</FaceNote>}
+              face={(h) => <OverviewIcon icon={typeKey === 'headphones' ? <Icon /> : <BlownSpeakerIcon />} box={{ w: box.w, h }} color="var(--signal-clipping-text)" />}
+              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes[typeKey].blown}</FaceNote>}
             />
           )
         }
         // The icon and the Volume knob, side by side, in the height they are given
-        const face = (h: number) => <VolumeFace nodeId={id} typeKey="active-speaker" icon={<Icon />} box={{ w: box.w, h }} />
+        const face = (h: number) => <VolumeFace nodeId={id} typeKey={typeKey} icon={<Icon />} box={{ w: box.w, h }} />
         if (!hum) return face(box.h)
         return (
           <WithNote

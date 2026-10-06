@@ -24,14 +24,14 @@ function knobBlockWidth(size: number, label: string): number {
 }
 
 /**
- * A face-only card's icon with its Volume knob beside it — the Active Speaker, the Guitar Amp — in the
+ * A face-only card's icon with its Volume knob beside it — the Active Speaker, Headphones, the Guitar Amp — in the
  * box they are given: the knob as big as the height allows, its value and then its name under it (one
  * above the other: a long name — Bulgarian's — leaves the icon its room), and the icon as big as the
  * room that leaves.
  */
 export function VolumeFace({ nodeId, typeKey, icon, box }: {
   nodeId: string
-  typeKey: 'active-speaker' | 'guitar-amp'
+  typeKey: 'active-speaker' | 'headphones' | 'guitar-amp'
   icon: ReactNode
   box: { w: number; h: number }
 }) {

@@ -169,7 +169,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       from:        incoming.map((e) => e.source),
       drivingFrom: relay ? (driving?.source ?? null) : null,
       plays:       def.category === 'source' && !(node.typeKey === 'mic' && fed),
-      amped:       node.typeKey === 'active-speaker' && fedBy(node.id, 'amp', graph),
+      amped:       (node.typeKey === 'active-speaker' || node.typeKey === 'headphones') && fedBy(node.id, 'amp', graph),
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),
       role: preamp ? 'preamp'

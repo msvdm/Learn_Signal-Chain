@@ -5,7 +5,7 @@ import {
   AudioWaveform, Minus,
   Merge, Volume2,
   SlidersHorizontal, GitBranch, MoveHorizontal,
-  ArrowRight, ArrowLeft,
+  ArrowRight, ArrowLeft, Headphones,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon, GeneratorIcon } from './icons'
@@ -61,6 +61,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'matrix-bus':      { icon: Merge,             group: 'routing' },
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
+  headphones:        { icon: Headphones,        group: 'output' },
   amp:               { icon: Radio,             group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },
 }

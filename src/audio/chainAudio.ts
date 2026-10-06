@@ -349,6 +349,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       case 'matrix-bus': return gain(param(node, 'faderDb'), x)
       case 'speaker':    return gain(param(node, 'outputTrimDb'), x)
       case 'active-speaker':
+      case 'headphones':
       case 'guitar-amp': return gain(param(node, 'volumeDb'), x)
       case 'di-box':     return gain(-DI_DROP_DB, x)
       default:           return x

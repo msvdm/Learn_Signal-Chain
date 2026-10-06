@@ -53,6 +53,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'graphic-eq':      GraphicEQNode,
   speaker:           SpeakerNode,
   'active-speaker':  ActiveSpeakerNode,
+  headphones:        ActiveSpeakerNode,
   adc:               AdcDacNode,
   dac:               AdcDacNode,
 }

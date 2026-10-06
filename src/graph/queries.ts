@@ -206,7 +206,7 @@ export function preampSourceOf(gainId: string, view: GraphView): string | null {
  * pedal, which takes an instrument as it is.
  */
 const DESK_INPUTS: ReadonlySet<TypeKey> = new Set<TypeKey>([
-  'gain', 'fader', 'master-bus', 'aux-bus', 'matrix-bus', 'adc', 'amp', 'active-speaker', 'speaker',
+  'gain', 'fader', 'master-bus', 'aux-bus', 'matrix-bus', 'adc', 'amp', 'active-speaker', 'headphones', 'speaker',
 ])
 
 /** A DI Box output that brings the instrument down to mic level: its XLR Out, unless it is bypassed. */
