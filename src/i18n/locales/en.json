@@ -587,7 +587,7 @@
     "guitar-amp": {
       "what": "A guitar amplifier with its own speaker: it takes a guitar straight in and plays it out loud on stage. Its sound is what a microphone in front of it picks up.",
       "why": "Guitarists shape much of their sound with their amp. To get it to the audience, put a Microphone in front of it (a dotted line: sound through the air, not a cable) and send the microphone to a Preamp like any other.",
-      "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too."
+      "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too. Its Volume goes to 11 — one louder: at 1 it plays about 100 dB SPL in front of it, at 11 about 115."
     },
     "generator": {
       "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise) or short pulses (Click). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around. Switch it to Stereo to test a stereo chain: the same sound on Left and Right, on one wire.",

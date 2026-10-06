@@ -4,7 +4,7 @@ import {
   ceilingOf, crestOf, dbToPercent, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
   sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
-import { AT_THE_MIC_DB, GUITAR_REF_DB } from './process'
+import { AT_THE_MIC_DB, GUITAR_AMP_MAX, GUITAR_REF_DB, guitarAmpGainDb } from './process'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 // The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,
@@ -205,6 +205,12 @@ describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a spea
     const amp = -30
     const mic = (NODE_REGISTRY.mic.defaultParams.sensitivityDb as number) + amp - GUITAR_REF_DB
     expect(amp + SPL_DB['guitar-amp']!).toBe(mic + SPL_DB.mic!)
+  })
+
+  it('a Guitar Amp plays 100 dB SPL at 1, 106 at 5, 115 at 11 (it goes to 11)', () => {
+    expect(formatSpl(-30 + guitarAmpGainDb(1), SPL_DB['guitar-amp']!)).toBe('100 dB SPL')
+    expect(formatSpl(-30 + guitarAmpGainDb(5), SPL_DB['guitar-amp']!)).toBe('106 dB SPL')
+    expect(formatSpl(-30 + guitarAmpGainDb(GUITAR_AMP_MAX), SPL_DB['guitar-amp']!)).toBe('115 dB SPL')
   })
 
   it('silence reads −∞', () => {

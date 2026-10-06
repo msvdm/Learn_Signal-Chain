@@ -125,9 +125,13 @@ describe('amplifiers and speakers', () => {
     expect(out('amp', -10, { gainDb: -6, gainDbR: -2 }, { side: 'l' })).toBe(-16)
   })
 
-  it('a Guitar Amp plays the guitar turned up or down by its Volume', () => {
-    expect(out('guitar-amp', -30)).toBe(-30)
-    expect(out('guitar-amp', -30, { volumeDb: 6 })).toBe(-24)
+  // Changed on purpose (2026-10-06): its Volume goes to 11 — 1 plays a guitar at −16 (100 dB SPL),
+  // 1.5 dB more a step, 11 at −1 (115 dB SPL); 0 is silent
+  it('a Guitar Amp plays the guitar louder as its Volume goes up to 11', () => {
+    expect(out('guitar-amp', -30)).toBe(-10)
+    expect(out('guitar-amp', -30, { volume: 1 })).toBe(-16)
+    expect(out('guitar-amp', -30, { volume: 11 })).toBe(-1)
+    expect(out('guitar-amp', -30, { volume: 0 })).toBe(S)
   })
 
   it('speakers play what reaches them, turned up or down', () => {

@@ -66,6 +66,16 @@ export const DI_DROP_DB = 20
  */
 export const GUITAR_REF_DB = -30
 
+/**
+ * A Guitar Amp's Volume knob goes to 11 — one louder. At 1 it plays a guitar at its usual level
+ * 14 dB up (−16 dBu: 100 dB SPL, levels.ts SPL_DB), every step 1.5 dB more, 115 dB SPL at 11; 0 is
+ * silent. At 5 (its default) the microphone in front of it gets −40 dBu.
+ */
+export const GUITAR_AMP_MAX = 11
+export function guitarAmpGainDb(volume: number): number {
+  return volume <= 0 ? -Infinity : 14 + (volume - 1) * 1.5
+}
+
 // ── Sources and noise ─────────────────────────────────────────────────────────
 
 /** How a source sounds: its peaks above its average (dB), its noise below it (dB). */
@@ -305,8 +315,8 @@ const PROCESS: Record<TypeKey, Process> = {
   generator:    (node) => source(node, 'generator'),
   // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
   'di-box':     (_, input) => ({ out: shifted(input, -DI_DROP_DB), domain: 'analog' }),
-  // What it plays: the guitar turned up or down by its Volume
-  'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx)),
+  // What it plays: the guitar turned up by its Volume (0 … 11)
+  'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, guitarAmpGainDb(param(node, 'volume'))), ctx)),
   gain: (node, input, ctx) => {
     // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
     if (ctx.preamp) return pass(gainUpToClip(input, param(node, 'preampDb')), ctx)

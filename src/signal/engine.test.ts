@@ -287,10 +287,11 @@ describe('a DI Box in a ground loop (Ground Lift off): the hum', () => {
     gtr:    { out: -30, health: 'good' },
     // XLR Out: down to mic level (−20 dB). The loop starts a hum there.
     di:     { in: -30, out: -50, health: 'too-quiet', hum: -80 },
-    amp:    { in: -30, out: -30, health: 'good' },
-    // The Guitar Amp plays at the usual guitar level: the mic picks it up at its usual −60
-    mic:    { out: -60, health: 'too-quiet' },
-    micPre: { in: -60, out: -20, health: 'good', role: 'preamp' },
+    // Changed on purpose (2026-10-06): the Guitar Amp goes to 11; at its default 5 it plays the
+    // guitar 20 dB up (106 dB SPL), and the mic in front of it picks it up at −40, not −60
+    amp:    { in: -30, out: -10, health: 'good' },
+    mic:    { out: -40, health: 'good' },
+    micPre: { in: -40, out: 0, health: 'good', role: 'preamp' },
     // The Preamp lifts the hum with the guitar: +40 dB
     pre:    { in: -50, out: -10, health: 'good', role: 'preamp', hum: -40 },
     // D1: the fader turns the hum down with the guitar, 10 dB (it was −40: a hum never went down)
@@ -314,9 +315,10 @@ describe('the same rig with Ground Lift on: no hum', () => {
   expectCards(result, {
     gtr:    { out: -30, health: 'good' },
     di:     { in: -30, out: -50, health: 'too-quiet' },
-    amp:    { in: -30, out: -30, health: 'good' },
-    mic:    { out: -60, health: 'too-quiet' },
-    micPre: { in: -60, out: -20, health: 'good', role: 'preamp' },
+    // The Guitar Amp at 5, 20 dB up: the mic at −40 (see above)
+    amp:    { in: -30, out: -10, health: 'good' },
+    mic:    { out: -40, health: 'good' },
+    micPre: { in: -40, out: 0, health: 'good', role: 'preamp' },
     pre:    { in: -50, out: -10, health: 'good', role: 'preamp' },
     fader:  { in: -10, out: -20, health: 'good' },
     spk:    { in: -20, out: -20, health: 'good' },
@@ -339,7 +341,8 @@ describe('a hum through an ADC moves to the digital scale', () => {
   ]), {
     gtr: { out: -30, health: 'good' },
     di:  { in: -30, out: -50, health: 'too-quiet', hum: -80 },
-    amp: { in: -30, out: -30, health: 'good' },
+    // The Guitar Amp at 5 plays the guitar 20 dB up (it goes to 11)
+    amp: { in: -30, out: -10, health: 'good' },
     pre: { in: -50, out: -10, health: 'good', role: 'preamp', hum: -40 },
     adc: { in: -10, out: -28, health: 'good', domain: 'digital', hum: -58 },
   })

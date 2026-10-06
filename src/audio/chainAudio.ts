@@ -5,7 +5,7 @@ import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, HISS_DBU, NOISE_BELOW, balanceSides, hissDbOf, loudnessOf, panSides, soundKindOf } from '../signal/process'
+import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, HISS_DBU, NOISE_BELOW, balanceSides, guitarAmpGainDb, hissDbOf, loudnessOf, panSides, soundKindOf } from '../signal/process'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -365,8 +365,8 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       case 'matrix-bus': return gain(param(node, 'faderDb'), x)
       case 'speaker':    return gain(param(node, 'outputTrimDb'), x)
       case 'active-speaker':
-      case 'headphones':
-      case 'guitar-amp': return gain(param(node, 'volumeDb'), x)
+      case 'headphones': return gain(param(node, 'volumeDb'), x)
+      case 'guitar-amp': return gain(guitarAmpGainDb(param(node, 'volume')), x)
       case 'di-box':     return gain(-DI_DROP_DB, x)
       default:           return x
     }

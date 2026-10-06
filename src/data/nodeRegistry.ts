@@ -234,7 +234,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
     category: 'processor', inputs: IN, outputs: [{ id: SOUND_PORT }], stereo: 'never',
     minLevel: 'intermediate', bypass: false,
-    defaultParams: { volumeDb: 0 },
+    // Its Volume knob goes to 11 (signal/process.ts guitarAmpGainDb)
+    defaultParams: { volume: 5 },
   },
   amp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -392,6 +393,8 @@ export interface ParamTypes {
   alignmentDb: number
   outputTrimDb: number
   volumeDb: number
+  /** Guitar Amp: its Volume knob, 0 … 11 (GUITAR_AMP_MAX) */
+  volume: number
   /** Graphic EQ: Left (or only) side's band gains, b0 … b30 */
   [band: `b${number}`]: number
   /** Graphic EQ: Right side's band gains; until the right side is touched, they follow the left */

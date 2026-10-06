@@ -6,19 +6,30 @@ import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { widestFormat } from '../../utils/readout'
+import { GUITAR_AMP_MAX } from '../../signal/process'
 
 const GAP = 16
 // Value, then label, under the knob
 const READOUT_H = 38
-const MIN_DB  = -20
-const MAX_DB  = 10
-const STEP_DB = 0.5
 
-const format = (v: number) => `${v >= 0 ? '+' : ''}${v} dB`
+/** The Volume knob: a speaker's in dB; a Guitar Amp's goes to 11 (process.ts guitarAmpGainDb). */
+interface VolumeKnob {
+  param: 'volumeDb' | 'volume'
+  min: number
+  max: number
+  step: number
+  format: (v: number) => string
+}
+const SPEAKER_KNOB: VolumeKnob = { param: 'volumeDb', min: -20, max: 10, step: 0.5, format: (v) => `${v >= 0 ? '+' : ''}${v} dB` }
+const KNOBS: Record<'active-speaker' | 'headphones' | 'guitar-amp', VolumeKnob> = {
+  'active-speaker': SPEAKER_KNOB,
+  headphones:       SPEAKER_KNOB,
+  'guitar-amp':     { param: 'volume', min: 0, max: GUITAR_AMP_MAX, step: 0.5, format: (v) => `${v}` },
+}
 
 /** The knob's width with its value and, under that, its name (KnobControl `labelBelow`: as `.lsc-knob-label` draws it). */
-function knobBlockWidth(size: number, label: string): number {
-  const value = textWidth(widestFormat(MIN_DB, MAX_DB, STEP_DB, format), cssVar('--lsc-font-mono'), 700) * (size >= 52 ? 15 : 13)
+function knobBlockWidth(size: number, label: string, k: VolumeKnob): number {
+  const value = textWidth(widestFormat(k.min, k.max, k.step, k.format), cssVar('--lsc-font-mono'), 700) * (size >= 52 ? 15 : 13)
   const name  = textWidth(label.toUpperCase(), cssVar('--lsc-font-sans'), 600, 0.06) * 11
   return Math.ceil(Math.max(size, value, name))
 }
@@ -39,9 +50,10 @@ export function VolumeFace({ nodeId, typeKey, icon, box }: {
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
+  const k     = KNOBS[typeKey]
   const label = t.nodes[typeKey].volume
   const knob  = Math.max(40, Math.min(72, Math.round(box.h - READOUT_H)))
-  const size  = Math.max(0, Math.min(box.h, box.w - knobBlockWidth(knob, label) - GAP))
+  const size  = Math.max(0, Math.min(box.h, box.w - knobBlockWidth(knob, label, k) - GAP))
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
@@ -49,13 +61,13 @@ export function VolumeFace({ nodeId, typeKey, icon, box }: {
       {/* The face ignores the pointer; the knob takes it back */}
       <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
         <KnobControl
-          value={p('volumeDb')}
-          min={MIN_DB}
-          max={MAX_DB}
-          step={STEP_DB}
+          value={p(k.param)}
+          min={k.min}
+          max={k.max}
+          step={k.step}
           label={label}
-          formatValue={format}
-          onChange={(v) => updateNodeParams(nodeId, { volumeDb: v })}
+          formatValue={k.format}
+          onChange={(v) => updateNodeParams(nodeId, { [k.param]: v })}
           color="var(--signal-good)"
           size={knob}
           labelBelow
