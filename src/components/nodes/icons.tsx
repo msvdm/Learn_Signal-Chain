@@ -121,3 +121,31 @@ export function NoiseIcon({ size }: { size?: number }) {
 export function ClickIcon({ size }: { size?: number }) {
   return <SoundPicture size={size} d="M2 12H5L6 2L7 12H11L12 2L13 12H17L18 2L19 12H22" />
 }
+
+// The converters: a wave (analog) and the digits 1 0 1 (digital), in the order the signal goes
+
+/** "1 0 1": two ones with their flags, a zero between, from `x` (9.4 wide). */
+const bits = (x: number) => `M${x} 9.4L${x + 1.6} 8V16M${x + 7.8} 9.4L${x + 9.4} 8V16`
+
+/** A wave from `x` (8.5 wide): one hump up, one down. */
+const wave = (x: number) => `M${x} 12C${x + 1.4} 6.5 ${x + 2.8} 6.5 ${x + 4.25} 12S${x + 7.1} 17.5 ${x + 8.5} 12`
+
+/** Analog to Digital Converter: a wave in, digits out. */
+export function AdcIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={`${wave(1.5)}${bits(12.6)}`} />
+      <ellipse cx="17.6" cy="12" rx="1.9" ry="4" />
+    </svg>
+  )
+}
+
+/** Digital to Analog Converter: digits in, a wave out. */
+export function DacIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={`${bits(2)}${wave(14)}`} />
+      <ellipse cx="7" cy="12" rx="1.9" ry="4" />
+    </svg>
+  )
+}

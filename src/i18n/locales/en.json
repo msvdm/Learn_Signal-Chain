@@ -314,10 +314,10 @@
       "direction": "Where you will hear it: between the left (L) and the right (R) speaker."
     },
     "adc": {
-      "label": "ADC"
+      "label": "Analog to Digital Converter"
     },
     "dac": {
-      "label": "DAC"
+      "label": "Digital to Analog Converter"
     },
     "aux-bus": {
       "label": "Aux Bus",
@@ -454,14 +454,14 @@
       "switch": "On Off Switch",
       "relay": "Pre / Post switch",
       "pan": "Pan / Balance",
-      "adc": "ADC",
-      "dac": "DAC",
+      "adc": "Analog to Digital Converter",
+      "dac": "Digital to Analog Converter",
       "master-bus": "Master Bus",
       "aux-bus": "Aux Bus",
       "matrix-bus": "Matrix Bus",
       "active-speaker": "Active Speaker",
       "headphones": "Headphones",
-      "speaker": "Speaker (passive)"
+      "speaker": "Passive Speaker"
     }
   },
   "theory": {

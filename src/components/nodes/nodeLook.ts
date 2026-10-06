@@ -4,11 +4,10 @@ import {
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus,
   Merge, Volume2,
-  SlidersHorizontal, GitBranch, MoveHorizontal,
-  ArrowRight, ArrowLeft, Headphones,
+  SlidersHorizontal, GitBranch, MoveHorizontal, Headphones,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon, GeneratorIcon } from './icons'
+import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -29,7 +28,7 @@ export interface NodeLook {
   nameMax?: number
 }
 
-/** Every type's look, in palette order. */
+/** Every type's look, in palette order: by what each does, in the order a signal meets them (two columns, row by row). */
 export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Sources
   mic:               { icon: Mic,               group: 'source' },
@@ -38,30 +37,30 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'di-box':          { icon: Plug,              group: 'source' },
   'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
   generator:         { icon: GeneratorIcon,     group: 'source', headerSize: 18 },
-  // Processing
+  // Processing — into the digital world after the Preamp, back out at the end
   gain:              { icon: KnobIcon,          group: 'processing' },
+  adc:               { icon: AdcIcon,           group: 'processing', headerSize: 20 },
   // "HPF" in capitals looks much bigger than mixed-case names at the same size
   hpf:               { icon: HighPassIcon,      group: 'processing', nameMax: 70 },
+  pad:               { icon: Minus,             group: 'processing', headerSize: 18 },
+  'noise-gate':      { icon: GateIcon,          group: 'processing' },
   eq:                { icon: Activity,          group: 'processing' },
   comp:              { icon: CompressorIcon,    group: 'processing' },
-  pad:               { icon: Minus,             group: 'processing', headerSize: 18 },
-  deesser:           { icon: AudioWaveform,     group: 'processing' },
-  'noise-gate':      { icon: GateIcon,          group: 'processing' },
   limiter:           { icon: LimiterIcon,       group: 'processing' },
+  deesser:           { icon: AudioWaveform,     group: 'processing' },
   'graphic-eq':      { icon: Sliders,           group: 'processing' },
-  // Routing — level controls, switches, panning, conversion, buses
+  dac:               { icon: DacIcon,           group: 'processing', headerSize: 20 },
+  // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },
   relay:             { icon: GitBranch,         group: 'routing' },
   pan:               { icon: MoveHorizontal,    group: 'routing' },
-  adc:               { icon: ArrowRight,        group: 'routing', headerSize: 20 },
-  dac:               { icon: ArrowLeft,         group: 'routing', headerSize: 20 },
   'master-bus':      { icon: Merge,             group: 'routing' },
   'aux-bus':         { icon: Merge,             group: 'routing' },
   'matrix-bus':      { icon: Merge,             group: 'routing' },
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
-  headphones:        { icon: Headphones,        group: 'output' },
-  amp:               { icon: Radio,             group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },
+  amp:               { icon: Radio,             group: 'output' },
+  headphones:        { icon: Headphones,        group: 'output' },
 }

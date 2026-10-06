@@ -10,10 +10,41 @@ import { useTranslation } from '../i18n/useTranslation'
 import { useChainEmpty } from '../hooks/useChainEmpty'
 import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 import { PALETTE_WIDTH, PALETTE_RAIL_WIDTH } from '../hooks/usePaletteWidth'
+import { cssVar, textWidth } from '../utils/fitText'
 
 type Tab = 'all' | PaletteGroup
 
 const ICON = 18
+
+// Every tile the same size: its icon, then its name — on one or two lines at the usual size, or a
+// long name (a Bulgarian one) on up to three in smaller letters; never a taller tile
+const PAD_X     = 12
+const GRID_GAP  = 6
+const TILE_PAD  = '9px 10px'
+const NAME_SIZE = 12
+const NAME_MIN  = 9
+const NAME_W    = ((PALETTE_WIDTH - 2 * PAD_X - GRID_GAP) / 2 - 2 * 10 - 2) * 0.96
+const NAME_H    = 33
+const TILE_H    = 2 * 9 + ICON + 6 + NAME_H + 2
+/** Line height: two lines at the usual size, three tighter */
+const lineHeightOf = (lines: number) => (lines > 2 ? 1.1 : 1.25)
+
+/** A tile's name: its lines, filled the way a browser wraps them, at the largest size that fits. */
+function tileName(text: string): { lines: string[]; size: number } {
+  const family = cssVar('--lsc-font-sans')
+  const words  = text.split(' ')
+  for (let size = NAME_SIZE; ; size -= 0.5) {
+    const width = (s: string) => textWidth(s, family, 600) * size
+    const lines: string[] = []
+    for (const word of words) {
+      const last = lines[lines.length - 1]
+      if (last !== undefined && width(`${last} ${word}`) <= NAME_W) lines[lines.length - 1] = `${last} ${word}`
+      else lines.push(word)
+    }
+    const fits = lines.length * size * lineHeightOf(lines.length) <= NAME_H && lines.every((l) => width(l) <= NAME_W)
+    if (fits || size <= NAME_MIN) return { lines, size }
+  }
+}
 
 // Every type, in palette order (NODE_LOOK's order)
 const ALL_ITEMS = (Object.keys(NODE_LOOK) as TypeKey[]).map((typeKey) => ({ typeKey, ...NODE_LOOK[typeKey] }))
@@ -99,7 +130,7 @@ export function ElementPalette() {
         width: PALETTE_WIDTH, flexShrink: 0, height: '100%',
         background: 'var(--lsc-header)', borderRight: '1px solid var(--lsc-border)',
         display: 'flex', flexDirection: 'column', gap: 12,
-        padding: '14px 12px', overflowY: 'auto', overflowX: 'hidden',
+        padding: `14px ${PAD_X}px`, overflowY: 'auto', overflowX: 'hidden',
         userSelect: 'none',
       }}
     >
@@ -165,9 +196,11 @@ export function ElementPalette() {
             >
               {t.palette.categories[cat]}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {/* Two equal columns, whatever the names (a long word never widens one) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: GRID_GAP }}>
               {items.map((item) => {
                 const start = chainEmpty && item.typeKey === START_ITEM
+                const name  = tileName(nameOf(item.typeKey))
                 return (
                   <div
                     key={item.typeKey}
@@ -178,7 +211,7 @@ export function ElementPalette() {
                     style={{
                       position: 'relative',
                       display: 'flex', flexDirection: 'column', gap: 6,
-                      padding: '9px 10px', borderRadius: 8,
+                      height: TILE_H, padding: TILE_PAD, borderRadius: 8,
                       background: 'var(--lsc-node-bg)',
                       border: `1px solid ${start ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
                       color: 'var(--lsc-fg)', cursor: 'grab',
@@ -187,8 +220,8 @@ export function ElementPalette() {
                     <span style={{ color: 'var(--lsc-fg-muted)', display: 'flex', height: ICON, alignItems: 'center' }}>
                       <item.icon size={ICON} />
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.25, hyphens: 'auto', overflowWrap: 'break-word' }}>
-                      {nameOf(item.typeKey)}
+                    <span title={nameOf(item.typeKey)} style={{ fontSize: name.size, fontWeight: 600, lineHeight: lineHeightOf(name.lines.length), whiteSpace: 'nowrap' }}>
+                      {name.lines.map((line) => <span key={line} style={{ display: 'block' }}>{line}</span>)}
                     </span>
                     {start && (
                       // Sits on the top border like a tag, so longer translations never cover the icon
