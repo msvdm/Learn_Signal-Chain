@@ -71,6 +71,10 @@ describe('formatDb', () => {
     expect(formatDb(4.04)).toBe('+4.0 dBu')
     expect(formatDb(-60)).toBe('-60.0 dBu')
     expect(formatDb(-18, 'digital')).toBe('-18.0 dBFS')
+    // A render's 0 dBu comes back a hair under: still "+0.0", never "-0.0"
+    expect(formatDb(-0.00001)).toBe('+0.0 dBu')
+    expect(formatDb(-0.04, 'digital')).toBe('+0.0 dBFS')
+    expect(formatDb(-0.06)).toBe('-0.1 dBu')
   })
 
   it('is a real reading down to −99.9, silence below', () => {
@@ -172,6 +176,15 @@ describe('meters', () => {
     expect(dbToPercent(20)).toBe(100)
     expect(dbToPercent(S)).toBe(0)
     expect(dbToPercent(30)).toBe(100)
+  })
+
+  it('a digital meter runs −80 … 0 dBFS: the top of the bar is where it clips, as analog', () => {
+    expect(dbToPercent(0, 'digital')).toBe(100)
+    expect(dbToPercent(ceilingOf('digital'), 'digital')).toBe(dbToPercent(ceilingOf('analog'), 'analog'))
+    expect(dbToPercent(-80, 'digital')).toBe(0)
+    expect(dbToPercent(-40, 'digital')).toBe(50)
+    // Unity on either side of a converter: within 2.5 % of the bar of each other
+    expect(dbToPercent(UNITY_DBU - ALIGNMENT_DB, 'digital') - dbToPercent(UNITY_DBU)).toBe(2.5)
   })
 
   it('humStrength grows from 0 where a hum starts to 1 at 60 dB louder', () => {

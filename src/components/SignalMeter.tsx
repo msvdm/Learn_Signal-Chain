@@ -13,23 +13,23 @@ import { alongScale, paintBar, readingOf } from './meterPaint'
 
 // The meters, as a DAW draws them: three readings in one bar. The solid bar is the average (RMS);
 // from Intermediate up (useReadingsShown) a mark in the bar's colour shows the peaks and a grey fog
-// from the quiet end the noise, once it is loud enough to reach the scale (−60 dBu). Beginner sees
+// from the quiet end the noise, once it is loud enough to reach the scale (−60 dBu, −80 dBFS). The
+// scale ends where the signal clips, analog or digital (dbToPercent). Beginner sees
 // the bar alone. React draws the still picture — the render's readings over the whole loop; while
 // the chain plays (from Intermediate, hooks/useLiveMeter.ts) the bar moves as an RMS over 300 ms,
 // a light bar shows the peak falling back, and the mark becomes the peak hold (audio/meters.ts).
 
 /**
- * Tick marks at the zone edges: where "too quiet" ends and unity (the strong one). Digital also
- * marks its ceiling, 0 dBFS; analog clips at +20 dBu, the end of the scale.
+ * Tick marks at the zone edges: where "too quiet" ends and unity (the strong one). The scale ends
+ * where the signal clips — +20 dBu analog, 0 dBFS digital (dbToPercent) — so that needs none.
  */
 function zoneTicks(domain: SignalDomain): { db: number; strong: boolean }[] {
   const unity = domain === 'digital' ? UNITY_DBU - ALIGNMENT_DB : UNITY_DBU
-  const ticks = [{ db: unity - 40, strong: false }, { db: unity, strong: true }]
-  return domain === 'digital' ? [...ticks, { db: 0, strong: false }] : ticks
+  return [{ db: unity - 40, strong: false }, { db: unity, strong: true }]
 }
 
-/** On the scale: louder than its quiet end (−60). */
-const onScale = (db: number | undefined): db is number => db !== undefined && dbToPercent(db) > 0
+/** On the scale: louder than its quiet end (−60 dBu, −80 dBFS). */
+const onScale = (db: number | undefined, domain: SignalDomain): db is number => db !== undefined && dbToPercent(db, domain) > 0
 
 /** Thickness of a peak mark across an upright bar (px) */
 const PEAK_MARK = 3
@@ -41,7 +41,7 @@ const PEAK_MARK = 3
 export const STRIP_W = 76
 
 /**
- * One meter bar on the −60…+20 dB scale: `up` from the bottom (a desk's or a DAW's meter) or
+ * One meter bar on its domain's scale (−60 … +20 dBu, −80 … 0 dBFS): `up` from the bottom (a desk's or a DAW's meter) or
  * `right` from the left. The still picture: `side.rms` (the bar), its peaks and noise when
  * `detailed`. With a `source` it moves while the chain plays. `shift`: every reading moved by this
  * on the bar (a dB SPL meter's scale).
@@ -68,15 +68,15 @@ function MeterTrack({ side: levels, color, domain, detailed, direction, thicknes
   const up = direction === 'up'
   useLiveMeter(source && detailed ? source.nodeId : undefined, ref, (live, i) => {
     const r = source ? readingOf(live, source.at, source.side, i) : null
-    if (source) paintBar({ rms: rms.current, peak: peak.current, hold: hold.current }, up, r && shift ? { rms: r.rms + shift, peak: r.peak + shift, hold: r.hold + shift } : r)
+    if (source) paintBar({ rms: rms.current, peak: peak.current, hold: hold.current }, up, r && shift ? { rms: r.rms + shift, peak: r.peak + shift, hold: r.hold + shift } : r, domain)
   })
   // Ticks widen with a thick bar (the overview meter), so they stay visible zoomed out
   const tick = Math.max(1, Math.round(thickness / 8))
   const mark = up ? PEAK_MARK : tick * 3
   const vars = {
-    '--rms': alongScale(side.rms),
-    '--peak': alongScale(side.peak),
-    '--peak-on': detailed && onScale(side.peak) ? 1 : 0,
+    '--rms': alongScale(side.rms, domain),
+    '--peak': alongScale(side.peak, domain),
+    '--peak-on': detailed && onScale(side.peak, domain) ? 1 : 0,
     '--mark': `${mark}px`,
     '--bar': color,
   } as CSSProperties
@@ -92,12 +92,12 @@ function MeterTrack({ side: levels, color, domain, detailed, direction, thicknes
     >
       {detailed && source && <div ref={peak} aria-hidden className="lsc-meter-fill lsc-meter-peak" />}
       <div ref={rms} className="lsc-meter-fill lsc-meter-rms" />
-      {detailed && onScale(side.noise) && (
+      {detailed && onScale(side.noise, domain) && (
         <div
           aria-hidden
           className="lsc-meter-fog"
           style={{
-            [up ? 'height' : 'width']: `${dbToPercent(side.noise)}%`,
+            [up ? 'height' : 'width']: `${dbToPercent(side.noise, domain)}%`,
             background: `linear-gradient(to ${up ? 'top' : 'right'}, var(--lsc-noise-fog) 75%, transparent)`,
           }}
         />
@@ -108,8 +108,8 @@ function MeterTrack({ side: levels, color, domain, detailed, direction, thicknes
           className="absolute"
           style={{
             ...(up
-              ? { left: 0, right: 0, bottom: `${dbToPercent(at)}%`, height: 2 }
-              : { top: 0, bottom: 0, left: `${dbToPercent(at)}%`, width: tick }),
+              ? { left: 0, right: 0, bottom: `${dbToPercent(at, domain)}%`, height: 2 }
+              : { top: 0, bottom: 0, left: `${dbToPercent(at, domain)}%`, width: tick }),
             background: strong ? 'var(--lsc-fg-muted)' : 'var(--lsc-border)',
           }}
         />
@@ -159,7 +159,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
   /** The card and which of its signals: it moves while the chain plays */
   nodeId: string
   at: MeterAt
-  /** Reads dB SPL, the sound in the air (its card's SPL_DB): the number, and the bar on 40 … 120 dB SPL */
+  /** Reads dB SPL, the sound in the air (its card's SPL_DB): the number, and the bar on 50 … 130 dB SPL */
   spl?: number
 }) {
   const { t }    = useTranslation()

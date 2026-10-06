@@ -7,9 +7,10 @@ import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { levelOf } from '../../signal/engine'
 import { useTranslation } from '../../i18n/useTranslation'
 import { StableText } from '../controls/StableText'
-import { LEVEL_SAMPLE } from '../../utils/readout'
+import { LEVEL_SAMPLE, levelParts } from '../../utils/readout'
 
-const levelText = (db: number) => (isFinite(db) ? db.toFixed(1) : '−∞')
+/** A level's number as the meters print it ("+0.0", "-18.0", "-∞"); the unit is written beside it. */
+const levelText = (db: number) => levelParts(db, 'analog')[0]
 
 export function AdcDacNode({ id, type }: CardProps) {
   const levels              = useStereoLevels(id)
@@ -70,7 +71,8 @@ export function AdcDacNode({ id, type }: CardProps) {
               <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(inDb)}</StableText> {inputUnit}
             </span>
             {' → '}
-            <span style={{ color: hasWarning ? 'var(--signal-clipping)' : 'var(--signal-good)' }}>
+            {/* In the colour of its health, as the port and the wire: red when the converter clips */}
+            <span style={{ color: hasWarning ? 'var(--signal-clipping)' : `var(--signal-${levels.outHealth}-text)` }}>
               <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelText(outDb)}</StableText> {outputUnit}
             </span>
           </div>

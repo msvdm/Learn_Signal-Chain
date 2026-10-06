@@ -1,6 +1,7 @@
 import type { LiveStage, MeterReading } from '../signal/moving'
 import { readingAt } from '../signal/moving'
 import { dbToPercent } from '../signal/levels'
+import type { SignalDomain } from '../signal/levels'
 
 // Writing the moving values into the meters (hooks/useLiveMeter.ts calls the painters 30 times a
 // second). React draws the still picture: each moving part sits where its CSS puts it from the
@@ -30,8 +31,8 @@ export function readingOf(live: LiveStage | undefined, at: MeterAt, side: MeterS
   return { rms: Math.max(l.rms, r.rms), peak: Math.max(l.peak, r.peak), hold: Math.max(l.hold, r.hold) }
 }
 
-/** A level as a share of the meter's scale (0 … 1), in steps of a quarter of a percent (finer is not seen). */
-export const alongScale = (db: number) => Math.round(dbToPercent(db) * 4) / 400
+/** A level as a share of the meter's scale (0 … 1, the top its domain's ceiling), in steps of a quarter of a percent (finer is not seen). */
+export const alongScale = (db: number, domain: SignalDomain = 'analog') => Math.round(dbToPercent(db, domain) * 4) / 400
 
 /** What each element was last given, by property, so an unchanged value is not written again. */
 const written = new WeakMap<Element, Partial<Record<string, string>>>()
@@ -55,8 +56,8 @@ export interface BarParts {
   hold: HTMLElement | null
 }
 
-/** A meter bar at a reading, rising `up` or growing to the `right` (null: still). */
-export function paintBar(parts: BarParts, up: boolean, r: MeterReading | null) {
+/** A meter bar at a reading in `domain`, rising `up` or growing to the `right` (null: still). */
+export function paintBar(parts: BarParts, up: boolean, r: MeterReading | null, domain: SignalDomain = 'analog') {
   if (!r) {
     paintStyle(parts.rms, 'transform', null)
     paintStyle(parts.peak, 'transform', null)
@@ -66,9 +67,9 @@ export function paintBar(parts: BarParts, up: boolean, r: MeterReading | null) {
   }
   // Full-size parts slid along the bar (the track clips them): as index.css places the still ones
   const fill = (f: number) => (up ? `translateY(${((1 - f) * 100).toFixed(2)}%)` : `translateX(${((f - 1) * 100).toFixed(2)}%)`)
-  const hold = alongScale(r.hold)
-  paintStyle(parts.rms, 'transform', fill(alongScale(r.rms)))
-  paintStyle(parts.peak, 'transform', fill(alongScale(r.peak)))
+  const hold = alongScale(r.hold, domain)
+  paintStyle(parts.rms, 'transform', fill(alongScale(r.rms, domain)))
+  paintStyle(parts.peak, 'transform', fill(alongScale(r.peak, domain)))
   paintStyle(parts.hold, 'transform', up ? `translateY(${(-hold * 100).toFixed(2)}%)` : `translateX(${(hold * 100).toFixed(2)}%)`)
   paintStyle(parts.hold, 'opacity', hold > 0 ? '1' : '0')
 }

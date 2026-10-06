@@ -1,7 +1,7 @@
 import type { Character, GeneratorSound, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { MIC_CHARACTERS, param } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain } from './levels'
-import { CLIP_DBU, SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
+import { SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
 
 // What each card does to one channel, as the number engine reads it (signal/chain.ts runChain runs
@@ -291,8 +291,9 @@ const busFader: Process = summing((node, input, ctx) => pass(shifted(input, para
 const source = (node: SignalNode, typeKey: Exclude<Source, 'mic'>): SideResult =>
   ({ out: sourceLevels(param(node, 'levelDb'), soundOf(typeKey, node.params)), domain: 'analog' })
 
-/** A gain that stops at the clip level (−∞ dB: off). */
-const gainUpToClip = (input: SideLevels, gainDb: number) => eachReading((k) => Math.min(input[k] + gainDb, CLIP_DBU))
+/** A gain that stops at the clip level — after an ADC, at 0 dBFS (−∞ dB: off). */
+const gainUpToClip = (input: SideLevels, gainDb: number, domain: SignalDomain) =>
+  eachReading((k) => Math.min(input[k] + gainDb, ceilingOf(domain)))
 
 /** An Active Speaker, or Headphones (the same, amplifier built in): its Volume. */
 const poweredSpeaker: Process = analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, param(node, 'volumeDb')), ctx))
@@ -319,9 +320,9 @@ const PROCESS: Record<TypeKey, Process> = {
   'guitar-amp': analogOnly('digitalToSpeaker', (node, input, ctx) => pass(shifted(input, guitarAmpGainDb(param(node, 'volume'))), ctx)),
   gain: (node, input, ctx) => {
     // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down.
-    if (ctx.preamp) return pass(gainUpToClip(input, param(node, 'preampDb')), ctx)
+    if (ctx.preamp) return pass(gainUpToClip(input, param(node, 'preampDb'), ctx.domain), ctx)
     const gainDb = param(node, 'gainDb')
-    return pass(gainUpToClip(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb), ctx)
+    return pass(gainUpToClip(input, gainDb <= GAIN_OFF_DB ? -Infinity : gainDb, ctx.domain), ctx)
   },
   amp: analogOnly('digitalToAmp', (node, input, ctx) => {
     // Only turns down (−∞…0 dB): fully left = off. In stereo each side has its own channel

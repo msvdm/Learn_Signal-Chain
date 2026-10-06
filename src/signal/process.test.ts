@@ -78,6 +78,12 @@ describe('Gain', () => {
     expect(out('gain', -10, { gainDb: -59 })).toBe(-69)
   })
 
+  it('after an ADC stops at the digital ceiling, 0 dBFS — not at +20', () => {
+    expect(out('gain', -10, { gainDb: 20 }, { domain: 'digital' })).toBe(0)
+    expect(levels('gain', sig(-16, -28, S), { gainDb: 20 }, { domain: 'digital' })).toEqual(sig(0, -8, S))
+    expect(out('gain', -28, { gainDb: 10 }, { domain: 'digital' })).toBe(-18)
+  })
+
   it('turned all the way down is off', () => {
     expect(out('gain', -10, { gainDb: -60 })).toBe(S)
   })

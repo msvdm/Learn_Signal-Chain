@@ -120,9 +120,17 @@ export function healthColor(health: SignalHealth): string {
   return `var(--signal-${health})`
 }
 
-export function dbToPercent(db: number): number {
-  // Map -60..+20 to 0..100
-  return Math.max(0, Math.min(100, ((db + 60) / 80) * 100))
+/** How many dB a meter's bar spans: from 80 dB under the ceiling up to it. */
+export const METER_RANGE_DB = 80
+
+/**
+ * Where a level sits along a meter's bar (0 … 100 %): the bar ends at the domain's ceiling — the
+ * clip level analog (−60 … +20 dBu), 0 dBFS digital (−80 … 0 dBFS) — so a bar reaching the top
+ * clips, either way.
+ */
+export function dbToPercent(db: number, domain: SignalDomain = 'analog'): number {
+  const bottom = ceilingOf(domain) - METER_RANGE_DB
+  return Math.max(0, Math.min(100, ((db - bottom) / METER_RANGE_DB) * 100))
 }
 
 /** At or below this a level counts as silence: written −∞, no readings (a microphone sits at −60 dBu). */
@@ -132,7 +140,9 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
   // A real reading down to −99.9; below that it is silence
   const unit = domain === 'digital' ? 'dBFS' : 'dBu'
   if (!isFinite(db) || db <= SILENCE_DB) return `-∞ ${unit}`
-  return `${db >= 0 ? '+' : ''}${db.toFixed(1)} ${unit}`
+  // Rounded first: a hair under 0 is "+0.0", never "-0.0"
+  const shown = Math.round(db * 10) / 10 || 0
+  return `${shown >= 0 ? '+' : ''}${shown.toFixed(1)} ${unit}`
 }
 
 // ── Sound in the air (dB SPL) ──────────────────────────────────────────────────
