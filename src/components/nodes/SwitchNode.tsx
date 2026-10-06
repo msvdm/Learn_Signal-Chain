@@ -2,6 +2,7 @@ import type { CardProps } from './cardProps'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
+import { SquareButton } from '../controls/SquareButton'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 
@@ -18,24 +19,9 @@ export function SwitchNode({ id }: CardProps) {
 
   return (
     <FreeControl nodeId={id} typeKey="switch" label={useNodeName(id, 'switch')} showName={false} portLine={BUTTON / 2}>
-      <button
-        className="nodrag nopan"
-        aria-pressed={isOn}
-        onClick={() => updateNodeParams(id, { on: !isOn })}
-        style={{
-          width: BUTTON, height: BUTTON, borderRadius: 24, padding: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 32, fontWeight: 800, letterSpacing: '0.04em',
-          background: isOn ? 'var(--signal-good-bg)' : 'var(--lsc-sunken)',
-          border: `3px solid ${isOn ? 'var(--signal-good)' : 'var(--lsc-border)'}`,
-          color: isOn ? 'var(--signal-good-text)' : 'var(--lsc-fg-muted)',
-          boxShadow: 'var(--lsc-shadow-node)',
-          cursor: 'pointer',
-          transition: 'background 0.1s, border-color 0.1s, color 0.1s',
-        }}
-      >
+      <SquareButton on={isOn} tone="good" size={BUTTON} fontSize={32} onClick={() => updateNodeParams(id, { on: !isOn })}>
         {isOn ? t.nodeControls.on : t.nodeControls.off}
-      </button>
+      </SquareButton>
     </FreeControl>
   )
 }

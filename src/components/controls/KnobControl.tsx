@@ -17,6 +17,8 @@ interface KnobControlProps {
   showReadout?: boolean
   /** Where the value and label go: under the knob (default) or beside it (the label may wrap to two lines). */
   layout?: 'below' | 'side'
+  /** Under the knob: the label under the value even on a big knob, which puts them side by side (room across is short) */
+  labelBelow?: boolean
 }
 
 const START_CLOCK = 225
@@ -40,6 +42,7 @@ export function KnobControl({
   className = '',
   showReadout = true,
   layout = 'below',
+  labelBelow = false,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
@@ -77,7 +80,7 @@ export function KnobControl({
   }
 
   const valueSize = size >= 52 ? 15 : 13
-  const inlineLabel = size >= 56
+  const inlineLabel = size >= 56 && !labelBelow
   const side = layout === 'side'
 
   return (
@@ -115,8 +118,7 @@ export function KnobControl({
           />
         )}
 
-        {/* Indicator dot — plain circle with CSS transition avoids framer-motion
-            SVG attribute initialisation issues (cx/cy undefined on first paint) */}
+        {/* Indicator dot — a plain circle, eased by a CSS transition */}
         <circle
           cx={indicatorTip.x}
           cy={indicatorTip.y}

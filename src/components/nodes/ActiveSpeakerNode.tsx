@@ -3,17 +3,12 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
-import { KnobControl } from '../controls/KnobControl'
-import { useSignalStore } from '../../store/signalStore'
-import { useParams } from '../../hooks/useParams'
+import { VolumeFace } from './VolumeFace'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 import { FaceNote, WithNote } from './FaceNote'
 
-const GAP = 16
-// Value and label under the knob
-const READOUT_H = 34
-const Icon      = NODE_LOOK['active-speaker'].icon
+const Icon = NODE_LOOK['active-speaker'].icon
 
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
 function BlownSpeakerIcon() {
@@ -28,19 +23,16 @@ function BlownSpeakerIcon() {
 }
 
 /**
- * Active speaker (amplifier built in): a card with a big icon, its Volume knob and the level
- * it plays, at every zoom. Fed from an Amplifier it blows (condition 'blown'): the level goes red, the
- * icon cracks and smokes, and a note says why. A hum from a DI Box ground loop shows under it.
+ * Active speaker (amplifier built in): a card with a big icon and its Volume knob, at every zoom (no
+ * level — D11). Fed from an Amplifier it blows (condition 'blown'): the icon cracks and smokes, and a
+ * note says why. A hum from a DI Box ground loop shows under it.
  */
 export function ActiveSpeakerNode({ id }: CardProps) {
-  const p                = useParams(id, 'active-speaker')
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const stage            = useStage(id)
-  const { t }            = useTranslation()
+  const stage = useStage(id)
+  const { t } = useTranslation()
 
-  const volumeDb = p('volumeDb')
-  const blown    = stage?.condition === 'blown'
-  const hum      = stage?.hum !== undefined
+  const blown = stage?.condition === 'blown'
+  const hum   = stage?.hum !== undefined
 
   return (
     <NodeWrapper
@@ -59,29 +51,7 @@ export function ActiveSpeakerNode({ id }: CardProps) {
           )
         }
         // The icon and the Volume knob, side by side, in the height they are given
-        const face = (h: number) => {
-          const knob = Math.max(40, Math.min(72, Math.round(h - READOUT_H)))
-          const icon = Math.min(h, box.w - knob - GAP)
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
-              <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
-              {/* The face ignores the pointer; the knob takes it back */}
-              <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
-                <KnobControl
-                  value={volumeDb}
-                  min={-20}
-                  max={10}
-                  step={0.5}
-                  label={t.nodes['active-speaker'].volume}
-                  formatValue={(v) => `${v >= 0 ? '+' : ''}${v} dB`}
-                  onChange={(v) => updateNodeParams(id, { volumeDb: v })}
-                  color="var(--signal-good)"
-                  size={knob}
-                />
-              </div>
-            </div>
-          )
-        }
+        const face = (h: number) => <VolumeFace nodeId={id} typeKey="active-speaker" icon={<Icon />} box={{ w: box.w, h }} />
         if (!hum) return face(box.h)
         return (
           <WithNote

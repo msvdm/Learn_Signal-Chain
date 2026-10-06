@@ -53,13 +53,16 @@ function Reading({ shown, tip, reserve, children }: {
   )
 }
 
-/** The readings of the signal leaving a card. Wraps to the card's width; never widens it. */
-export function SignalReadings({ nodeId }: { nodeId: string }) {
+/**
+ * The readings of the signal leaving a card. Wraps to the card's width; never widens it. `hidden`:
+ * kept in place, unseen (a source not connected yet — D11), with `status` said over them.
+ */
+export function SignalReadings({ nodeId, hidden = false, status }: { nodeId: string; hidden?: boolean; status?: string }) {
   const stage    = useStage(nodeId)
   const { t, fmt } = useTranslation()
   const tr       = t.readings
   const readings: Readings | null = stage ? readingsOf(stage.out, stage.domain) : null
-  const shown    = readings !== null
+  const shown    = readings !== null && !hidden
 
   const room = (verdict: RoomVerdict) => ({ text: tr.roomVerdict[verdict], color: VERDICT_COLOR[verdict] })
   const hiss = (verdict: HissVerdict) => ({ text: tr.hissVerdict[verdict], color: VERDICT_COLOR[verdict] })
@@ -70,11 +73,17 @@ export function SignalReadings({ nodeId }: { nodeId: string }) {
     <div
       className="lsc-wrap-text"
       style={{
+        position: 'relative',
         display: 'flex', flexDirection: 'column', gap: 2,
         fontSize: 'var(--node-text-sm)', lineHeight: 1.35, color: 'var(--lsc-fg-muted)',
         fontVariantNumeric: 'tabular-nums',
       }}
     >
+      {hidden && status && (
+        <div title={tr.notConnectedTip} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', fontWeight: 700 }}>
+          {status}
+        </div>
+      )}
       <Reading shown={shown} tip={tr.tips.peaks} reserve={[wording(tr.peaks, NUMBER_SAMPLE)]}>
         {wording(tr.peaks, dbText(readings?.peaksAbove ?? 0))}
       </Reading>

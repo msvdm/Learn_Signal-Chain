@@ -33,7 +33,7 @@ interface NodeWrapperProps {
   overviewLevel?: boolean
   /** false = no readings at the bottom (a card whose outputs send different signals: the DI Box) */
   readings?: boolean
-  /** Show only the overview face (icon + level) at every zoom: no header, no body. */
+  /** Show only the overview face (its icon, no level — D11) at every zoom: no header, no body. */
   faceOnly?: boolean
 }
 
@@ -58,7 +58,7 @@ export function NodeWrapper({
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
-  const { node, ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
+  const { node, ports, chains, selected, overview, wireTarget, notConnected } = useNodeChrome(nodeId, typeKey)
   const { t }            = useTranslation()
   // From Intermediate up, every card that shows a level ends with the readings of what leaves it
   const readings         = useReadingsShown() && overviewLevel && withReadings
@@ -68,6 +68,8 @@ export function NodeWrapper({
   const canBypass  = NODE_REGISTRY[typeKey].bypass
   const canStereo  = NODE_REGISTRY[typeKey].stereo === 'optional'
   const { inputs, outputs } = ports
+  // A source with nothing on its output says so instead of a level and readings (D11)
+  const status     = notConnected ? t.readings.notConnected : undefined
 
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, outputs.length, 1)
@@ -225,41 +227,43 @@ export function NodeWrapper({
             className="lsc-fade"
             style={{ padding: `0 ${BODY_PAD_X}px 12px`, opacity: isBypassed ? 0.5 : 1, ...hideInOverview }}
           >
-            <ReadingsBlock nodeId={nodeId} />
+            <ReadingsBlock nodeId={nodeId} hidden={notConnected} status={status} />
           </div>
         )}
       </>}
 
       {/* A face-only card keeps its face as it was and takes its readings under it; zoomed out they
-          hide and the face fills the whole card */}
+          hide and the face fills the whole card. Not connected: the face says so, the readings keep
+          their space */}
       {faceOnly && readings && <>
         <div aria-hidden style={{ height: minHeight - 2, flexShrink: 0 }} />
         <div className="lsc-fade" style={{ padding: FACE_READINGS_PAD, ...hideInOverview }}>
-          <ReadingsBlock nodeId={nodeId} />
+          <ReadingsBlock nodeId={nodeId} hidden={notConnected} />
         </div>
       </>}
 
-      {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
+      {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports.
+          A face-only card shows its face at every zoom, with no level (D11) */}
       <OverviewFace
         nodeId={nodeId}
         typeKey={typeKey}
         label={label}
         art={overviewArt}
-        showLevel={overviewLevel}
+        showLevel={overviewLevel && !faceOnly}
+        status={status}
         shown={overview || faceOnly}
         bypassed={isBypassed}
-        hasOutput={outputs.length > 0}
         height={faceOnly && readings && !overview ? minHeight : undefined}
       />
     </div>
   )
 }
 
-/** The readings under a line across the card. */
-function ReadingsBlock({ nodeId }: { nodeId: string }) {
+/** The readings under a line across the card (`hidden`: kept in place, unseen; `status` said there instead). */
+function ReadingsBlock({ nodeId, hidden, status }: { nodeId: string; hidden?: boolean; status?: string }) {
   return (
     <div style={{ borderTop: '1px solid var(--lsc-border-soft)', paddingTop: 8 }}>
-      <SignalReadings nodeId={nodeId} />
+      <SignalReadings nodeId={nodeId} hidden={hidden} status={status} />
     </div>
   )
 }

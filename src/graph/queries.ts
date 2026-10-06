@@ -262,6 +262,16 @@ function reaches(
 }
 
 /**
+ * A source with nothing plugged into its output (decision D11: no connection, no signal): it shows no
+ * level and no readings, and its meters stand still, until it is wired to something.
+ */
+export function unwiredSource(nodeId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  return node !== undefined && NODE_REGISTRY[node.typeKey].category === 'source' && graph.from(nodeId).length === 0
+}
+
+/**
  * True when this Instrument's signal goes into a desk or PA input still at instrument level —
  * straight, through effect pedals, or through a DI Box's Direct Out (a thru, still instrument
  * level): the high notes get lost on the way. Fine: into a Guitar Amp, or through a DI Box's XLR Out.

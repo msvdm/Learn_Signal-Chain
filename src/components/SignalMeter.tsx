@@ -137,29 +137,6 @@ export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise
   )
 }
 
-/** One labelled channel bar (L or R) with its level (the average), coloured by its own health (clipping from its peaks). */
-export function ChannelRow({ ch, side, domain = 'analog', source }: {
-  ch: string
-  side: SideLevels
-  domain?: SignalDomain
-  source?: MeterSource
-}) {
-  const detailed = useReadingsShown()
-  const db       = side.rms
-  const color    = isFinite(db) ? healthColor(getHealth(db, domain, side.peak)) : 'var(--lsc-border)'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-      <span style={{ fontWeight: 700, width: 10, color: 'var(--lsc-fg-muted)' }}>{ch}</span>
-      <div style={{ flex: 1 }}>
-        <MeterTrack side={side} color={color} domain={domain} detailed={detailed} direction="right" thickness={6} source={source} />
-      </div>
-      <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg-muted)' }}>
-        {isFinite(db) ? db.toFixed(1) : '−∞'}
-      </StableText>
-    </div>
-  )
-}
-
 /** A level as the meters print it (formatDb): its number and its unit. */
 const levelParts = (db: number, domain: SignalDomain) => formatDb(db, domain).split(' ')
 

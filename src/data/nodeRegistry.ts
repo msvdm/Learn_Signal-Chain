@@ -214,8 +214,9 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
   pad: {
+    // A bare button like the On Off Switch (D11), with its name under it
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false,
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 162, h: 188 },
     defaultParams: { engaged: true },
   },
   'di-box': {
@@ -264,7 +265,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   pan: {
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 266 },
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 239 },
     defaultParams: { panPosition: 50 },
   },
   adc: {

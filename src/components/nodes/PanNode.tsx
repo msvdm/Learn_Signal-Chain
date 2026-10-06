@@ -3,14 +3,16 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { useStage } from '../../hooks/useGraphSignal'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
-import { ChannelRow } from '../SignalMeter'
-import { SILENT } from '../../signal/levels'
+import { graphSignal } from '../../signal/engine'
+import { useTranslation } from '../../i18n/useTranslation'
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
+// The direction indicator under it
+const TRACK_W = 180
+const DOT     = 16
 
 function positionLabel(pos: number): string {
   if (pos <= 2)  return 'L'
@@ -24,12 +26,14 @@ function positionLabel(pos: number): string {
  * Always sends out a stereo wire.
  * Mono wire in: Pan knob — spreads it over L / R (equal-power, −3 dB each side at centre).
  * Stereo wire in: Balance knob — turning only fades the opposite side.
- * Drawn as a bare knob (no card) with a slim L / R meter under it.
+ * Drawn as a bare knob (no card) with a direction indicator under it: where between the left and
+ * the right speaker it goes (decision D11 — no level meter).
  */
 export function PanNode({ id }: CardProps) {
-  const stage            = useStage(id)
   const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const balance          = useSignalStore((s) => graphSignal(s.nodes, s.edges, s.measured).stages[id]?.role === 'balance')
+  const { t }            = useTranslation()
 
   const panPosition = p('panPosition')
 
@@ -42,12 +46,7 @@ export function PanNode({ id }: CardProps) {
       label={label}
       portLine={KNOB / 2}
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
-      footer={
-        <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <ChannelRow ch="L" side={stage?.out.l ?? SILENT} domain={stage?.domain} source={{ nodeId: id, at: 'out', side: 'l' }} />
-          <ChannelRow ch="R" side={stage?.out.r ?? SILENT} domain={stage?.domain} source={{ nodeId: id, at: 'out', side: 'r' }} />
-        </div>
-      }
+      footer={<Direction position={panPosition} hint={balance ? t.nodes.balance.direction : t.nodes.pan.direction} />}
     >
       {/* 0 = full left, 50 = centre, 100 = full right */}
       <KnobControl
@@ -63,5 +62,40 @@ export function PanNode({ id }: CardProps) {
         showReadout={false}
       />
     </FreeControl>
+  )
+}
+
+/** Where it goes between the speakers: a dot on a short track from L to R, following the knob (not the sound). */
+function Direction({ position, hint }: { position: number; hint: string }) {
+  return (
+    <div
+      title={hint}
+      style={{
+        width: TRACK_W, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)',
+      }}
+    >
+      <span>L</span>
+      <div
+        style={{
+          position: 'relative', flex: 1, height: 8, borderRadius: 9999,
+          background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
+        }}
+      >
+        {/* The centre */}
+        <div style={{ position: 'absolute', left: '50%', top: -4, bottom: -4, width: 2, marginLeft: -1, background: 'var(--lsc-border)' }} />
+        <div
+          style={{
+            position: 'absolute', left: `${position}%`, top: '50%', width: DOT, height: DOT,
+            borderRadius: 9999, background: 'var(--lsc-accent)', transform: 'translate(-50%, -50%)',
+            // A ring of the canvas's colour keeps the dot clear of the centre mark
+            boxShadow: '0 0 0 2px var(--lsc-canvas)',
+            // Eased like the knob's own dot
+            transition: 'left 80ms ease-out',
+          }}
+        />
+      </div>
+      <span>R</span>
+    </div>
   )
 }

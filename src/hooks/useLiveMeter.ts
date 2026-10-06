@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import type { RefObject } from 'react'
 import { useSignalStore } from '../store/signalStore'
 import { READINGS_LEVEL, atLeast } from '../data/levels'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
+import { unwiredSource } from '../graph/queries'
 import { graphSignal } from '../signal/engine'
 import type { LiveStage } from '../signal/moving'
 import { liveStageOf } from '../signal/moving'
@@ -92,10 +92,9 @@ function rebuild() {
   stages = new Map()
   if (!measured?.moving) return
   const shown = graphSignal(nodes, edges, measured)
-  // A source plays once it is wired to something
-  const wired = new Set(edges.map((e) => e.source))
   for (const node of nodes) {
-    if (NODE_REGISTRY[node.typeKey].category === 'source' && !wired.has(node.id)) continue
+    // A source plays once it is wired to something (D11: no connection, no signal)
+    if (unwiredSource(node.id, { nodes, edges })) continue
     const stage = shown.stages[node.id]
     const m = measured.stages.get(node.id)
     const moving = measured.moving.get(node.id)

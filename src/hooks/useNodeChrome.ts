@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../store/signalStore'
 import type { NodePort, TypeKey } from '../data/nodeRegistry'
 import { graphOf } from '../graph/graph'
-import { getPorts } from '../graph/queries'
+import { getPorts, unwiredSource } from '../graph/queries'
 import { nodeAcceptsWire } from '../utils/connectionRules'
 import { chainColorsOf } from '../utils/chainColors'
 
@@ -15,9 +15,10 @@ const toPorts = (ids: string): NodePort[] => (ids === '' ? [] : ids.split(',').m
 
 /**
  * What the shell around an element's controls shows (NodeWrapper, FreeControl): its ports, the
- * colours of the chains passing through it, whether it is selected (or its help is open), and
- * whether the wire being drawn could land on it. Each part is read on its own, so the shell is
- * redrawn only when one of them changes — not on every change of the graph.
+ * colours of the chains passing through it, whether it is selected (or its help is open), whether
+ * the wire being drawn could land on it, and whether it is a source not connected yet. Each part is
+ * read on its own, so the shell is redrawn only when one of them changes — not on every change of
+ * the graph.
  */
 export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   // (Gone for the moment the card is drawn while being removed)
@@ -38,6 +39,8 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
     const n = graphOf(s).node(nodeId)
     return n !== undefined && nodeAcceptsWire(n, s.wire.source, s.edges, s.nodes)
   })
+  /** A source with nothing on its output: no level, no readings (D11) */
+  const notConnected = useSignalStore((s) => unwiredSource(nodeId, s))
 
-  return { node, ports, chains, selected, overview, wireTarget }
+  return { node, ports, chains, selected, overview, wireTarget, notConnected }
 }

@@ -23,7 +23,8 @@ const MAX_BUTTONS_H = 104
 
 /**
  * Microphone, Line Input and Instrument. Microphone and Instrument show only their face, at every
- * zoom: a big icon and the level they send out. From Intermediate up a Microphone and a Line Input
+ * zoom: a big icon (no level — D11), "Not connected" under it until something is wired to their
+ * output (NodeWrapper). From Intermediate up a Microphone and a Line Input
  * also pick what they pick up — a Microphone Speech, Singing or Drums (whose hits reach far above
  * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon. An Instrument going into
  * the desk without a DI Box says so (condition 'needsDi': a dull-tone curve and a note). Line

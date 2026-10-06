@@ -148,12 +148,14 @@
       "loud": "very noisy"
     },
     "tips": {
-      "peaks": "The solid bar shows the average level — how loud it sounds; the light bar and the thin line beyond it show the loudest moments (the peaks) — what clips first. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
+      "peaks": "The average is how loud it sounds; the peaks are its loudest moments — what clips first. On a meter, the solid bar is the average, the light bar and the thin line beyond it the peaks. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
       "room": "How far the loudest moments are below the clip level (+20 dBu, or 0 dBFS after an ADC), where every stage distorts. Engineers call this room headroom. {careful} dB or less: careful, a louder note will distort.",
       "hiss": "Every powered device adds a little hiss. This is how far it sits below the music — engineers call it the signal-to-noise ratio: {audible} dB or more and you won't notice it; less, and you hear it in the quiet moments. Make the gain early, at the Preamp: turning up later lifts the hiss too. The grey fog on the meter is the noise."
     },
     "hissHere": "You can hear hiss here",
-    "hissHereTip": "From this element on, the hiss is less than {audible} dB below the music, so you hear it in the quiet moments. Usually the signal reaching it is too weak: turn up early (the Preamp) instead of later."
+    "hissHereTip": "From this element on, the hiss is less than {audible} dB below the music, so you hear it in the quiet moments. Usually the signal reaching it is too weak: turn up early (the Preamp) instead of later.",
+    "notConnected": "Not connected",
+    "notConnectedTip": "Nothing is plugged into its output yet. Wire it to another element: then it plays, and its readings show."
   },
   "tooltip": {
     "whatIsThis": "What is this?",
@@ -301,7 +303,8 @@
       "post": "POST"
     },
     "pan": {
-      "label": "Pan"
+      "label": "Pan",
+      "direction": "Where you will hear it: between the left (L) and the right (R) speaker."
     },
     "adc": {
       "label": "ADC"
@@ -321,7 +324,8 @@
       "sendHint": "How much of this bus goes in. Point here to light up where it comes from."
     },
     "balance": {
-      "label": "Balance"
+      "label": "Balance",
+      "direction": "Which side is louder: turning towards one side fades the other."
     }
   },
   "nodeControls": {
@@ -456,7 +460,7 @@
     "mic": {
       "what": "The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.",
       "why": "Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.",
-      "tip": "The signal is in the blue (too quiet) zone — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Speech, Singing or Drums. Drum hits jump much further above the average, so they reach the clip level sooner.",
+      "tip": "Its wire is blue (too quiet) — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Speech, Singing or Drums. Drum hits jump much further above the average, so they reach the clip level sooner.",
       "readings": "The Hiss reading starts at 66 dB below the signal: the quiet hiss of the room and of the microphone itself. Engineers call it the noise floor — the cleanest this signal will ever be. Every powered card after it adds a little hiss of its own, so on the way to the speakers this gap can only shrink (a Noise Gate can hide it in the pauses); your job is to keep it big. The Peaks reading says 12 dB for a voice, speaking or singing, and 18 for Drums."
     },
     "line-in": {

@@ -768,7 +768,9 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
   second; the light peak bar at 38 % of the bar's colour.
 - "When a source is connected and mode is selected": a source plays once it is wired to something, and
   every card it reaches moves; "mode" read as the level (Intermediate and up) — a source always has a
-  sound selected.
+  sound selected. **Corrected in 11b (D11):** "mode" meant what the source plays — melodic or
+  percussive when D10 was asked, today the sound buttons (Speech / Singing / Drums, Music / Drums); one
+  is always chosen, so a source still plays as soon as it is wired.
 - Reduced motion keeps the meters still (the loop's picture): with no Pause, it is the only way to stop
   them, for those who asked their system for less motion.
 - The moving bar keeps the loop's colour, and the level number and health word under it stay the loop's.
@@ -830,6 +832,126 @@ Original plan:
   whole graph per change in ~30–130 ms for a typical chain; the cards' readings stay the render's —
   only the meters, bars and curve dots move.
 
+## ~~11b. Review of step 11 — what shows a level, and where nothing needs one~~ — done (2026-10-06)
+
+### D11 — decided (user, 2026-10-06, reviewing step 11)
+
+How step 11 read the answers of D10:
+1. **"When a source is connected and mode is selected"**: "mode" meant what the source plays — melodic
+   or percussive then, today the sound buttons (Speech / Singing / Drums, Music / Drums). One is always
+   chosen, so a source plays as soon as it is wired. (Step 11 read it as the level: corrected there.)
+2. **No connection means no signal.** No Play / Pause button.
+3. **The numbers, health words and colours stay the loop's** while the meters move: kept.
+
+Step 11's choices:
+1. **The face-only cards** (Microphone, Instrument, Guitar Amp, Speaker, Active Speaker) need no
+   complicated level meters at all. **Pan** needs only a direction indicator (a moving L / R meter sat
+   under its knob). **The Gain** is just a value. **Buttons and relays** (the On Off Switch, the
+   Pre / Post switch) need nothing.
+2. **The Graphic EQ**: the user will think about it later — left as it is (862 × 545, its sliders).
+3. **Clean up**: framer-motion out of `package.json` (with `bun.lock`), and whatever this step leaves
+   unused.
+
+Then asked in one round, with mock-ups (the user's answers):
+- **Q1 = B** — a face-only card shows its icon (with its buttons or knob) and its notes; the level and
+  the health word go with the bar; the readings stay (from Intermediate).
+- **Q2 = P1** — Pan / Balance: a dot on a short track between L and R, following the knob, not the sound.
+- **Q3 = a** — the Pad is one of the buttons: a bare button like the On Off Switch ("−20 dB" lit / "OFF",
+  its name under it); no card, no readings, no level.
+- **Q4 = Keep** — zoomed out, the other cards' faces keep their meter.
+- **Q5 = Not connected** — an unwired source shows no level and no readings until it is wired (their
+  space kept).
+- Not changed: the Gain (its knob, name and setting), the On Off Switch and the Pre / Post switch (they
+  showed no level already). The red Hum and grey hiss tags stay on every element: warnings, not meters.
+
+### What it is now
+
+- **Face-only cards** (Microphone, Instrument, Guitar Amp, Speaker, Active Speaker): the icon, with its
+  buttons or Volume knob, and its notes (no DI Box, needs an amp, blown, a hum), at every zoom — no meter,
+  no level number, no health word (the wire's colour shows the health); from Intermediate the three
+  readings stay under the face. Nothing on them moves. The icon takes the room the level left: 168 px at
+  Intermediate (was 98), the Microphone's 138 beside its buttons. The Active Speaker and the Guitar Amp
+  share their face (`VolumeFace`): the knob's value and, under it, its name — beside the value, Bulgarian's
+  "СИЛА НА ЗВУКА" left the Active Speaker's icon 40 px at Beginner; now 122 there (English 149), 162 at
+  Intermediate (English 168). Card sizes unchanged.
+- **Not connected** (Q5): a source with nothing plugged into its output (`unwiredSource`, which the live
+  loop now uses too): a Microphone or an Instrument says "Not connected" under its icon; a Line Input or
+  the Generator in its readings' place and, zoomed out, in its level's place; the readings keep their
+  space. The number engine and the render are unchanged, so wiring it shows its level at once.
+- **Pan / Balance** (Q2): the L / R meter rows gave way to a dot on a short track between L and R,
+  following the knob (eased 80 ms, like the knob's own dot), the centre marked; its tooltip says where you
+  will hear it (Balance: which side is louder).
+- **Pad** (Q3): a bare button like the On Off Switch — "−20 dB" lit in the hot colour, "OFF" in grey, one
+  fitted size for both words (24 px; the Switch's ON / OFF 32), its name PAD under it; no card, readings or
+  level, the same at every zoom. Saved chains open as before (same type and settings). The Switch and the
+  Pad share `SquareButton`.
+- **Kept** (Q4): zoomed out, the other cards' faces keep their meter.
+- **Words** (en + bg): "Not connected" and its tooltip; the indicator's tooltips; the Microphone's tip now
+  points at its wire ("Its wire is blue (too quiet)…" — its face no longer shows "Too Quiet"); the Peaks
+  reading's tooltip no longer starts from "the solid bar" (a face-only card has none). Fixed on the way:
+  Bulgarian "Изгоря! … твърде силен за нея" → "за него" (the Active Speaker, "говорител", is masculine).
+- **Cleaned up**: framer-motion out of `package.json` and `bun.lock` (with motion-dom and motion-utils;
+  `bun install --frozen-lockfile` passes); `ChannelRow` (only Pan used it); `OverviewFace`'s `hasOutput`
+  (only the speakers' level used it); KnobControl's comment that still named framer-motion.
+- Tests: 383 (379 + 4: what counts as a source not connected), Bun and Node.
+
+### Measured (headless Chromium in the cloud container, as in step 11 — this one ~2.5× slower: the 75-card render took 6 s, 2.1–2.6 s in step 11)
+
+| Element | Before | Now |
+|---|---|---|
+| Face-only cards (Beginner / with readings / Bulgarian) | 280 × 210 / 320 × 288 / 320 × 304 | the same |
+| Pan / Balance | 232 × 266 | 232 × 239 |
+| Pad | a card, 320 × 210 | a button, 162 × 188 |
+
+- **The moving meters' cost** on the 75-card stress chain (Intermediate, CDP `Performance.getMetrics`,
+  main-thread time per second, two runs each): all on screen (zoomed out, 24 %) 937 / 907 → **808 / 757 ms**
+  (−14 %); at 85 % (about a dozen cards on screen) 703 / 766 → 707 / 674 (the same: what moves there is
+  the dynamics cards' meters and curves); reduced motion 0 → 0. No longer moving: the 8 Microphones' and
+  2 speakers' faces and the 8 Pans' L / R rows. Recorded under step 13.
+- Bundle: the script 750.1 → 751.9 kB (framer-motion had left the bundle in step 11 already — nothing
+  imported it); the one-file copy 1.64 MB.
+
+Checked in headless Chromium, by script, at Beginner, Intermediate and Advanced, light and dark, English and
+Bulgarian: every changed element zoomed in and out, no meter on a face-only card, no text out of its card
+(the knob's name ran out of the Active Speaker at Beginner before `VolumeFace`; the Hum tag spilling past a
+bare Preamp is older — the same on HEAD, as are Bulgarian's 320 × 304 cards), the sizes above, the meters
+playing from Intermediate only, no console errors. The production build and the one-file copy (over http:
+one request, the page itself) opened from a share link: "Not connected", the Pad's button.
+
+### Choices made here, to review
+
+- "Not connected" on a Microphone or an Instrument sits under the icon in grey, like the other notes; a
+  Line Input or the Generator says it in its readings' place (from Intermediate) and zoomed out in its
+  level's place. At Beginner, zoomed in, an unwired Line Input shows nothing about it (no readings there;
+  its body shows the level it is set to).
+- Connected = a wire leaves the source's output: a Microphone that only hears a Guitar Amp is not
+  connected (it plays nothing on).
+- The face-only icons grew into the room the level left (168 px), as in the mock-up.
+- The Volume knob's name under its value on the Active Speaker and the Guitar Amp (it was beside it).
+- Pan's dot follows the knob, not the sound; L / R letters in both languages (as the knob's L20 / R30).
+- The Pad lit yellow as before, with its name under it — the Switch shows none (ON / OFF says it all), but
+  "−20 dB" does not say "Pad".
+- The Microphone's tip and the Peaks tooltip reworded (above).
+
+### Left for the user
+
+1. `bun dev`, Intermediate: drop a Microphone — its icon and the Speech / Singing / Drums buttons, "Not
+   connected" under them, no level, no readings. Wire it to a Gain: "Not connected" goes, the three readings
+   appear (Peaks 12 dB above the average …), still no meter, level or health word on it; its wire is blue.
+2. An Active Speaker and a Guitar Amp: a big icon, the Volume knob beside it with "+0 dB" and VOLUME under
+   it; nothing moves on them while the chain plays (the cards with In / Out meters still do).
+3. A Line Input, unwired: "Not connected" at the bottom of the card, and zoomed out where the level would
+   be. Wire it: its readings, and zoomed out its meter, come back.
+4. Pan: turn the knob — the dot under it slides between L and R; hover it for the tooltip. Feed it a stereo
+   Line Input: BALANCE, the same dot.
+5. Pad: one big button, "−20 dB" in yellow with PAD under it; click it: "OFF" in grey. The same zoomed out.
+   A chain saved before with a Pad opens with the button in its place.
+6. Bulgarian, light and dark: "Не е свързан", "СИЛА НА ЗВУКА" under the knob's value — all inside the cards.
+7. Beginner: Microphone, Instrument and Active Speaker show only their icon (and the speaker's knob); an
+   unwired Microphone says "Not connected".
+8. With your own fonts: do "Not connected" and the knob's name fit? (Checked here with Inter.)
+9. Later: the Graphic EQ (left as it is, your call).
+
 ## 12. Wires move with the signal
 
 - Wires brighten and pulse with the level they carry; the flow animation already there keeps the
@@ -848,6 +970,10 @@ Original plan:
 - The moving meters (step 11): in the cloud container (software painting) the 75-card chain zoomed out cost
   552 ms of main thread a second, one strip on screen 182 — mostly painting. If a weak device struggles:
   fewer pictures a second zoomed out, or the faces' meters without their peak bar.
+  Re-measured in 11b (another, ~2.5× slower container; the same script before and after, two runs each):
+  zoomed out 937 / 907 → 808 / 757 ms a second (the face-only cards' and Pan's meters gone: −14 %), at 85 %
+  703 / 766 → 707 / 674, reduced motion 0. Most of what is left zoomed out is the other cards' faces (kept,
+  D11 Q4) — and step 12 adds the wires.
   From 10c (desktop, dev build): 30 ms for 4 cards, 130 for a channel strip, 1.4 s for the 75-card
   stress chain — a render is mostly nodes (~0.75 ms per node per loop) and the dynamics worklets.
 

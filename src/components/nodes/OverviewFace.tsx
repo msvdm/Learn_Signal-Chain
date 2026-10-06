@@ -10,6 +10,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_LOOK } from './nodeLook'
+import { FaceNote, WithNote } from './FaceNote'
 
 // ── Geometry (all sizes follow the card's measured width W) ─────────────────────
 const PAD         = 20     // around the name and the level block
@@ -33,13 +34,16 @@ interface OverviewFaceProps {
   label: string
   /** Shown instead of the name (a big icon, the control itself). */
   art?: OverviewArt
-  /** false = no level block: the art fills the card. */
+  /** false = no level block: the art fills the card (a face-only card, the Pre / Post switch). */
   showLevel?: boolean
+  /**
+   * Said instead of the level ("Not connected": a source with nothing on its output — D11): in the
+   * level block's place, or under the art when there is none.
+   */
+  status?: string
   /** Fully visible (zoomed out); otherwise faded out and hidden. */
   shown: boolean
   bypassed: boolean
-  /** Cards without an output (speakers) show the level they play: silent for a passive speaker without an amp. */
-  hasOutput: boolean
   /** Height of the face (px) when it covers only the top of the card (a face-only card's readings below it). */
   height?: number
 }
@@ -47,9 +51,10 @@ interface OverviewFaceProps {
 /**
  * What a card shows when zoomed out (overview): its name, as big as it fits, and the level
  * leaving it. A layer over the card — the card's controls stay in place underneath, hidden,
- * so the card keeps exactly the same size and its ports stay where they are.
+ * so the card keeps exactly the same size and its ports stay where they are. A face-only card
+ * (a source or a speaker: its icon) shows this face at every zoom, without a level (D11).
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, shown, bypassed, hasOutput, height }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, height }: OverviewFaceProps) {
   const { t }    = useTranslation()
   const detailed = useReadingsShown()
   // A string, so dragging the card (a new internal node each frame) does not re-render it
@@ -92,9 +97,9 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
 
   if (!layout) return null
 
-  // The level leaving the card (its louder side); a speaker's is the sound it plays (its stage result)
+  // The level leaving the card (its louder side)
   const { l, r } = levels.output
-  const side   = r && hasOutput ? louder(l, r) : l
+  const side   = r ? louder(l, r) : l
   const db     = side.rms
   const state  = levels.outHealth
   const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
@@ -125,7 +130,16 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >
-        {art ? art({ w: layout.nameW, h: layout.nameH }) : (
+        {art ? (
+          // With no level block, a status goes under the art (the art takes the height it leaves)
+          status && !showLevel ? (
+            <WithNote
+              box={{ w: layout.nameW, h: layout.nameH }} lines={1}
+              face={(h) => art({ w: layout.nameW, h })}
+              note={<FaceNote box={{ w: layout.nameW }} color="var(--lsc-fg-muted)">{status}</FaceNote>}
+            />
+          ) : art({ w: layout.nameW, h: layout.nameH })
+        ) : (
           <div
             style={{
               fontSize: layout.name.fontSize, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1,
@@ -149,8 +163,23 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, sh
         )}
       </div>
 
+      {/* A status in the level block's place, in its height: the name keeps its size */}
+      {showLevel && status && (
+        <div
+          style={{
+            position: 'absolute', left: PAD, right: PAD, bottom: PAD,
+            height: layout.meter + METER_GAP + layout.number + (layout.ownRow ? 4 + layout.health : 0),
+            display: 'flex', alignItems: 'center',
+            fontSize: Math.round(layout.number * 0.75), fontWeight: 700, lineHeight: 1.1,
+            color: 'var(--lsc-fg-muted)',
+          }}
+        >
+          {status}
+        </div>
+      )}
+
       {/* Level leaving the card: meter, then reading + health word */}
-      {showLevel && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
+      {showLevel && !status && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
         <MeterBar
           db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain}
           peak={detailed ? side.peak : undefined} noise={detailed ? side.noise : undefined}

@@ -23,12 +23,12 @@ interface FreeControlProps {
   portLine: number
   /** The control itself (knob, fader, button) */
   children: ReactNode
-  /** Under the reading (Pan's L / R meter) */
+  /** Under the reading (Pan's direction indicator) */
   footer?: ReactNode
 }
 
 /**
- * A free-standing control: Gain, Pan, Fader and Switch are drawn as the bare control with its
+ * A free-standing control: Gain, Pan, Fader, Switch and Pad are drawn as the bare control with its
  * connection points, not as a card. The same size at every zoom (no overview face), large
  * enough to read zoomed out. Help and Remove are in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.
