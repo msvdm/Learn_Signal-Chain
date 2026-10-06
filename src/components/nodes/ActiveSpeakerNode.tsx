@@ -23,8 +23,9 @@ function BlownSpeakerIcon() {
 /**
  * Active speaker (amplifier built in), and Headphones, which work the same: a card with a big icon
  * and its Volume knob, at every zoom (its meter in dB SPL — D13). Fed from an Amplifier it blows (condition
- * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why. A hum from a DI
- * Box ground loop shows under it.
+ * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why. A signal clipped
+ * on its way here says "Bad sound" (`distorted`: its meter may be green); a hum from a DI Box
+ * ground loop shows under it.
  */
 export function ActiveSpeakerNode({ id, type }: CardProps) {
   const typeKey = type as 'active-speaker' | 'headphones'
@@ -32,8 +33,9 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
   const stage   = useStage(id)
   const { t }   = useTranslation()
 
-  const blown = stage?.condition === 'blown'
-  const hum   = stage?.hum !== undefined
+  const blown     = stage?.condition === 'blown'
+  const distorted = stage?.distorted === true
+  const hum       = stage?.hum !== undefined
 
   return (
     <NodeWrapper
@@ -53,6 +55,15 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
         }
         // The icon and the Volume knob, side by side, in the height they are given
         const face = (h: number) => <VolumeFace nodeId={id} typeKey={typeKey} icon={<Icon />} box={{ w: box.w, h }} />
+        // Something before it clips: its meter may be green, but you hear it
+        if (distorted) {
+          return (
+            <WithNote
+              box={box} lines={2} face={face}
+              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes.speaker.distorted}</FaceNote>}
+            />
+          )
+        }
         if (!hum) return face(box.h)
         return (
           <WithNote

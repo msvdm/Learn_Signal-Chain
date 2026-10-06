@@ -13,12 +13,14 @@ const Icon = NODE_LOOK.speaker.icon
 /**
  * Passive speaker: a card with a big icon, at every zoom (its meter in dB SPL — D13; from Intermediate its
  * readings under it). It has no amplifier inside — fed without an Amplifier before it, it stays silent,
- * and the card says so (crossed-out speaker + a note). A hum from a DI Box ground loop shows too.
+ * and the card says so (crossed-out speaker + a note). A signal clipped on its way here says "Bad
+ * sound" (`distorted`: its meter may be green); a hum from a DI Box ground loop shows too.
  */
 export function SpeakerNode({ id }: CardProps) {
   const stage      = useStage(id)
   const { t }      = useTranslation()
   const needsAmp   = stage?.condition === 'needsAmp'
+  const distorted  = stage?.distorted === true
   const hum        = stage?.hum !== undefined
 
   return (
@@ -34,6 +36,16 @@ export function SpeakerNode({ id }: CardProps) {
               box={box} lines={2}
               face={(h) => <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h }} color="var(--signal-hot-text)" />}
               note={<FaceNote box={box} color="var(--signal-hot-text)">{t.nodes.speaker.needsAmp}</FaceNote>}
+            />
+          )
+        }
+        // Something before it clips: its meter may be green, but you hear it
+        if (distorted) {
+          return (
+            <WithNote
+              box={box} lines={2}
+              face={(h) => <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />}
+              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes.speaker.distorted}</FaceNote>}
             />
           )
         }

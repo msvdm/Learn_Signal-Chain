@@ -1,11 +1,11 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
-import { SILENT, louder } from './levels'
+import { SILENCE_DB, SILENT, louder } from './levels'
 import type { StageCondition } from './process'
 import { withOwnHiss } from './process'
 import type { CardPlan, ChainLevels, StageRole, WireSignal } from './chain'
-import { contextOf, healthOf, humOf, planChain, runChain } from './chain'
+import { contextOf, healthOf, humOf, levelOf, planChain, runChain } from './chain'
 import type { MeasuredChain } from './measured'
 import { withMeasured } from './measured'
 import { sameShape } from '../utils/sameShape'
@@ -54,6 +54,13 @@ export interface StageResult {
    * turns it down with the music; only Ground Lift takes it away. Undefined: no hum.
    */
   hum?: number
+  /**
+   * What it plays was clipped — here, or by a card before it (its peaks reached the ceiling and
+   * were cut off). Turning down after that does not bring them back: the meters can be green, but
+   * the distortion is heard (a speaker says so). Carried along the wires a card works on, never
+   * through silence. Undefined: clean.
+   */
+  distorted?: true
 }
 
 /** What a dynamics card's curve works on (`curveIn`); bypassed, what arrives — its louder side. */
@@ -101,12 +108,34 @@ export function stillPicture(nodes: SignalNode[], edges: SignalEdge[]): StillPic
  * changed.
  */
 export function graphSignal(nodes: SignalNode[], edges: SignalEdge[], measured: MeasuredChain | null = null): GraphSignalResult {
-  const still = stillPicture(nodes, edges).result
+  const picture = stillPicture(nodes, edges)
+  const still   = picture.result
   if (lastShown && lastShown.still === still && lastShown.measured === measured) return lastShown.result
-  const fresh  = withMeasured(still, measured)
+  const fresh  = withDistortion(withMeasured(still, measured), picture.plans)
   const result = lastShown ? keepUnchanged(fresh, lastShown.result) : fresh
   lastShown = { still, measured, result }
   return result
+}
+
+/**
+ * Every card that plays a clipped signal marked `distorted`: one whose own peaks reach the ceiling
+ * (health `clipping`), and every card after it on the wires it works on (a Relay's selected input,
+ * a bus's wires) — unless it sends nothing (a Switch turned off).
+ */
+function withDistortion(result: GraphSignalResult, plans: CardPlan[]): GraphSignalResult {
+  const clipped = new Set<string>()
+  let stages = result.stages
+  for (const card of plans) {
+    const id    = card.node.id
+    const stage = result.stages[id]
+    if (!stage || levelOf(stage.out) <= SILENCE_DB) continue
+    const before = card.used.some((u) => clipped.has(u.from.slice(0, u.from.lastIndexOf(':'))))
+    if (!before && stage.health !== 'clipping') continue
+    clipped.add(id)
+    if (stages === result.stages) stages = { ...result.stages }
+    stages[id] = { ...stage, distorted: true }
+  }
+  return stages === result.stages ? result : { ...result, stages }
 }
 
 /** `fresh`, with every stage, wire and hum that equals the one in `before` replaced by that one. */

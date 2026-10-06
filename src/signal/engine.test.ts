@@ -641,6 +641,47 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
   })
 })
 
+describe('a clip before a speaker is heard there, however green its meter (distorted)', () => {
+  // A Gain 20 dB too hot clips the music's peaks; the Fader after it brings the level back down
+  const chain = (on: boolean) => signalOf([
+    card('line', 'line-in'),
+    card('hot', 'gain', { gainDb: 20 }),
+    card('fader', 'fader', { faderDb: -20 }),
+    card('sw', 'switch', { on }),
+    card('spk', 'active-speaker'),
+    card('clean', 'line-in'),
+    card('bus', 'master-bus'),
+    card('phones', 'headphones'),
+  ], [
+    wire('line', 'hot'), wire('hot', 'fader'), wire('fader', 'sw'), wire('sw', 'spk'),
+    wire('fader', 'bus'), wire('clean', 'bus'), wire('bus:out-l', 'phones'),
+  ])
+  const result = chain(true)
+  const distorted = (id: string, r = result) => r.stages[id].distorted ?? false
+
+  it('marks the card that clips and everything after it, the speaker green', () => {
+    expect(result.stages.hot.health).toBe('clipping')
+    expect(result.stages.spk.health).toBe('good')
+    expect(['hot', 'fader', 'sw', 'spk'].map((id) => distorted(id))).toEqual([true, true, true, true])
+  })
+
+  it('a bus with one clipped channel in it is distorted too, and what it feeds', () => {
+    expect(distorted('bus')).toBe(true)
+    expect(distorted('phones')).toBe(true)
+  })
+
+  it('leaves clean cards alone: before the clip, another source', () => {
+    expect(distorted('line')).toBe(false)
+    expect(distorted('clean')).toBe(false)
+  })
+
+  it('a Switch turned off sends nothing: nothing distorted after it', () => {
+    const off = chain(false)
+    expect(distorted('sw', off)).toBe(false)
+    expect(distorted('spk', off)).toBe(false)
+  })
+})
+
 // ── Peaks, noise and the hum ────────────────────────────────────────────────────
 
 /** What leaves a card: its peak, average and noise (the louder side). */
