@@ -262,8 +262,8 @@ kbd {
 .lsc-meter-up .lsc-meter-hold::after    { left: 0; right: 0; bottom: 0; height: var(--mark); }
 .lsc-meter-right .lsc-meter-hold::after { top: 0; bottom: 0; left: 0; width: var(--mark); }
 
-/* A dynamics card's turning-down bar (components/nodes/DynamicsLayout.tsx) */
-.lsc-reduction-fill { background: var(--signal-hot); border-radius: 3px; transform: translateX(calc((var(--gr) - 1) * 100%)); }
+/* A dynamics card's turning-down bar (components/nodes/DynamicsLayout.tsx): it grows from the right */
+.lsc-reduction-fill { background: var(--signal-hot); border-radius: 3px; transform: translateX(calc((1 - var(--gr)) * 100%)); }
 
 /* The marks on a dynamics card's curve: each group at its point (--x, --y in the SVG's pixels), a
    faint copy on the diagonal and a line between them while the card moves it 2 px or more; the word

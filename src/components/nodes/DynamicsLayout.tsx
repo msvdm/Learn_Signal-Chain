@@ -32,7 +32,10 @@ function reductionAt(live: LiveStage | undefined, i: number | null): number | nu
   return r && i !== null ? Math.max(0, r.frames[i] + r.shift) : null
 }
 
-/** How much the signal is being turned down: a bar across the column, then the label and the amount (over the loop). */
+/**
+ * How much the signal is being turned down: a bar across the column, growing from the right like a
+ * desk's gain-reduction meter (it takes level away), then the label and the amount (over the loop).
+ */
 export function ReductionReadout({ nodeId, db, maxDb, label, style }: {
   /** Its card: the bar moves while the chain plays */
   nodeId: string
@@ -47,7 +50,7 @@ export function ReductionReadout({ nodeId, db, maxDb, label, style }: {
   useLiveMeter(useBodyShown() ? nodeId : undefined, ref, (live, i) => {
     const gr = reductionAt(live, i)
     const f  = gr === null ? null : Math.round(Math.min(1, gr / maxDb) * 400) / 400
-    paintStyle(fill.current, 'transform', f === null ? null : `translateX(${((f - 1) * 100).toFixed(2)}%)`)
+    paintStyle(fill.current, 'transform', f === null ? null : `translateX(${((1 - f) * 100).toFixed(2)}%)`)
   })
   return (
     <div style={style}>
