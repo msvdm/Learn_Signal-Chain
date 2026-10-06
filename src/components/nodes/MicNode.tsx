@@ -23,7 +23,7 @@ const MAX_BUTTONS_H = 104
 
 /**
  * Microphone, Line Input and Instrument. Microphone and Instrument show only their face, at every
- * zoom: a big icon (no level — D11), "Not connected" under it until something is wired to their
+ * zoom: a big icon (its meter beside it — D13: a Microphone's in dB SPL), "Not connected" under it until something is wired to their
  * output (NodeWrapper). From Intermediate up a Microphone and a Line Input
  * also pick what they pick up — a Microphone Speech, Singing or Drums (whose hits reach far above
  * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon —

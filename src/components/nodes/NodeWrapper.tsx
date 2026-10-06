@@ -12,11 +12,19 @@ import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
 import { SignalReadings } from './Readings'
 import { useReadingsShown } from '../../hooks/useReadingsShown'
+import { useStereoLevels } from '../../hooks/useStereoLevels'
+import { MeterStrip, STRIP_W } from '../SignalMeter'
+import { SPL_DB } from '../../signal/levels'
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
 const BODY_PAD_X = 20
 // Under a face-only card's face: its readings (the face's own padding is above)
 const FACE_READINGS_PAD = '0 20px 16px'
+// A face-only card's upright meter, zoomed in: on the right of its face, which keeps this much room
+// free for it; the card is tall enough for it
+const FACE_METER_PAD  = '14px 20px 12px'
+const FACE_METER_ROOM = STRIP_W + 16
+const FACE_METER_H    = 250
 
 interface NodeWrapperProps {
   nodeId: string
@@ -33,7 +41,11 @@ interface NodeWrapperProps {
   overviewLevel?: boolean
   /** false = no readings at the bottom (a card whose outputs send different signals: the DI Box) */
   readings?: boolean
-  /** Show only the overview face (its icon, no level — D11) at every zoom: no header, no body. */
+  /**
+   * Show only the overview face (its icon) at every zoom: no header, no body. With a level
+   * (`overviewLevel`), an upright meter beside it zoomed in — dB SPL where the card meets the air
+   * (SPL_DB) — and the level under it zoomed out.
+   */
   faceOnly?: boolean
 }
 
@@ -74,7 +86,9 @@ export function NodeWrapper({
   // Tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, outputs.length, 1)
   const minSize   = cardMinSize(typeKey)
-  const minHeight = Math.max(minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
+  // A face-only card with a level: its meter
+  const meter     = faceOnly && overviewLevel
+  const minHeight = Math.max(meter ? FACE_METER_H : minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
@@ -91,7 +105,7 @@ export function NodeWrapper({
       style={{
         position: 'relative',
         width: 'max-content',
-        minWidth: readings ? Math.max(minSize.w, READINGS_MIN_W) : minSize.w,
+        minWidth: (readings ? Math.max(minSize.w, READINGS_MIN_W) : minSize.w) + (meter ? FACE_METER_ROOM : 0),
         minHeight,
         display: 'flex',
         flexDirection: 'column',
@@ -235,27 +249,53 @@ export function NodeWrapper({
       {/* A face-only card keeps its face as it was and takes its readings under it; zoomed out they
           hide and the face fills the whole card. Not connected: the face says so, the readings keep
           their space */}
-      {faceOnly && readings && <>
-        <div aria-hidden style={{ height: minHeight - 2, flexShrink: 0 }} />
-        <div className="lsc-fade" style={{ padding: FACE_READINGS_PAD, ...hideInOverview }}>
-          <ReadingsBlock nodeId={nodeId} hidden={notConnected} />
+      {faceOnly && <>
+        {/* The face's place; zoomed in, its meter on the right (hidden, its space kept, when not connected) */}
+        <div style={{ height: minHeight - 2, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', padding: FACE_METER_PAD, boxSizing: 'border-box' }}>
+          {meter && (
+            <div className="lsc-fade" style={{ display: 'flex', ...(notConnected ? { visibility: 'hidden' } : {}), ...hideInOverview }}>
+              <FaceMeter nodeId={nodeId} typeKey={typeKey} />
+            </div>
+          )}
         </div>
+        {readings && (
+          <div className="lsc-fade" style={{ padding: FACE_READINGS_PAD, ...hideInOverview }}>
+            <ReadingsBlock nodeId={nodeId} hidden={notConnected} />
+          </div>
+        )}
       </>}
 
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports.
-          A face-only card shows its face at every zoom, with no level (D11) */}
+          A face-only card shows its face at every zoom: zoomed in beside its meter, zoomed out with
+          its level under it */}
       <OverviewFace
         nodeId={nodeId}
         typeKey={typeKey}
         label={label}
         art={overviewArt}
-        showLevel={overviewLevel && !faceOnly}
+        showLevel={overviewLevel && (!faceOnly || overview)}
         status={status}
         shown={overview || faceOnly}
         bypassed={isBypassed}
         height={faceOnly && readings && !overview ? minHeight : undefined}
+        reserveRight={meter && !overview ? FACE_METER_ROOM : 0}
+        spl={SPL_DB[typeKey]}
       />
     </div>
+  )
+}
+
+/** A face-only card's upright meter: what it plays or picks up — dB SPL where that is sound in the air. */
+function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
+  const { t }  = useTranslation()
+  const levels = useStereoLevels(nodeId)
+  const spl    = SPL_DB[typeKey]
+  return (
+    <MeterStrip
+      {...levels.output}
+      label={spl === undefined ? t.meters.output : t.meters.sound}
+      nodeId={nodeId} at="out" spl={spl}
+    />
   )
 }
 

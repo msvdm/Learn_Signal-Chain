@@ -104,11 +104,13 @@
   "meters": {
     "input": "Input",
     "output": "Output",
+    "sound": "Sound",
     "analogOut": "Analog out",
     "digitalOut": "Digital out",
     "axisIn": "0 dB in",
     "tipBeginner": "How strong the signal is: the taller the bar, the louder. Blue: too quiet. Green: good. Yellow: getting hot. Red: it distorts.",
     "tip": "A meter like a recording program's. The solid bar is the average over the last 0.3 seconds — how loud it sounds. The light bar shows the peaks, the loudest moments, falling back slowly. The mark is the loudest peak of the last 3 seconds. The grey fog at the bottom is the noise you hear when the music stops. The number under it is the average over the whole 10 seconds of sound.",
+    "splTip": "The number is how loud the sound is in the air, in dB SPL (sound pressure level): about 60 is a conversation, 85 a loud mix in a studio, and 100 or more harms your hearing if it goes on. The colour and the word judge the signal in the cable, as on every card — a microphone's is weak until a Preamp lifts it.",
     "curve": {
       "peak": "Peaks",
       "rms": "Average",

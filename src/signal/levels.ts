@@ -1,6 +1,8 @@
 // Levels: the dB scale signals are measured on, the readings a signal carries, its health zones,
 // how a reading is written, how signals add up, and the send knobs' audio taper.
 
+import type { TypeKey } from '../data/nodeRegistry'
+
 export type SignalHealth = 'too-quiet' | 'good' | 'hot' | 'clipping'
 export type SignalDomain = 'analog' | 'digital'
 
@@ -131,6 +133,28 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
   const unit = domain === 'digital' ? 'dBFS' : 'dBu'
   if (!isFinite(db) || db <= SILENCE_DB) return `-∞ ${unit}`
   return `${db >= 0 ? '+' : ''}${db.toFixed(1)} ${unit}`
+}
+
+// ── Sound in the air (dB SPL) ──────────────────────────────────────────────────
+
+/**
+ * Where a card turns sound into a signal or a signal into sound, its meter reads dB SPL — how loud
+ * the sound is in the air: its level in dBu plus this. A Microphone: a typical dynamic mic sends
+ * −52 dBu at 94 dB SPL (1 pascal), so its usual −60 dBu is a voice at 86. A speaker or headphones:
+ * 0 dBu in plays 95 dB SPL where you listen (−10 dBu: 85, the level studios mix at). A Guitar Amp:
+ * as loud as the Microphone in front of it hears it (process.ts GUITAR_REF_DB, a mic at −60 dBu).
+ */
+export const SPL_DB: Partial<Record<TypeKey, number>> = {
+  mic: 146, 'guitar-amp': 116, speaker: 95, 'active-speaker': 95, headphones: 95,
+}
+
+/** A dB SPL meter's bar runs 40 … 120 dB SPL: the dBu scale (−60 … +20) moved up by this. */
+export const SPL_SCALE_DB = 100
+
+/** A level as dB SPL (`spl`: its card's SPL_DB), in whole dB: "86 dB SPL"; −∞ below silence. */
+export function formatSpl(db: number, spl: number): string {
+  if (!isFinite(db) || db <= SILENCE_DB) return '-∞ dB SPL'
+  return `${Math.round(db + spl)} dB SPL`
 }
 
 /** `dbs` added as amplitudes (`per` 20) or powers (10). Silent ones add nothing; one alone comes out exactly as it went in. */

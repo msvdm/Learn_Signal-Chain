@@ -22,7 +22,7 @@ function BlownSpeakerIcon() {
 
 /**
  * Active speaker (amplifier built in), and Headphones, which work the same: a card with a big icon
- * and its Volume knob, at every zoom (no level — D11). Fed from an Amplifier it blows (condition
+ * and its Volume knob, at every zoom (its meter in dB SPL — D13). Fed from an Amplifier it blows (condition
  * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why. A hum from a DI
  * Box ground loop shows under it.
  */

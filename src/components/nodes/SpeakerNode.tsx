@@ -11,7 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 const Icon = NODE_LOOK.speaker.icon
 
 /**
- * Passive speaker: a card with a big icon, at every zoom (no level — D11; from Intermediate its
+ * Passive speaker: a card with a big icon, at every zoom (its meter in dB SPL — D13; from Intermediate its
  * readings under it). It has no amplifier inside — fed without an Amplifier before it, it stays silent,
  * and the card says so (crossed-out speaker + a note). A hum from a DI Box ground loop shows too.
  */

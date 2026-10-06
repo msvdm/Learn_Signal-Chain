@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
 import { MeterBar } from '../SignalMeter'
+import { levelParts } from '../../utils/readout'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { healthColor, formatDb, getHealth, louder } from '../../signal/levels'
+import { healthColor, getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
 import type { SideLevels } from '../../signal/levels'
 import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -37,7 +38,7 @@ interface OverviewFaceProps {
   label: string
   /** Shown instead of the name (a big icon, the control itself). */
   art?: OverviewArt
-  /** false = no level block: the art fills the card (a face-only card, the Pre / Post switch). */
+  /** false = no level block: the art fills the card (a face-only card zoomed in, the Pre / Post switch). */
   showLevel?: boolean
   /**
    * Said instead of the level ("Not connected": a source with nothing on its output — D11): in the
@@ -49,15 +50,20 @@ interface OverviewFaceProps {
   bypassed: boolean
   /** Height of the face (px) when it covers only the top of the card (a face-only card's readings below it). */
   height?: number
+  /** Room kept free on the right (px): a face-only card's upright meter, zoomed in */
+  reserveRight?: number
+  /** The level reads dB SPL, the sound in the air (its card's SPL_DB) */
+  spl?: number
 }
 
 /**
  * What a card shows when zoomed out (overview): its name, as big as it fits, and the level
  * leaving it. A layer over the card — the card's controls stay in place underneath, hidden,
  * so the card keeps exactly the same size and its ports stay where they are. A face-only card
- * (a source or a speaker: its icon) shows this face at every zoom, without a level (D11).
+ * (a source or a speaker: its icon) shows this face at every zoom: zoomed in beside its upright
+ * meter, without the level block; zoomed out with it (D13).
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, height }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, height, reserveRight = 0, spl }: OverviewFaceProps) {
   const { t }    = useTranslation()
   const detailed = useReadingsShown()
   // A string, so dragging the card (a new internal node each frame) does not re-render it
@@ -76,7 +82,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     const sans = cssVar('--lsc-font-sans')
     const mono = cssVar('--lsc-font-mono')
     // Inside the 1px border
-    const innerW = W - 2 - PAD * 2
+    const innerW = W - 2 - PAD * 2 - reserveRight
 
     const number = Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1)))
     const unit   = Math.round(number * UNIT_RATIO)
@@ -86,7 +92,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
 
     // The health word: one size for all four words (the longest fits), so it never resizes the row
     const longest  = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
-    const numberW  = textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth('dBu', sans, 600) * unit
+    const numberW  = textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
     const beside   = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
     const ownRow   = beside < number * HEALTH_MIN
     const health   = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
@@ -100,7 +106,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
     return { number, unit, bar, meterH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo])
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo, reserveRight, spl])
 
   if (!layout) return null
 
@@ -109,11 +115,11 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
   const side   = r ? louder(l, r) : l
   const db     = side.rms
   const state  = levels.outHealth
-  const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
+  const [value, unitText] = levelParts(db, levels.outDomain, spl)
   // One bar: the louder side in the card's colour; L / R each in the colour of its own health
   const bar = (s: SideLevels, which: 'l' | 'r' | 'louder', color?: string) => (
     <MeterBar
-      db={s.rms} height={layout.bar} domain={levels.outDomain}
+      db={s.rms} height={layout.bar} domain={levels.outDomain} shift={spl === undefined ? undefined : spl - SPL_SCALE_DB}
       color={color ?? (isFinite(s.rms) ? healthColor(getHealth(s.rms, levels.outDomain, s.peak)) : 'var(--lsc-border)')}
       peak={detailed ? s.peak : undefined} noise={detailed ? s.noise : undefined}
       // Moves only while it is shown (zoomed out, or a face-only card)
@@ -143,7 +149,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       {/* Name, centred both ways in the space above the level block */}
       <div
         style={{
-          position: 'absolute', left: PAD, right: PAD, top: PAD, height: layout.nameH,
+          position: 'absolute', left: PAD, right: PAD + reserveRight, top: PAD, height: layout.nameH,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >

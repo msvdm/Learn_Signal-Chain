@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENCE_DB, SILENT, TAPER_UNITY, UNITY_DBU,
-  ceilingOf, crestOf, dbToPercent, formatDb, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
+  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENCE_DB, SILENT, SPL_DB, TAPER_UNITY, UNITY_DBU,
+  ceilingOf, crestOf, dbToPercent, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
   sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
+import { GUITAR_REF_DB } from './process'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 // The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,
 // and the readings one side of a signal carries (peak, average, noise, hum).
@@ -178,5 +180,27 @@ describe('meters', () => {
     expect(humStrength(-20)).toBe(1)
     expect(humStrength(-100)).toBe(0)
     expect(humStrength(0)).toBe(1)
+  })
+})
+
+describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a speaker', () => {
+  it('a Microphone at its usual −60 dBu hears a voice at 86 dB SPL', () => {
+    expect(formatSpl(-60, SPL_DB.mic!)).toBe('86 dB SPL')
+  })
+
+  it('a speaker fed −10 dBu plays 85 dB SPL, the level studios mix at; Headphones the same', () => {
+    expect(formatSpl(-10, SPL_DB['active-speaker']!)).toBe('85 dB SPL')
+    expect(SPL_DB.headphones).toBe(SPL_DB['active-speaker'])
+    expect(SPL_DB.speaker).toBe(SPL_DB['active-speaker'])
+  })
+
+  it('a Guitar Amp reads as loud as the Microphone in front of it hears it', () => {
+    const amp = -30
+    const mic = (NODE_REGISTRY.mic.defaultParams.sensitivityDb as number) + amp - GUITAR_REF_DB
+    expect(amp + SPL_DB['guitar-amp']!).toBe(mic + SPL_DB.mic!)
+  })
+
+  it('silence reads −∞', () => {
+    expect(formatSpl(-Infinity, SPL_DB.mic!)).toBe('-∞ dB SPL')
   })
 })

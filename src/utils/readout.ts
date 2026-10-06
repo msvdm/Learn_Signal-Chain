@@ -1,4 +1,5 @@
-import { taperToDb } from '../signal/levels'
+import { formatDb, formatSpl, taperToDb } from '../signal/levels'
+import type { SignalDomain } from '../signal/levels'
 
 /** Readout of an audio-taper knob (0 = off, 75 = 0 dB, 100 = +10 dB). */
 export function formatTaperDb(position: number): string {
@@ -24,4 +25,11 @@ export function widestFormat(min: number, max: number, step: number, format: (v:
     if (text.length > widest.length) widest = text
   }
   return widest
+}
+
+/** A level as the meters print it (formatDb, or formatSpl with an `spl`): its number and its unit. */
+export function levelParts(db: number, domain: SignalDomain, spl?: number): [string, string] {
+  const text = spl === undefined ? formatDb(db, domain) : formatSpl(db, spl)
+  const at   = text.indexOf(' ')
+  return [text.slice(0, at), text.slice(at + 1)]
 }

@@ -1,13 +1,13 @@
 import { useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
-import { healthColor, dbToPercent, formatDb, getHealth, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
+import { healthColor, dbToPercent, getHealth, shifted, SPL_SCALE_DB, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useReadingsShown } from '../hooks/useReadingsShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
 import { useSignalStore } from '../store/signalStore'
 import { StableText } from './controls/StableText'
-import { LEVEL_SAMPLE } from '../utils/readout'
+import { LEVEL_SAMPLE, levelParts } from '../utils/readout'
 import type { MeterAt, MeterSide, MeterSource } from './meterPaint'
 import { alongScale, paintBar, readingOf } from './meterPaint'
 
@@ -43,9 +43,10 @@ export const STRIP_W = 76
 /**
  * One meter bar on the −60…+20 dB scale: `up` from the bottom (a desk's or a DAW's meter) or
  * `right` from the left. The still picture: `side.rms` (the bar), its peaks and noise when
- * `detailed`. With a `source` it moves while the chain plays.
+ * `detailed`. With a `source` it moves while the chain plays. `shift`: every reading moved by this
+ * on the bar (a dB SPL meter's scale).
  */
-function MeterTrack({ side, color, domain, detailed, direction, thickness, length, source, style }: {
+function MeterTrack({ side: levels, color, domain, detailed, direction, thickness, length, source, shift = 0, style }: {
   side: SideLevels
   color: string
   domain: SignalDomain
@@ -56,15 +57,18 @@ function MeterTrack({ side, color, domain, detailed, direction, thickness, lengt
   /** Along it (px); none: it fills its box */
   length?: number
   source?: MeterSource
+  shift?: number
   style?: CSSProperties
 }) {
+  const side = shift ? shifted(levels, shift) : levels
   const ref  = useRef<HTMLDivElement>(null)
   const rms  = useRef<HTMLDivElement>(null)
   const peak = useRef<HTMLDivElement>(null)
   const hold = useRef<HTMLDivElement>(null)
   const up = direction === 'up'
   useLiveMeter(source && detailed ? source.nodeId : undefined, ref, (live, i) => {
-    if (source) paintBar({ rms: rms.current, peak: peak.current, hold: hold.current }, up, readingOf(live, source.at, source.side, i))
+    const r = source ? readingOf(live, source.at, source.side, i) : null
+    if (source) paintBar({ rms: rms.current, peak: peak.current, hold: hold.current }, up, r && shift ? { rms: r.rms + shift, peak: r.peak + shift, hold: r.hold + shift } : r)
   })
   // Ticks widen with a thick bar (the overview meter), so they stay visible zoomed out
   const tick = Math.max(1, Math.round(thickness / 8))
@@ -119,7 +123,7 @@ function MeterTrack({ side, color, domain, detailed, direction, thickness, lengt
 }
 
 /** A horizontal level bar (the overview face): the average, and from Intermediate its peaks and noise (`peak` / `noise` set). */
-export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise, source }: {
+export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise, source, shift }: {
   db: number
   color: string
   height?: number
@@ -127,25 +131,24 @@ export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise
   peak?: number
   noise?: number
   source?: MeterSource
+  /** Every reading moved by this on the bar (a dB SPL meter) */
+  shift?: number
 }) {
   const detailed = peak !== undefined
   return (
     <MeterTrack
       side={{ rms: db, peak: peak ?? -Infinity, noise: noise ?? -Infinity, hum: -Infinity }}
-      color={color} domain={domain} detailed={detailed} direction="right" thickness={height} source={source}
+      color={color} domain={domain} detailed={detailed} direction="right" thickness={height} source={source} shift={shift}
     />
   )
 }
-
-/** A level as the meters print it (formatDb): its number and its unit. */
-const levelParts = (db: number, domain: SignalDomain) => formatDb(db, domain).split(' ')
 
 /**
  * A card's upright meter, on its side of the card: what arrives (left) or leaves (right). Its name,
  * the bar — two, L and R, for a stereo signal — then the level (the average over the loop) and the
  * health word. It takes the height its card gives it; its width is its longest word.
  */
-export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at }: {
+export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at, spl }: {
   /** The signal, or its left side when `r` is set */
   l: SideLevels
   /** Right side: two bars */
@@ -156,6 +159,8 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at 
   /** The card and which of its signals: it moves while the chain plays */
   nodeId: string
   at: MeterAt
+  /** Reads dB SPL, the sound in the air (its card's SPL_DB): the number, and the bar on 40 … 120 dB SPL */
+  spl?: number
 }) {
   const { t }    = useTranslation()
   const detailed = useReadingsShown()
@@ -163,13 +168,14 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at 
   const shown    = !useSignalStore((s) => s.overview)
   const color    = healthColor(health)
   const sides: [string, SideLevels, MeterSide][] = r ? [['L', l, 'l'], ['R', r, 'r']] : [['', l, 'l']]
-  const [value, unit] = levelParts(l.rms, domain)
+  const [value, unit] = levelParts(l.rms, domain, spl)
   const words    = Object.values(t.health)
+  const tip      = detailed ? t.meters.tip : t.meters.tipBeginner
 
   return (
     <div
       className="lsc-meter-strip"
-      title={detailed ? t.meters.tip : t.meters.tipBeginner}
+      title={spl === undefined ? tip : `${t.meters.splTip}\n\n${tip}`}
       style={{ width: STRIP_W, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}
     >
       <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
@@ -183,7 +189,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at 
               // Two sides: each in the colour of its own health (clipping from its own peaks)
               color={r ? (isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'var(--lsc-border)') : color}
               domain={domain} detailed={detailed} direction="up" thickness={r ? 11 : 16}
-              source={shown ? { nodeId, at, side: which } : undefined}
+              source={shown ? { nodeId, at, side: which } : undefined} shift={spl === undefined ? 0 : spl - SPL_SCALE_DB}
               style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
             />
             <span style={{ fontSize: 10, fontWeight: 700, lineHeight: '11px', color: 'var(--lsc-fg-muted)', visibility: ch ? 'visible' : 'hidden' }}>
@@ -198,7 +204,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at 
         {r ? sides.map(([ch, side]) => (
           <div key={ch} style={{ color: 'var(--lsc-fg-muted)' }}>
             <span style={{ fontWeight: 700 }}>{ch}</span>{' '}
-            <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelParts(side.rms, domain)[0]}</StableText>
+            <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelParts(side.rms, domain, spl)[0]}</StableText>
           </div>
         )) : <>
           <div style={{ color }}><StableText reserve={[LEVEL_SAMPLE]} align="center">{value}</StableText></div>
