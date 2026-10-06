@@ -4,7 +4,8 @@ import { useStore } from '@xyflow/react'
 import { MeterBar } from '../SignalMeter'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { healthColor, formatDb, louder } from '../../signal/levels'
+import { healthColor, formatDb, getHealth, louder } from '../../signal/levels'
+import type { SideLevels } from '../../signal/levels'
 import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
@@ -16,6 +17,8 @@ import { FaceNote, WithNote } from './FaceNote'
 const PAD         = 20     // around the name and the level block
 const NAME_GAP    = 12     // between the name area and the level block
 const METER_GAP   = 10     // between the meter and the level row
+const SIDES_BAR   = 0.7    // stereo: each of the L and R bars, relative to the one mono bar
+const SIDES_GAP   = 0.35   // stereo: between them, relative to the mono bar
 const HEALTH_GAP  = 12     // between the level number and the health word
 const NAME_MAX    = 96
 const NUMBER_MIN  = 24
@@ -63,6 +66,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     return m?.width && m?.height ? `${m.width}x${m.height}` : ''
   })
   const levels = useStereoLevels(nodeId)
+  // A stereo signal leaving: two bars, L above R
+  const stereo = levels.output.r !== undefined
 
   const layout = useMemo(() => {
     if (!sizeKey) return null
@@ -76,6 +81,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     const number = Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1)))
     const unit   = Math.round(number * UNIT_RATIO)
     const meter  = Math.round(number / 2)
+    const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
+    const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
 
     // The health word: one size for all four words (the longest fits), so it never resizes the row
     const longest  = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
@@ -84,7 +91,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     const ownRow   = beside < number * HEALTH_MIN
     const health   = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
 
-    const levelH = showLevel ? meter + METER_GAP + number + (ownRow ? 4 + health : 0) + NAME_GAP : 0
+    const levelH = showLevel ? meterH + METER_GAP + number + (ownRow ? 4 + health : 0) + NAME_GAP : 0
     const tag    = Math.round(number * 0.5)
     const tagH   = bypassed ? tag * 1.4 + 2 + 8 : 0
     const nameH  = H - 2 - PAD * 2 - levelH - tagH
@@ -92,8 +99,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
-    return { number, unit, meter, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height])
+    return { number, unit, bar, meterH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo])
 
   if (!layout) return null
 
@@ -103,6 +110,16 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
   const db     = side.rms
   const state  = levels.outHealth
   const [value, unitText] = formatDb(db, levels.outDomain).split(' ')
+  // One bar: the louder side in the card's colour; L / R each in the colour of its own health
+  const bar = (s: SideLevels, which: 'l' | 'r' | 'louder', color?: string) => (
+    <MeterBar
+      db={s.rms} height={layout.bar} domain={levels.outDomain}
+      color={color ?? (isFinite(s.rms) ? healthColor(getHealth(s.rms, levels.outDomain, s.peak)) : 'var(--lsc-border)')}
+      peak={detailed ? s.peak : undefined} noise={detailed ? s.noise : undefined}
+      // Moves only while it is shown (zoomed out, or a face-only card)
+      source={shown ? { nodeId, at: 'out', side: which } : undefined}
+    />
+  )
   const healthWord = (
     <StableText
       reserve={Object.values(t.health)}
@@ -168,7 +185,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
         <div
           style={{
             position: 'absolute', left: PAD, right: PAD, bottom: PAD,
-            height: layout.meter + METER_GAP + layout.number + (layout.ownRow ? 4 + layout.health : 0),
+            height: layout.meterH + METER_GAP + layout.number + (layout.ownRow ? 4 + layout.health : 0),
             display: 'flex', alignItems: 'center',
             fontSize: Math.round(layout.number * 0.75), fontWeight: 700, lineHeight: 1.1,
             color: 'var(--lsc-fg-muted)',
@@ -178,14 +195,18 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
         </div>
       )}
 
-      {/* Level leaving the card: meter, then reading + health word */}
+      {/* Level leaving the card: meter (L and R in stereo), then reading + health word */}
       {showLevel && !status && <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: PAD }}>
-        <MeterBar
-          db={db} color={healthColor(state)} height={layout.meter} domain={levels.outDomain}
-          peak={detailed ? side.peak : undefined} noise={detailed ? side.noise : undefined}
-          // Moves only while it is shown (zoomed out, or a face-only card)
-          source={shown ? { nodeId, at: 'out', side: 'louder' } : undefined}
-        />
+        {r ? (
+          <div style={{ height: layout.meterH, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            {([['L', l, 'l'], ['R', r, 'r']] as const).map(([letter, s, which]) => (
+              <div key={which} style={{ height: layout.bar, display: 'flex', alignItems: 'center', gap: layout.bar * 0.6 }}>
+                <span style={{ fontSize: layout.meterH - layout.bar, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)' }}>{letter}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>{bar(s, which)}</div>
+              </div>
+            ))}
+          </div>
+        ) : bar(side, 'louder', healthColor(state))}
         <div
           style={{
             marginTop: METER_GAP, height: layout.number,
