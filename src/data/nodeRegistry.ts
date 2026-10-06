@@ -156,10 +156,10 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { levelDb: -30 },
   },
   generator: {
-    // A test sound of its own, at the level its knob sets (0 dBu: unity)
-    category: 'source', inputs: [], outputs: OUT, stereo: 'never',
+    // A test sound of its own, at the level its knob sets (0 dBu: unity); Stereo: the same on both sides
+    category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
     minLevel: 'intermediate', bypass: false,
-    defaultParams: { sound: 'sine', levelDb: 0 },
+    defaultParams: { sound: 'sine', levelDb: 0, stereo: false },
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -361,7 +361,7 @@ export interface ParamTypes {
   character: Character
   /** Generator: what it plays (GENERATOR_SOUNDS) */
   sound: GeneratorSound
-  /** The Mono | Stereo switch (Line In, Aux Bus) */
+  /** The Mono | Stereo switch (Line In, Generator, Aux Bus) */
   stereo: boolean
   preampDb: number
   gainDb: number

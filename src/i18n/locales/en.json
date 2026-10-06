@@ -576,7 +576,7 @@
       "tip": "Feed it from an Instrument, or from a DI Box's Direct Out to send the same guitar to the desk as well. Turn its Volume down and the microphone in front of it gets quieter too."
     },
     "generator": {
-      "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise) or short pulses (Click). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around.",
+      "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise) or short pulses (Click). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around. Switch it to Stereo to test a stereo chain: the same sound on Left and Right, on one wire.",
       "why": "Engineers send a known sound through a chain to check every stage before the musicians arrive. Every sound has loudest moments (its peaks) above its average level, and the gap depends on the sound: about 3 dB for a sine, 18 dB for clicks. The meters show the average; the peaks are what clip.",
       "tip": "Try this: set Sine at +10 dBu — its wire is yellow (hot). Switch to Click at the same level and the wire turns red: the clicks' peaks reach the clip level (+20 dBu) while their average has not moved.",
       "readings": "At the same Level the Peaks reading depends on the sound: Sine 3 dB above the average, Noise 12, Click 18 — so at 0 dBu Room before clipping reads 17, 8 and 2 dB (careful). Its own hiss is 90 dB below the signal, cleaner than any instrument: any hiss you see further along was added by the chain."

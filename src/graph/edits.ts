@@ -85,7 +85,7 @@ export function withPositions(graph: GraphView, moves: Map<string, { x: number; 
 }
 
 /**
- * The graph with an element's Mono / Stereo switch set (Line In, Aux Bus); null when nothing
+ * The graph with an element's Mono / Stereo switch set (Line In, Generator, Aux Bus); null when nothing
  * changes. Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l'
  * (into a Matrix Bus it then becomes the Matrix send); Stereo → Mono moves 'out-l', 'out-r', the
  * Matrix send and a Main Fader's 'mix' back to 'out'.

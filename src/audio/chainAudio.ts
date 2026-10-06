@@ -237,7 +237,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         : twoSides(gain(sides.l, inSig), gain(sides.r, inSig))
     } else if (card.mode === 'source') {
       outSig = clippedIfNear(source(card), card, 'analog')
-      // Line In set to Stereo: the same on both sides
+      // Line In or Generator set to Stereo: the same on both sides
       if (isNodeStereo(node)) outSig = gain(0, outSig, 2)
     } else {
       // One channel, or both sides: a stereo signal through a follow card, a stereo bus (linked

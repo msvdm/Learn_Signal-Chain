@@ -244,6 +244,23 @@ describe('on a stereo bus a mono wire lands on both sides, a side wire keeps its
   })
 })
 
+describe('a Generator set to Stereo sends the same sound on both sides of one wire', () => {
+  const result = signalOf([
+    card('gen', 'generator', { stereo: true, levelDb: -6 }),
+    card('bal', 'pan', { panPosition: 0 }),
+  ], [wire('gen', 'bal')])
+
+  expectCards(result, {
+    gen: { out: [-6, -6], health: 'good' },
+    // Balance fully left: the right side fades out
+    bal: { in: [-6, -6], out: [-6, S], health: 'good', role: 'balance' },
+  })
+
+  it('is one stereo wire', () => {
+    expectWire(result, 'gen:out', 'stereo', -6, -6)
+  })
+})
+
 /**
  * A guitar through a DI Box: its Direct Out to a Guitar Amp with a mic in front of it, its XLR Out
  * to a Preamp, a fader and a speaker.

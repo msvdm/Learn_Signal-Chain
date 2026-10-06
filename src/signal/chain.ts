@@ -283,7 +283,7 @@ export function runChain(plans: CardPlan[]): ChainLevels {
       }
       side = { domain: inputDomain }
     } else if (card.mode === 'source') {
-      // Line In set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
+      // Line In or Generator set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
       const only = runSide(null)
       side   = only
       inSig  = SILENT_WIRE
