@@ -1,7 +1,7 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import {
   NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT,
-  canSplit, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide,
+  canSplit, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
@@ -46,12 +46,12 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
 
 /**
  * True when this card splits a stereo signal into Left and Right: a Fader fed a bus's mix (the
- * Main Fader), or a Graphic EQ / Amplifier fed a stereo wire. A Graphic EQ / Amplifier with
+ * Main Fader) or a Limiter fed one, or a Graphic EQ / Amplifier fed a stereo wire. A Graphic EQ / Amplifier with
  * nothing plugged in keeps the layout its wires show, so plugging it back in restores L and R.
  */
 export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: GraphView): boolean {
   if (!canSplit(node.typeKey)) return false
-  if (node.typeKey === 'fader') return mixBusOf(node.id, view) !== null
+  if (splitsOnlyMix(node.typeKey)) return mixBusOf(node.id, view) !== null
   const graph = graphOf(view)
   const wire  = graph.into(node.id)[0]
   if (!wire) {

@@ -98,7 +98,8 @@ function getInitialCanvas() {
     const saved = parseChainFile(JSON.parse(localStorage.getItem(CANVAS_KEY) ?? 'null'))
     if (saved && saved.chain.nodes.length > 0) {
       const { nodes, edges, name, level } = saved.chain
-      return { nodes, edges, chainName: name, complexityLevel: level }
+      // Its L / R takeovers settled as today's rules have them (as every change is: commitGraph)
+      return { nodes, edges: reconcileMainFaders(EMPTY_GRAPH, { nodes, edges }), chainName: name, complexityLevel: level }
     }
   } catch { /* a broken save: start blank */ }
   return { nodes: [], edges: [], chainName: '', complexityLevel: getInitialComplexityLevel() }

@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIX_PORT, canSplit, isStereoBus, portSide } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIX_PORT, canSplit, isStereoBus, portSide, splitsOnlyMix } from '../data/nodeRegistry'
 import type { GraphView } from '../graph/graph'
 import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '../graph/queries'
 
@@ -8,9 +8,9 @@ import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '.
 // The wire becomes the Mix wire (the whole stereo mix), the fader gets Left / Right outputs,
 // and every wire on the bus's L / R (and its Matrix send) moves to the fader. Effects may sit
 // between the bus's Mix output and the fader.
-// The Graphic EQ and the Amplifier do the same, from whichever card holds the L / R at that point
-// (a bus, its Main Fader, another EQ or amp): the chain carries one stereo wire up to the last of
-// them, which sends Left and Right out. The Matrix send stays where it is (it is after the fader).
+// The Graphic EQ, the Amplifier and the Limiter do the same, from whichever card holds the L / R at
+// that point (a bus, its Main Fader, another EQ, amp or limiter): the chain carries one stereo wire
+// up to the last of them, which sends Left and Right out. A Fader or Limiter only after a bus. The Matrix send stays where it is (it is after the fader).
 // Matrix send: the same idea for Matrix Buses. A stereo bus's (or Main Fader's) L or R wired to a
 // Matrix Bus becomes its Matrix send — one stereo wire, after the fader.
 // The ports themselves are read from the wires (getPorts), so these functions only move wires.
@@ -70,8 +70,9 @@ function takeovers(graph: GraphView): Map<string, string> {
 }
 
 /**
- * Applies the takeover rule to every Fader, Graphic EQ or Amplifier wired straight to the L or R
- * of a card that holds them (a Fader only after a bus — that makes it the Main Fader).
+ * Applies the takeover rule to every Fader, Limiter, Graphic EQ or Amplifier wired straight to the L
+ * or R of a card that holds them (a Fader or Limiter only after a bus — that makes a Fader the Main
+ * Fader).
  * Also tidies cards whose layout changed: one that no longer splits folds its L / R / Mix wires
  * back onto its one output; one that now splits moves its one-output wires to L.
  */
@@ -86,48 +87,54 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
       : e)
   let next = edges
 
-  for (let guard = 0; guard < 100; guard++) {
-    next = matrixSends(next)
-    const graph = { nodes, edges: next }
-    const hit = next.find((e) => {
-      const src = byId.get(e.source)
-      const tgt = byId.get(e.target)
-      if (!src || !tgt || portSide(e.sourceHandle) === null || !canSplit(tgt.typeKey)) return false
-      if (!holdsSides(src, graph)) return false
-      // A Fader takes the sides over only from a bus's mix (it becomes the Main Fader)
-      return tgt.typeKey !== 'fader' || isStereoBus(src) || mixBusOf(src.id, graph) !== null
-    })
-    if (!hit) break
-    const side   = portSide(hit.sourceHandle)
-    const target = byId.get(hit.target)!
-    // The Matrix send is after the fader: only a Main Fader takes it over
-    const follows = (portId: string) => portSide(portId) !== null || (portId === MATRIX_PORT && target.typeKey === 'fader')
-    next = next.map((e) => {
-      if (e.id === hit.id) return { ...e, sourceHandle: MIX_PORT }
-      // The holder's L / R wires (and a bus's Matrix send) move to the same output of the new card
-      if (e.source === hit.source && follows(e.sourceHandle)) return moveSource(e, hit.target, e.sourceHandle)
-      // What the new card already fed stays on the side its new wire came from
-      if (e.source === hit.target && e.sourceHandle === 'out') return { ...e, sourceHandle: `out-${side}` }
-      return e
-    })
-  }
+  // Takeovers, then tidying; a card that starts splitting (a Limiter fed a bus's mix) may be
+  // taken over in turn by the card after it, so again until the tidy changes nothing
+  for (let round = 0; round < 10; round++) {
+    for (let guard = 0; guard < 100; guard++) {
+      next = matrixSends(next)
+      const graph = { nodes, edges: next }
+      const hit = next.find((e) => {
+        const src = byId.get(e.source)
+        const tgt = byId.get(e.target)
+        if (!src || !tgt || portSide(e.sourceHandle) === null || !canSplit(tgt.typeKey)) return false
+        if (!holdsSides(src, graph)) return false
+        // A Fader (it becomes the Main Fader) or Limiter takes the sides over only from a bus's mix
+        return !splitsOnlyMix(tgt.typeKey) || isStereoBus(src) || mixBusOf(src.id, graph) !== null
+      })
+      if (!hit) break
+      const side   = portSide(hit.sourceHandle)
+      const target = byId.get(hit.target)!
+      // The Matrix send is after the fader: only a Main Fader takes it over
+      const follows = (portId: string) => portSide(portId) !== null || (portId === MATRIX_PORT && target.typeKey === 'fader')
+      next = next.map((e) => {
+        if (e.id === hit.id) return { ...e, sourceHandle: MIX_PORT }
+        // The holder's L / R wires (and a bus's Matrix send) move to the same output of the new card
+        if (e.source === hit.source && follows(e.sourceHandle)) return moveSource(e, hit.target, e.sourceHandle)
+        // What the new card already fed stays on the side its new wire came from
+        if (e.source === hit.target && e.sourceHandle === 'out') return { ...e, sourceHandle: `out-${side}` }
+        return e
+      })
+    }
 
-  // Tidy until settled: one card's change can change what the next one receives
-  for (let pass = 0; pass < 10; pass++) {
-    const graph   = { nodes, edges: next }
-    let changed   = false
-    next = next.map((e) => {
-      const src = byId.get(e.source)
-      if (!src || !canSplit(src.typeKey)) return e
-      const splits = splitsStereo(src, graph)
-      let handle   = e.sourceHandle
-      if (!splits && (isSideOutput(handle) || handle === MIX_PORT)) handle = 'out'
-      else if (splits && handle === 'out') handle = 'out-l'
-      if (handle === e.sourceHandle) return e
-      changed = true
-      return { ...e, sourceHandle: handle }
-    })
-    if (!changed) break
+    // Tidy until settled: one card's change can change what the next one receives
+    let tidied = false
+    for (let pass = 0; pass < 10; pass++) {
+      const graph   = { nodes, edges: next }
+      let changed   = false
+      next = next.map((e) => {
+        const src = byId.get(e.source)
+        if (!src || !canSplit(src.typeKey)) return e
+        const splits = splitsStereo(src, graph)
+        let handle   = e.sourceHandle
+        if (!splits && (isSideOutput(handle) || handle === MIX_PORT)) handle = 'out'
+        else if (splits && handle === 'out') handle = 'out-l'
+        if (handle === e.sourceHandle) return e
+        changed = tidied = true
+        return { ...e, sourceHandle: handle }
+      })
+      if (!changed) break
+    }
+    if (!tidied) break
   }
 
   // (The tidy can move a one-output wire to L)

@@ -68,11 +68,11 @@ export type NodeTypeDef = {
   bus?: 'mix' | 'matrix'
   /**
    * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
-   * separately: the Fader after a bus (Main Fader), the Graphic EQ and the Amplifier (a two-channel
-   * amp). The Graphic EQ and the Amplifier do it for any stereo wire; fed one channel they stay
-   * single-channel.
+   * separately: the Graphic EQ and the Amplifier (a two-channel amp) for any stereo wire (`true`;
+   * fed one channel they stay single-channel); the Fader (Main Fader) and the Limiter only for a
+   * bus's mix (`'mix'`: a stereo channel through them stays one wire).
    */
-  splits?: true
+  splits?: true | 'mix'
   /** Dynamics that run "linked" in stereo: the louder side decides, both sides get the same change. */
   linked?: true
   /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
@@ -205,7 +205,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   limiter: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, linked: true,
+    minLevel: 'intermediate', bypass: true, linked: true, splits: 'mix',
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   deesser: {
@@ -243,7 +243,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, splits: true, freeSize: { w: 198, h: 541 },
+    minLevel: 'beginner', bypass: false, splits: 'mix', freeSize: { w: 198, h: 541 },
     defaultParams: { faderDb: 0 },
   },
   switch: {
@@ -428,9 +428,14 @@ export function isMixBus(typeKey: TypeKey): boolean {
   return NODE_REGISTRY[typeKey].bus === 'mix'
 }
 
-/** A Fader, Graphic EQ or Amplifier: takes a stereo mix's L / R over (NodeTypeDef `splits`). */
+/** A Fader, Limiter, Graphic EQ or Amplifier: takes a stereo mix's L / R over (NodeTypeDef `splits`). */
 export function canSplit(typeKey: TypeKey): boolean {
-  return NODE_REGISTRY[typeKey].splits === true
+  return NODE_REGISTRY[typeKey].splits !== undefined
+}
+
+/** A Fader or Limiter: takes L / R over only from a bus's mix (NodeTypeDef `splits: 'mix'`). */
+export function splitsOnlyMix(typeKey: TypeKey): boolean {
+  return NODE_REGISTRY[typeKey].splits === 'mix'
 }
 
 /**
