@@ -86,15 +86,25 @@ const CLIP_MARGIN_DB = { sure: 1, guessed: 24 }
 /** Web Audio's high- and low-pass take their Q in dB: a 2nd-order Butterworth is −3.01 dB (0.707). */
 const BUTTERWORTH_Q_DB = 20 * Math.log10(Math.SQRT1_2)
 
-/** Cards the number engine cannot follow closely: a filter or a dynamics card, and everything after one. */
-function unsure(plans: CardPlan[]): Set<string> {
+/**
+ * Cards the number engine cannot follow closely: a filter or a dynamics card, a stereo file played in
+ * stereo (it puts both sides at the knob's level), and everything after one.
+ */
+function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
   const ids = new Set<string>()
   const guess = new Set(['eq', 'graphic-eq', 'hpf'])
   for (const card of plans) {
-    const own = guess.has(card.node.typeKey) || Boolean(NODE_REGISTRY[card.node.typeKey].linked)
+    const own = guess.has(card.node.typeKey) || Boolean(NODE_REGISTRY[card.node.typeKey].linked) || stereoFileOf(card, sounds) !== undefined
     if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.from.slice(0, u.from.lastIndexOf(':'))))) ids.add(card.node.id)
   }
   return ids
+}
+
+/** What a Line In set to Stereo plays: a stereo file's left and right (none: a mono file, or anything else). */
+function stereoFileOf(card: CardPlan, sounds: ChainSounds): AudioBuffer | undefined {
+  if (card.mode !== 'source' || !card.plays || !isNodeStereo(card.node)) return undefined
+  const kind = soundKindOf(card.node)
+  return kind === 'sine' || kind === 'noise' || kind === 'click' ? undefined : sounds.loops.get(kind)?.stereo
 }
 
 /**
@@ -106,7 +116,7 @@ function unsure(plans: CardPlan[]): Set<string> {
 export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: ChainLevels, sounds: ChainSounds, music: boolean): Tap[] {
   const taps: Tap[] = []
   const wires = new Map<string, Feed>()
-  const guessed = unsure(plans)
+  const guessed = unsure(plans, sounds)
   let noises = 0
 
   const silence = (channels: 1 | 2): Sig => ({ parts: [], channels })
@@ -132,11 +142,11 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   /** Signals added together. */
   const plus = (...xs: Sig[]): Sig => ({ parts: xs.flatMap((x) => x.parts), channels: xs[0].channels })
 
-  /** A buffer played over and over from `offset`, between `start` and `end`. */
+  /** A buffer (one channel, or a stereo file's two) played over and over from `offset`, between `start` and `end`. */
   const playing = (buffer: AudioBuffer, start = 0, end = buffer.duration, offset = start): Sig => {
     const source = new AudioBufferSourceNode(ctx, { buffer, loop: true, loopStart: start, loopEnd: end })
     source.start(0, offset)
-    return one(source, 1)
+    return one(source, buffer.numberOfChannels === 2 ? 2 : 1)
   }
 
   /** A signal of an RMS of 1 played at the reading `db`. */
@@ -237,7 +247,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         : twoSides(gain(sides.l, inSig), gain(sides.r, inSig))
     } else if (card.mode === 'source') {
       outSig = clippedIfNear(source(card), card, 'analog')
-      // Line In or Generator set to Stereo: the same on both sides
+      // Line In or Generator set to Stereo: one channel the same on both sides (a stereo file is already both)
       if (isNodeStereo(node)) outSig = gain(0, outSig, 2)
     } else {
       // One channel, or both sides: a stereo signal through a follow card, a stereo bus (linked
@@ -283,7 +293,10 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   }
   return taps
 
-  /** What a source sends: its sound at its level, and its own noise. A Microphone fed a Guitar Amp hears the amp. */
+  /**
+   * What a source sends: its sound at its level, and its own noise. A Microphone fed a Guitar Amp
+   * hears the amp. A Line In set to Stereo plays a stereo file's left and right, its noise on both.
+   */
   function source(card: CardPlan): Sig {
     const { node } = card
     const level = node.typeKey === 'mic' ? param(node, 'sensitivityDb') : param(node, 'levelDb')
@@ -296,7 +309,9 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       sound = playing(sounds.generator.get(kind)!)
     } else {
       const loop = sounds.loops.get(kind)!
-      sound = playing(loop.buffer, loop.start, loop.end)
+      const both = stereoFileOf(card, sounds)
+      if (both) return plus(atLevel(level, playing(both, loop.start, loop.end)), gain(0, noise, 2))
+      sound = playing(loop.mono, loop.start, loop.end)
     }
     return plus(atLevel(level, sound), noise)
   }
