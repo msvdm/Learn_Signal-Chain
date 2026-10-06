@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
-import { MeterBar } from '../SignalMeter'
+import { LiveLevel, MeterBar } from '../SignalMeter'
+import type { LiveReading } from '../SignalMeter'
 import { levelParts } from '../../utils/readout'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -18,6 +19,8 @@ import { FaceNote, WithNote } from './FaceNote'
 const PAD         = 20     // around the name and the level block
 const NAME_GAP    = 12     // between the name area and the level block
 const METER_GAP   = 10     // between the meter and the level row
+const ROW_GAP     = 6      // between the Peak and the RMS rows (from Intermediate)
+const LEVEL_SHARE = 0.5    // the most of the face's height the level block takes
 const SIDES_BAR   = 0.7    // stereo: each of the L and R bars, relative to the one mono bar
 const SIDES_GAP   = 0.35   // stereo: between them, relative to the mono bar
 const HEALTH_GAP  = 12     // between the level number and the health word
@@ -84,20 +87,34 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     // Inside the 1px border
     const innerW = W - 2 - PAD * 2 - reserveRight
 
-    const number = Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1)))
-    const unit   = Math.round(number * UNIT_RATIO)
-    const meter  = Math.round(number / 2)
-    const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
-    const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
-
+    // From Intermediate a Peak and an RMS row, each with its name in front (as wide as the longer, per px of its size)
+    const labelEm = detailed ? Math.max(textWidth(t.meters.peak, sans, 600), textWidth(t.meters.rms, sans, 600)) : 0
     // The health word: one size for all four words (the longest fits), so it never resizes the row
-    const longest  = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
-    const numberW  = textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
-    const beside   = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
-    const ownRow   = beside < number * HEALTH_MIN
-    const health   = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
+    const longest = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
 
-    const levelH = showLevel ? meterH + METER_GAP + number + (ownRow ? 4 + health : 0) + NAME_GAP : 0
+    /** The level block at a number size: the meter, the rows, the health word beside them or under. */
+    const sized = (number: number) => {
+      const unit   = Math.round(number * UNIT_RATIO)
+      // As thick as the number is tall: a bar to read from afar
+      const meter  = number
+      const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
+      const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
+      const labelW = detailed ? Math.ceil(labelEm * unit + unit * 0.4) : 0
+      const numberW = labelW + textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
+      const beside = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
+      const ownRow = beside < number * HEALTH_MIN
+      const health = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
+      // The meter and its numbers (a status, "Not connected", takes the same height)
+      const blockH = meterH + METER_GAP + number + (detailed ? ROW_GAP + number : 0) + (ownRow ? 4 + health : 0)
+      return { number, unit, bar, meterH, labelW, ownRow, health, blockH }
+    }
+    let level = sized(Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1))))
+    // At most half the face: on a small card the name (or the icon) keeps its room, the numbers get smaller
+    while (showLevel && level.number > NUMBER_MIN && level.blockH + NAME_GAP > (H - 2 - PAD * 2) * LEVEL_SHARE) {
+      level = sized(level.number - 1)
+    }
+    const { number, unit, bar, meterH, labelW, ownRow, health, blockH } = level
+    const levelH = showLevel ? blockH + NAME_GAP : 0
     const tag    = Math.round(number * 0.5)
     const tagH   = bypassed ? tag * 1.4 + 2 + 8 : 0
     const nameH  = H - 2 - PAD * 2 - levelH - tagH
@@ -105,8 +122,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
-    return { number, unit, bar, meterH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo, reserveRight, spl])
+    return { number, unit, bar, meterH, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo, reserveRight, spl, detailed])
 
   if (!layout) return null
 
@@ -115,7 +132,26 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
   const side   = r ? louder(l, r) : l
   const db     = side.rms
   const state  = levels.outHealth
-  const [value, unitText] = levelParts(db, levels.outDomain, spl)
+  const unitText = levelParts(db, levels.outDomain, spl)[1]
+  /** A level row's number and unit — named Peak or RMS from Intermediate, where it moves with the sound. */
+  const number = (which: LiveReading) => (
+    <span>
+      {detailed && (
+        <span style={{ display: 'inline-block', width: layout.labelW, fontSize: layout.unit, fontWeight: 600, color: 'var(--lsc-fg-muted)' }}>
+          {which === 'hold' ? t.meters.peak : t.meters.rms}
+        </span>
+      )}
+      <LiveLevel
+        db={which === 'hold' ? side.peak : db} reading={which}
+        source={shown && detailed ? { nodeId, at: 'out', side: 'louder' } : undefined}
+        domain={levels.outDomain} spl={spl} reserve={NUMBER_SAMPLE} align="end"
+        style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: layout.number, fontWeight: 700, color: 'var(--lsc-fg)' }}
+      />
+      <span style={{ fontSize: layout.unit, fontWeight: 600, marginLeft: layout.unit * 0.25, color: 'var(--lsc-fg-muted)' }}>
+        {unitText}
+      </span>
+    </span>
+  )
   // One bar: the louder side in the card's colour; L / R each in the colour of its own health
   const bar = (s: SideLevels, which: 'l' | 'r' | 'louder', color?: string) => (
     <MeterBar
@@ -191,7 +227,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
         <div
           style={{
             position: 'absolute', left: PAD, right: PAD, bottom: PAD,
-            height: layout.meterH + METER_GAP + layout.number + (layout.ownRow ? 4 + layout.health : 0),
+            height: layout.blockH,
             display: 'flex', alignItems: 'center',
             fontSize: Math.round(layout.number * 0.75), fontWeight: 700, lineHeight: 1.1,
             color: 'var(--lsc-fg-muted)',
@@ -220,20 +256,15 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
             lineHeight: 1, whiteSpace: 'nowrap',
           }}
         >
-          <span>
-            <StableText
-              reserve={[NUMBER_SAMPLE]}
-              align="end"
-              style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: layout.number, fontWeight: 700, color: 'var(--lsc-fg)' }}
-            >
-              {value}
-            </StableText>
-            <span style={{ fontSize: layout.unit, fontWeight: 600, marginLeft: layout.unit * 0.25, color: 'var(--lsc-fg-muted)' }}>
-              {unitText}
-            </span>
-          </span>
+          {/* From Intermediate its Peak (the mark), moving with the sound; Beginner the average */}
+          {number(detailed ? 'hold' : 'rms')}
           {!layout.ownRow && healthWord}
         </div>
+        {detailed && (
+          <div style={{ marginTop: ROW_GAP, height: layout.number, display: 'flex', alignItems: 'baseline', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            {number('rms')}
+          </div>
+        )}
         {layout.ownRow && <div style={{ marginTop: 4, height: layout.health, display: 'flex' }}>{healthWord}</div>}
       </div>}
     </div>

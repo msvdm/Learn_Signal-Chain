@@ -49,6 +49,29 @@ export function paintStyle(el: HTMLElement | SVGElement | null | undefined, prop
   else el.style.setProperty(prop, value)
 }
 
+/** How often a moving number may change (ms): about 8 times a second, slow enough to read its digits. */
+export const TEXT_EVERY_MS = 125
+
+/** When each element's text was last written. */
+const textWritten = new WeakMap<Element, number>()
+
+/**
+ * Sets an element's text (null: empties it). A new text is written at most every TEXT_EVERY_MS, so a
+ * number following the sound stays readable; emptying it is never held back.
+ */
+export function paintText(el: HTMLElement | null | undefined, text: string | null) {
+  if (!el) return
+  const now = performance.now()
+  if (text === null) {
+    if (el.textContent !== '') el.textContent = ''
+    textWritten.delete(el)
+    return
+  }
+  if (el.textContent === text || now - (textWritten.get(el) ?? -Infinity) < TEXT_EVERY_MS) return
+  el.textContent = text
+  textWritten.set(el, now)
+}
+
 /** The moving parts of a meter bar. */
 export interface BarParts {
   rms: HTMLElement | null

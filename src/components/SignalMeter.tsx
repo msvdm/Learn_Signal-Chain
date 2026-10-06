@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
-import { healthColor, dbToPercent, getHealth, shifted, SPL_SCALE_DB, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
+import { healthColor, dbToPercent, getHealth, louder, shifted, SPL_SCALE_DB, UNITY_DBU, ALIGNMENT_DB } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useReadingsShown } from '../hooks/useReadingsShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
@@ -9,7 +9,7 @@ import { useSignalStore } from '../store/signalStore'
 import { StableText } from './controls/StableText'
 import { LEVEL_SAMPLE, levelParts } from '../utils/readout'
 import type { MeterAt, MeterSide, MeterSource } from './meterPaint'
-import { alongScale, paintBar, readingOf } from './meterPaint'
+import { alongScale, paintBar, paintStyle, paintText, readingOf } from './meterPaint'
 
 // The meters, as a DAW draws them: three readings in one bar. The solid bar is the average (RMS);
 // from Intermediate up (useReadingsShown) a mark in the bar's colour shows the peaks and a grey fog
@@ -18,6 +18,7 @@ import { alongScale, paintBar, readingOf } from './meterPaint'
 // the bar alone. React draws the still picture — the render's readings over the whole loop; while
 // the chain plays (from Intermediate, hooks/useLiveMeter.ts) the bar moves as an RMS over 300 ms,
 // a light bar shows the peak falling back, and the mark becomes the peak hold (audio/meters.ts).
+// Their numbers, Peak (the mark) and RMS (the bar), move with them (LiveLevel).
 
 /**
  * Tick marks at the zone edges: where "too quiet" ends and unity (the strong one). The scale ends
@@ -39,6 +40,10 @@ const PEAK_MARK = 3
  * controls' room never change with it — the longest health word, "Изкривяване!", fits in 11px bold.
  */
 export const STRIP_W = 76
+
+/** Thickness of a card's upright bar (px): one in mono, each of L and R in stereo — wide enough to read from afar. */
+const MONO_BAR_W   = 32
+const STEREO_BAR_W = 22
 
 /**
  * One meter bar on its domain's scale (−60 … +20 dBu, −80 … 0 dBFS): `up` from the bottom (a desk's or a DAW's meter) or
@@ -143,10 +148,52 @@ export function MeterBar({ db, color, height = 6, domain = 'analog', peak, noise
   )
 }
 
+/** A meter's moving number: the peak hold (the mark) or the RMS (the solid bar). */
+export type LiveReading = 'hold' | 'rms'
+
+/**
+ * A level's number that follows its meter while the chain plays — `reading`'s value at each moment,
+ * changing at most every TEXT_EVERY_MS so its digits can be read — and is the still reading `db`
+ * otherwise (Beginner, before a render, zoomed away). It keeps the width of `reserve`.
+ */
+export function LiveLevel({ db, reading, source, domain, spl, reserve = LEVEL_SAMPLE, align = 'center', style }: {
+  db: number
+  reading: LiveReading
+  /** Where its meter's movement comes from; none: it stays still */
+  source?: MeterSource
+  domain: SignalDomain
+  /** dB SPL (its card's SPL_DB) */
+  spl?: number
+  /** As wide as the widest value it can show */
+  reserve?: string
+  /** Where the number sits in that width */
+  align?: 'start' | 'center' | 'end'
+  style?: CSSProperties
+}) {
+  const box   = useRef<HTMLSpanElement>(null)
+  const still = useRef<HTMLSpanElement>(null)
+  const live  = useRef<HTMLSpanElement>(null)
+  useLiveMeter(source?.nodeId, box, (moving, i) => {
+    const r = source ? readingOf(moving, source.at, source.side, i) : null
+    // The moving number over the still one, which keeps its place (React owns it; the painter, the other)
+    paintText(live.current, r ? levelParts(r[reading], domain, spl)[0] : null)
+    paintStyle(still.current, 'visibility', r ? 'hidden' : null)
+  })
+  return (
+    <span ref={box} style={{ display: 'inline-grid', justifyItems: align, whiteSpace: 'nowrap', ...style }}>
+      <span ref={still} style={{ gridArea: '1 / 1' }}>{levelParts(db, domain, spl)[0]}</span>
+      <span ref={live} aria-hidden style={{ gridArea: '1 / 1' }} />
+      <span aria-hidden style={{ gridArea: '1 / 1', visibility: 'hidden' }}>{reserve}</span>
+    </span>
+  )
+}
+
 /**
  * A card's upright meter, on its side of the card: what arrives (left) or leaves (right). Its name,
- * the bar — two, L and R, for a stereo signal — then the level (the average over the loop) and the
- * health word. It takes the height its card gives it; its width is its longest word.
+ * the bar — two, L and R, for a stereo signal — then its numbers and the health word. From
+ * Intermediate the numbers are its Peak (the peak hold: the mark) and its RMS (the solid bar) —
+ * a stereo signal's louder side —, moving with the sound; at Beginner (no peaks — D3) the average
+ * over the loop. It takes the height its card gives it; its width is its longest word.
  */
 export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at, spl }: {
   /** The signal, or its left side when `r` is set */
@@ -168,9 +215,25 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
   const shown    = !useSignalStore((s) => s.overview)
   const color    = healthColor(health)
   const sides: [string, SideLevels, MeterSide][] = r ? [['L', l, 'l'], ['R', r, 'r']] : [['', l, 'l']]
+  // Two sides: each in the colour of its own health (clipping from its own peaks)
+  const colorOf  = (side: SideLevels) => (r ? (isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'var(--lsc-border)') : color)
   const [value, unit] = levelParts(l.rms, domain, spl)
   const words    = Object.values(t.health)
   const tip      = detailed ? t.meters.tip : t.meters.tipBeginner
+
+  // A stereo signal's numbers: its louder side (as the overview face's); the bars show each side
+  const whole = r ? louder(l, r) : l
+  /** One labelled number, Peak or RMS, on one line: its name, then its value moving with the sound. */
+  const reading = (name: string, which: LiveReading, valueColor: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 4 }}>
+      <span style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{name}</span>
+      <LiveLevel
+        db={which === 'hold' ? whole.peak : whole.rms} reading={which}
+        source={shown ? { nodeId, at, side: r ? 'louder' : 'l' } : undefined} domain={domain} spl={spl}
+        align="end" style={{ color: valueColor }}
+      />
+    </div>
+  )
 
   return (
     <div
@@ -186,9 +249,8 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
           <div key={which} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
             <MeterTrack
               side={side}
-              // Two sides: each in the colour of its own health (clipping from its own peaks)
-              color={r ? (isFinite(side.rms) ? healthColor(getHealth(side.rms, domain, side.peak)) : 'var(--lsc-border)') : color}
-              domain={domain} detailed={detailed} direction="up" thickness={r ? 11 : 16}
+              color={colorOf(side)}
+              domain={domain} detailed={detailed} direction="up" thickness={r ? STEREO_BAR_W : MONO_BAR_W}
               source={shown ? { nodeId, at, side: which } : undefined} shift={spl === undefined ? 0 : spl - SPL_SCALE_DB}
               style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
             />
@@ -199,7 +261,15 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
         ))}
       </div>
 
-      {/* The level: one line in mono, an L and an R line in stereo — the same height either way */}
+      {detailed ? (
+        // Peak and RMS, moving with the sound, then their unit: the same height mono or stereo
+        <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap', width: '100%' }}>
+          {reading(t.meters.peak, 'hold', color)}
+          {reading(t.meters.rms, 'rms', 'var(--lsc-fg)')}
+          <div style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{unit}</div>
+        </div>
+      ) : (
+      /* The level: one line in mono, an L and an R line in stereo — the same height either way */
       <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap' }}>
         {r ? sides.map(([ch, side]) => (
           <div key={ch} style={{ color: 'var(--lsc-fg-muted)' }}>
@@ -211,6 +281,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
           <div style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{unit}</div>
         </>}
       </div>
+      )}
 
       {/* The health word: as tall as the tallest of them (a long one wraps), so a new one never resizes the card */}
       <Reserved words={words} style={{ fontSize: 11, lineHeight: '14px', fontWeight: 700, color }}>{t.health[health]}</Reserved>
