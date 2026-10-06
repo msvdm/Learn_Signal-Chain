@@ -11,17 +11,16 @@ import { compressor, limiter, noiseGate, throughCurve } from './process'
 import type { HissVerdict, RoomVerdict } from './readings'
 import { hissStartsAt, readingsOf } from './readings'
 
-// Reference chains: the level, health, domain and condition at every card. Since step 4 (TODO.md)
-// every wire carries a peak and a noise reading too, but the average — the one number before it —
-// stays what it was, so old chains keep their levels. Where a decision changed a reading on
-// purpose (step 4), the line says so:
+// Reference chains: the level, health, domain and condition at every card. Every wire carries a
+// peak and a noise reading too, but the average — the one number before them — stays what it was,
+// so old chains keep their levels. Where a design decision (CLAUDE.md → Design decisions) changed a
+// reading on purpose, the line says so:
 // - D1: a hum follows the signal (a fader turns it down too); before, it only ever grew
 // - D4: a card clips as soon as its peaks reach the clip level; before, a hot average stayed "hot"
 // - D9: these are the number engine's readings, the instant picture: a dynamics card puts each
 //   reading through its curve on its own. The cards show what a render of the chain on real sound
 //   measures (audio/measure.ts — checked in the browser: Web Audio does not run in Bun), moved on by
-//   the number engine between renders (signal/measured.ts). From step 10b to 10c the still picture
-//   measured a homemade moving one here (D6); those lines are back to the curve
+//   the number engine between renders (signal/measured.ts)
 // Peaks, noise and the hum: the tests after the reference chains.
 
 // ── Building a chain ────────────────────────────────────────────────────────────

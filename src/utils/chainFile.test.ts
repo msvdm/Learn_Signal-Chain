@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { parseChainFile } from './chainFile'
 
 // A saved chain read back: what a Microphone or Line Input picks up, in a file from before the
-// Speech / Singing / Drums choices (step 10c) and in one with a word no version knows.
+// Speech / Singing / Drums choices (Melodic / Percussive) and in one with a word no version knows.
 
 const fileWith = (typeKey: string, params: Record<string, unknown>) => ({
   app: 'learn-signal-chain', version: 1, name: '', level: 'intermediate',

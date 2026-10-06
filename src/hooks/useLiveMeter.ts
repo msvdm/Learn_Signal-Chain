@@ -10,12 +10,14 @@ import { SLICE_S } from '../audio/meters'
 import { LOOP_S } from '../audio/sounds'
 import { useLatestRef } from './useLatestRef'
 
-// The meters move (step 11): the last render recorded how every card's signal moves over one loop
+// The meters move (decision D10): the last render recorded how every card's signal moves over one loop
 // (signal/moving.ts), and this plays it back in time with the clock, round and round — the loop is
 // everything the chain plays. One animation loop outside React writes the moving values straight
 // into the meters, the turning-down bars and the marks on the curves (each registers a painter:
 // useLiveMeter); no card redraws for movement. It plays from Intermediate up, once a source is
-// wired, unless the system asks for reduced motion; a hidden tab gets no frames.
+// wired — also when the system asks for reduced motion: moving meters are what the app shows (the
+// user's call; with them still, a computer with animations off saw nothing move); a hidden tab gets
+// no frames.
 //
 // Cheap on purpose: 30 pictures a second (a DAW's meters update about as often), only the meters on
 // screen (an IntersectionObserver) and only what changed (components/meterPaint.ts).
@@ -41,8 +43,6 @@ let lastPaint = -Infinity
 let playing = false
 /** Where the loop started: every meter plays the same moment of it */
 const origin = performance.now()
-
-const reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null
 
 const visibility = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver((changes) => {
@@ -102,10 +102,10 @@ function rebuild() {
   }
 }
 
-/** Start or stop playing, as the level, the system's motion setting and the render say. */
+/** Start or stop playing, as the level and the render say. */
 function update() {
   const { complexityLevel } = useSignalStore.getState()
-  const should = atLeast(complexityLevel, READINGS_LEVEL) && !reducedMotion?.matches && stages.size > 0
+  const should = atLeast(complexityLevel, READINGS_LEVEL) && stages.size > 0
   if (should === playing) return
   playing = should
   document.documentElement.classList.toggle('lsc-meters-live', playing)
@@ -122,7 +122,6 @@ useSignalStore.subscribe((s, prev) => {
   rebuild()
   update()
 })
-reducedMotion?.addEventListener('change', update)
 rebuild()
 update()
 
