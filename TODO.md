@@ -677,6 +677,13 @@ Checked in the browser (Intermediate): Mic → Preamp +50 → Compressor → spe
   the two visibly split on drums and almost touch on a sine. That is "peak vs RMS".
 - Play / Pause in the header (a teacher freezes the picture to explain). Starts paused when the
   system asks for reduced motion. Stops by itself in a hidden tab.
+- Facts from 10c to plan with (not decisions): a browser starts an AudioContext suspended until a
+  click or key press, so nothing can play before the first Play; `buildChain` builds into any
+  `BaseAudioContext` and returns every card's taps; the meter worklet (`METER_PROCESSOR`) reports once,
+  at the end of its stretch — live meters need it to report as it plays (or an AnalyserNode per tap);
+  the chain changes while it plays (a knob, a wire), and the measuring render already rebuilds the
+  whole graph per change in ~30–130 ms for a typical chain; the cards' readings stay the render's —
+  only the meters, bars and curve dots move.
 
 ## 12. Wires move with the signal
 
