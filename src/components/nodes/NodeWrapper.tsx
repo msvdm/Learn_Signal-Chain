@@ -13,12 +13,30 @@ import type { OverviewArt } from './OverviewFace'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { MeterStrip, STRIP_W } from '../SignalMeter'
 import { SPL_DB } from '../../signal/levels'
+import { cssVar, textWidth } from '../../utils/fitText'
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
 const BODY_PAD_X = 20
-// The header's title: up to the card's width less its icon, gaps and On / Off button, at least TITLE_MIN_W
-const TITLE_ROOM  = 100
-const TITLE_MIN_W = 132
+// The header's title: TITLE_W wide; a name that would take more than two rows there gets just the
+// width two rows need, never more than the card has room for (its width less its icon, gaps and On / Off)
+const TITLE_W    = 132
+const TITLE_ROOM = 100
+const TITLE_SIZE = 14      // --node-text-md
+const TITLE_SLACK = 2      // a canvas measures a pixel or so off the page
+
+/** How wide a card's title may be: TITLE_W, or for a long name the width two rows need (broken at a space). */
+function titleWidth(label: string, cardW: number): number {
+  const family = cssVar('--lsc-font-sans')
+  const width  = (s: string) => Math.ceil(textWidth(s, family, 600) * TITLE_SIZE) + TITLE_SLACK
+  const words  = label.split(' ')
+  let twoRows  = width(label)
+  for (let k = 1; k < words.length; k++) {
+    twoRows = Math.min(twoRows, Math.max(width(words.slice(0, k).join(' ')), width(words.slice(k).join(' '))))
+  }
+  // Two rows or fewer at the usual width (words fill each row): the usual width
+  if (twoRows <= TITLE_W) return TITLE_W
+  return Math.min(twoRows, Math.max(TITLE_W, cardW - TITLE_ROOM))
+}
 // A face-only card's upright meter, zoomed in: on the right of its face, which keeps this much room
 // free for it (the card is its registry minSize plus this room, as tall as the minSize)
 const FACE_METER_PAD  = '14px 20px 12px'
@@ -165,11 +183,11 @@ export function NodeWrapper({
           <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>
             <look.icon size={look.headerSize ?? 16} />
           </span>
-          {/* A title as wide as the card has room for, never wider (the card keeps its size);
-              a longer one wraps (Bulgarian's Допълнителна смесителна шина (Aux)) */}
+          {/* Short titles stay on one line (the card grows); long ones wrap — onto two rows at most
+              where the card has room (Bulgarian's Допълнителна смесителна шина (Aux)) */}
           <span
             style={{
-              flex: '0 1 auto', width: 'max-content', maxWidth: Math.max(TITLE_MIN_W, minSize.w - TITLE_ROOM),
+              flex: '0 1 auto', width: 'max-content', maxWidth: titleWidth(label, minSize.w),
               fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
               padding: '6px 0',
             }}
