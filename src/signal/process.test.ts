@@ -282,6 +282,14 @@ describe('Pan and Balance', () => {
     expect(balanceSides(0, -10, -12)).toEqual({ l: -10, r: S })
     expect(balanceSides(100, -10, -12)).toEqual({ l: S, r: -12 })
   })
+
+  it('near hard left (L99, half a step in) the far side is far down, and cut only at the very end', () => {
+    expect(panSides(0.5, 0).r).toBeCloseTo(-42.1, 1)
+    expect(panSides(0.5, 0).l).toBeCloseTo(0, 2)
+    expect(balanceSides(0.5, 0, 0).r).toBeCloseTo(-40, 2)
+    expect(panSides(5, 0).r).toBeCloseTo(-22.1, 1)       // L90
+    expect(balanceSides(5, 0, 0).r).toBeCloseTo(-20, 2)
+  })
 })
 
 describe('sources: their peaks above the average, their noise below it', () => {

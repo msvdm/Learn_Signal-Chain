@@ -12,13 +12,15 @@ const KNOB = 165
 const TRACK_W = 180
 const DOT     = 16
 
-/** 0 = hard left (L), L49 … L1, C, R1 … R49, 100 = hard right (R): L / R only where one side is off. */
+// L100 … C … R100, like a DAW's pan: half a step of panPosition (0 … 100) each, 300px of drag
+// for the whole sweep (1.5px a step)
+const STEP    = 0.5
+const DRAG_PX = 300
+
+/** panPosition 0 (hard left) … 50 (centre) … 100 (hard right) as L100 … L1, C, R1 … R100. */
 function positionLabel(pos: number): string {
-  if (pos <= 0)   return 'L'
-  if (pos >= 100) return 'R'
-  if (pos < 50)   return `L${50 - pos}`
-  if (pos > 50)   return `R${pos - 50}`
-  return 'C'
+  const by = Math.round((50 - pos) * 2)
+  return by > 0 ? `L${by}` : by < 0 ? `R${-by}` : 'C'
 }
 
 /**
@@ -43,7 +45,7 @@ export function PanNode({ id }: CardProps) {
       label={label}
       portLine={KNOB / 2}
       textScale={2}
-      value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
+      value={<StableText reserve={['L100', 'R100']} align="center">{positionLabel(panPosition)}</StableText>}
       footer={<Direction position={panPosition} />}
     >
       {/* 0 = full left, 50 = centre, 100 = full right */}
@@ -51,7 +53,8 @@ export function PanNode({ id }: CardProps) {
         value={panPosition}
         min={0}
         max={100}
-        step={1}
+        step={STEP}
+        dragPx={DRAG_PX}
         label="L ← → R"
         formatValue={positionLabel}
         onChange={(v) => updateNodeParams(id, { panPosition: v })}

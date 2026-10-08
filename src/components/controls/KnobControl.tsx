@@ -19,6 +19,8 @@ interface KnobControlProps {
   layout?: 'below' | 'side'
   /** Under the knob: the label under the value even on a big knob, which puts them side by side (room across is short) */
   labelBelow?: boolean
+  /** How far (px on screen, up / down) a drag takes it through its whole range */
+  dragPx?: number
 }
 
 const START_CLOCK = 225
@@ -43,6 +45,7 @@ export function KnobControl({
   showReadout = true,
   layout = 'below',
   labelBelow = false,
+  dragPx = 150,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
@@ -65,10 +68,10 @@ export function KnobControl({
   const format  = formatValue ?? ((v: number) => String(v))
   const display = format(value)
 
-  // Drag up / down: 150px is the whole range
+  // Drag up / down: dragPx is the whole range
   const drag = usePointerDrag<{ y: number; value: number }>((e, from) => {
     const dy = from.y - e.clientY
-    const deltaValue = (dy / 150) * range
+    const deltaValue = (dy / dragPx) * range
     const raw = from.value + deltaValue
     const clamped = Math.max(min, Math.min(max, raw))
     const stepped = Math.round(clamped / step) * step
