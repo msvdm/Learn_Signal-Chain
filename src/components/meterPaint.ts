@@ -1,6 +1,6 @@
 import type { LiveStage, MeterReading } from '../signal/moving'
 import { readingAt } from '../signal/moving'
-import { dbToPercent } from '../signal/levels'
+import { ZONE_HEALTH, dbToPercent, zoneAt } from '../signal/levels'
 import type { SignalDomain } from '../signal/levels'
 
 // Writing the moving values into the meters (hooks/useLiveMeter.ts calls the painters 30 times a
@@ -60,19 +60,31 @@ const textWritten = new WeakMap<Element, number>()
 
 /**
  * Sets an element's text (null: empties it). A new text is written at most every TEXT_EVERY_MS, so a
- * number following the sound stays readable; emptying it is never held back.
+ * number following the sound stays readable; emptying it is never held back. True when it wrote a
+ * new text (its colour may change with it).
  */
-export function paintText(el: HTMLElement | null | undefined, text: string | null) {
-  if (!el) return
+export function paintText(el: HTMLElement | null | undefined, text: string | null): boolean {
+  if (!el) return false
   const now = performance.now()
   if (text === null) {
     if (el.textContent !== '') el.textContent = ''
     textWritten.delete(el)
-    return
+    return false
   }
-  if (el.textContent === text || now - (textWritten.get(el) ?? -Infinity) < TEXT_EVERY_MS) return
+  if (el.textContent === text || now - (textWritten.get(el) ?? -Infinity) < TEXT_EVERY_MS) return false
   el.textContent = text
   textWritten.set(el, now)
+  return true
+}
+
+/**
+ * A number's colour (D17): the colour of where it sits on its meter's scale — blue at the noise,
+ * green, yellow hot, red in the top 2 dB (signal/levels.ts zoneAt; the text shades, readable on the
+ * card). In the cable's units; muted for silence.
+ */
+export function zoneTextColor(db: number, domain: SignalDomain, noise?: number): string {
+  const zone = zoneAt(db, domain, noise)
+  return zone ? `var(--signal-${ZONE_HEALTH[zone]}-text)` : 'var(--lsc-fg-muted)'
 }
 
 /**

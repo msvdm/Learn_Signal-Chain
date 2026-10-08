@@ -86,7 +86,6 @@
   --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
   --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
-  --lsc-noise-fog:   rgba(196,202,216,0.5); /* the noise on a meter: grey fog from the left */
 
   /* Pro tip */
   --lsc-tip:    #facc15;
@@ -154,7 +153,6 @@
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */
-  --lsc-noise-fog:   rgba(92,84,79,0.38); /* the noise on a meter: grey fog from the left */
 
   /* Pro tip */
   --lsc-tip:    #d89548;
@@ -252,9 +250,6 @@ kbd {
 .lsc-meter-clip { position: absolute; background: var(--signal-clipping); opacity: var(--clip-on); }
 .lsc-meter-up .lsc-meter-clip    { left: 0; right: 0; top: 0; height: calc(var(--mark) * 2); }
 .lsc-meter-right .lsc-meter-clip { top: 0; bottom: 0; right: 0; width: calc(var(--mark) * 2); }
-.lsc-meter-fog { position: absolute; left: 0; bottom: 0; }
-.lsc-meter-up .lsc-meter-fog    { right: 0; }
-.lsc-meter-right .lsc-meter-fog { top: 0; }
 
 /* The peak mark — the loudest peak over the loop; while the chain plays, the peak hold. It slides
    over the bar less its own size, so it stays inside at both ends. */
@@ -287,7 +282,6 @@ kbd {
 .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
-.lsc-meter-fog { transition: width 0.3s ease-out, height 0.3s ease-out; }
 .lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
 
 /* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
@@ -312,7 +306,7 @@ kbd {
   .react-flow__panel.lsc-left-tools { transition: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
-  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-fog, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
+  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
 }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */

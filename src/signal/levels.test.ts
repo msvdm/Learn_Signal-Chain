@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_RANGE_DB, METER_TAIL, SILENCE_DB, SILENT, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
+  ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_TAIL, SILENCE_DB, SILENT, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
   ceilingOf, crestOf, dbToPercent, fitScaleMarks, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, meterZones,
-  scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
+  scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb, zoneAt,
 } from './levels'
 import { AT_THE_MIC_DB, GUITAR_AMP_MAX, GUITAR_REF_DB, guitarAmpGainDb } from './process'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
@@ -196,35 +196,54 @@ describe('meters', () => {
     expect(dbToPercent(UNITY_DBU - ALIGNMENT_DB, 'digital') - dbToPercent(UNITY_DBU)).toBeCloseTo(2.25, 9)
   })
 
-  it('meterZones colours the bar at the health edges: blue, green, yellow, red in the top 2 dB', () => {
+  // D17 (after D16's fixed blue below −40 dBu): the blue part is the noise, and moves with it
+  it('meterZones: blue up to the noise, green up to unity, yellow, red in the top 2 dB', () => {
     const at = (db: number, domain: 'analog' | 'digital' = 'analog') => dbToPercent(db, domain)
-    expect(meterZones()).toEqual([
-      { health: 'too-quiet', from: 0, to: at(-40) },
-      { health: 'good', from: at(-40), to: at(0) },
-      { health: 'hot', from: at(0), to: at(CLIP_DBU - CLIP_ZONE_DB) },
-      { health: 'clipping', from: at(CLIP_DBU - CLIP_ZONE_DB), to: 100 },
+    expect(meterZones('analog', 0, -74)).toEqual([
+      { kind: 'noise', from: 0, to: at(-74) },
+      { kind: 'good', from: at(-74), to: at(0) },
+      { kind: 'hot', from: at(0), to: at(CLIP_DBU - CLIP_ZONE_DB) },
+      { kind: 'clipping', from: at(CLIP_DBU - CLIP_ZONE_DB), to: 100 },
     ])
-    // Digital: the same zones moved down by the alignment — good up to −18 dBFS, red from −2
-    expect(meterZones('digital').map((z) => z.to)).toEqual([at(-58, 'digital'), at(-18, 'digital'), at(-2, 'digital'), 100])
-    // Every edge is where getHealth changes its verdict
-    for (const domain of ['analog', 'digital'] as const) {
-      for (const zone of meterZones(domain).slice(0, 2)) {
-        const edge = ceilingOf(domain) - METER_RANGE_DB + ((zone.to - METER_TAIL) / (100 - METER_TAIL)) * METER_RANGE_DB
-        expect(getHealth(edge - 0.01, domain)).toBe(zone.health)
-      }
-    }
+    // No noise shown (Beginner — D3): green from the bottom
+    expect(meterZones()).toEqual([
+      { kind: 'good', from: 0, to: at(0) },
+      { kind: 'hot', from: at(0), to: at(CLIP_DBU - CLIP_ZONE_DB) },
+      { kind: 'clipping', from: at(CLIP_DBU - CLIP_ZONE_DB), to: 100 },
+    ])
+    // Digital: green up to unity, −18 dBFS; red from −2
+    expect(meterZones('digital', 0, -100).map((z) => z.to)).toEqual([at(-100, 'digital'), at(-18, 'digital'), at(-2, 'digital'), 100])
+    // Noise louder than unity: blue up to it, then hot
+    expect(meterZones('analog', 0, 5).map((z) => z.kind)).toEqual(['noise', 'hot', 'clipping'])
   })
 
   it('meterZones on a dB SPL meter: the colours still judge the signal in the cable', () => {
-    // A Microphone (+36 on its bar): blue up to a −40 dBu signal (106 dB SPL), green above, nothing else on the bar
-    expect(meterZones('analog', SPL_DB.mic! - SPL_SCALE_DB)).toEqual([
-      { health: 'too-quiet', from: 0, to: dbToPercent(-4) },
-      { health: 'good', from: dbToPercent(-4), to: 100 },
+    // A Microphone (+36 on its bar): blue up to its room's noise (−126 dBu, 20 dB SPL), green above, nothing else on the bar
+    expect(meterZones('analog', SPL_DB.mic! - SPL_SCALE_DB, -126)).toEqual([
+      { kind: 'noise', from: 0, to: dbToPercent(-90) },
+      { kind: 'good', from: dbToPercent(-90), to: 100 },
     ])
     // Headphones (−15): red from a +18 dBu signal (113 dB SPL) to the top of the bar
-    const phones = meterZones('analog', SPL_DB.headphones! - SPL_SCALE_DB)
-    expect(phones.map((z) => z.health)).toEqual(['too-quiet', 'good', 'hot', 'clipping'])
-    expect(phones[3]).toEqual({ health: 'clipping', from: dbToPercent(3), to: 100 })
+    const phones = meterZones('analog', SPL_DB.headphones! - SPL_SCALE_DB, -85)
+    expect(phones.map((z) => z.kind)).toEqual(['noise', 'good', 'hot', 'clipping'])
+    expect(phones[3]).toEqual({ kind: 'clipping', from: dbToPercent(3), to: 100 })
+  })
+
+  it('zoneAt: a value takes the colour of its place on the scale', () => {
+    // At the noise — or within 1 dB, a moving RMS in a pause — blue
+    expect(zoneAt(-74, 'analog', -74)).toBe('noise')
+    expect(zoneAt(-73.5, 'analog', -74)).toBe('noise')
+    // Above it, green — a level too quiet for the word ("Too Quiet") is still above its noise
+    expect(zoneAt(-60, 'analog', -74)).toBe('good')
+    expect(zoneAt(-10)).toBe('good')
+    expect(zoneAt(0)).toBe('good')
+    expect(zoneAt(5)).toBe('hot')
+    expect(zoneAt(CLIP_DBU - CLIP_ZONE_DB)).toBe('clipping')
+    expect(zoneAt(CLIP_DBU)).toBe('clipping')
+    expect(zoneAt(-17, 'digital')).toBe('hot')
+    expect(zoneAt(-2, 'digital')).toBe('clipping')
+    expect(zoneAt(S)).toBe(null)
+    expect(zoneAt(SILENCE_DB)).toBe(null)
   })
 
   it('scaleMarks: every 10 dB, then −∞ — dBu, dBFS (−18 for −20) or dB SPL', () => {

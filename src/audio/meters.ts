@@ -13,7 +13,7 @@ import { dbOf } from './processors'
 //   return time of a digital peak meter (IEC 60268-18, EBU).
 // - Peak hold (the mark): the loudest peak stays 3 s (Pro Tools' hold; Logic's 2 – 6 s, the EBU's
 //   3 s), then falls back like the peak.
-// The noise floor (the grey fog) is the still reading of the music stopped: it does not move.
+// The noise floor (the blue part of a bar — D17) is the still reading of the music stopped: it does not move.
 // The loop repeats — every sound in it is one loop long (audio/sounds.ts LOOP_S) — so its end runs
 // into its start: the meters are worked out twice round it and the second time kept. Pure.
 

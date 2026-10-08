@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
-import { healthColor, getHealth, louder, shifted, SPL_SCALE_DB, meterFloorOf, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
+import { healthColor, getHealth, louder, shifted, SPL_SCALE_DB, ZONE_HEALTH, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useDetailShown } from '../hooks/useDetailShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
@@ -10,19 +10,19 @@ import { useSignalStore } from '../store/signalStore'
 import { StableText } from './controls/StableText'
 import { LEVEL_SAMPLE, levelParts } from '../utils/readout'
 import type { MeterAt, MeterSide, MeterSource } from './meterPaint'
-import { alongScale, paintBar, paintStyle, paintText, readingOf } from './meterPaint'
+import { alongScale, paintBar, paintStyle, paintText, readingOf, zoneTextColor } from './meterPaint'
 
 // The meters, as a DAW draws them (D16, after Sound Forge's): one bar per side, coloured along its
-// scale — blue where a level is too quiet, green good, yellow hot, red in the top 2 dB (meterZones) —
-// with the dB numbers beside it (scaleMarks), down to −∞ at the bottom. The solid bar is the average
-// (RMS); from Intermediate up (useDetailShown) a white mark shows the peaks and a grey fog from the
-// quiet end the noise, once it is loud enough to reach the even part of the scale (−60 dBu, −80
-// dBFS). A red line across the top lights up while that side clips. Beginner sees the bar alone.
-// React draws the still picture — the render's readings over the whole loop; while the chain plays
-// (from Intermediate, hooks/useLiveMeter.ts) the bar moves as an RMS over 300 ms, the peaks show
-// pale above it, falling back, and the mark becomes the peak hold (audio/meters.ts). The colours
-// never move: covers slide over them (meterPaint.ts). Their numbers, Peak (the mark) and RMS (the
-// bar), move with them (LiveLevel).
+// scale (meterZones) — from Intermediate up (useDetailShown) blue from the bottom up to the noise
+// measured with the music stopped (D17: the blue part is the noise), green above it up to unity,
+// yellow hot, red in the top 2 dB; at Beginner green from the bottom — with the dB numbers beside it
+// (scaleMarks), down to −∞ at the bottom. The solid bar is the average (RMS); from Intermediate a
+// thin line shows the peaks. A red line across the top lights up while that side clips. React draws
+// the still picture — the render's readings over the whole loop; while the chain plays (from
+// Intermediate, hooks/useLiveMeter.ts) the bar moves as an RMS over 300 ms, the peaks show pale above
+// it, falling back, and the line becomes the peak hold (audio/meters.ts). The colours never move:
+// covers slide over them (meterPaint.ts). Under it its numbers — Peak (the line) and RMS (the bar),
+// moving with them (LiveLevel), and the Noise —, each in the colour of its place on the scale.
 
 /** Thickness of a peak mark across an upright bar (px) */
 const PEAK_MARK = 3
@@ -47,16 +47,16 @@ const SCALE_LABEL_H = 10
 /** Between the bars and the scale (px) */
 const BAR_GAP = 2
 
-/** The colours along a bar: each health zone where its levels sit, hard edges (meterZones). */
-function zonesBackground(domain: SignalDomain, shift: number, up: boolean): string {
-  const stops = meterZones(domain, shift).map((z) => `${healthColor(z.health)} ${z.from}% ${z.to}%`)
+/** The colours along a bar: each zone where its levels sit, hard edges (meterZones; `noise`: the blue part). */
+function zonesBackground(domain: SignalDomain, shift: number, up: boolean, noise?: number): string {
+  const stops = meterZones(domain, shift, noise).map((z) => `${healthColor(ZONE_HEALTH[z.kind])} ${z.from}% ${z.to}%`)
   return `linear-gradient(to ${up ? 'top' : 'right'}, ${stops.join(', ')})`
 }
 
 /**
  * One meter bar on its domain's scale (−∞, then −60 … +20 dBu, −80 … 0 dBFS): `up` from the bottom
  * (a desk's or a DAW's meter) or `right` from the left — the same look either way. The still
- * picture: lit up to `side.rms`, its peak mark and noise when `detailed`. With a `source` it moves
+ * picture: lit up to `side.rms`, its peak line and its noise (the blue part) when `detailed`. With a `source` it moves
  * while the chain plays. `shift`: every reading moved by this on the bar (a dB SPL meter's scale);
  * `clipping`: this side's peaks reach the clip level — the red line across its end.
  */
@@ -84,7 +84,9 @@ function MeterTrack({ side: levels, domain, detailed, direction, thickness, leng
     const r = source ? readingOf(live, source.at, source.side, i) : null
     if (source) paintBar({ pale: pale.current, dark: dark.current, hold: hold.current }, up, r && shift ? { rms: r.rms + shift, peak: r.peak + shift, hold: r.hold + shift } : r, domain)
   })
-  const zones = useMemo(() => zonesBackground(domain, shift, up), [domain, shift, up])
+  // The blue part: its noise, in tenths of a dB (a render that moved it less leaves the colours alone)
+  const noise = detailed && isFinite(levels.noise) ? Math.round(levels.noise * 10) / 10 : undefined
+  const zones = useMemo(() => zonesBackground(domain, shift, up, noise), [domain, shift, up, noise])
   // The mark widens with a thick bar (the overview meter), so it stays visible zoomed out
   const mark = up ? PEAK_MARK : Math.max(1, Math.round(thickness / 8)) * 3
   const vars = {
@@ -108,16 +110,6 @@ function MeterTrack({ side: levels, domain, detailed, direction, thickness, leng
       {/* Covers over the colours: pale above the average (the peaks show through), dark above the peaks */}
       {detailed && source && <div ref={pale} aria-hidden className="lsc-meter-cover lsc-meter-pale" />}
       <div ref={dark} aria-hidden className="lsc-meter-cover lsc-meter-dark" />
-      {detailed && side.noise > meterFloorOf(domain) && (
-        <div
-          aria-hidden
-          className="lsc-meter-fog"
-          style={{
-            [up ? 'height' : 'width']: `${alongScale(side.noise, domain) * 100}%`,
-            background: `linear-gradient(to ${up ? 'top' : 'right'}, var(--lsc-noise-fog) 75%, transparent)`,
-          }}
-        />
-      )}
       {detailed && (
         // Slides along the bar less the mark's own size: the mark stays inside the bar at both ends
         <div aria-hidden className="lsc-meter-hold-track"><div ref={hold} className="lsc-meter-hold" /></div>
@@ -227,9 +219,10 @@ export type LiveReading = 'hold' | 'rms'
 /**
  * A level's number that follows its meter while the chain plays — `reading`'s value at each moment,
  * changing at most every TEXT_EVERY_MS so its digits can be read — and is the still reading `db`
- * otherwise (Beginner, before a render, zoomed away). It keeps the width of `reserve`.
+ * otherwise (Beginner, before a render, zoomed away). It keeps the width of `reserve`, and takes
+ * the colour of its place on the meter's scale, moving or still (D17: at its `noise`, blue).
  */
-export function LiveLevel({ db, reading, source, domain, spl, reserve = LEVEL_SAMPLE, align = 'center', style }: {
+export function LiveLevel({ db, reading, source, domain, spl, noise, reserve = LEVEL_SAMPLE, align = 'center', style }: {
   db: number
   reading: LiveReading
   /** Where its meter's movement comes from; none: it stays still */
@@ -237,6 +230,8 @@ export function LiveLevel({ db, reading, source, domain, spl, reserve = LEVEL_SA
   domain: SignalDomain
   /** dB SPL (its card's SPL_DB) */
   spl?: number
+  /** Its meter's noise (the blue part; none at Beginner) */
+  noise?: number
   /** As wide as the widest value it can show */
   reserve?: string
   /** Where the number sits in that width */
@@ -247,14 +242,18 @@ export function LiveLevel({ db, reading, source, domain, spl, reserve = LEVEL_SA
   const still = useRef<HTMLSpanElement>(null)
   const live  = useRef<HTMLSpanElement>(null)
   useLiveMeter(source?.nodeId, box, (moving, i) => {
-    const r = source ? readingOf(moving, source.at, source.side, i) : null
-    // The moving number over the still one, which keeps its place (React owns it; the painter, the other)
-    paintText(live.current, r ? levelParts(r[reading], domain, spl)[0] : null)
+    const r     = source ? readingOf(moving, source.at, source.side, i) : null
+    const value = r ? r[reading] : null
+    // The moving number over the still one, which keeps its place (React owns it; the painter, the
+    // other) — its colour changes with its text
+    if (paintText(live.current, value === null ? null : levelParts(value, domain, spl)[0]) && value !== null) {
+      paintStyle(live.current, 'color', zoneTextColor(value, domain, noise))
+    }
     paintStyle(still.current, 'visibility', r ? 'hidden' : null)
   })
   return (
     <span ref={box} style={{ display: 'inline-grid', justifyItems: align, whiteSpace: 'nowrap', ...style }}>
-      <span ref={still} style={{ gridArea: '1 / 1' }}>{levelParts(db, domain, spl)[0]}</span>
+      <span ref={still} style={{ gridArea: '1 / 1', color: zoneTextColor(db, domain, noise) }}>{levelParts(db, domain, spl)[0]}</span>
       <span ref={live} aria-hidden style={{ gridArea: '1 / 1' }} />
       <span aria-hidden style={{ gridArea: '1 / 1', visibility: 'hidden' }}>{reserve}</span>
     </span>
@@ -303,14 +302,19 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
 
   // A stereo signal's numbers: its louder side (as the overview face's); the bars show each side
   const whole = r ? louder(l, r) : l
+  /** A number's name, on the left of its line. */
+  const name = (text: string) => (
+    <span style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{text}</span>
+  )
+  const line: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 4 }
   /** One labelled number, Peak or RMS, on one line: its name, then its value moving with the sound. */
-  const reading = (name: string, which: LiveReading, valueColor: string) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 4 }}>
-      <span style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{name}</span>
+  const reading = (label: string, which: LiveReading) => (
+    <div style={line}>
+      {name(label)}
       <LiveLevel
         db={which === 'hold' ? whole.peak : whole.rms} reading={which}
-        source={shown ? { nodeId, at, side: r ? 'louder' : 'l' } : undefined} domain={domain} spl={spl}
-        align="end" style={{ color: valueColor }}
+        source={shown ? { nodeId, at, side: r ? 'louder' : 'l' } : undefined} domain={domain} spl={spl} noise={whole.noise}
+        align="end"
       />
     </div>
   )
@@ -351,20 +355,27 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
       {detailed ? (
         // Peak and RMS, moving with the sound, then their unit: the same height mono or stereo
         <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap', width: '100%' }}>
-          {reading(t.meters.peak, 'hold', color)}
-          {reading(t.meters.rms, 'rms', 'var(--lsc-fg)')}
+          {reading(t.meters.peak, 'hold')}
+          {reading(t.meters.rms, 'rms')}
+          {/* The noise, measured with the music stopped: still, blue (the blue part of the bar) */}
+          <div style={line}>
+            {name(t.meters.noise)}
+            <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ color: zoneTextColor(whole.noise, domain, whole.noise) }}>
+              {levelParts(whole.noise, domain, spl)[0]}
+            </StableText>
+          </div>
           <div style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{unit}</div>
         </div>
       ) : (
       /* The level: one line in mono, an L and an R line in stereo — the same height either way */
       <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap' }}>
         {r ? ([['L', l], ['R', r]] as const).map(([ch, side]) => (
-          <div key={ch} style={{ color: 'var(--lsc-fg-muted)' }}>
-            <span style={{ fontWeight: 700 }}>{ch}</span>{' '}
+          <div key={ch} style={{ color: zoneTextColor(side.rms, domain) }}>
+            <span style={{ fontWeight: 700, color: 'var(--lsc-fg-muted)' }}>{ch}</span>{' '}
             <StableText reserve={[LEVEL_SAMPLE]} align="end">{levelParts(side.rms, domain, spl)[0]}</StableText>
           </div>
         )) : <>
-          <div style={{ color }}><StableText reserve={[LEVEL_SAMPLE]} align="center">{value}</StableText></div>
+          <div style={{ color: zoneTextColor(l.rms, domain) }}><StableText reserve={[LEVEL_SAMPLE]} align="center">{value}</StableText></div>
           <div style={{ fontSize: 11, color: 'var(--lsc-fg-muted)', fontFamily: 'var(--lsc-font-sans)', fontWeight: 400 }}>{unit}</div>
         </>}
       </div>

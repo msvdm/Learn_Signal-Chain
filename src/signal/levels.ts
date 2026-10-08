@@ -155,32 +155,57 @@ export function dbToPercent(db: number, domain: SignalDomain = 'analog'): number
 /** The top of a meter's scale painted red: this close under the ceiling, the peaks are about to clip. */
 export const CLIP_ZONE_DB = 2
 
-/** One colour along a meter's bar: where its health zone runs (%, bottom to top). */
+/**
+ * What a part of a meter's scale shows (D17): the noise (blue — the noise measured with the music
+ * stopped), a good level (green, up to unity), a hot one (yellow), clipping (red, the top
+ * CLIP_ZONE_DB under the ceiling).
+ */
+export type MeterZoneKind = 'noise' | 'good' | 'hot' | 'clipping'
+
+/** Each zone's colour, by the health it shares it with (the noise: the too-quiet blue). */
+export const ZONE_HEALTH: Record<MeterZoneKind, SignalHealth> = { noise: 'too-quiet', good: 'good', hot: 'hot', clipping: 'clipping' }
+
+/** One colour along a meter's bar: where its zone runs (%, bottom to top). */
 export interface MeterZone {
-  health: SignalHealth
+  kind: MeterZoneKind
   from: number
   to: number
 }
 
 /**
- * A meter's colours along its bar (D16): each health zone where a level would be judged so — too
- * quiet below unity − 40, good up to unity, hot above it, clipping in the top CLIP_ZONE_DB under the
- * ceiling (and anything above). `shift`: every reading is moved by this on the bar (a dB SPL meter),
- * so the colours still judge the signal in the cable. Zones with no room are left out.
+ * A meter's colours along its bar (D17, after D16): blue from the bottom up to its `noise` — the
+ * blue part is the noise, and it moves with it —, green above that up to unity, yellow hot, red in
+ * the top CLIP_ZONE_DB under the ceiling (and anything above). No `noise` (Beginner — D3): green
+ * from the bottom. `shift`: every reading is moved by this on the bar (a dB SPL meter); `noise` is
+ * in the cable's units, like the zones' edges, so the colours still judge the signal in the cable.
+ * Zones with no room are left out.
  */
-export function meterZones(domain: SignalDomain = 'analog', shift = 0): MeterZone[] {
-  const unity = unityOf(domain)
-  const upTo: [SignalHealth, number][] = [
-    ['too-quiet', unity - 40], ['good', unity], ['hot', ceilingOf(domain) - CLIP_ZONE_DB], ['clipping', Infinity],
+export function meterZones(domain: SignalDomain = 'analog', shift = 0, noise?: number): MeterZone[] {
+  const upTo: [MeterZoneKind, number][] = [
+    ['noise', noise ?? -Infinity], ['good', unityOf(domain)], ['hot', ceilingOf(domain) - CLIP_ZONE_DB], ['clipping', Infinity],
   ]
   const zones: MeterZone[] = []
   let from = 0
-  for (const [health, db] of upTo) {
+  for (const [kind, db] of upTo) {
     const to = dbToPercent(db + shift, domain)
-    if (to > from) zones.push({ health, from, to })
+    if (to > from) zones.push({ kind, from, to })
     from = Math.max(from, to)
   }
   return zones
+}
+
+/** A level this close above the noise still reads as the noise (a meter's moving RMS in a pause). */
+export const NOISE_MARGIN_DB = 1
+
+/**
+ * Where a value sits on a meter's scale (D17): its zone, as `meterZones` colours it — at the noise
+ * (or within NOISE_MARGIN_DB of it) the noise. In the cable's units. Null: silence.
+ */
+export function zoneAt(db: number, domain: SignalDomain = 'analog', noise?: number): MeterZoneKind | null {
+  if (!isFinite(db) || db <= SILENCE_DB) return null
+  if (noise !== undefined && db <= noise + NOISE_MARGIN_DB) return 'noise'
+  if (db >= ceilingOf(domain) - CLIP_ZONE_DB) return 'clipping'
+  return db > unityOf(domain) ? 'hot' : 'good'
 }
 
 /** A number beside a meter. */
