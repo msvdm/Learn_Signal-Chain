@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { SOUND_PORT } from '../data/nodeRegistry'
-import { unwiredSource } from './queries'
+import { MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
+import { faderBusOf, unwiredSource } from './queries'
 
 // No connection, no signal (decision D11): a source with nothing plugged into its output shows no
 // level and no readings, and its meters stand still, until it is wired to something.
@@ -35,5 +35,30 @@ describe('a source not connected yet', () => {
     const nodes = [node('comp', 'comp'), node('amp', 'guitar-amp'), node('spk', 'active-speaker')]
     for (const id of ['comp', 'amp', 'spk']) expect(unwiredSource(id, { nodes, edges: [] })).toBe(false)
     expect(unwiredSource('gone', { nodes, edges: [] })).toBe(false)
+  })
+})
+
+// A Fader's cap says what it sets: an Aux Bus's level blue, a Main Fader red, a channel's plain
+// (FaderNode)
+
+describe('the bus a Fader sets the level of', () => {
+  it("an Aux Bus's, mono or stereo, through effects", () => {
+    const nodes = [node('aux', 'aux-bus'), node('comp', 'comp'), node('f', 'fader'), node('saux', 'aux-bus'), node('sf', 'fader')]
+    const view  = { nodes, edges: [wire('aux', 'comp'), wire('comp', 'f'), wire('saux', 'sf', MIX_PORT)] }
+    expect(faderBusOf('f', view)?.id).toBe('aux')
+    expect(faderBusOf('sf', view)?.id).toBe('saux')
+  })
+
+  it("a Master Bus's: its Main Fader", () => {
+    const view = { nodes: [node('bus', 'master-bus'), node('f', 'fader')], edges: [wire('bus', 'f', MIX_PORT)] }
+    expect(faderBusOf('f', view)?.typeKey).toBe('master-bus')
+  })
+
+  it("a channel's fader, or one after the bus's own fader: none", () => {
+    const nodes = [node('mic', 'mic'), node('pre', 'gain'), node('f', 'fader'), node('aux', 'aux-bus'), node('af', 'fader'), node('f2', 'fader')]
+    const view  = { nodes, edges: [wire('mic', 'pre'), wire('pre', 'f'), wire('aux', 'af'), wire('af', 'f2')] }
+    expect(faderBusOf('f', view)).toBe(null)
+    expect(faderBusOf('f2', view)).toBe(null)
+    expect(faderBusOf('af', view)?.id).toBe('aux')
   })
 })

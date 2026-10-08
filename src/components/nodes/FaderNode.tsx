@@ -7,6 +7,7 @@ import { StableText } from '../controls/StableText'
 import { useSignalStore } from '../../store/signalStore'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useParams } from '../../hooks/useParams'
+import { faderBusOf } from '../../graph/queries'
 import { FADER_MIN_DB, FADER_MAX_DB, FADER_MARKS, faderPosition, faderDbAt } from '../../utils/faderTaper'
 
 // A free-standing fader, big enough to read zoomed out
@@ -22,8 +23,9 @@ const TAPER: FaderTaper = { toPosition: faderPosition, fromPosition: faderDbAt }
 const format = (v: number) => (v <= FADER_MIN_DB ? '−∞' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} dB`)
 
 /**
- * A plain fader, or — wired straight after a stereo bus — the Main Fader: one handle for
- * the whole mix, with the bus's Left and Right outputs moved onto it (its cap red).
+ * A plain fader (its cap black, white on the dark theme), or — wired straight after a stereo
+ * bus — the Main Fader: one handle for the whole mix, with the bus's Left and Right outputs moved
+ * onto it (its cap red). An Aux Bus's fader is blue, mono or stereo.
  * Drawn as a bare fader (no card).
  */
 export function FaderNode({ id }: CardProps) {
@@ -33,6 +35,8 @@ export function FaderNode({ id }: CardProps) {
 
   const faderDb = p('faderDb')
   const main    = stage?.role === 'main-fader'
+  // An Aux Bus's fader is blue, mono or stereo (a stereo one is its Main Fader too)
+  const aux     = useSignalStore((s) => faderBusOf(id, s)?.typeKey === 'aux-bus')
 
   return (
     <FreeControl
@@ -53,7 +57,7 @@ export function FaderNode({ id }: CardProps) {
         height={FADER_H}
         scale={FADER_SCALE}
         showReadout={false}
-        capColor={main ? 'red' : 'black'}
+        capColor={aux ? 'blue' : main ? 'red' : 'plain'}
       />
     </FreeControl>
   )

@@ -153,6 +153,19 @@ export function sourceBusOf(nodeId: string, view: GraphView): string | null {
 }
 
 /**
+ * The Master or Aux Bus whose level this Fader sets: the first one back through one-input
+ * effects — mono or stereo, a Main Fader or not. Null when another Fader comes first (that one
+ * sets it) or no bus feeds it.
+ */
+export function faderBusOf(nodeId: string, view: GraphView): SignalNode | null {
+  for (const { source } of walkPassthrough(nodeId, view)) {
+    if (isMixBus(source.typeKey)) return source
+    if (source.typeKey === 'fader') return null
+  }
+  return null
+}
+
+/**
  * True when output `handleId` of this card may feed a Matrix Bus. Matrix sends are post-fader:
  * - the Matrix send, or the L / R of a stereo bus or of its Main Fader (that wire becomes the
  *   Matrix send);

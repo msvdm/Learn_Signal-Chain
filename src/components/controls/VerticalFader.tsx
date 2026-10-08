@@ -60,8 +60,8 @@ interface VerticalFaderProps {
   showReadout?: boolean
   /** Uneven scale (a desk fader's); default: even from min to max in `step`s */
   taper?: FaderTaper
-  /** Cap colour: black, or red for the Main Fader (like a desk's master fader) */
-  capColor?: 'black' | 'red'
+  /** Cap colour, like a desk's: plain (a channel's — black, white on the dark theme), red (the Main Fader), blue (an Aux Bus's) */
+  capColor?: CapColor
 }
 
 export function VerticalFader({
@@ -77,7 +77,7 @@ export function VerticalFader({
   scale = 1,
   showReadout = true,
   taper,
-  capColor = 'black',
+  capColor = 'plain',
 }: VerticalFaderProps) {
   const k         = scale
   const trackCx   = TRACK_CX * k
@@ -218,14 +218,20 @@ export function VerticalFader({
   )
 }
 
-// Solid cap colours: a lit top edge, the body, the dark underside, and the ridge across the middle
-const CAP_COLORS = {
-  black: { hi: '#5d6066', base: '#25262a', lo: '#09090b', ridge: '#3d3f45' },
-  red:   { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d' },
+// Solid cap colours: a lit top edge, the body, the dark underside, the ridge across the middle
+// and the value line on it. The plain cap follows the theme (index.css); red and blue never change.
+export type CapColor = 'plain' | 'red' | 'blue'
+const CAP_COLORS: Record<CapColor, { hi: string; base: string; lo: string; ridge: string; line: string }> = {
+  plain: {
+    hi: 'var(--lsc-fader-cap-hi)', base: 'var(--lsc-fader-cap-base)', lo: 'var(--lsc-fader-cap-lo)',
+    ridge: 'var(--lsc-fader-cap-ridge)', line: 'var(--lsc-fader-cap-line)',
+  },
+  red:  { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d', line: '#f4f4f4' },
+  blue: { hi: '#6ea6f7', base: '#1f5fc4', lo: '#0e2d63', ridge: '#3d7fe3', line: '#f4f4f4' },
 }
 
-/** A desk fader's cap: sloped upper face, a ridge with a white line across the middle, sloped lower face. */
-function FaderCap({ color, style }: { color: 'black' | 'red'; style: React.CSSProperties }) {
+/** A desk fader's cap: sloped upper face, a ridge with a line across the middle, sloped lower face. */
+function FaderCap({ color, style }: { color: CapColor; style: React.CSSProperties }) {
   const id = useId()
   const c  = CAP_COLORS[color]
   return (
@@ -236,22 +242,22 @@ function FaderCap({ color, style }: { color: 'black' | 'red'; style: React.CSSPr
     >
       <defs>
         <linearGradient id={`${id}-upper`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={c.hi} />
-          <stop offset="1" stopColor={c.base} />
+          <stop offset="0" style={{ stopColor: c.hi }} />
+          <stop offset="1" style={{ stopColor: c.base }} />
         </linearGradient>
         <linearGradient id={`${id}-lower`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={c.base} />
-          <stop offset="1" stopColor={c.lo} />
+          <stop offset="0" style={{ stopColor: c.base }} />
+          <stop offset="1" style={{ stopColor: c.lo }} />
         </linearGradient>
       </defs>
-      {/* Body */}
-      <rect x="0" y="0" width="60" height="80" rx="6" fill={c.base} stroke="var(--lsc-fader-cap-rim)" strokeWidth="1.2" />
+      {/* Body (colours as styles: the plain cap's are the theme's CSS variables) */}
+      <rect x="0" y="0" width="60" height="80" rx="6" style={{ fill: c.base }} stroke="var(--lsc-fader-cap-rim)" strokeWidth="1.2" />
       {/* Upper face, rising towards the top edge */}
       <path d="M2,8 Q30,1 58,8 L58,35 L2,35 Z" fill={`url(#${id}-upper)`} />
       {/* Ridge across the middle, catching the light */}
-      <rect x="1" y="35" width="58" height="10" fill={c.ridge} />
+      <rect x="1" y="35" width="58" height="10" style={{ fill: c.ridge }} />
       {/* The value line */}
-      <rect x="8" y="38.5" width="44" height="3" rx="1.5" fill="#f4f4f4" />
+      <rect x="8" y="38.5" width="44" height="3" rx="1.5" style={{ fill: c.line }} />
       {/* Lower face, falling away into shadow */}
       <path d="M2,45 L58,45 L58,72 Q30,79 2,72 Z" fill={`url(#${id}-lower)`} />
     </svg>

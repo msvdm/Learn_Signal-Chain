@@ -99,6 +99,12 @@
   --lsc-shadow-tooltip: 0 4px 24px rgba(0,0,0,0.5);
   --lsc-shadow-fader:   0 1px 4px rgba(0,0,0,0.5);
   --lsc-fader-cap-rim:  rgba(255,255,255,0.22); /* outline of the solid fader cap */
+  /* A plain fader's cap (a channel's): white on the dark canvas */
+  --lsc-fader-cap-hi:    #ffffff;
+  --lsc-fader-cap-base:  #e3e4e8;
+  --lsc-fader-cap-lo:    #a7aab2;
+  --lsc-fader-cap-ridge: #f3f4f6;
+  --lsc-fader-cap-line:  #25262a;  /* the line across it that marks the value */
 }
 
 /* ── Light theme ────────────────────────────────────────────────────────── */
@@ -166,6 +172,12 @@
   --lsc-shadow-tooltip: 0 2px 12px rgba(60,50,40,0.05);
   --lsc-shadow-fader:   0 1px 2px rgba(60,50,40,0.08);
   --lsc-fader-cap-rim:  rgba(0,0,0,0.55);
+  /* A plain fader's cap (a channel's): black on the light canvas */
+  --lsc-fader-cap-hi:    #5d6066;
+  --lsc-fader-cap-base:  #25262a;
+  --lsc-fader-cap-lo:    #09090b;
+  --lsc-fader-cap-ridge: #3d3f45;
+  --lsc-fader-cap-line:  #f4f4f4;
 }
 
 * {
