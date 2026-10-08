@@ -88,25 +88,25 @@ const GRILLE = Array.from({ length: 15 }, (_, i) => {
 }).join('')
 
 /**
- * An electric guitar (Instrument): a single-cut body, pickups and two knobs, a long neck up to the
- * right, an angled headstock with its tuning pegs. Drawn upright round (0, 0), then turned.
+ * An electric guitar (Instrument): a double-cut body with two horns, three pickups and two knobs, a
+ * long neck up to the right ending in a one-sided triangle — one edge carrying on from the neck's,
+ * the tuning pegs along the other. Drawn upright round (0, 0), then turned.
  */
 export function GuitarIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg viewBox="-15 -15 30 30" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-      <g transform="translate(1.28 -1.28) rotate(45)">
-        {/* Body, from the neck's left side round to its right, the cutaway last: the same either side
-            of the neck's line but for the cutaway, so it never looks crooked */}
-        <path d="M-1.1 -0.2C-3.2 -1.4 -5.6 0.6 -5.6 3.2C-5.6 5 -4.8 6.2 -4.8 7.4C-4.8 8.6 -7.6 10 -7.6 12.6C-7.6 15.8 -4.2 18 0 18C4.2 18 7.6 15.8 7.6 12.6C7.6 10 4.8 8.6 4.8 7.4C4.8 5.6 5.6 2.2 4.2 1.4C3 0.7 1.8 2.6 1.1 3.8" />
+    <svg viewBox="-15.5 -15.5 31 31" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <g transform="translate(0.85 -1.05) rotate(45)">
+        {/* Body, from the neck's left side: the long horn, round the bottom, the short horn */}
+        <path d="M-0.9 5.4C-1.6 4.2 -2 1.6 -2.6 0.5C-3 -0.3 -4 -0.3 -4.1 0.9C-4.2 2.6 -3.9 4.8 -4.7 6.6C-5.5 8.2 -7.4 9.2 -7.4 12.3C-7.4 16 -3.6 18 0.2 17.7C4 17.3 7.4 15.4 7.2 12.4C7 10 5 9.8 4.8 7.8C4.6 6.2 5.3 5 4.5 4.1C3.9 3.4 3.1 3.8 2.5 4.6C1.9 5.4 1.5 6.7 0.9 6.9" />
         {/* Neck, its end on the body */}
-        <path d="M-1.1 5.5V-12.5H1.1V5.5Z" />
-        {/* Headstock, square to the neck, and its two tuning pegs */}
-        <path d="M-1.1 -12.5L-1.8 -16.4H1.8L1.1 -12.5" />
-        <path d="M-0.8 -16.4V-17.6M0.8 -16.4V-17.6" />
-        {/* Two pickups, across the neck's line */}
-        <path d="M-2.4 8.8H2.4M-2.4 11.4H2.4" />
+        <path d="M-0.9 8.4V-9.6H0.9V8.4Z" />
+        {/* Headstock: a one-sided triangle, its tuning pegs along the slope */}
+        <path d="M-0.9 -9.6L-3 -11.4L0.9 -18.4V-9.6" />
+        <path d="M-2.3 -12.66L-3.26 -13.2M-1.48 -14.13L-2.44 -14.67M-0.66 -15.6L-1.62 -16.14M0.16 -17.07L-0.8 -17.61" />
+        {/* Three pickups, across the neck's line */}
+        <path d="M-1.6 9.8H1.6M-1.6 11.8H1.6M-1.6 13.8H1.6" />
         {/* Volume and tone knobs */}
-        <path d="M4.6 12.4h.01M3.6 14.8h.01" strokeWidth="1.8" />
+        <path d="M2.2 15.6h.01M3.9 14.5h.01" strokeWidth="1.8" />
       </g>
     </svg>
   )
