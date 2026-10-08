@@ -25,6 +25,7 @@ const BUTTON_TOP = 10
 const BUTTON_H   = 38
 const BUTTON_GAP = 10
 const BUTTON_X   = 20
+const BUTTON_FONT = { normal: 20, overview: 30 }
 // The symbol itself is a button too: a click flips it (the only control zoomed out)
 const HIT_X      = 30
 const HIT_PAD    = 22
@@ -36,8 +37,7 @@ const CONTACT_R   = { normal: 5, overview: 10 }
 /**
  * The Relay Switch (type `relay`): two inputs, A (top) and B, one output — the chosen input goes
  * out, the other is cut off. Drawn as a relay's symbol whose arm swings to the chosen contact, on
- * its card at every zoom: zoomed in under its A / B buttons, zoomed out the symbol alone, and a
- * click on it flips it. An aux send's pre-fader (A) or post-fader (B) copy is one use; skipping a
+ * its card at every zoom, under its A / B buttons; a click on the symbol flips it too. An aux send's pre-fader (A) or post-fader (B) copy is one use; skipping a
  * group of elements is another.
  */
 export function RelayNode({ id }: CardProps) {
@@ -58,8 +58,8 @@ export function RelayNode({ id }: CardProps) {
 
   const face = (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      {/* A and B: lit like a desk's buttons — hidden zoomed out, where the symbol is the control */}
-      <div className="nodrag nopan" style={{ visibility: overview ? 'hidden' : 'visible' }}>
+      {/* A and B: lit like a desk's buttons, at every zoom (zoomed out, bigger letters) */}
+      <div className="nodrag nopan">
         {(['a', 'b'] as const).map((input, i) => {
           const on = (input === 'b') === onB
           return (
@@ -70,9 +70,9 @@ export function RelayNode({ id }: CardProps) {
               style={{
                 position: 'absolute', top: BUTTON_TOP, left: BUTTON_X + i * (buttonW + BUTTON_GAP),
                 width: buttonW, height: BUTTON_H, padding: 0, pointerEvents: 'auto',
-                fontSize: 20, fontWeight: 800, lineHeight: 1,
+                fontSize: overview ? BUTTON_FONT.overview : BUTTON_FONT.normal, fontWeight: 800, lineHeight: 1,
                 borderRadius: 'var(--lsc-radius-md)',
-                border: `2px solid ${on ? 'var(--signal-good)' : 'var(--lsc-border)'}`,
+                border: `${overview ? 4 : 2}px solid ${on ? 'var(--signal-good)' : 'var(--lsc-border)'}`,
                 background: on ? 'var(--signal-good-bg)' : 'var(--lsc-sunken)',
                 color: on ? 'var(--signal-good-text)' : 'var(--lsc-fg-muted)',
                 cursor: on ? 'default' : 'pointer',
