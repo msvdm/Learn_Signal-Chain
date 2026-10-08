@@ -94,18 +94,19 @@ const GRILLE = Array.from({ length: 15 }, (_, i) => {
 export function GuitarIcon({ size = 24 }: { size?: number }) {
   return (
     <svg viewBox="-15 -15 30 30" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-      <g transform="translate(2.55 -2.6) rotate(45)">
-        {/* Body, from the neck's left side round to its right, the cutaway last */}
-        <path d="M-1 0.08C-6.08 -1 -7.43 2.38 -6.21 5.75C-5.4 7.78 -8.78 9.8 -7.56 13.85C-6.48 17.36 6.48 17.36 7.56 13.85C8.78 9.8 5.4 8.45 5.94 5.75C6.48 3.73 5.67 1.43 4.32 1.97C3.24 2.38 2.7 3.05 1 3.05" />
+      <g transform="translate(1.28 -1.28) rotate(45)">
+        {/* Body, from the neck's left side round to its right, the cutaway last: the same either side
+            of the neck's line but for the cutaway, so it never looks crooked */}
+        <path d="M-1.1 -0.2C-3.2 -1.4 -5.6 0.6 -5.6 3.2C-5.6 5 -4.8 6.2 -4.8 7.4C-4.8 8.6 -7.6 10 -7.6 12.6C-7.6 15.8 -4.2 18 0 18C4.2 18 7.6 15.8 7.6 12.6C7.6 10 4.8 8.6 4.8 7.4C4.8 5.6 5.6 2.2 4.2 1.4C3 0.7 1.8 2.6 1.1 3.8" />
         {/* Neck, its end on the body */}
-        <path d="M-1 5.5V-11.5H1V5.5Z" />
-        {/* Headstock and its two tuning pegs */}
-        <path d="M-1 -11.5L-1.6 -14L1.6 -15L1 -11.5" />
-        <path d="M-0.6 -14.2L-0.9 -15.6M0.9 -14.7L0.6 -16.1" />
-        {/* Pickups and the bridge */}
-        <path d="M-2.2 8H2.2M-2.2 10.3H2.2M-3 12.6H1.4" />
+        <path d="M-1.1 5.5V-12.5H1.1V5.5Z" />
+        {/* Headstock, square to the neck, and its two tuning pegs */}
+        <path d="M-1.1 -12.5L-1.8 -16.4H1.8L1.1 -12.5" />
+        <path d="M-0.8 -16.4V-17.6M0.8 -16.4V-17.6" />
+        {/* Two pickups, across the neck's line */}
+        <path d="M-2.4 8.8H2.4M-2.4 11.4H2.4" />
         {/* Volume and tone knobs */}
-        <path d="M4.6 10.5h.01M3.6 13.6h.01" strokeWidth="1.8" />
+        <path d="M4.6 12.4h.01M3.6 14.8h.01" strokeWidth="1.8" />
       </g>
     </svg>
   )
