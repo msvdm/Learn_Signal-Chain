@@ -1,4 +1,5 @@
 // Icons lucide does not have (24 × 24). See nodeLook.ts.
+import { useId } from 'react'
 
 /**
  * A jack plug (Line Input): tip, ring and sleeve, the handle and its cable — filled, tilted with the
@@ -64,18 +65,27 @@ export function KnobIcon({ size = 24 }: { size?: number }) {
   )
 }
 
-/** A guitar amp (combo): a cabinet with a row of knobs on top and one round speaker. */
+/** A guitar amp (combo): a cabinet with a row of knobs on top and a grille of thin crossed lines. */
 export function GuitarAmpIcon({ size = 24 }: { size?: number }) {
+  const clip = useId()
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <defs>
+        <clipPath id={clip}><rect x="4" y="9" width="16" height="11" /></clipPath>
+      </defs>
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M3 8h18" />
       <path d="M6.5 5.5h.01M9.5 5.5h.01M12.5 5.5h.01" />
-      <circle cx="12" cy="14.5" r="4" />
-      <circle cx="12" cy="14.5" r="1" />
+      {/* The grille: diagonals both ways, 2 apart, cut to the front panel */}
+      <path d={GRILLE} strokeWidth="0.3" clipPath={`url(#${clip})`} />
     </svg>
   )
 }
+
+const GRILLE = Array.from({ length: 15 }, (_, i) => {
+  const x = i * 2 - 9
+  return `M${x} 21L${x + 13} 8M${x + 13} 21L${x} 8`
+}).join('')
 
 /** A dull tone: flat, then the high notes falling away (an instrument without a DI Box). Wider than tall. */
 export function DullToneIcon({ size = 24 }: { size?: number }) {
