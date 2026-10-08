@@ -33,6 +33,10 @@ export const HEADER_H = 56
 // buttons. The ring is 28px (40px while it shows the unplug ×), so it never touches the line.
 export const PORT_TOP = HEADER_H + 24
 export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
+// How far from a port's centre the mouse finds it (the cursor turns into a cross): twice the
+// ring's radius, so a port is easy to hit zoomed out — the ring itself stays 28px. Ports stacked
+// closer than twice this share the room between them half and half (NodePort).
+export const PORT_REACH = 28
 
 /** The centre of a port ring: on the left edge (inputs) or right edge (outputs), `index` down the stack. */
 export function portPoint(card: Box, type: 'source' | 'target', index: number): Pt {

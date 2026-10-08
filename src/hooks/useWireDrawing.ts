@@ -53,7 +53,7 @@ export function useSwallowClick(): MutableRefObject<boolean> {
 
 /**
  * Wiring, like a pen tool (never a drag). The canvas follows the mouse: over a port it is in
- * Connect mode, ~200ms after leaving every port back in Select mode (never while a wire is drawn).
+ * Connect mode, off every port back in Select mode (never while a wire is drawn).
  * Click an output to start a wire, click empty space to add a corner, click an input that takes it
  * to finish; right-click (or Esc, useCanvasShortcuts) cancels.
  * The wire's source and corners are the store's (`wire`); only its loose end, which follows the
@@ -66,9 +66,8 @@ export function useWireDrawing(
   const { screenToFlowPosition } = useReactFlow()
   const layout = useCanvasLayout()
   const [cursor, setCursor] = useState<WireCursor | null>(null)
-  const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Hovering a port switches to Connect mode; moving away switches back after a short delay.
+  // Hovering a port switches to Connect mode; moving away switches back.
   // While a wire is drawn, the cursor is tracked for the live preview instead.
   useEffect(() => {
     function followMouse(e: MouseEvent) {
@@ -80,16 +79,10 @@ export function useWireDrawing(
         if (toolMode === 'connect') setToolMode('select')
         return
       }
-      if (handleUnder(e.clientX, e.clientY)) {
-        if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
-        if (toolMode === 'select') setToolMode('connect')
-      } else if (toolMode === 'connect' && !revertTimerRef.current) {
-        revertTimerRef.current = setTimeout(() => {
-          revertTimerRef.current = null
-          const s = useSignalStore.getState()
-          if (!s.wire) s.setToolMode('select')
-        }, 200)
-      }
+      // Back at once: a delay would show Connect mode's look (no wire to click) between a port
+      // and what is next to it — the unplug × and the wire it sits on flickered with a cross
+      const overPort = handleUnder(e.clientX, e.clientY) !== null
+      if (overPort !== (toolMode === 'connect')) setToolMode(overPort ? 'connect' : 'select')
     }
 
     function onMove(e: MouseEvent) {
@@ -106,10 +99,7 @@ export function useWireDrawing(
     }
 
     document.addEventListener('mousemove', onMove)
-    return () => {
-      document.removeEventListener('mousemove', onMove)
-      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null }
-    }
+    return () => document.removeEventListener('mousemove', onMove)
   }, [screenToFlowPosition, layout])
 
   useEffect(() => {

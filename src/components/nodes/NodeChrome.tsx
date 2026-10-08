@@ -25,10 +25,10 @@ export function PortStack({ nodeId, typeKey, ports }: {
   return (
     <>
       {!noInputs && ports.inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} last={i === ports.inputs.length - 1} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} last={i === ports.outputs.length - 1} />
       ))}
     </>
   )

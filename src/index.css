@@ -332,6 +332,23 @@ kbd {
   transition: width 0.1s, height 0.1s, background 0.1s;
 }
 
+/* Where the mouse finds a port: an unseen area twice the ring's size (PORT_REACH), centred on it
+   whatever size the ring is just then. A hit on it is a hit on the port — the cross cursor,
+   wiring (elementsFromPoint), the unplug ×. Towards a port stacked above / below it is cut
+   flat half way (--lsc-port-up / -down, NodePort; a clip-path is hit-tested as drawn), so each
+   point between two ports belongs to the nearer one. */
+.react-flow__handle.lsc-port::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(2 * var(--lsc-port-reach));
+  height: calc(2 * var(--lsc-port-reach));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  clip-path: inset(calc(var(--lsc-port-reach) - var(--lsc-port-up)) 0 calc(var(--lsc-port-reach) - var(--lsc-port-down)) 0);
+}
+
 /* Valid target while a wire is being drawn */
 .react-flow__handle.lsc-port.lsc-port-target {
   width: 32px;
@@ -347,7 +364,8 @@ kbd {
   cursor: crosshair !important;
 }
 
-.lsc-connect-mode .react-flow__pane {
+/* A wire being drawn: a click on empty canvas adds a corner */
+.lsc-wiring .react-flow__pane {
   cursor: crosshair !important;
 }
 
@@ -373,7 +391,9 @@ kbd {
 .react-flow__handle.lsc-port.lsc-port-remove svg {
   pointer-events: none;
 }
-.lsc-connect-mode .react-flow__handle.lsc-port-remove {
+/* An input a click unplugs: the finger from the first moment, in any mode — never the cross
+   first and the finger once the × shows */
+.react-flow__handle.lsc-port.lsc-port-unplug {
   cursor: pointer !important;
 }
 

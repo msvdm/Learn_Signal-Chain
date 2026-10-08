@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useShallow } from 'zustand/shallow'
@@ -8,7 +9,7 @@ import { graphSignal, levelOf, peakOf } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
-import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
+import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
 import { MATRIX_PORT } from '../../data/nodeRegistry'
@@ -27,6 +28,8 @@ interface NodePortProps {
   type: 'source' | 'target'
   /** Position in the stack of ports on this side (0 = top, just below the header). */
   index: number
+  /** The bottom port of its stack */
+  last: boolean
 }
 
 /**
@@ -39,7 +42,7 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, index }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, index, last }: NodePortProps) {
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
@@ -77,6 +80,13 @@ export function NodePort({ nodeId, portId, type, index }: NodePortProps) {
   const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + index * PORT_GAP
+  // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the
+  // port above or below, so each part of the room between two ports belongs to the nearer one
+  const reach = {
+    '--lsc-port-reach': `${PORT_REACH}px`,
+    '--lsc-port-up':    `${index > 0 ? Math.min(PORT_REACH, PORT_GAP / 2) : PORT_REACH}px`,
+    '--lsc-port-down':  `${last ? PORT_REACH : Math.min(PORT_REACH, PORT_GAP / 2)}px`,
+  } as CSSProperties
 
   function unplug(e: React.MouseEvent) {
     if (connected.length > 1) {
@@ -86,7 +96,7 @@ export function NodePort({ nodeId, portId, type, index }: NodePortProps) {
     }
   }
 
-  const className = ['lsc-port', isValidTarget && 'lsc-port-target', showUnplug && 'lsc-port-remove']
+  const className = ['lsc-port', isValidTarget && 'lsc-port-target', canUnplug && 'lsc-port-unplug', showUnplug && 'lsc-port-remove']
     .filter(Boolean).join(' ')
 
   return (
@@ -96,7 +106,7 @@ export function NodePort({ nodeId, portId, type, index }: NodePortProps) {
         type={type}
         position={type === 'source' ? Position.Right : Position.Left}
         className={className}
-        style={{ top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
+        style={{ ...reach, top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         // The ring grows while hovered or while a wire looks for an input. Once its size settles,
