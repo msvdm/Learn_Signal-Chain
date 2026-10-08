@@ -57,6 +57,15 @@ export const SPEAKER_LEVEL_DB = 40
 /** A Gain (not a Preamp) or an Amplifier turned all the way down is switched off. */
 export const GAIN_OFF_DB = -60
 
+/**
+ * A Fader at the bottom of its travel: −∞, the signal muted — its scale ends at −∞, like a
+ * meter's (utils/faderTaper.ts). Above it the fader turns down by its setting.
+ */
+export const FADER_OFF_DB = -100
+
+/** What a Fader set to `db` does to the level: −∞ at the bottom of its travel. */
+export const faderGainDb = (db: number) => (db <= FADER_OFF_DB ? -Infinity : db)
+
 /** How far a DI Box's XLR Out brings an instrument down: to mic level, like a passive DI's transformer. */
 export const DI_DROP_DB = 20
 
@@ -403,7 +412,7 @@ const PROCESS: Record<TypeKey, Process> = {
   limiter: (node, input, ctx) => dynamics(limiter(param(node, 'thresholdDb'), param(node, 'makeupGainDb')), input, ctx),
   deesser: (node, input, ctx) => dynamics(deesser(param(node, 'thresholdDb')), input, ctx),
   pad:    (node, input, ctx) => pass(param(node, 'engaged') ? shifted(input, -20) : input, ctx),
-  fader:  (node, input, ctx) => pass(shifted(input, param(node, 'faderDb')), ctx),
+  fader:  (node, input, ctx) => pass(shifted(input, faderGainDb(param(node, 'faderDb'))), ctx),
   switch: (node, input, ctx) => pass(param(node, 'on') ? input : SILENT, ctx),
   // The Relay passes on its selected input (the engine hands it only that one)
   relay:  (_, input, ctx) => pass(input, ctx),

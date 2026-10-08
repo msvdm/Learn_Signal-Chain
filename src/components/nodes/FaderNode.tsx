@@ -18,7 +18,8 @@ const PORT_LINE   = 60
 // A desk fader's uneven scale: fine steps around unity, the quiet end squeezed together
 const TAPER: FaderTaper = { toPosition: faderPosition, fromPosition: faderDbAt }
 
-const format = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} dB`
+// All the way down: −∞, the signal muted
+const format = (v: number) => (v <= FADER_MIN_DB ? '−∞' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} dB`)
 
 /**
  * A plain fader, or — wired straight after a stereo bus — the Main Fader: one handle for
@@ -39,7 +40,7 @@ export function FaderNode({ id }: CardProps) {
       typeKey="fader"
       label={useNodeName(id, 'fader')}
       portLine={PORT_LINE}
-      value={<StableText reserve={['−00.5 dB', '−100 dB']} align="center">{format(faderDb)}</StableText>}
+      value={<StableText reserve={['−00.5 dB', '−98 dB']} align="center">{format(faderDb)}</StableText>}
     >
       <VerticalFader
         value={faderDb}

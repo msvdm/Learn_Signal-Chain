@@ -96,7 +96,15 @@ describe('cards that pass the level on', () => {
   it('a fader adds its setting', () => {
     expect(out('fader', -10)).toBe(-10)
     expect(out('fader', -10, { faderDb: 10 })).toBe(0)
-    expect(out('fader', -10, { faderDb: -100 })).toBe(-110)
+    expect(out('fader', -10, { faderDb: -98 })).toBe(-108)
+  })
+
+  it('a fader at the bottom of its travel mutes the signal (−∞, like the bottom of a meter)', () => {
+    expect(out('fader', -10, { faderDb: -100 })).toBe(S)
+    const muted = levels('fader', sig(2, -10, -80), { faderDb: -100 })
+    expect(muted.peak).toBe(S)
+    // What arrives is gone, hiss and all; its own output stage still hisses (D18)
+    expect(muted.noise).toBe(LINE_NOISE_DBU)
   })
 
   it('a pad takes 20 dB off while it is in', () => {

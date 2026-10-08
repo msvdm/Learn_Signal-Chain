@@ -254,7 +254,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, splits: 'mix', freeSize: { w: 198, h: 541 },
+    minLevel: 'beginner', bypass: false, splits: 'mix', freeSize: { w: 198, h: 582 },
     defaultParams: { faderDb: 0 },
   },
   switch: {

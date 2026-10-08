@@ -1,13 +1,15 @@
+import { FADER_OFF_DB } from '../signal/process'
+
 /**
  * A mixing-desk fader's scale: not even in dB. The top of the travel gives fine control around
  * unity (0 dB, high up the travel), the bottom squeezes the quiet end together — like a real
  * console, where pulling a fader halfway down already takes about 20 dB off. The spacing follows
  * a real desk's fader print: 5 dB steps from +10 to −10, 10 dB steps below, closing up towards
- * the bottom.
+ * the bottom, which is −∞ — the signal muted (FADER_OFF_DB), like the bottom of a meter.
  * Points along the travel (0 = bottom, 1 = top) with the dB there; straight lines in between.
  */
 const POINTS: Array<[db: number, position: number]> = [
-  [-100, 0],
+  [FADER_OFF_DB, 0],
   [-80,  0.06],
   [-60,  0.135],
   [-50,  0.215],
@@ -21,7 +23,7 @@ const POINTS: Array<[db: number, position: number]> = [
   [10,   1],
 ]
 
-export const FADER_MIN_DB = -100
+export const FADER_MIN_DB = FADER_OFF_DB
 export const FADER_MAX_DB = 10
 
 /** Where a dB value sits along the travel (0 = bottom, 1 = top). */
@@ -68,17 +70,19 @@ export interface FaderMark {
 }
 
 /**
- * Scale printed beside the fader, like a desk's: numbered marks, half-way ticks below −10, and a
- * dotted high-resolution zone around unity (+5…−5 dB): one dot row per 0.5 dB, the step the fader
- * moves in there. The dots sit beside the cap, so they stay visible wherever the cap is.
+ * Scale printed beside the fader, like a desk's: numbered marks down to −60 and −∞ at the bottom
+ * (a meter's numbers), half-way ticks below −10, and a dotted high-resolution zone around unity
+ * (+5…−5 dB): one dot row per 0.5 dB, the step the fader moves in there. The dots sit beside the
+ * cap, so they stay visible wherever the cap is.
  */
 export const FADER_MARKS: FaderMark[] = (() => {
-  const labelled = [10, 5, 0, -5, -10, -20, -30, -40, -50, -60, -80, -100]
+  const labelled = [10, 5, 0, -5, -10, -20, -30, -40, -50, -60]
   const marks = new Map<number, FaderMark>()
   const put = (db: number, patch: Omit<FaderMark, 'db'>) => marks.set(db, { ...(marks.get(db) ?? { db }), ...patch })
   for (const db of range(5, -5, 0.5)) put(db, { dot: true })
-  for (const db of [-15, -25, -35, -45, -55, -70, -90]) put(db, { tick: true })
+  for (const db of [-15, -25, -35, -45, -55]) put(db, { tick: true })
   for (const db of labelled) put(db, { tick: true, label: db > 0 ? `+${db}` : db === 0 ? '0' : `−${-db}` })
+  put(FADER_OFF_DB, { tick: true, label: '−∞' })
   return [...marks.values()]
 })()
 

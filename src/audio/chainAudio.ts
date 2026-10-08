@@ -5,7 +5,7 @@ import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, NOISE_BELOW, balanceSides, guitarAmpGainDb, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
+import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, NOISE_BELOW, balanceSides, faderGainDb, guitarAmpGainDb, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -357,7 +357,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       case 'limiter':
       case 'deesser':    return dynamics(x, settingsOf(node))
       case 'pad':        return param(node, 'engaged') ? gain(-20, x) : x
-      case 'fader':      return gain(param(node, 'faderDb'), x)
+      case 'fader':      return gain(faderGainDb(param(node, 'faderDb')), x)
       case 'switch':     return param(node, 'on') ? x : silence(x.channels)
       case 'adc':        return gain(-param(node, 'alignmentDb'), x)
       case 'dac':        return gain(param(node, 'alignmentDb'), x)

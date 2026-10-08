@@ -124,7 +124,9 @@ export function VerticalFader({
   }
 
   return (
-    <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+    // Room under the track for the cap's lower half: at the bottom of its travel (−∞) the cap
+    // must not cover what is printed under the fader (its name and reading)
+    <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, paddingBottom: capH / 2 }}>
 
       {/* Draggable fader area */}
       <div
