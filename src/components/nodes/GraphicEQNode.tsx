@@ -110,7 +110,6 @@ export function GraphicEQNode({ id }: CardProps) {
             </span>
             <button
               className="nodrag nopan lsc-btn-outline"
-              title={t.nodes['graphic-eq'].flatHint}
               disabled={isFlat}
               onClick={flat}
               style={{

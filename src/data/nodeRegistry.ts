@@ -4,7 +4,7 @@
 import type { ComplexityLevel } from './levels'
 import { atLeast } from './levels'
 
-/** A connection point. Its tooltip is in the locales (`ports`, utils/nodeName.ts portName). */
+/** A connection point. */
 export type NodePort = {
   id: string
 }

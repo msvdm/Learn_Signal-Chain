@@ -36,7 +36,7 @@ export function GeneratorNode({ id }: CardProps) {
 
   const choices: Choice<GeneratorSound>[] = GENERATOR_SOUNDS.map((value) => {
     const SoundIcon = SOUND_ICONS[value]
-    return { value, label: text.sounds[value], hint: text.hints[value], icon: <SoundIcon size={22} /> }
+    return { value, label: text.sounds[value], icon: <SoundIcon size={22} /> }
   })
 
   return (

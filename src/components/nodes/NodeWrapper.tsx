@@ -98,8 +98,6 @@ export function NodeWrapper({
   return (
     <div
       className={`lsc-node-card select-none ${selected ? 'lsc-selected' : ''} ${className}`}
-      // A face-only card shows an icon, not its name: the name appears on hover
-      title={faceOnly ? label : undefined}
       style={{
         position: 'relative',
         width: 'max-content',
@@ -190,7 +188,7 @@ export function NodeWrapper({
             {canBypass && (
               <button
                 className="lsc-node-btn"
-                title={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
+                aria-label={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
                 aria-pressed={!isBypassed}
                 onClick={() => toggleBypassNode(nodeId)}
                 style={{
@@ -213,7 +211,6 @@ export function NodeWrapper({
               stereo={isNodeStereo(node)}
               onChange={(on) => setNodeStereo(nodeId, on)}
               labels={[t.stereo.mono, t.stereo.stereo]}
-              hint={t.stereo.toggleHint}
             />
           </div>
         )}
@@ -282,17 +279,15 @@ function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
 }
 
 /** Two-part switch: Mono | Stereo. */
-function StereoToggle({ stereo, onChange, labels, hint }: {
+function StereoToggle({ stereo, onChange, labels }: {
   stereo: boolean
   onChange: (stereo: boolean) => void
   labels: [string, string]
-  hint: string
 }) {
   return (
     <div
       className="nodrag nopan"
       role="radiogroup"
-      title={hint}
       style={{
         display: 'flex', padding: 2, gap: 2,
         borderRadius: 9999, background: 'var(--lsc-sunken)',

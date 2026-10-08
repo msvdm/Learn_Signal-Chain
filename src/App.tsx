@@ -86,7 +86,6 @@ function App() {
           <div className="flex items-center" style={{ gap: 10 }}>
             <button
               onClick={() => setPaletteOpen(!paletteOpen)}
-              title={paletteOpen ? t.palette.hide : t.palette.show}
               aria-label={paletteOpen ? t.palette.hide : t.palette.show}
               aria-expanded={paletteOpen}
               aria-controls="lsc-palette"
@@ -127,7 +126,6 @@ function App() {
                   <button
                     onClick={() => handleLevelChange(id)}
                     aria-current={active ? 'step' : undefined}
-                    title={t.levels[id].description}
                     className={active ? undefined : 'lsc-btn-outline'}
                     style={{
                       height: 36, padding: '0 12px', borderRadius: 8,
@@ -164,13 +162,12 @@ function App() {
               role="switch"
               aria-checked={snapToGrid}
               onClick={() => setSnapToGrid(!snapToGrid)}
-              title={t.toolbar.snapHint}
               aria-label={t.toolbar.snap}
               className="lsc-btn-outline"
               style={{ ...headerBtn, gap: 8 }}
             >
               <Grid3x3 size={15} />
-              {/* Narrower screens: icon + switch only, so the header still fits (the hint says what it does) */}
+              {/* Narrower screens: icon + switch only, so the header still fits */}
               {isWideHeader && t.toolbar.snap}
               <span
                 style={{
@@ -193,7 +190,6 @@ function App() {
 
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              title={t.app.theme.toggle}
               aria-label={themeLabel}
               className="lsc-btn-outline"
               style={isWideHeader ? headerBtn : { ...headerBtn, width: 34, padding: 0, justifyContent: 'center' }}
@@ -206,7 +202,7 @@ function App() {
             <div className="relative" ref={languageRef}>
               <button
                 onClick={() => setShowLanguages((v) => !v)}
-                title={t.app.language}
+                aria-label={t.app.language}
                 aria-haspopup="menu"
                 aria-expanded={showLanguages}
                 className="lsc-btn-outline"

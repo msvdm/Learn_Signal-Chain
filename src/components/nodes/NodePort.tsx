@@ -7,7 +7,6 @@ import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
 import { graphSignal, levelOf, peakOf } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
-import { useTranslation } from '../../i18n/useTranslation'
 import { nodeAcceptsWire, portAcceptsWire } from '../../utils/connectionRules'
 import { PORT_TOP, PORT_GAP } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
@@ -28,7 +27,6 @@ interface NodePortProps {
   type: 'source' | 'target'
   /** Position in the stack of ports on this side (0 = top, just below the header). */
   index: number
-  title?: string
 }
 
 /**
@@ -41,9 +39,8 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, index }: NodePortProps) {
   const removeEdge = useSignalStore((s) => s.removeEdge)
-  const { t }      = useTranslation()
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
   const updateNodeInternals     = useUpdateNodeInternals()
@@ -98,7 +95,6 @@ export function NodePort({ nodeId, portId, type, index, title }: NodePortProps) 
         id={portId}
         type={type}
         position={type === 'source' ? Position.Right : Position.Left}
-        title={showUnplug ? (connected.length > 1 ? t.unplugMenu.title : t.nodeControls.unplug) : title}
         className={className}
         style={{ top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
         onMouseEnter={() => setHovered(true)}

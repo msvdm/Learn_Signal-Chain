@@ -1,4 +1,4 @@
-import type { SignalNode, TypeKey } from '../data/nodeRegistry'
+import type { SignalNode } from '../data/nodeRegistry'
 import type { Translations } from '../i18n/translations'
 import type { StageResult } from '../signal/engine'
 import type { WireKind } from '../graph/queries'
@@ -32,12 +32,6 @@ export function nodeName(
 ): string {
   if (!node) return '?'
   return node.label ?? titleOf(t, helpKeyOf(node, stage))
-}
-
-/** A port's tooltip: its own for this type (an ADC's "Analog In"), else the usual one ("Input"). */
-export function portName(t: Translations, typeKey: TypeKey, portId: string): string {
-  const own = (t.ports.byType as Partial<Record<string, Record<string, string>>>)[typeKey]?.[portId]
-  return own ?? (t.ports as unknown as Record<string, string | undefined>)[portId] ?? portId
 }
 
 /** 'L' / 'R' for a wire that carries one side of a stereo mix, null otherwise. */

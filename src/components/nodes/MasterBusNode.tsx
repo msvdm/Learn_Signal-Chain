@@ -77,7 +77,6 @@ export function MasterBusNode({ id, type }: CardProps) {
               return (
                 <div
                   key={key}
-                  title={tm.sendHint}
                   onMouseEnter={() => setHighlight(wiresIn.map((e) => e.id))}
                   onMouseLeave={() => setHighlight([])}
                   style={{ display: 'flex', alignItems: 'center', gap: 8 }}

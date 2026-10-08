@@ -13,7 +13,7 @@ const ORDER: Direction[] = ['left', 'right', 'up', 'down']
 
 /** ← → ↑ ↓ buttons: which side a copy goes (Duplicate) or an opened chain is added. */
 export function DirectionArrows({ labels, onPick, role }: {
-  /** Tooltip / accessible name of each arrow */
+  /** Accessible name of each arrow */
   labels: Record<Direction, string>
   onPick: (dir: Direction) => void
   role?: 'menuitem'
@@ -22,7 +22,6 @@ export function DirectionArrows({ labels, onPick, role }: {
     <button
       key={dir}
       role={role}
-      title={labels[dir]}
       aria-label={labels[dir]}
       onClick={() => onPick(dir)}
       className="lsc-menu-item"

@@ -74,7 +74,6 @@ function ShelfToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     <button
       className="nodrag nopan"
       aria-pressed={on}
-      title={t.nodes.eq.shelfHint}
       onClick={onToggle}
       style={{
         fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -91,7 +90,7 @@ function ShelfToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 /** A small knob with its value beside it (the row says what it is). */
-function BandKnob({ value, min, max, step, label, display, reserve, color, disabled = false, title, onChange }: {
+function BandKnob({ value, min, max, step, label, display, reserve, color, disabled = false, onChange }: {
   value: number
   min: number
   max: number
@@ -102,12 +101,10 @@ function BandKnob({ value, min, max, step, label, display, reserve, color, disab
   reserve: string
   color: string
   disabled?: boolean
-  title?: string
   onChange: (v: number) => void
 }) {
   return (
     <div
-      title={title}
       style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: disabled ? 0.4 : 1, pointerEvents: disabled ? 'none' : undefined }}
     >
       <KnobControl value={value} min={min} max={max} step={step} label={label} onChange={onChange} color={color} size={KNOB} showReadout={false} />
@@ -182,7 +179,7 @@ function BandTable({ specs, bands, onChange }: {
           <BandKnob
             key="q" value={q} min={Q_MIN} max={Q_MAX} step={0.1}
             label={eq.widthQ} display={shelf ? '—' : q.toFixed(1)} reserve="00.0" color={color}
-            disabled={shelf} title={shelf ? eq.widthShelf : undefined}
+            disabled={shelf}
             onChange={(v) => patch({ Q: v })}
           />,
         ]

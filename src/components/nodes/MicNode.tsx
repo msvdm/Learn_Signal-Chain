@@ -115,7 +115,7 @@ function CharacterButtons({ nodeId, typeKey, columns, height }: {
 
   const choices: Choice<Character>[] = CHARACTERS_OF[typeKey === 'mic' ? 'mic' : 'line-in'].map((value) => {
     const CharacterIcon = CHARACTER_ICONS[value]
-    return { value, label: t.character[value], hint: t.character.hints[value], icon: <CharacterIcon size={16} /> }
+    return { value, label: t.character[value], icon: <CharacterIcon size={16} /> }
   })
 
   return (

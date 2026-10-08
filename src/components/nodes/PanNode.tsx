@@ -5,8 +5,6 @@ import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
-import { graphSignal } from '../../signal/engine'
-import { useTranslation } from '../../i18n/useTranslation'
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
@@ -32,8 +30,6 @@ function positionLabel(pos: number): string {
 export function PanNode({ id }: CardProps) {
   const p                = useParams(id, 'pan')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const balance          = useSignalStore((s) => graphSignal(s.nodes, s.edges, s.measured).stages[id]?.role === 'balance')
-  const { t }            = useTranslation()
 
   const panPosition = p('panPosition')
 
@@ -46,7 +42,7 @@ export function PanNode({ id }: CardProps) {
       label={label}
       portLine={KNOB / 2}
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
-      footer={<Direction position={panPosition} hint={balance ? t.nodes.balance.direction : t.nodes.pan.direction} />}
+      footer={<Direction position={panPosition} />}
     >
       {/* 0 = full left, 50 = centre, 100 = full right */}
       <KnobControl
@@ -66,10 +62,9 @@ export function PanNode({ id }: CardProps) {
 }
 
 /** Where it goes between the speakers: a dot on a short track from L to R, following the knob (not the sound). */
-function Direction({ position, hint }: { position: number; hint: string }) {
+function Direction({ position }: { position: number }) {
   return (
     <div
-      title={hint}
       style={{
         width: TRACK_W, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 8,
         fontSize: 13, fontWeight: 700, lineHeight: 1, color: 'var(--lsc-fg-muted)',

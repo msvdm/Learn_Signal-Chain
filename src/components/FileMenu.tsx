@@ -85,7 +85,6 @@ export function FileMenu({ onNew, buttonStyle }: {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        title={t.file.menuHint}
         aria-haspopup="menu"
         aria-expanded={open}
         className="lsc-btn-outline"

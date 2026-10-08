@@ -5,7 +5,6 @@
     "language": "Language",
     "level": "Difficulty level",
     "theme": {
-      "toggle": "Switch between light and dark colours",
       "light": "Light",
       "dark": "Dark"
     }
@@ -21,7 +20,6 @@
   },
   "file": {
     "menu": "File",
-    "menuHint": "Save your chain, open one, or share it",
     "new": "New — empty canvas",
     "open": "Open…",
     "save": "Save to a file…",
@@ -62,7 +60,6 @@
   },
   "toolbar": {
     "snap": "Snap to grid",
-    "snapHint": "Line elements up on the dotted grid",
     "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -89,16 +86,13 @@
   },
   "levels": {
     "beginner": {
-      "title": "Beginner",
-      "description": "Simple chain: microphone → preamp → EQ → compressor → speaker."
+      "title": "Beginner"
     },
     "intermediate": {
-      "title": "Intermediate",
-      "description": "Full chain including channel fader and master bus."
+      "title": "Intermediate"
     },
     "advanced": {
-      "title": "Advanced",
-      "description": "Full chain with all processing stages."
+      "title": "Advanced"
     }
   },
   "meters": {
@@ -111,14 +105,10 @@
     "peak": "Peak",
     "rms": "RMS",
     "noise": "Noise",
-    "tipBeginner": "How strong the signal is: the taller the bar, the louder. The numbers beside it are decibels (dB); at the bottom, −∞ is silence. The colours are painted on the scale: green — good, yellow — getting hot, red at the very top — about to distort; the number under it takes the colour of where it is. A red line across the top lights up when it distorts. The word says whether it is too quiet, good, hot or clipping.",
-    "tip": "A meter like a recording program's. The numbers beside it are decibels — dBu, or dBFS after an Analog to Digital Converter — down to −∞ (silence) at the bottom. The blue part at the bottom is the noise — what you hear when the music stops: it grows as the noise does. Above it the colours belong to the scale: green good, yellow getting hot, red at the very top. The solid bar is the average over the last 0.3 seconds — how loud it sounds. The pale part above it shows the peaks, the loudest moments, falling back slowly. The thin line is the loudest peak of the last 3 seconds. A red line across the top lights up while the signal distorts (clips). Under it, Peak is the thin line's level and RMS (the average) the solid bar's — both move with the sound — and Noise the noise's: each in the colour of where it sits on the scale. The word judges the whole 10 seconds of sound.",
-    "splTip": "The number is how loud the sound is in the air, in dB SPL (sound pressure level): about 60 is a conversation, 85 a loud mix in a studio, 100 or more harms your hearing if it goes on, and a powerful PA speaker reaches 130 a metre away. The colours and the word judge the signal in the cable, as on every card — a microphone's is weak until a Preamp lifts it.",
     "curve": {
       "peak": "Peaks",
       "rms": "Average",
-      "noise": "Noise",
-      "tip": "Left to right: the level coming in. Bottom to top: the level going out. On the dashed diagonal nothing changes; where the curve leaves it, this card is at work. The Peaks and Average marks move with the sound as it plays; the Noise mark shows what comes out when the music stops. A faint mark on the diagonal shows where a mark would be without the card. A Peaks mark above the curve: the start of a note got through before the card reacted (its Attack)."
+      "noise": "Noise"
     }
   },
   "health": {
@@ -135,12 +125,10 @@
     "dacExpectsDigital": "DAC expects a digital input. Connect it after an ADC or other digital node."
   },
   "hum": {
-    "tag": "Hum",
-    "tip": "A hum from the DI Box's ground loop rides along with the signal, like any noise: a boost lifts it with the music, a fader turns both down together — the gap between them stays. Only Ground Lift on the DI Box takes it away."
+    "tag": "Hum"
   },
   "status": {
-    "notConnected": "Not connected",
-    "notConnectedTip": "Nothing is plugged into its output yet. Wire it to another element: then it plays, and its level shows."
+    "notConnected": "Not connected"
   },
   "tooltip": {
     "whatIsThis": "What is this?",
@@ -183,17 +171,14 @@
       "gain": "Gain",
       "freq": "Freq",
       "widthQ": "Width (Q)",
-      "widthShelf": "A shelf has no width — turn Shelf off to use it",
       "shelf": "Shelf",
-      "shelfHint": "Shelf: raise or lower everything past this frequency evenly, instead of a hump around it",
       "graphHint": "Drag a coloured dot up to make that range louder, down to make it quieter, or sideways to move it to lower or higher sounds. Double-click a dot to set it back to 0 dB (no change).",
       "graphHintWidth": "Scroll over a dot to make its band wider or narrower."
     },
     "graphic-eq": {
       "label": "Graphic EQ",
       "hint": "Drag a slider up to boost that frequency, down to cut it. Double-click = 0 dB.",
-      "flat": "Flat",
-      "flatHint": "Set every slider back to 0 dB"
+      "flat": "Flat"
     },
     "comp": {
       "label": "Compressor",
@@ -254,11 +239,6 @@
         "sine": "Sine",
         "noise": "Noise",
         "click": "Click"
-      },
-      "hints": {
-        "sine": "Sine: a steady test tone. Its loudest moments are only 3 dB above its average — it is the last to clip.",
-        "noise": "Noise: hiss across every pitch. Its loudest moments are about 12 dB above its average, like a voice.",
-        "click": "Click: short pulses, like a metronome. Each one jumps about 18 dB above the average — at the same level, these clip first."
       }
     },
     "noise-gate": {
@@ -293,8 +273,7 @@
       "post": "POST"
     },
     "pan": {
-      "label": "Pan",
-      "direction": "Where you will hear it: between the left (L) and the right (R) speaker."
+      "label": "Pan"
     },
     "adc": {
       "label": "Analog to Digital Converter"
@@ -310,12 +289,10 @@
     },
     "matrix-bus": {
       "label": "Matrix Bus",
-      "empty": "Plug in a mix: an output of a Master Bus or an Aux Bus",
-      "sendHint": "How much of this bus goes in. Point here to light up where it comes from."
+      "empty": "Plug in a mix: an output of a Master Bus or an Aux Bus"
     },
     "balance": {
-      "label": "Balance",
-      "direction": "Which side is louder: turning towards one side fades the other."
+      "label": "Balance"
     }
   },
   "nodeControls": {
@@ -324,8 +301,7 @@
     "remove": "Remove from chain",
     "bypassedShort": "Bypassed",
     "on": "ON",
-    "off": "OFF",
-    "unplug": "Click to unplug this wire"
+    "off": "OFF"
   },
   "nodeMenu": {
     "bypass": "Bypass — let the signal pass through unchanged",
@@ -346,54 +322,14 @@
   },
   "stereo": {
     "mono": "Mono",
-    "stereo": "Stereo",
-    "toggleHint": "Mono = one channel. Stereo = Left and Right travel together on one wire (drawn as a double line)."
+    "stereo": "Stereo"
   },
   "character": {
     "label": "What it picks up",
     "speech": "Speech",
     "singing": "Singing",
     "music": "Music",
-    "drums": "Drums",
-    "hints": {
-      "speech": "Speech: someone talking, with pauses between the sentences. The loudest moments are about 12 dB above the average.",
-      "singing": "Singing: a voice holding notes. The loudest moments are about 12 dB above the average.",
-      "music": "Music: keys, a bass and a shaker playing a song. The loudest moments are about 12 dB above the average.",
-      "drums": "Drums: sharp hits jump about 18 dB above the average — at the same level, they reach the clip level sooner."
-    }
-  },
-  "ports": {
-    "in": "Input",
-    "out": "Output",
-    "out-l": "Left Out",
-    "out-r": "Right Out",
-    "mix": "Mix",
-    "send": "Matrix send (L + R, after the fader)",
-    "byType": {
-      "di-box": {
-        "out": "XLR Out — mic level, to the desk",
-        "direct": "Direct Out — the guitar as it is, to a guitar amp"
-      },
-      "guitar-amp": {
-        "in": "Guitar in — from an Instrument or a DI Box's Direct Out",
-        "sound": "Sound — put a Microphone in front of it"
-      },
-      "mic": {
-        "in": "Sound in — the Guitar Amp this microphone is in front of"
-      },
-      "relay": {
-        "in-a": "PRE — wire in the signal from before the fader",
-        "in-b": "POST — wire in the signal from after the fader"
-      },
-      "adc": {
-        "in": "Analog In",
-        "out": "Digital Out"
-      },
-      "dac": {
-        "in": "Digital In",
-        "out": "Analog Out"
-      }
-    }
+    "drums": "Drums"
   },
   "unplugMenu": {
     "title": "Wires on this input",

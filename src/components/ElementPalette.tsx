@@ -92,7 +92,7 @@ export function ElementPalette() {
               draggable
               onDragStart={(e) => onDragStart(e, item.typeKey)}
               onDragEnd={onDragEnd}
-              title={nameOf(item.typeKey)}
+              aria-label={nameOf(item.typeKey)}
               className="lsc-palette-tile"
               style={{
                 width: 44, height: 44, flexShrink: 0, borderRadius: 10,
@@ -220,7 +220,7 @@ export function ElementPalette() {
                     <span style={{ color: 'var(--lsc-fg-muted)', display: 'flex', height: ICON, alignItems: 'center' }}>
                       <item.icon size={ICON} />
                     </span>
-                    <span title={nameOf(item.typeKey)} style={{ fontSize: name.size, fontWeight: 600, lineHeight: lineHeightOf(name.lines.length), whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: name.size, fontWeight: 600, lineHeight: lineHeightOf(name.lines.length), whiteSpace: 'nowrap' }}>
                       {name.lines.map((line) => <span key={line} style={{ display: 'block' }}>{line}</span>)}
                     </span>
                     {start && (

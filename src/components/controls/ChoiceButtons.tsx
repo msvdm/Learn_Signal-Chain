@@ -4,8 +4,6 @@ export interface Choice<T extends string> {
   value: T
   /** Its word on the button */
   label: string
-  /** What it means, in a sentence (the button's tooltip) */
-  hint: string
   /** A small picture before (or over) the word */
   icon: ReactNode
 }
@@ -47,7 +45,6 @@ export function ChoiceButtons<T extends string>({
             key={c.value}
             role="radio"
             aria-checked={on}
-            title={c.hint}
             onClick={() => onChange(c.value)}
             style={{
               display: 'flex', flexDirection: item, alignItems: 'center', justifyContent: 'center',

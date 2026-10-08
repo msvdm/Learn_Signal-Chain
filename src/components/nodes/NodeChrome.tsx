@@ -6,7 +6,6 @@ import { useStage } from '../../hooks/useGraphSignal'
 import { formatDb, humStrength } from '../../signal/levels'
 import type { SignalDomain } from '../../signal/levels'
 import { useTranslation } from '../../i18n/useTranslation'
-import { portName } from '../../utils/nodeName'
 import { NodePort } from './NodePort'
 
 // Pieces every element's shell draws around its controls (NodeWrapper, FreeControl; useNodeChrome)
@@ -21,16 +20,15 @@ export function PortStack({ nodeId, typeKey, ports }: {
   typeKey: TypeKey
   ports: { inputs: Port[]; outputs: Port[] }
 }) {
-  const { t } = useTranslation()
   const noInputs = useSignalStore((s) =>
     typeKey === 'mic' && !availableAt('guitar-amp', s.complexityLevel) && !s.edges.some((e) => e.target === nodeId))
   return (
     <>
       {!noInputs && ports.inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} title={portName(t, typeKey, port.id)} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} title={portName(t, typeKey, port.id)} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} />
       ))}
     </>
   )
@@ -85,7 +83,7 @@ function HumTag({ db, domain, overview }: { db: number; domain: SignalDomain; ov
   const { t } = useTranslation()
   const size  = Math.round((overview ? 28 : 12) * (1 + humStrength(db)))
   return (
-    <span title={t.hum.tip} style={{ ...tag, fontSize: size, background: 'var(--signal-clipping)', color: '#fff' }}>
+    <span style={{ ...tag, fontSize: size, background: 'var(--signal-clipping)', color: '#fff' }}>
       <svg viewBox="0 0 24 12" width="1.6em" height="0.8em" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
         <path d="M2 6 C4 1 6 1 8 6 S12 11 14 6 S18 1 20 6 S22 9 22 9" />
       </svg>
@@ -98,7 +96,7 @@ function HumTag({ db, domain, overview }: { db: number; domain: SignalDomain; ov
 function NotConnectedTag() {
   const { t } = useTranslation()
   return (
-    <span title={t.status.notConnectedTip} style={{ ...tag, fontSize: 12, background: 'var(--lsc-fg-muted)', color: 'var(--lsc-node-bg)' }}>
+    <span style={{ ...tag, fontSize: 12, background: 'var(--lsc-fg-muted)', color: 'var(--lsc-node-bg)' }}>
       {t.status.notConnected}
     </span>
   )

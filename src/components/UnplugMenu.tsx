@@ -103,7 +103,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
               {via && <span style={{ display: 'block', fontSize: 12, color: 'var(--lsc-fg-muted)' }}>{via}</span>}
             </span>
             <button
-              title={t.unplugMenu.unplugOne}
+              aria-label={t.unplugMenu.unplugOne}
               onClick={() => removeEdge(wire.id)}
               className="lsc-node-btn lsc-node-btn-remove"
               style={{

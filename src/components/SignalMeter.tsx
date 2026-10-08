@@ -298,7 +298,6 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
   const color    = healthColor(health)
   const [value, unit] = levelParts(l.rms, domain, spl)
   const words    = Object.values(t.health)
-  const tip      = detailed ? t.meters.tip : t.meters.tipBeginner
 
   // A stereo signal's numbers: its louder side (as the overview face's); the bars show each side
   const whole = r ? louder(l, r) : l
@@ -342,7 +341,6 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
   return (
     <div
       className="lsc-meter-strip"
-      title={spl === undefined ? tip : `${t.meters.splTip}\n\n${tip}`}
       style={{ width: STRIP_W, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}
     >
       <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>

@@ -39,8 +39,6 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
   return (
     <div
       className={`lsc-free-control select-none ${selected ? 'lsc-selected' : ''}`}
-      // Without its name under it, the name shows on hover
-      title={showName ? undefined : label}
       style={{
         position: 'relative',
         width: 'max-content',

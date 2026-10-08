@@ -219,7 +219,6 @@ export function TransferCurve({
         viewBox={`0 0 ${GW} ${GH}`} width={GW} height={GH}
         style={{ display: 'block', '--active': state?.active ? 1 : 0 } as CSSProperties}
       >
-        <title>{t.meters.curve.tip}</title>
         <rect x={0} y={0} width={GW} height={GH} fill="var(--lsc-sunken)" />
 
         {grid.map((db) => (

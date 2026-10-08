@@ -160,7 +160,6 @@ export function HelpPopover() {
           )}
           <button
             onClick={close}
-            title={t.tooltip.close}
             aria-label={t.tooltip.close}
             style={{
               display: 'flex', padding: 2, border: 'none', background: 'transparent',
