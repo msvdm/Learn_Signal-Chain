@@ -144,18 +144,20 @@ const SIDES: NodePort[] = [
 // enough that their long names stay big in overview.
 const BUS_SIZE: Size  = { w: 398, h: 361 }
 const FACE_SIZE: Size = { w: 320, h: 328 }
+// Microphone and Line Input: one size
+const SOURCE_SIZE: Size = { w: 320, h: 350 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
 export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   mic: {
     // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
     category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
-    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
+    minLevel: 'beginner', bypass: false, minSize: SOURCE_SIZE,
     defaultParams: { sensitivityDb: -60, character: 'speech' },
   },
   'line-in': {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
-    minLevel: 'beginner', bypass: false, minSize: { w: 320, h: 250 },
+    minLevel: 'beginner', bypass: false, minSize: SOURCE_SIZE,
     defaultParams: { levelDb: -10, stereo: false, character: 'music' },
   },
   instrument: {

@@ -11,10 +11,16 @@ export const METER_GAP = 14
  * left, what leaves on the right, like a DAW plug-in's In and Out meters. They take the body's
  * height; `input` / `output` false leaves one out (a DI Box shows its two outputs as levels).
  */
-export function MeterSides({ nodeId, input = true, output = true, children }: {
+export function MeterSides({ nodeId, input = true, output = true, spl, outputLabel, hideOutput = false, children }: {
   nodeId: string
   input?: boolean
   output?: boolean
+  /** What leaves is sound in the air: its meter reads dB SPL (its card's SPL_DB) */
+  spl?: number
+  /** The output meter's name, when not Output (or Sound in dB SPL) */
+  outputLabel?: string
+  /** The output meter keeps its place, unseen (a source not connected — D11) */
+  hideOutput?: boolean
   children: ReactNode
 }) {
   const levels = useStereoLevels(nodeId)
@@ -26,7 +32,11 @@ export function MeterSides({ nodeId, input = true, output = true, children }: {
       <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {children}
       </div>
-      {output && <MeterStrip {...levels.output} label={t.meters.output} nodeId={nodeId} at="out" />}
+      {output && (
+        <div style={{ display: 'flex', ...(hideOutput ? { visibility: 'hidden' } : {}) }}>
+          <MeterStrip {...levels.output} label={outputLabel ?? (spl === undefined ? t.meters.output : t.meters.sound)} nodeId={nodeId} at="out" spl={spl} />
+        </div>
+      )}
     </div>
   )
 }

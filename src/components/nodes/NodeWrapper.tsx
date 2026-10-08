@@ -34,6 +34,8 @@ interface NodeWrapperProps {
   overviewArt?: OverviewArt
   /** Overview: false = no level block, the art takes the whole card. */
   overviewLevel?: boolean
+  /** Overview: the level block is the meter bar alone, no numbers (Microphone, Line Input) */
+  overviewBarOnly?: boolean
   /**
    * Show only the overview face (its icon) at every zoom: no header, no body. With a level
    * (`overviewLevel`), an upright meter beside it zoomed in — dB SPL where the card meets the air
@@ -58,6 +60,7 @@ export function NodeWrapper({
   style,
   overviewArt,
   overviewLevel = true,
+  overviewBarOnly = false,
   faceOnly = false,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
@@ -248,6 +251,7 @@ export function NodeWrapper({
         label={label}
         art={overviewArt}
         showLevel={overviewLevel && (!faceOnly || overview)}
+        barOnly={overviewBarOnly}
         status={status}
         shown={overview || faceOnly}
         bypassed={isBypassed}

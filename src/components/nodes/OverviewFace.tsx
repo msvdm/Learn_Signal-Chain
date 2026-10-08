@@ -34,6 +34,7 @@ const UNIT_RATIO  = 0.65
 const HEALTH_MAX  = 0.75   // health word, relative to the number
 const HEALTH_MIN  = 0.55   // below this it moves to its own row
 const NUMBER_SAMPLE = '-00.0'   // widest level reading (formatDb, mono font)
+const BAR_ONLY    = 1.5    // the meter alone (barOnly): its bar, relative to the number it would have
 
 /** Drawn instead of the name, given the box it may fill (px). */
 export type OverviewArt = (box: { w: number; h: number }) => ReactNode
@@ -46,6 +47,8 @@ interface OverviewFaceProps {
   art?: OverviewArt
   /** false = no level block: the art fills the card (a face-only card zoomed in, the Pre / Post switch). */
   showLevel?: boolean
+  /** The level block is the meter alone: its bar(s) and scale, no numbers or health word */
+  barOnly?: boolean
   /**
    * Said instead of the level ("Not connected": a source with nothing on its output — D11): in the
    * level block's place, or under the art when there is none.
@@ -67,9 +70,11 @@ interface OverviewFaceProps {
  * (a source or a speaker: its icon) shows this face at every zoom: zoomed in beside its upright
  * meter, without the level block; zoomed out with it (D13).
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, reserveRight = 0, spl }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, barOnly = false, status, shown, bypassed, reserveRight = 0, spl }: OverviewFaceProps) {
   const { t }    = useTranslation()
   const detailed = useDetailShown()
+  // The Peak, RMS and Noise rows (from Intermediate), unless the meter stands alone
+  const rows     = detailed && !barOnly
   // A string, so dragging the card (a new internal node each frame) does not re-render it
   const sizeKey = useStore((s) => {
     const m = s.nodeLookup.get(nodeId)?.measured
@@ -88,7 +93,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     const innerW = W - 2 - PAD * 2 - reserveRight
 
     // From Intermediate a Peak and an RMS row, each with its name in front (as wide as the longer, per px of its size)
-    const labelEm = detailed ? Math.max(...[t.meters.peak, t.meters.rms, t.meters.noise].map((w) => textWidth(w, sans, 600))) : 0
+    const labelEm = rows ? Math.max(...[t.meters.peak, t.meters.rms, t.meters.noise].map((w) => textWidth(w, sans, 600))) : 0
     // The health word: one size for all four words (the longest fits), so it never resizes the row
     const longest = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
 
@@ -96,17 +101,18 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
     const sized = (number: number) => {
       const unit   = Math.round(number * UNIT_RATIO)
       // As thick as the number is tall: a bar to read from afar
-      const meter  = number
+      const meter  = barOnly ? Math.round(number * BAR_ONLY) : number
       const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
       const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
       const scale  = Math.round(unit * SCALE_RATIO)
-      const labelW = detailed ? Math.ceil(labelEm * unit + unit * 0.4) : 0
+      const labelW = rows ? Math.ceil(labelEm * unit + unit * 0.4) : 0
       const numberW = labelW + textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
       const beside = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
       const ownRow = beside < number * HEALTH_MIN
       const health = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
       // The meter, its scale and its numbers (a status, "Not connected", takes the same height)
-      const blockH = meterH + SCALE_GAP + Math.round(scale * SCALE_ROW) + METER_GAP + number + (detailed ? 2 * (ROW_GAP + number) : 0) + (ownRow ? 4 + health : 0)
+      const meterBlock = meterH + SCALE_GAP + Math.round(scale * SCALE_ROW)
+      const blockH = barOnly ? meterBlock : meterBlock + METER_GAP + number + (rows ? 2 * (ROW_GAP + number) : 0) + (ownRow ? 4 + health : 0)
       return { number, unit, bar, meterH, scale, labelW, ownRow, health, blockH }
     }
     let level = sized(Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1))))
@@ -124,7 +130,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
     return { number, unit, bar, meterH, scale, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, stereo, reserveRight, spl, detailed])
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, barOnly, stereo, reserveRight, spl, rows])
 
   if (!layout) return null
 
@@ -261,7 +267,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
           )}
           <div style={{ flex: 1, minWidth: 0 }}><MeterScaleRow domain={levels.outDomain} spl={spl} size={layout.scale} /></div>
         </div>
-        <div
+        {!barOnly && <><div
           style={{
             marginTop: METER_GAP, height: layout.number,
             display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: HEALTH_GAP,
@@ -288,6 +294,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
           </div>
         </>}
         {layout.ownRow && <div style={{ marginTop: 4, height: layout.health, display: 'flex' }}>{healthWord}</div>}
+        </>}
       </div>}
     </div>
   )

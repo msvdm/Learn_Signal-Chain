@@ -7,6 +7,9 @@ import { atLeast } from '../../data/levels'
 import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
+import { MeterSides } from './MeterSides'
+import { unwiredSource } from '../../graph/queries'
+import { SPL_DB } from '../../signal/levels'
 import { FaceNote, WithNote } from './FaceNote'
 import { DullToneIcon } from './icons'
 import { ChoiceButtons } from '../controls/ChoiceButtons'
@@ -16,20 +19,21 @@ import { useParams } from '../../hooks/useParams'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
-// A Microphone's face: its icon, then the Speech / Singing / Drums buttons beside it
-const GAP       = 16
-const BUTTONS_W = 124
-const MAX_BUTTONS_H = 104
+// A Microphone's body without buttons (Beginner, or hearing a Guitar Amp): its icon
+const MIC_ICON = 96
+// Its Speech / Singing / Drums buttons, stacked
+const MIC_BUTTONS_H = 132
 
 /**
- * Microphone, Line Input and Instrument. Microphone and Instrument show only their face, at every
- * zoom: a big icon (its meter beside it — D13: a Microphone's in dB SPL), "Not connected" under it until something is wired to their
- * output (NodeWrapper). From Intermediate up a Microphone and a Line Input
- * also pick what they pick up — a Microphone Speech, Singing or Drums (whose hits reach far above
- * their average), a Line Input Music or Drums; a Microphone shows the buttons beside its icon —
- * not while it hears a Guitar Amp (it picks up the amp, not a sound of its own). An Instrument going into
- * the desk without a DI Box says so (condition 'needsDi': a dull-tone curve and a note). Line
- * Input keeps a full card: it has a Mono / Stereo switch.
+ * Microphone, Line Input and Instrument. The Instrument shows only its face, at every zoom: a big
+ * icon (its meter beside it — D13), "Not connected" under it until something is wired to its
+ * output (NodeWrapper). Microphone and Line Input are cards of one size, their meter on the right
+ * (hidden, its place kept, until something is wired to their output — D11); zoomed out their icon
+ * over a horizontal level bar, no numbers. From Intermediate up they pick what they pick up — a Microphone Speech, Singing or Drums
+ * (whose hits reach far above their average), a Line Input Music or Drums. A Microphone's buttons
+ * sit beside its meter (dB SPL — D13), its icon in their place at Beginner or while it hears a
+ * Guitar Amp (it picks up the amp, not a sound of its own). An Instrument going into the desk without
+ * a DI Box says so (condition 'needsDi': a dull-tone curve and a note).
  */
 export function MicNode({ id, type }: CardProps) {
 
@@ -44,6 +48,8 @@ export function MicNode({ id, type }: CardProps) {
   const needsDi  = stage?.condition === 'needsDi'
   const Icon     = NODE_LOOK[typeKey].icon
   const label    = useNodeName(id, typeKey)
+  // No connection, no signal (D11): its meter keeps its place, unseen
+  const notConnected = useSignalStore((s) => typeKey !== 'instrument' && unwiredSource(id, s))
 
   const art = (box: { w: number; h: number }) => {
     if (needsDi) {
@@ -59,18 +65,18 @@ export function MicNode({ id, type }: CardProps) {
         />
       )
     }
-    // Only a Microphone's face holds the buttons (a Line Input has them in its body)
-    if (!choosing || typeKey !== 'mic') return <OverviewIcon icon={<Icon />} box={box} />
-    const buttonsW = Math.min(BUTTONS_W, Math.round(box.w * 0.55))
-    const icon     = Math.min(box.h, box.w - buttonsW - GAP)
+    return <OverviewIcon icon={<Icon />} box={box} />
+  }
+
+  if (typeKey === 'mic') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: GAP }}>
-        <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
-        {/* The face ignores the pointer; the buttons take it back */}
-        <div style={{ pointerEvents: 'auto', width: buttonsW }}>
-          <CharacterButtons nodeId={id} typeKey={typeKey} columns={1} height={Math.min(icon, MAX_BUTTONS_H)} />
-        </div>
-      </div>
+      <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBarOnly>
+        <MeterSides nodeId={id} input={false} spl={SPL_DB.mic} hideOutput={notConnected}>
+          {choosing
+            ? <CharacterButtons nodeId={id} typeKey={typeKey} columns={1} height={MIC_BUTTONS_H} />
+            : <div style={{ display: 'flex', justifyContent: 'center' }}><OverviewIcon icon={<Icon />} box={{ w: MIC_ICON, h: MIC_ICON }} /></div>}
+        </MeterSides>
+      </NodeWrapper>
     )
   }
 
@@ -79,12 +85,15 @@ export function MicNode({ id, type }: CardProps) {
   }
 
   return (
-    <NodeWrapper nodeId={id} typeKey={typeKey} label={label} align="start" overviewArt={art}>
-      <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 28, fontWeight: 700, lineHeight: 1.1 }}>
-        {levelDb} dBu
-      </span>
-      {/* Taller buttons: the room the readings had */}
-      {choosing && <div style={{ alignSelf: 'stretch' }}><CharacterButtons nodeId={id} typeKey={typeKey} columns={2} height={64} /></div>}
+    <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBarOnly>
+      <MeterSides nodeId={id} input={false} outputLabel={t.meters.input} hideOutput={notConnected}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 28, fontWeight: 700, lineHeight: 1.1 }}>
+            {levelDb} dBu
+          </span>
+          {choosing && <CharacterButtons nodeId={id} typeKey={typeKey} columns={2} height={64} />}
+        </div>
+      </MeterSides>
     </NodeWrapper>
   )
 }
