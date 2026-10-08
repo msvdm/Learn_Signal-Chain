@@ -29,6 +29,7 @@ const SIDES_GAP   = 0.35   // stereo: between them, relative to the mono bar
 const HEALTH_GAP  = 12     // between the level number and the health word
 const NAME_MAX    = 96
 const NUMBER_MIN  = 24
+const BAR_H       = 24     // the meter's bar: one thickness on every card (stereo: SIDES_BAR of it each)
 const NUMBER_MAX  = 44
 const UNIT_RATIO  = 0.65
 const HEALTH_MAX  = 0.75   // health word, relative to the number
@@ -99,8 +100,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
     /** The level block at a number size: the meter, the rows, the health word beside them or under. */
     const sized = (number: number) => {
       const unit   = Math.round(number * UNIT_RATIO)
-      // As thick as the number is tall: a bar to read from afar
-      const meter  = number
+      // One thickness on every card, whatever its size
+      const meter  = BAR_H
       const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
       const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
       const scale  = Math.round(unit * SCALE_RATIO)
