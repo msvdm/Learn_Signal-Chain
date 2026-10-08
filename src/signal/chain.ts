@@ -6,7 +6,7 @@ import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, pre
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideContext, SideResult, StageCondition } from './process'
-import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processSide, withOwnHiss } from './process'
+import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processJob, processSide, withInputNoise, withOutputNoise } from './process'
 
 // The walk through a chain: what the wiring makes of each card (planChain, once per change of the
 // graph) and the levels the number engine gives every card and every wire (runChain) — per side,
@@ -290,15 +290,17 @@ export function runChain(plans: CardPlan[]): ChainLevels {
       outSig = isNodeStereo(node) ? stereo(only.out, only.out) : mono(only.out)
     } else if (card.mode === 'linked') {
       // The louder side drives the detector (reading by reading); the same change goes to both
-      // sides, each with the card's own hiss
+      // sides, then each gets the card's own output noise (D18)
       const l   = arriving('l')
       const r   = arriving('r')
       const ctx = contextOf(card, inputDomain, mixedDomains, null)
-      const result   = processSide(node, louder(l, r), ctx)
-      const detector = withOwnHiss(node, louder(l, r), ctx)
+      const job      = processJob(node, louder(l, r), ctx)
+      const result   = { ...job, out: flattenPeaks(withOutputNoise(node, job, ctx), job.domain) }
+      const detector = withInputNoise(node, louder(l, r), ctx)
       const linked   = (s: SideLevels) => {
-        const own = withOwnHiss(node, s, ctx)
-        return eachReading((k) => (isFinite(detector[k]) ? own[k] + (result.out[k] - detector[k]) : own[k]))
+        const own     = withInputNoise(node, s, ctx)
+        const changed = eachReading((k) => (isFinite(detector[k]) ? own[k] + (job.out[k] - detector[k]) : own[k]))
+        return withOutputNoise(node, { ...job, out: changed }, ctx)
       }
       side   = result
       inSig  = stereo(l, r)

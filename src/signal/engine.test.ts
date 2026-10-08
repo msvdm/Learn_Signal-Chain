@@ -5,9 +5,9 @@ import type { WireKind } from '../graph/queries'
 import type { GraphSignalResult, StageResult, StageRole, WireSignal } from './engine'
 import { curveInputOf, graphSignal } from './engine'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
-import { CLIP_DBU, headroomOf, hissOf, louder, snrOf } from './levels'
+import { CLIP_DBU, headroomOf, hissOf, louder, snrOf, sumNoiseToDb } from './levels'
 import type { StageCondition, Transfer } from './process'
-import { compressor, limiter, noiseGate, throughCurve } from './process'
+import { LINE_NOISE_DBU, compressor, limiter, noiseGate, throughCurve } from './process'
 
 // Reference chains: the level, health, domain and condition at every card. Every wire carries a
 // peak and a noise reading too, but the average — the one number before them — stays what it was,
@@ -19,6 +19,9 @@ import { compressor, limiter, noiseGate, throughCurve } from './process'
 //   reading through its curve on its own. The cards show what a render of the chain on real sound
 //   measures (audio/measure.ts — checked in the browser: Web Audio does not run in Bun), moved on by
 //   the number engine between renders (signal/measured.ts)
+// - D18: noise as on a real desk — a Gain's input noise lifted by its gain, every powered card's
+//   own after its job (−95 dBu a line stage, −90 a bus, −112 dBFS a converter); before, every card
+//   added −80 dBu (a Preamp −128) before its job. The noise columns moved with it
 // Peaks, noise and the hum: the tests after the reference chains.
 
 // ── Building a chain ────────────────────────────────────────────────────────────
@@ -721,18 +724,21 @@ describe('gain staging, well set: the Preamp makes the gain (+50 dB)', () => {
 
   expectReadings(result, {
     mic:   [-48, -60, -126],
-    // Its own hiss (−128 dBu) joins before its gain: 64 dB between the voice and the noise
-    pre:   [2, -10, -73.88],
-    // Every other card adds a hiss at −80 dBu: little next to a voice at −10
-    eq:    [2, -10, -72.93],
-    gain:  [2, -10, -72.15],
-    fader: [2, -10, -71.49],
-    bus:   [2, -10, -70.92],
-    spk:   [2, -10, -70.41],
+    // D18: its input noise (EIN, −128 dBu) joins before its gain, its floor (−100) after: the
+    // room the microphone hears rules, 64 dB under the voice
+    pre:   [2, -10, -73.86],
+    // Every other card adds its own after its job — a line stage −95 dBu, the bus −90, the
+    // speaker's amp −85: next to a voice at −10, hardly anything
+    eq:    [2, -10, -73.83],
+    gain:  [2, -10, -73.82],
+    fader: [2, -10, -73.79],
+    bus:   [2, -10, -73.68],
+    spk:   [2, -10, -73.37],
   })
 
-  it('ends near 60 dB above its noise, its peaks 18 dB under the clip level', () => {
-    expectDb(snrOf(leaving(result, 'spk')), 60.41)
+  // D18: 63 dB (with every card at −80 dBu it was 60)
+  it('ends about 63 dB above its noise, its peaks 18 dB under the clip level', () => {
+    expectDb(snrOf(leaving(result, 'spk')), 63.37)
     expectDb(headroomOf(leaving(result, 'spk')), 18)
   })
 })
@@ -742,23 +748,50 @@ describe('gain staging, the classic mistake: Preamp +20, made up later (Gain +20
 
   expectReadings(result, {
     mic:   [-48, -60, -126],
-    pre:   [-28, -40, -103.88],
-    // The EQ's hiss lands on a voice 30 dB too weak: only 40 dB under it
-    eq:    [-28, -40, -79.98],
-    // Making it up later lifts that hiss with the voice
-    gain:  [-8, -20, -56.98],
-    fader: [2, -10, -46.96],
-    bus:   [2, -10, -46.96],
-    spk:   [2, -10, -46.95],
+    pre:   [-28, -40, -98.51],
+    // D18: the Preamp's floor (−100) and the EQ's (−95) land on a voice 30 dB too weak: only
+    // 53 dB under it
+    eq:    [-28, -40, -93.4],
+    // Making it up later lifts that noise with the voice: the gap stays
+    gain:  [-8, -20, -73.24],
+    fader: [2, -10, -63.24],
+    bus:   [2, -10, -63.23],
+    spk:   [2, -10, -63.2],
   })
 
-  it('ends at the same level with the same peaks, but more than 20 dB more hiss', () => {
+  // D18: about 10 dB lost (with every card at −80 dBu: 23)
+  it('ends at the same level with the same peaks, but about 10 dB more noise', () => {
     const good = leaving(gainStaging(50, 0, 0), 'spk')
     const bad  = leaving(result, 'spk')
     expectDb(bad.rms, good.rms)
     expectDb(bad.peak, good.peak)
-    expectDb(snrOf(bad), 36.95)
-    expect(snrOf(good) - snrOf(bad)).toBeGreaterThan(20)
+    expectDb(snrOf(bad), 53.2)
+    expect(snrOf(good) - snrOf(bad)).toBeGreaterThan(10)
+  })
+})
+
+describe('where the gain is made, on a real desk (D18)', () => {
+  // One after another (a Master Bus through its L)
+  const chain = (...cards: SignalNode[]) =>
+    signalOf(cards, cards.slice(1).map((c, i) => wire(cards[i].typeKey === 'master-bus' ? `${cards[i].id}:out-l` : cards[i].id, c.id)))
+  const speakerSnr = (result: GraphSignalResult, id = 'spk') => snrOf(leaving(result, id))
+
+  it('before the converter: a Preamp 30 dB low costs more made up digitally (the ADC\'s own noise lifted) than before it', () => {
+    const wellSet  = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
+    const upBefore = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 20 }), card('trim', 'gain', { gainDb: 30 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
+    const upAfter  = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 20 }), card('adc', 'adc'), card('trim', 'gain', { gainDb: 30 }), card('dac', 'dac'), card('spk', 'active-speaker'))
+    expectDb(speakerSnr(wellSet), 63.465)
+    expectDb(speakerSnr(upBefore), 57.935)
+    expectDb(speakerSnr(upAfter), 52.655)
+  })
+
+  it('at the amplifier: the desk turned down into an amp wide open is noisier than the desk well set into an amp turned down', () => {
+    // The amp's own noise comes after its Volume: it decides most of it (−85 dBu, 25 dB SPL)
+    const ampOpen = chain(card('line', 'line-in'), card('bus', 'master-bus', { faderDb: -20 }), card('amp', 'amp', { gainDb: 0 }), card('spk', 'speaker'))
+    const ampDown = chain(card('line', 'line-in'), card('bus', 'master-bus', { faderDb: 0 }), card('amp', 'amp', { gainDb: -20 }), card('spk', 'speaker'))
+    expectDb(leaving(ampOpen, 'spk').rms, leaving(ampDown, 'spk').rms)
+    expectDb(speakerSnr(ampOpen), 53.796)
+    expectDb(speakerSnr(ampDown), 54.973)
   })
 })
 
@@ -777,14 +810,14 @@ describe('peaks: the loudest moments, above the average', () => {
     // Keys: peaks 12 dB above the average
     line:  [2, -10, -90],
     // D9: 4:1 from −20: the average comes down 7.5 dB, the peaks 16.5 — the gap shrinks from 12 dB to 3
-    comp:  [-14.5, -17.5, -79.59],
+    comp:  [-14.5, -17.5, -88.81],
     // D9: a limiter at −3: the average passes untouched, the peaks are capped
-    lim:   [-3, -10, -79.59],
+    lim:   [-3, -10, -88.81],
     loud:  [12, 0, -80],
     // +15 dB: the peaks would reach +27, an analog stage flattens them at the clip level (+20)
-    gain:  [20, 15, -61.99],
+    gain:  [20, 15, -64.99],
     // Turned down 20 dB, the gap stays 5 dB: flattened peaks do not come back
-    fader: [0, -5, -81.92],
+    fader: [0, -5, -84.58],
   })
 })
 
@@ -815,10 +848,10 @@ describe('the same average, another sound: the peaks decide when it clips (D4)',
 
   expectReadings(result, {
     sine:       [13, 10, -80],
-    sineFader:  [13, 10, -76.99],
+    sineFader:  [13, 10, -79.86],
     click:      [20, 10, -80],
     // 10 dB between the peaks and the average, where the clicks had 18
-    clickFader: [0, -10, -96.99],
+    clickFader: [0, -10, -93.81],
     keys:       [16, 4, -76],
     drums:      [20, 4, -76],
   })
@@ -839,16 +872,17 @@ describe('noise: what is left when the music stops', () => {
     ])
 
     expectReadings(result, {
-      pre:    [2, -10, -73.88],
-      // Open, the noise passes with the gate's own hiss
-      open:   [2, -10, -72.93],
-      gate:   [2, -10, -152.93],
-      gate20: [2, -10, -92.93],
+      pre:    [2, -10, -73.86],
+      // Open, the noise passes, with the gate's own (−95 dBu, after it — D18)
+      open:   [2, -10, -73.83],
+      gate:   [2, -10, -95],
+      gate20: [2, -10, -91.39],
     })
 
-    it('drops the noise by its Range and leaves the music alone', () => {
-      expectDb(leaving(result, 'open').noise - leaving(result, 'gate').noise, 80)
-      expectDb(leaving(result, 'open').noise - leaving(result, 'gate20').noise, 20)
+    it('drops the noise that arrives by its Range, leaves the music alone — and its own floor after it (D18)', () => {
+      // −80: far under its own floor, which is all that is left
+      expectDb(leaving(result, 'gate').noise, LINE_NOISE_DBU)
+      expectDb(leaving(result, 'gate20').noise, sumNoiseToDb([leaving(result, 'pre').noise - 20, LINE_NOISE_DBU]))
       expectDb(result.stages.gate.gainReductionDb, 0)
     })
   })
@@ -859,16 +893,16 @@ describe('noise: what is left when the music stops', () => {
       card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
       card('comp6', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
     ], [wire('line', 'comp'), wire('line', 'comp6')])
-    // The line (80 dB), the compressor's hiss (69.59), then 7.5 dB of gain reduction (D9)
-    expectDb(snrOf(leaving(result, 'comp')), 62.09)
+    // The line (80 dB), 7.5 dB of gain reduction (D9), then the compressor's own noise (−95, D18)
+    expectDb(snrOf(leaving(result, 'comp')), 71.31)
     expectDb(result.stages.comp.gainReductionDb, 7.5)
-    // The makeup gain lifts the noise with the music
-    expectDb(leaving(result, 'comp6').noise - leaving(result, 'comp').noise, 6)
+    // The makeup gain lifts the noise that arrived with the music; its own floor comes after it
+    expectDb(leaving(result, 'comp6').noise - leaving(result, 'comp').noise, 5.14)
     expectDb(leaving(result, 'comp6').rms - leaving(result, 'comp').rms, 6)
   })
 
   it('a bus adds the music as voltages (+6 dB per doubling) and the noise as noise (+3 dB)', () => {
-    // Digital, so the buses add no hiss of their own and the sums show alone
+    // Digital, so the buses add no noise of their own and the sums show alone
     const result = signalOf([
       card('a', 'line-in'), card('adcA', 'adc'),
       card('b', 'line-in'), card('adcB', 'adc'),
@@ -884,22 +918,23 @@ describe('noise: what is left when the music stops', () => {
     const one  = leaving(result, 'one')
     const two  = leaving(result, 'two')
     const four = leaving(result, 'four')
-    expectDb(one.noise, -97.59)
+    // The line's noise (−108 dBFS) and the ADC's own (−112 dBFS — D18)
+    expectDb(one.noise, -106.54)
     expectDb(two.noise - one.noise, 3.01)
     expectDb(four.noise - two.noise, 3.01)
     expectDb(two.rms - one.rms, 6.02)
     expectDb(four.rms - two.rms, 6.02)
   })
 
-  it('an analog bus adds its own hiss on top of what it sums', () => {
+  it('an analog bus adds its own noise on top of what it sums', () => {
     const result = signalOf([
       card('a', 'line-in'), card('b', 'line-in'), card('aux', 'aux-bus'),
     ], [wire('a', 'aux'), wire('b', 'aux')])
-    // Two line noises at −90 (−86.99 together) and the bus's −80
-    expectDb(leaving(result, 'aux').noise, -79.21)
+    // Two line noises at −90 (−86.99 together) and the bus's own −90 (D18)
+    expectDb(leaving(result, 'aux').noise, -85.23)
   })
 
-  describe('digital stages add none; converters add theirs on their analog side', () => {
+  describe('digital stages add none; converters add their own, 112 dB under full scale (D18)', () => {
     expectReadings(signalOf([
       card('line', 'line-in'),
       card('adc', 'adc'),
@@ -909,12 +944,12 @@ describe('noise: what is left when the music stops', () => {
       wire('line', 'adc'), wire('adc', 'fader'), wire('fader', 'dac'),
     ]), {
       line:  [2, -10, -90],
-      // The line's noise and the ADC's hiss (−79.59 dBu), on the digital scale
-      adc:   [-16, -28, -97.59],
-      // A digital fader: exactly 6 dB down, no hiss of its own
-      fader: [-22, -34, -103.59],
-      // Back to dBu (−85.59) and the DAC's hiss
-      dac:   [-4, -16, -78.94],
+      // The line's noise (−108 dBFS) and the ADC's own (−112 dBFS)
+      adc:   [-16, -28, -106.54],
+      // A digital fader: exactly 6 dB down, no noise of its own
+      fader: [-22, -34, -112.54],
+      // Back to dBu (−94.54) and the DAC's own (−94 dBu)
+      dac:   [-4, -16, -91.25],
     })
   })
 })
@@ -945,15 +980,15 @@ describe('D1: a hum is part of the noise and follows the signal', () => {
     expectDb(snrOf(leaving(hum, 'fader')), 30)
   })
 
-  it('a gate shuts it off in the pauses, with the rest of the noise', () => {
+  it('a gate shuts it off in the pauses, with the rest of the noise: its own floor is left (D18)', () => {
     expectDb(hum.stages.gate.hum, -120)
-    expectDb(leaving(hum, 'gate').noise, -120)
+    expectDb(leaving(hum, 'gate').noise, -94.99)
   })
 
   it('Ground Lift takes it away: only the hiss is left', () => {
     const lifted = rig(true)
     expect(lifted.stages.pre.hum).toBeUndefined()
-    expectDb(snrOf(leaving(lifted, 'pre')), 69.36)
+    expectDb(snrOf(leaving(lifted, 'pre')), 69.32)
   })
 })
 
@@ -976,8 +1011,9 @@ describe('a hum is not hiss: the noise without its hum reads the same either way
 
 // ── The marks on a dynamics card's curve ────────────────────────────────────────
 // A Compressor, Noise Gate or Limiter draws the peaks, the average and the noise of what goes into
-// its curve (curveIn: what arrives, its own hiss included), each where the curve sends it. Those
-// must be what leaves the card, or the marks and the meters disagree.
+// its curve (curveIn: what arrives — its own noise comes after its curve, D18), each where the curve
+// sends it, then its own noise added. Those must be what leaves the card, or the marks and the
+// meters disagree.
 
 /** A side's [peak, average, noise]. */
 function expectSide(actual: SideLevels | undefined, [peak, rms, noise]: readonly [number, number, number]) {
@@ -986,10 +1022,13 @@ function expectSide(actual: SideLevels | undefined, [peak, rms, noise]: readonly
   expectDb(actual?.noise, noise)
 }
 
-/** The noise through the card's curve on its own (peaks flattened at the clip level, as the engine does). */
+/**
+ * The readings through the card's curve on their own (peaks flattened at the clip level, as the
+ * engine does), then its own noise after it (a dynamics card: a line stage's, D18).
+ */
 function marksOf(stage: StageResult, curve: Transfer): SideLevels {
   const out = throughCurve(curve, curveInputOf(stage))
-  return { ...out, peak: Math.min(out.peak, CLIP_DBU) }
+  return { ...out, peak: Math.min(out.peak, CLIP_DBU), noise: sumNoiseToDb([out.noise, LINE_NOISE_DBU]) }
 }
 
 /**
@@ -1003,8 +1042,8 @@ function expectMarksLeave(result: GraphSignalResult, id: string, curve: Transfer
 }
 
 describe("the marks on a dynamics card's curve: what goes in, and where the card sends it", () => {
-  // Mic → Preamp +50: a voice at −10 dBu, peaks at +2, noise at −73.88; each card adds its own
-  // hiss (−80) to the noise it hears: −72.93. D9: the number engine sends each through the curve.
+  // Mic → Preamp +50: a voice at −10 dBu, peaks at +2, noise at −73.86. D9: the number engine sends
+  // each through the curve; D18: each card adds its own noise (−95) after it.
   const result = signalOf([
     card('mic', 'mic'),
     card('pre', 'gain', { preampDb: 50 }),
@@ -1020,28 +1059,28 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
     ...['comp', 'gate', 'high', 'lim', 'hot', 'off', 'fader'].map((id) => wire('pre', id)),
   ])
 
-  it('go in as the card hears them: what arrives, with its own hiss', () => {
-    expectSide(result.stages.comp.curveIn, [2, -10, -72.93])
-    expectSide(result.stages.gate.curveIn, [2, -10, -72.93])
+  it('go in as they arrive: a dynamics card adds its own noise after its curve (D18)', () => {
+    expectSide(result.stages.comp.curveIn, [2, -10, -73.86])
+    expectSide(result.stages.gate.curveIn, [2, -10, -73.86])
   })
 
   it('a compressor: the peaks come down further than the average — 12 dB apart in, 3 out (D9)', () => {
-    expectSide(result.stages.comp.curveOut, [-8.5, -11.5, -66.93])
+    expectSide(result.stages.comp.curveOut, [-8.5, -11.5, -67.86])
     expectMarksLeave(result, 'comp', compressor(-20, 4, 6))
   })
 
-  it('a noise gate with its threshold between the noise and the music: only the noise drops', () => {
-    expectSide(result.stages.gate.curveOut, [2, -10, -152.93])
+  it('a noise gate with its threshold between the noise and the music: only the noise drops, to its own floor', () => {
+    expectSide(result.stages.gate.curveOut, [2, -10, -95])
     expectMarksLeave(result, 'gate', noiseGate(-40, -80))
   })
 
   it('a noise gate set above the average: it cuts into the music, only the peaks get through (D9)', () => {
-    expectSide(result.stages.high.curveOut, [2, -90, -152.93])
+    expectSide(result.stages.high.curveOut, [2, -90, -95])
     expectMarksLeave(result, 'high', noiseGate(0, -80))
   })
 
   it('a limiter: the peaks stop at its ceiling, then the makeup gain lifts all three (D9)', () => {
-    expectSide(result.stages.lim.curveOut, [7, 0, -62.93])
+    expectSide(result.stages.lim.curveOut, [7, 0, -63.86])
     expectMarksLeave(result, 'lim', limiter(-3, 10))
   })
 
@@ -1053,7 +1092,7 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
   it('bypassed: nothing of its own goes in — the marks show what arrives', () => {
     expect(result.stages.off.curveIn).toBeUndefined()
     expect(result.stages.off.curveOut).toBeUndefined()
-    expectSide(curveInputOf(result.stages.off), [2, -10, -73.88])
+    expectSide(curveInputOf(result.stages.off), [2, -10, -73.86])
   })
 
   it('only dynamics cards have a curve', () => {
@@ -1061,11 +1100,10 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
     expect(result.stages.pre.curveIn).toBeUndefined()
   })
 
-  it("a gate hears its own hiss: set under it (−85), it never closes on the noise", () => {
-    // A line's noise is at −90, under the threshold; with the gate's hiss it is −79.59, over it
+  it("a gate does not hear its own noise (D18): set over a line's (−90), it closes on it — its own floor stays", () => {
     const line = signalOf([card('line', 'line-in'), card('gate', 'noise-gate', { thresholdDb: -85 })], [wire('line', 'gate')])
-    expectDb(line.stages.gate.curveIn?.noise, -79.59)
-    expectDb(leaving(line, 'gate').noise, -79.59)
+    expectDb(line.stages.gate.curveIn?.noise, -90)
+    expectDb(leaving(line, 'gate').noise, LINE_NOISE_DBU)
     expectMarksLeave(line, 'gate', noiseGate(-85, -80))
   })
 

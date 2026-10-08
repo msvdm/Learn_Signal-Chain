@@ -3,7 +3,7 @@ import { NODE_REGISTRY } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { SILENCE_DB, SILENT, louder } from './levels'
 import type { StageCondition } from './process'
-import { withOwnHiss } from './process'
+import { withInputNoise } from './process'
 import type { CardPlan, ChainLevels, StageRole, WireSignal } from './chain'
 import { contextOf, healthOf, humOf, levelOf, planChain, runChain } from './chain'
 import type { MeasuredChain } from './measured'
@@ -180,7 +180,7 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
     const at = cards.get(node.id)!
     // The dynamics run linked: one curve for both sides, driven by the louder one
     const curveIn = atWork(node)
-      ? withOwnHiss(node, louder(at.in.l, at.in.r), contextOf(card, at.inDomain, at.mixedDomains, null))
+      ? withInputNoise(node, louder(at.in.l, at.in.r), contextOf(card, at.inDomain, at.mixedDomains, null))
       : undefined
     const hum = humOf(at.out)
 

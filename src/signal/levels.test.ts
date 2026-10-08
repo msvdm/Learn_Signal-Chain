@@ -177,10 +177,11 @@ describe('meters', () => {
     expect(dbToPercent(-20)).toBe(55)
     expect(dbToPercent(20)).toBe(100)
     expect(dbToPercent(30)).toBe(100)
-    // The tail: −60 … −100 dBu (silence) squeezed into 10 %
-    expect(dbToPercent(-80)).toBe(5)
+    // The tail: −60 … −140 dBu (silence — D18: under the quietest noise) squeezed into 10 %
+    expect(dbToPercent(-100)).toBe(5)
+    expect(dbToPercent(-80)).toBe(7.5)
     expect(dbToPercent(SILENCE_DB)).toBe(0)
-    expect(dbToPercent(-120)).toBe(0)
+    expect(dbToPercent(-150)).toBe(0)
     expect(dbToPercent(S)).toBe(0)
   })
 
@@ -189,7 +190,7 @@ describe('meters', () => {
     expect(dbToPercent(ceilingOf('digital'), 'digital')).toBe(dbToPercent(ceilingOf('analog'), 'analog'))
     expect(dbToPercent(-80, 'digital')).toBe(METER_TAIL)
     expect(dbToPercent(-40, 'digital')).toBe(55)
-    expect(dbToPercent(-90, 'digital')).toBe(5)
+    expect(dbToPercent(-110, 'digital')).toBe(5)
     expect(dbToPercent(S, 'digital')).toBe(0)
     // Unity on either side of a converter: within 2.25 % of the bar of each other (2 dB)
     expect(dbToPercent(UNITY_DBU - ALIGNMENT_DB, 'digital') - dbToPercent(UNITY_DBU)).toBeCloseTo(2.25, 9)

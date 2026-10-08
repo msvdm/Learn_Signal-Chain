@@ -98,7 +98,8 @@ const STEPS = 100
 
 /**
  * Both axes span this much, up to the clip level (+20 dBu) or the digital ceiling (0 dBFS): down to
- * −100 dBu, 20 dB under the hiss every card adds (−80), so a gate's closing shows as a drop.
+ * −100 dBu, under a dynamics card's own noise (−95, after its curve — D18), so a gate's closing
+ * shows as a drop to it.
  */
 const RANGE_DB = 120
 const GRID_STEP_DB = 20

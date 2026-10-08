@@ -159,36 +159,89 @@ export function loudnessOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number
   return AT_THE_MIC_DB[param(node, 'character') as keyof typeof AT_THE_MIC_DB] ?? 0
 }
 
-/**
- * The hiss a powered card adds to what arrives, before it does its job (so a make-up gain after it
- * lifts it, and a gate can shut it off). A Preamp is built for tiny signals: far quieter.
- */
-export const HISS_DBU = -80
-export const PREAMP_HISS_DBU = -128
+// ── A card's own noise, as on a real analogue desk (D18) ───────────────────────────
+// Two sources per powered card. Input noise is added before the card's gain and amplified by it:
+// only a Gain has one — a mic preamp's equivalent input noise (EIN), or, as a trim on a line, the
+// same preamp behind a 20 dB pad. Output noise is added after the card's job and stays put: the
+// card's own controls never turn it down (a fader pulled down still leaves its stage's floor, an
+// amplifier turned down still hisses). So a Preamp's noise rises with its gain once the EIN, lifted,
+// passes its floor; noise arriving is turned up or down with the signal. Figures from real gear:
+// EIN −128 dBu (150 Ω, 20 Hz – 20 kHz; Yamaha MG, Behringer Xenyx, Mackie VLZ: −128 … −129.5); a
+// desk's residual output noise about −100 dBu (MG10XU: −102); a line stage about −95; a mix bus
+// −86 … −91 with channels at unity / down; converters 112 dB under full scale; a power amp about
+// 105 dB under its full output.
+
+/** A mic preamp's equivalent input noise (dBu), amplified by its gain. */
+export const PREAMP_EIN_DBU = -128
+/** A Gain's own floor at its output (dBu): what is left at low gain. */
+export const GAIN_FLOOR_DBU = -100
+/** A Gain as a trim on a line signal: the same preamp behind a 20 dB pad (dBu, before its gain). */
+export const TRIM_INPUT_NOISE_DBU = PREAMP_EIN_DBU + 20
+/** A line stage at its output: filter, EQ, dynamics, fader (dBu). */
+export const LINE_NOISE_DBU = -95
+/** A mix bus's summing amplifier at its output (dBu). */
+export const BUS_NOISE_DBU = -90
+/** A converter's own noise: 112 dB under its full scale (dBFS — at the usual alignment −94 dBu). */
+export const CONVERTER_NOISE_DBFS = -112
+/** A power amplifier's — or a powered speaker's own amp's — noise at its output (dBu at line level: 25 dB SPL from a speaker). */
+export const AMP_NOISE_DBU = -85
+/** A Guitar Amp's hiss and hum (dBu at line level: 40 dB SPL). */
+export const GUITAR_AMP_NOISE_DBU = -76
 
 /**
- * Cards with no power of their own add no hiss: a transformer, a resistor, a switch, a pan pot, a
- * passive speaker. Sources bring their own noise (NOISE_BELOW); digital stages add none.
+ * Cards with no power of their own add no noise: a transformer, a resistor, a switch, a pan pot, a
+ * passive speaker. Sources bring their own noise (NOISE_BELOW).
  */
 const PASSIVE = new Set<TypeKey>(['mic', 'line-in', 'instrument', 'generator', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker'])
 
-/** The hiss this card adds to what arrives (−∞: none). The DAC adds its own on its analog side. */
-export function hissDbOf(node: SignalNode, ctx: Pick<SideContext, 'domain' | 'preamp' | 'fed'>): number {
-  if (!ctx.fed || ctx.domain === 'digital' || PASSIVE.has(node.typeKey)) return -Infinity
-  return ctx.preamp ? PREAMP_HISS_DBU : HISS_DBU
+/** Each powered card's output noise (the Gain and the converters are worked out below). */
+const OUTPUT_NOISE: Partial<Record<TypeKey, number>> = {
+  hpf: LINE_NOISE_DBU, eq: LINE_NOISE_DBU, 'graphic-eq': LINE_NOISE_DBU,
+  comp: LINE_NOISE_DBU, 'noise-gate': LINE_NOISE_DBU, limiter: LINE_NOISE_DBU, deesser: LINE_NOISE_DBU,
+  fader: LINE_NOISE_DBU,
+  'master-bus': BUS_NOISE_DBU, 'aux-bus': BUS_NOISE_DBU, 'matrix-bus': BUS_NOISE_DBU,
+  amp: AMP_NOISE_DBU, 'active-speaker': AMP_NOISE_DBU, headphones: AMP_NOISE_DBU,
+  'guitar-amp': GUITAR_AMP_NOISE_DBU,
 }
 
-/** `s` with a hiss at `db` added to its noise. */
-const withHiss = (s: SideLevels, db: number): SideLevels => {
+/** A card's own noise: before its gain (`in`) and after its job (`out`), each in its side's units (−∞: none). */
+export interface OwnNoise {
+  in: number
+  out: number
+}
+
+const QUIET: OwnNoise = { in: -Infinity, out: -Infinity }
+
+/**
+ * The noise this card adds (D18). None with nothing plugged in, none from a passive card, none
+ * working digitally (32-bit float processing adds none) — but the converters: an ADC adds its own
+ * on its digital side (dBFS), a DAC on its analog side (dBu: the same 112 dB under its full scale).
+ */
+export function ownNoiseOf(node: SignalNode, ctx: Pick<SideContext, 'domain' | 'preamp' | 'fed'>): OwnNoise {
+  if (!ctx.fed || PASSIVE.has(node.typeKey)) return QUIET
+  if (node.typeKey === 'dac') return ctx.domain === 'digital' ? { in: -Infinity, out: CONVERTER_NOISE_DBFS + param(node, 'alignmentDb') } : QUIET
+  if (ctx.domain === 'digital') return QUIET
+  if (node.typeKey === 'adc') return { in: -Infinity, out: CONVERTER_NOISE_DBFS }
+  if (node.typeKey === 'gain') return { in: ctx.preamp ? PREAMP_EIN_DBU : TRIM_INPUT_NOISE_DBU, out: GAIN_FLOOR_DBU }
+  return { in: -Infinity, out: OUTPUT_NOISE[node.typeKey] ?? -Infinity }
+}
+
+/** `s` with a noise at `db` added to its noise (as powers). */
+const withNoise = (s: SideLevels, db: number): SideLevels => {
   if (!isFinite(db)) return s
   // Written out, not spread: every powered card on every change
   const noise = isFinite(s.noise) ? 10 * Math.log10(Math.pow(10, s.noise / 10) + Math.pow(10, db / 10)) : db
   return { peak: s.peak, rms: s.rms, noise, hum: s.hum }
 }
 
-/** What a card works on: `input` with the hiss it adds to what arrives (a dynamics card's curve shows it). */
-export function withOwnHiss(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
-  return withHiss(input, hissDbOf(node, ctx))
+/** What a card works on: `input` with the noise it adds before its gain (only a Gain adds any). */
+export function withInputNoise(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
+  return withNoise(input, ownNoiseOf(node, ctx).in)
+}
+
+/** What leaves a card: its result with its own output noise — none from a card that sends nothing (a blocked one). */
+export function withOutputNoise(node: SignalNode, result: SideResult, ctx: SideContext): SideLevels {
+  return result.condition === undefined ? withNoise(result.out, ownNoiseOf(node, ctx).out) : result.out
 }
 
 /**
@@ -363,9 +416,8 @@ const PROCESS: Record<TypeKey, Process> = {
   },
   dac: (node, input, ctx) => {
     if (ctx.domain === 'analog') return blocked('dacExpectsDigital', 'analog')
-    // Its analog side hisses like any powered card
-    const out = shifted(input, param(node, 'alignmentDb'))
-    return { out: ctx.fed ? withHiss(out, HISS_DBU) : out, domain: 'analog' }
+    // Its own noise is added on its analog side (ownNoiseOf)
+    return { out: shifted(input, param(node, 'alignmentDb')), domain: 'analog' }
   },
   'master-bus':      busFader,
   'aux-bus':         busFader,
@@ -377,13 +429,21 @@ const PROCESS: Record<TypeKey, Process> = {
 }
 
 /**
+ * What a card does to one channel before its own output noise: its input noise added, its job done
+ * (linked stereo dynamics take the change from here — signal/chain.ts).
+ */
+export function processJob(node: SignalNode, input: SideLevels, ctx: SideContext): SideResult {
+  return PROCESS[node.typeKey](node, withInputNoise(node, input, ctx), ctx)
+}
+
+/**
  * One channel of `node` with `input` arriving (dBu, or dBFS after an ADC). A bus gets everything
- * plugged into it already added up. The card adds its hiss to what arrives, does its job, and
- * flattens the peaks it cannot pass.
+ * plugged into it already added up. The card adds its input noise, does its job, adds its output
+ * noise (D18), and flattens the peaks it cannot pass.
  */
 export function processSide(node: SignalNode, input: SideLevels, ctx: SideContext): SideResult {
-  const result = PROCESS[node.typeKey](node, withOwnHiss(node, input, ctx), ctx)
-  return { ...result, out: flattenPeaks(result.out, result.domain) }
+  const result = processJob(node, input, ctx)
+  return { ...result, out: flattenPeaks(withOutputNoise(node, result, ctx), result.domain) }
 }
 
 /** Pan knob (0 = full left, 50 = centre, 100 = full right): equal-power, −3 dB each side at centre. */

@@ -5,7 +5,7 @@ import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, HISS_DBU, NOISE_BELOW, balanceSides, guitarAmpGainDb, hissDbOf, loudnessOf, panSides, soundKindOf } from '../signal/process'
+import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, NOISE_BELOW, balanceSides, guitarAmpGainDb, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -16,8 +16,9 @@ import { LOOP_S } from './sounds'
 // the number engine does to its readings (signal/chain.ts runChain, from the same plan) — gains,
 // faders and converters are gains, the filters biquads, Pan / Balance a gain per side, a bus adds up
 // what is plugged in, the dynamics are our processors (audio/processors.ts). Every powered card adds
-// its own hiss before it does its job; a DI Box in a ground loop a 50 Hz hum. Whatever would pass
-// the clip level (+20 dBu, 0 dBFS digital) is cut off there.
+// its own noise as a real desk does — a Gain before its gain, every card after its job (D18) —; a DI
+// Box in a ground loop a 50 Hz hum. Whatever would pass the clip level (+20 dBu, 0 dBFS digital) is
+// cut off there.
 //
 // Lean on purpose — a render's time is mostly nodes: a signal is the sum of a few node outputs
 // (a node's input adds up whatever is connected, so joining two signals costs nothing), and only
@@ -260,10 +261,10 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         // Passed on as it is, with no hiss of its own (a bus still adds its wires up)
         outSig = clippedIfNear(inSig, card, levels.inDomain)
       } else {
-        const own = hissDbOf(node, { domain: levels.inDomain, preamp: card.preamp, fed: card.fed })
-        let out = processed(card, isFinite(own) ? plus(inSig, hiss(own, channels)) : inSig)
-        // The DAC's analog side hisses like any powered card
-        if (node.typeKey === 'dac' && card.fed) out = plus(out, hiss(HISS_DBU, channels))
+        // Its own noise (D18): before its gain (a Gain's), then after its job, in the units it leaves in
+        const own = ownNoiseOf(node, { domain: levels.inDomain, preamp: card.preamp, fed: card.fed })
+        let out = processed(card, isFinite(own.in) ? plus(inSig, hiss(own.in, channels)) : inSig)
+        if (isFinite(own.out)) out = plus(out, hiss(own.out, channels))
         outSig = clippedIfNear(out, card, levels.domain)
       }
     }
@@ -317,7 +318,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     return plus(atLevel(level + loudnessOf(node), sound), noise)
   }
 
-  /** What a card does to what it works on (its own hiss in). */
+  /** What a card does to what it works on (a Gain's input noise already in). */
   function processed(card: CardPlan, x: Sig): Sig {
     const { node } = card
     switch (node.typeKey) {

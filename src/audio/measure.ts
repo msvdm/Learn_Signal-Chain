@@ -7,7 +7,7 @@ import type { SideLevels } from '../signal/levels'
 import { louder } from '../signal/levels'
 import type { MeasuredStage } from '../signal/measured'
 import type { MeterFrames, MovingSignal, MovingStage } from '../signal/moving'
-import { soundKindOf, withOwnHiss } from '../signal/process'
+import { soundKindOf, withInputNoise } from '../signal/process'
 import type { ChainSounds, Tap } from './chainAudio'
 import { HUM_HZ, buildChain } from './chainAudio'
 import type { LoopKind } from './loops'
@@ -266,7 +266,7 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
       stage.gainReductionDb = Math.max(0, bandIn && bandOut
         ? levelOf(bandIn) - levelOf(bandOut)
         : levelOf(inSig) + makeupOf(card) - levelOf(outSig))
-      stage.curveIn = withOwnHiss(node, louder(inSig.l, inSig.r), contextOf(card, levels.inDomain, levels.mixedDomains, null))
+      stage.curveIn = withInputNoise(node, louder(inSig.l, inSig.r), contextOf(card, levels.inDomain, levels.mixedDomains, null))
 
       // And as it moved: its curve hears the louder side; turning down, moment by moment
       const curveIn  = louderSlices((inMoving ?? outMoving).l, (inMoving ?? outMoving).r)

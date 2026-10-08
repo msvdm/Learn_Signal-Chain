@@ -231,11 +231,15 @@ export function fitScaleMarks(marks: ScaleMark[], length: number, label: number)
   return marks.filter((m) => kept.includes(m))
 }
 
-/** At or below this a level counts as silence: written −∞, no readings (a microphone sits at −60 dBu). */
-export const SILENCE_DB = -100
+/**
+ * At or below this a level counts as silence: written −∞, no readings. Under the quietest noise a
+ * chain has (a microphone's room, −126 dBu; a preamp's input noise, −128): real noise floors read
+ * as numbers (D18).
+ */
+export const SILENCE_DB = -140
 
 export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
-  // A real reading down to −99.9; below that it is silence
+  // A real reading down to −139.9; below that it is silence
   const unit = domain === 'digital' ? 'dBFS' : 'dBu'
   if (!isFinite(db) || db <= SILENCE_DB) return `-∞ ${unit}`
   // Rounded first: a hair under 0 is "+0.0", never "-0.0"

@@ -4,7 +4,10 @@ import { initialParams } from '../data/nodeRegistry'
 import type { SideLevels } from './levels'
 import { SILENT } from './levels'
 import type { SideContext, SideResult } from './process'
-import { balanceSides, compressor, flattenPeaks, limiter, noiseGate, panSides, processSide } from './process'
+import {
+  AMP_NOISE_DBU, BUS_NOISE_DBU, CONVERTER_NOISE_DBFS, GAIN_FLOOR_DBU, GUITAR_AMP_NOISE_DBU, LINE_NOISE_DBU,
+  balanceSides, compressor, flattenPeaks, limiter, noiseGate, panSides, processSide,
+} from './process'
 
 // What each card does to one channel, on its own (the engine tests, engine.test.ts, put the cards
 // together). processSide works on a peak, an average and a noise: `run` passes the average in and
@@ -336,20 +339,43 @@ describe('sources: their peaks above the average, their noise below it', () => {
   })
 })
 
-describe('hiss: every powered card adds its own to what arrives, before it does its job', () => {
+describe('noise as on a real desk (D18): a Gain lifts its input noise, every card adds its own after its job', () => {
   const quiet = sig(-48, -60, S)
 
-  it('a plain Gain: −80 dBu, lifted by its gain with the rest', () => {
-    expect(levels('gain', quiet, { gainDb: 20 }).noise).toBe(-60)
-    expect(levels('fader', sig(2, -10, S)).noise).toBe(-80)
+  it('a Preamp: its input noise (−128 dBu) rises with its gain once it passes its floor (−100)', () => {
+    const at = (preampDb: number) => levels('gain', quiet, { preampDb }, { preamp: true }).noise
+    expect(at(0)).toBeCloseTo(-99.99, 2)
+    expect(at(20)).toBeCloseTo(-99.36, 2)
+    expect(at(40)).toBeCloseTo(-87.73, 2)
+    expect(at(60)).toBeCloseTo(-68, 2)
   })
 
-  it('a Preamp is far quieter: −128 dBu', () => {
-    expect(levels('gain', quiet, { preampDb: 40 }, { preamp: true }).noise).toBe(-88)
+  it('a trim (a Gain on a line): the same preamp behind a 20 dB pad — its floor turned down, its noise up from unity', () => {
+    const at = (gainDb: number) => levels('gain', sig(2, -10, S), { gainDb }).noise
+    expect(at(-20)).toBeCloseTo(-99.99, 2)
+    expect(at(0)).toBeCloseTo(-99.36, 2)
+    expect(at(20)).toBeCloseTo(-87.73, 2)
+  })
+
+  it('a Gain turned all the way down sends nothing but its own floor', () => {
+    expect(levels('gain', sig(2, -10, -80), { gainDb: -60 })).toEqual({ peak: S, rms: S, noise: GAIN_FLOOR_DBU, hum: S })
+  })
+
+  it('a card never turns its own noise down: a fader pulled down leaves its floor (−95)', () => {
+    expect(levels('fader', sig(2, -10, S), { faderDb: -20 }).noise).toBe(LINE_NOISE_DBU)
+    // What arrives (−80) is turned down with the music, its own floor stays
+    expect(levels('fader', sig(2, -10, -80), { faderDb: -20 }).noise).toBeCloseTo(-93.81, 2)
   })
 
   it('added to the noise that arrives as noise (+3 dB for two equal ones)', () => {
-    expect(levels('eq', sig(2, -10, -80)).noise).toBeCloseTo(-76.99, 2)
+    expect(levels('eq', sig(2, -10, -95)).noise).toBeCloseTo(-91.99, 2)
+  })
+
+  it('a bus −90 dBu; an amplifier, a powered speaker −85 after their Volume; a Guitar Amp −76', () => {
+    expect(levels('master-bus', sig(2, -10, S)).noise).toBe(BUS_NOISE_DBU)
+    expect(levels('amp', sig(2, -10, S), { gainDb: -20 }).noise).toBe(AMP_NOISE_DBU)
+    expect(levels('active-speaker', sig(2, -10, S)).noise).toBe(AMP_NOISE_DBU)
+    expect(levels('guitar-amp', sig(-15, -30, S)).noise).toBe(GUITAR_AMP_NOISE_DBU)
   })
 
   it('passive cards add none: DI Box, Pad, the switches, Pan, a passive speaker', () => {
@@ -358,15 +384,12 @@ describe('hiss: every powered card adds its own to what arrives, before it does 
     }
   })
 
-  it('none with nothing plugged in, none working digitally — but a DAC hisses on its analog side', () => {
+  it('none with nothing plugged in, none working digitally — the converters 112 dB under full scale', () => {
     expect(levels('fader', SILENT, {}, { fed: false }).noise).toBe(S)
     expect(levels('fader', sig(-16, -28, S), {}, { domain: 'digital' }).noise).toBe(S)
-    expect(levels('adc', sig(2, -10, S)).noise).toBe(-98)
-    expect(levels('dac', sig(-16, -28, S), {}, { domain: 'digital' }).noise).toBe(-80)
-  })
-
-  it('a Gain turned all the way down sends nothing, its hiss neither', () => {
-    expect(levels('gain', sig(2, -10, -80), { gainDb: -60 })).toEqual(SILENT)
+    // An ADC on its digital side, a DAC on its analog side (−94 dBu at the usual alignment)
+    expect(levels('adc', sig(2, -10, S)).noise).toBe(CONVERTER_NOISE_DBFS)
+    expect(levels('dac', sig(-16, -28, S), {}, { domain: 'digital' }).noise).toBe(-94)
   })
 })
 
@@ -394,19 +417,19 @@ describe('dynamics work on every reading: the peaks, the average and the noise i
     const out = processSide(cardOf('comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 3 }), sig(2, -10, -90), CTX)
     expect(out.out.peak).toBe(-11.5)
     expect(out.out.rms).toBe(-14.5)
-    // The line's noise and the compressor's hiss (−79.59), under the threshold: +3 dB
-    expect(out.out.noise).toBeCloseTo(-76.59, 2)
+    // The line's noise, under the threshold, only gets the makeup gain (−87); the compressor's own (−95) comes after
+    expect(out.out.noise).toBeCloseTo(-86.36, 2)
     expect(out.gainReductionDb).toBe(7.5)
   })
 
   it('a noise gate between the noise and the signal: open for the music, closed in the pauses', () => {
     const out = levels('noise-gate', sig(2, -10, S))
     expect(out.rms).toBe(-10)
-    // Its own hiss (−80), turned down by the Range
-    expect(out.noise).toBe(-160)
+    // Nothing arrives in the pauses; its own noise comes after it (D18)
+    expect(out.noise).toBe(LINE_NOISE_DBU)
   })
 
   it('a limiter caps the peaks and leaves an average under its ceiling alone', () => {
-    expect(levels('limiter', sig(2, -10, S))).toEqual(sig(-3, -10, -80))
+    expect(levels('limiter', sig(2, -10, S))).toEqual(sig(-3, -10, LINE_NOISE_DBU))
   })
 })
