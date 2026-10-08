@@ -9,7 +9,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
-import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
+import { DYNAMICS_KNOB, KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { MeterSides } from './MeterSides'
 import { noiseGate } from '../../signal/process'
 
@@ -50,7 +50,7 @@ export function NoiseGateNode({ id }: CardProps) {
               formatValue={(v) => `${v} dB`}
               onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
             {/* How far it turns down when closed: −80 dB = silence */}
@@ -63,7 +63,7 @@ export function NoiseGateNode({ id }: CardProps) {
               formatValue={(v) => `${v} dB`}
               onChange={(v) => updateNodeParams(id, { rangeDb: v })}
               color="var(--signal-hot)"
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
             <KnobControl
@@ -75,7 +75,7 @@ export function NoiseGateNode({ id }: CardProps) {
               formatValue={(v) => `${v} ms`}
               onChange={(v) => updateNodeParams(id, { holdMs: v })}
               color="var(--lsc-accent)"
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
           </KnobStack>
@@ -110,7 +110,7 @@ export function NoiseGateNode({ id }: CardProps) {
             formatValue={(v) => `${v} ms`}
             onChange={(v) => updateNodeParams(id, { attackMs: v })}
             color="var(--lsc-accent)"
-            size={44}
+            size={DYNAMICS_KNOB}
             layout="side"
           />
           <KnobControl
@@ -122,7 +122,7 @@ export function NoiseGateNode({ id }: CardProps) {
             formatValue={(v) => `${v} ms`}
             onChange={(v) => updateNodeParams(id, { releaseMs: v })}
             color="var(--lsc-accent)"
-            size={44}
+            size={DYNAMICS_KNOB}
             layout="side"
           />
         </div>

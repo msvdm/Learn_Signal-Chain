@@ -8,7 +8,7 @@ import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
 import type { SideLevels } from '../../signal/levels'
-import { useReadingsShown } from '../../hooks/useReadingsShown'
+import { useDetailShown } from '../../hooks/useDetailShown'
 import { useTranslation } from '../../i18n/useTranslation'
 import { fitText, textWidth, cssVar } from '../../utils/fitText'
 import type { TypeKey } from '../../data/nodeRegistry'
@@ -53,8 +53,6 @@ interface OverviewFaceProps {
   /** Fully visible (zoomed out); otherwise faded out and hidden. */
   shown: boolean
   bypassed: boolean
-  /** Height of the face (px) when it covers only the top of the card (a face-only card's readings below it). */
-  height?: number
   /** Room kept free on the right (px): a face-only card's upright meter, zoomed in */
   reserveRight?: number
   /** The level reads dB SPL, the sound in the air (its card's SPL_DB) */
@@ -68,9 +66,9 @@ interface OverviewFaceProps {
  * (a source or a speaker: its icon) shows this face at every zoom: zoomed in beside its upright
  * meter, without the level block; zoomed out with it (D13).
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, height, reserveRight = 0, spl }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, status, shown, bypassed, reserveRight = 0, spl }: OverviewFaceProps) {
   const { t }    = useTranslation()
-  const detailed = useReadingsShown()
+  const detailed = useDetailShown()
   // A string, so dragging the card (a new internal node each frame) does not re-render it
   const sizeKey = useStore((s) => {
     const m = s.nodeLookup.get(nodeId)?.measured
@@ -82,8 +80,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
 
   const layout = useMemo(() => {
     if (!sizeKey) return null
-    const [W, cardH] = sizeKey.split('x').map(Number)
-    const H = height ?? cardH
+    const [W, H] = sizeKey.split('x').map(Number)
     const sans = cssVar('--lsc-font-sans')
     const mono = cssVar('--lsc-font-mono')
     // Inside the 1px border
@@ -126,7 +123,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
     return { number, unit, bar, meterH, scale, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo, reserveRight, spl, detailed])
+  }, [sizeKey, label, t, bypassed, typeKey, showLevel, stereo, reserveRight, spl, detailed])
 
   if (!layout) return null
 
@@ -180,7 +177,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       aria-hidden={!shown}
       className="lsc-fade"
       style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: height ?? '100%', pointerEvents: 'none',
+        position: 'absolute', top: 0, left: 0, right: 0, height: '100%', pointerEvents: 'none',
         opacity: shown ? (bypassed ? 0.5 : 1) : 0,
         visibility: shown ? 'visible' : 'hidden',
       }}

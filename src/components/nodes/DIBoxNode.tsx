@@ -53,8 +53,6 @@ export function DIBoxNode({ id }: CardProps) {
       nodeId={id}
       typeKey="di-box"
       label={useNodeName(id, 'di-box')}
-      // Its two outputs send different signals (mic level, instrument level): it shows both levels instead
-      readings={false}
     >
       {/* What arrives on the left; its two outputs, at their own levels, in the middle */}
       <MeterSides nodeId={id} output={false}>

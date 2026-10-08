@@ -240,16 +240,17 @@ export function EQNode({ id }: CardProps) {
           </MeterSides>
         </div>
       ) : (
-        // A simple mixing desk's EQ: no curve, just turn a range up or down
+        // A simple mixing desk's EQ: no curve, just turn a range up or down — its knobs one above
+        // another, High on top, as on a desk's channel strip
         <MeterSides nodeId={id}>
-          <div style={{ display: 'flex', justifyContent: 'space-around', gap: 8 }}>
-            {specs.map((s) => (
+          <div style={{ alignSelf: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[...specs].reverse().map((s) => (
               <KnobControl
                 key={s.index}
                 value={bands[s.index].gainDb} min={DB_MIN} max={DB_MAX} step={0.5}
                 label={s.name} formatValue={formatGain}
                 onChange={(v) => updateBand(s.index, { gainDb: v })}
-                color={BAND_COLORS[s.index]} size={44}
+                color={BAND_COLORS[s.index]} size={56} layout="side"
               />
             ))}
           </div>

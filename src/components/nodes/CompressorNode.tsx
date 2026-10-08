@@ -9,7 +9,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
-import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
+import { DYNAMICS_KNOB, KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { MeterSides } from './MeterSides'
 import { compressor } from '../../signal/process'
 
@@ -45,7 +45,7 @@ export function CompressorNode({ id }: CardProps) {
               formatValue={(v) => `${v} dB`}
               onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color="var(--signal-hot)"
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
             <KnobControl
@@ -57,7 +57,7 @@ export function CompressorNode({ id }: CardProps) {
               formatValue={(v) => `${v}:1`}
               onChange={(v) => updateNodeParams(id, { ratio: v })}
               color="var(--lsc-accent)"
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
             <KnobControl
@@ -69,7 +69,7 @@ export function CompressorNode({ id }: CardProps) {
               formatValue={(v) => `+${v} dB`}
               onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
               color="var(--signal-good)"
-              size={44}
+              size={DYNAMICS_KNOB}
               layout="side"
             />
           </KnobStack>
@@ -96,7 +96,7 @@ export function CompressorNode({ id }: CardProps) {
             formatValue={(v) => `${v} ms`}
             onChange={(v) => updateNodeParams(id, { attackMs: v })}
             color="var(--lsc-accent)"
-            size={44}
+            size={DYNAMICS_KNOB}
             layout="side"
           />
           <KnobControl
@@ -108,7 +108,7 @@ export function CompressorNode({ id }: CardProps) {
             formatValue={(v) => `${v} ms`}
             onChange={(v) => updateNodeParams(id, { releaseMs: v })}
             color="var(--lsc-accent)"
-            size={44}
+            size={DYNAMICS_KNOB}
             layout="side"
           />
         </div>

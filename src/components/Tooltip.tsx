@@ -8,7 +8,6 @@ import { chainOrder } from '../graph/graph'
 import { helpKeyOf, titleOf } from '../utils/nodeName'
 import { nodeDims } from '../utils/layoutHelpers'
 import { useGraphSignal } from '../hooks/useGraphSignal'
-import { useReadingsShown } from '../hooks/useReadingsShown'
 import { usePaletteWidth } from '../hooks/usePaletteWidth'
 
 const WIDTH  = 380
@@ -28,7 +27,6 @@ export function HelpPopover() {
   const setSelected = useSignalStore((s) => s.setSelectedNode)
   const { t, fmt } = useTranslation()
   const { stages } = useGraphSignal()
-  const readingsShown = useReadingsShown()
   const { setViewport, getViewport } = useReactFlow()
   const { x: vx, y: vy, zoom } = useViewport()
   const paneW = useStore((s) => s.width)
@@ -46,7 +44,7 @@ export function HelpPopover() {
   useLayoutEffect(() => {
     // Natural height (before any max-height clamp) + the 1px border top and bottom
     if (scrollRef.current) setHeight(scrollRef.current.scrollHeight + 2)
-  }, [activeId, helpKey, t, hasAnchor, readingsShown])
+  }, [activeId, helpKey, t, hasAnchor])
 
   // Bring the stage and its popover into view: once per opened stage, so it never
   // fights the learner's own panning afterwards.
@@ -183,12 +181,6 @@ export function HelpPopover() {
             <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whyIsItHere}</h4>
             <p style={paragraph}>{entry.why}</p>
           </section>
-          {readingsShown && entry.readings && (
-            <section>
-              <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.readings}</h4>
-              <p style={paragraph}>{entry.readings}</p>
-            </section>
-          )}
           <section
             style={{
               borderRadius: 12, background: 'var(--lsc-tip-bg)', border: '1px solid var(--lsc-tip-bd)',

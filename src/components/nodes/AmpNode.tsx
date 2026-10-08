@@ -1,7 +1,7 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
-import { ControlSlider } from './ControlSlider'
+import { KnobControl } from '../controls/KnobControl'
 import { MeterSides } from './MeterSides'
 import { GAIN_OFF_DB } from '../../signal/process'
 import { useSignalStore } from '../../store/signalStore'
@@ -12,6 +12,9 @@ import { COLUMN_W } from '../../utils/twoColumns'
 
 // The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
+
+/** Its Volume knobs (px): two fit one above the other in stereo */
+const KNOB = 72
 
 export function AmpNode({ id }: CardProps) {
   const p                   = useParams(id, 'amp')
@@ -33,25 +36,33 @@ export function AmpNode({ id }: CardProps) {
       typeKey="amp"
       label={useNodeName(id, 'amp')}
     >
-      {/* In | the Volume slider(s) | Out */}
+      {/* In | the Volume knob(s) — a power amp's attenuators, one per channel | Out */}
       <MeterSides nodeId={id}>
-        <div style={{ width: COLUMN_W, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <ControlSlider
+        <div style={{ width: COLUMN_W, alignSelf: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <KnobControl
             value={gainDb}
             min={GAIN_OFF_DB}
             max={0}
+            step={0.5}
             label={stereo ? t.nodes.amp.levelA : t.nodes.amp.level}
             formatValue={formatLevel}
             onChange={setA}
+            color="var(--lsc-accent)"
+            size={KNOB}
+            layout="side"
           />
           {stereo && (
-            <ControlSlider
+            <KnobControl
               value={gainDbR}
               min={GAIN_OFF_DB}
               max={0}
+              step={0.5}
               label={t.nodes.amp.levelB}
               formatValue={formatLevel}
               onChange={(v) => updateNodeParams(id, { gainDbR: v })}
+              color="var(--lsc-accent)"
+              size={KNOB}
+              layout="side"
             />
           )}
         </div>

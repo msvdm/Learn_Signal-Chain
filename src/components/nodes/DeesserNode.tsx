@@ -7,7 +7,7 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useParams } from '../../hooks/useParams'
 import { COLUMN_W } from '../../utils/twoColumns'
-import { KnobStack, ReductionReadout } from './DynamicsLayout'
+import { DYNAMICS_KNOB_BIG, KnobStack, ReductionReadout } from './DynamicsLayout'
 import { MeterSides } from './MeterSides'
 
 export function DeesserNode({ id }: CardProps) {
@@ -43,7 +43,7 @@ export function DeesserNode({ id }: CardProps) {
               formatValue={(v) => `${v} dB`}
               onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color={isActive ? 'var(--signal-hot)' : 'var(--signal-good)'}
-              size={44}
+              size={DYNAMICS_KNOB_BIG}
               layout="side"
             />
             <KnobControl
@@ -55,7 +55,7 @@ export function DeesserNode({ id }: CardProps) {
               formatValue={(v) => `${formatFreq(v)} Hz`}
               onChange={(v) => updateNodeParams(id, { frequencyHz: v })}
               color="var(--lsc-accent)"
-              size={44}
+              size={DYNAMICS_KNOB_BIG}
               layout="side"
             />
           </KnobStack>

@@ -5,12 +5,9 @@ import { useSignalStore } from '../../store/signalStore'
 import { useStage } from '../../hooks/useGraphSignal'
 import { formatDb, humStrength } from '../../signal/levels'
 import type { SignalDomain } from '../../signal/levels'
-import { AUDIBLE_HISS_DB, hissStartsAt } from '../../signal/readings'
-import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useTranslation } from '../../i18n/useTranslation'
 import { portName } from '../../utils/nodeName'
 import { NodePort } from './NodePort'
-import { NoiseIcon } from './icons'
 
 // Pieces every element's shell draws around its controls (NodeWrapper, FreeControl; useNodeChrome)
 
@@ -59,14 +56,13 @@ export function WireTargetBadge({ label }: { label: string }) {
 
 /**
  * The tags on the bottom edge of an element, side by side: the hum of a DI Box ground loop, on
- * every element it passes through, and — from Intermediate up — "You can hear hiss here" on the
- * element where the hiss becomes audible (signal/readings.ts hissStartsAt).
+ * every element it passes through, and "Not connected" on a source card with nothing plugged into
+ * its output (`notConnected`: zoomed in — zoomed out its face says so in the level's place, D11).
  */
-export function NoiseTags({ nodeId, overview }: { nodeId: string; overview: boolean }) {
-  const stage    = useStage(nodeId)
-  const detailed = useReadingsShown()
-  const hiss     = detailed && stage !== undefined && hissStartsAt(stage)
-  if (stage?.hum === undefined && !hiss) return null
+export function EdgeTags({ nodeId, overview, notConnected = false }: { nodeId: string; overview: boolean; notConnected?: boolean }) {
+  const stage = useStage(nodeId)
+  const lone  = notConnected && !overview
+  if (stage?.hum === undefined && !lone) return null
 
   return (
     <div
@@ -76,7 +72,7 @@ export function NoiseTags({ nodeId, overview }: { nodeId: string; overview: bool
       }}
     >
       {stage?.hum !== undefined && <HumTag db={stage.hum} domain={stage.domain} overview={overview} />}
-      {hiss && <HissTag overview={overview} />}
+      {lone && <NotConnectedTag />}
     </div>
   )
 }
@@ -98,17 +94,12 @@ function HumTag({ db, domain, overview }: { db: number; domain: SignalDomain; ov
   )
 }
 
-/** "You can hear hiss here", in the grey of the noise fog on the meters. */
-function HissTag({ overview }: { overview: boolean }) {
-  const { t, fmt } = useTranslation()
-  const size       = overview ? 28 : 12
+/** "Not connected", in a quiet grey: no connection, no signal (D11). */
+function NotConnectedTag() {
+  const { t } = useTranslation()
   return (
-    <span
-      title={fmt(t.readings.hissHereTip, { audible: String(AUDIBLE_HISS_DB) })}
-      style={{ ...tag, fontSize: size, background: 'var(--lsc-fg-muted)', color: 'var(--lsc-node-bg)' }}
-    >
-      <NoiseIcon size={Math.round(size * 1.6)} />
-      {t.readings.hissHere}
+    <span title={t.status.notConnectedTip} style={{ ...tag, fontSize: 12, background: 'var(--lsc-fg-muted)', color: 'var(--lsc-node-bg)' }}>
+      {t.status.notConnected}
     </span>
   )
 }

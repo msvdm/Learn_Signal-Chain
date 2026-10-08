@@ -11,12 +11,6 @@ export interface TheoryEntry {
   what: string
   why: string
   tip: string
-  /**
-   * What this card's readings show and what to watch in them (peaks, room before clipping, hiss):
-   * shown only where the cards show readings (`READINGS_LEVEL`). Types without readings, or with
-   * nothing to add, leave it out.
-   */
-  readings?: string
 }
 
 /**

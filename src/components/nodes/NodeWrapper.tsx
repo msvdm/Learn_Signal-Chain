@@ -5,26 +5,21 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
-import { HEADER_H, PORT_TOP, PORT_GAP, READINGS_MIN_W, cardMinSize } from '../../utils/layoutHelpers'
-import { NoiseTags, PortStack, WireTargetBadge } from './NodeChrome'
+import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
+import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
-import { SignalReadings } from './Readings'
-import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { MeterStrip, STRIP_W } from '../SignalMeter'
 import { SPL_DB } from '../../signal/levels'
 
 // Side padding of the body: the port rings reach 14px into the card, so content starts clear of them
 const BODY_PAD_X = 20
-// Under a face-only card's face: its readings (the face's own padding is above)
-const FACE_READINGS_PAD = '0 20px 16px'
 // A face-only card's upright meter, zoomed in: on the right of its face, which keeps this much room
-// free for it; the card is tall enough for it
+// free for it (the card is its registry minSize plus this room, as tall as the minSize)
 const FACE_METER_PAD  = '14px 20px 12px'
 const FACE_METER_ROOM = STRIP_W + 16
-const FACE_METER_H    = 250
 
 interface NodeWrapperProps {
   nodeId: string
@@ -37,10 +32,8 @@ interface NodeWrapperProps {
   style?: CSSProperties
   /** Overview (zoomed out): drawn instead of the name, e.g. a big icon or the control itself. */
   overviewArt?: OverviewArt
-  /** Overview: false = no level block, the art takes the whole card. Also no readings (below). */
+  /** Overview: false = no level block, the art takes the whole card. */
   overviewLevel?: boolean
-  /** false = no readings at the bottom (a card whose outputs send different signals: the DI Box) */
-  readings?: boolean
   /**
    * Show only the overview face (its icon) at every zoom: no header, no body. With a level
    * (`overviewLevel`), an upright meter beside it zoomed in — dB SPL where the card meets the air
@@ -66,29 +59,26 @@ export function NodeWrapper({
   overviewArt,
   overviewLevel = true,
   faceOnly = false,
-  readings: withReadings = true,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
   const { node, ports, chains, selected, overview, wireTarget, notConnected } = useNodeChrome(nodeId, typeKey)
   const { t }            = useTranslation()
-  // From Intermediate up, every card that shows a level ends with the readings of what leaves it
-  const readings         = useReadingsShown() && overviewLevel && withReadings
 
   const isBypassed = node?.bypassed ?? false
   const look       = NODE_LOOK[typeKey]
   const canBypass  = NODE_REGISTRY[typeKey].bypass
   const canStereo  = NODE_REGISTRY[typeKey].stereo === 'optional'
   const { inputs, outputs } = ports
-  // A source with nothing on its output says so instead of a level and readings (D11)
-  const status     = notConnected ? t.readings.notConnected : undefined
+  // A source with nothing on its output says so instead of a level (D11)
+  const status     = notConnected ? t.status.notConnected : undefined
 
-  // Tall enough for the longest stack of ports
+  // One size at every level (the registry's minSize), tall enough for the longest stack of ports
   const portRows  = Math.max(inputs.length, outputs.length, 1)
   const minSize   = cardMinSize(typeKey)
   // A face-only card with a level: its meter
   const meter     = faceOnly && overviewLevel
-  const minHeight = Math.max(meter ? FACE_METER_H : minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
+  const minHeight = Math.max(minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
@@ -105,7 +95,7 @@ export function NodeWrapper({
       style={{
         position: 'relative',
         width: 'max-content',
-        minWidth: (readings ? Math.max(minSize.w, READINGS_MIN_W) : minSize.w) + (meter ? FACE_METER_ROOM : 0),
+        minWidth: minSize.w + (meter ? FACE_METER_ROOM : 0),
         minHeight,
         display: 'flex',
         flexDirection: 'column',
@@ -140,7 +130,7 @@ export function NodeWrapper({
       )}
 
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
-      <NoiseTags nodeId={nodeId} overview={overview} />
+      <EdgeTags nodeId={nodeId} overview={overview} notConnected={notConnected && !faceOnly} />
 
       {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
       {!faceOnly && <>
@@ -234,21 +224,10 @@ export function NodeWrapper({
         >
           {children}
         </div>
-
-        {/* The readings of what leaves the card, at its bottom — hidden zoomed out, with the body */}
-        {readings && (
-          <div
-            className="lsc-fade"
-            style={{ padding: `0 ${BODY_PAD_X}px 12px`, opacity: isBypassed ? 0.5 : 1, ...hideInOverview }}
-          >
-            <ReadingsBlock nodeId={nodeId} hidden={notConnected} status={status} />
-          </div>
-        )}
       </>}
 
-      {/* A face-only card keeps its face as it was and takes its readings under it; zoomed out they
-          hide and the face fills the whole card. Not connected: the face says so, the readings keep
-          their space */}
+      {/* A face-only card is its face: zoomed in with its meter on the right, zoomed out with its
+          level under it. Not connected: the face says so */}
       {faceOnly && <>
         {/* The face's place; zoomed in, its meter on the right (hidden, its space kept, when not connected) */}
         <div style={{ height: minHeight - 2, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', padding: FACE_METER_PAD, boxSizing: 'border-box' }}>
@@ -258,11 +237,6 @@ export function NodeWrapper({
             </div>
           )}
         </div>
-        {readings && (
-          <div className="lsc-fade" style={{ padding: FACE_READINGS_PAD, ...hideInOverview }}>
-            <ReadingsBlock nodeId={nodeId} hidden={notConnected} />
-          </div>
-        )}
       </>}
 
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports.
@@ -277,7 +251,6 @@ export function NodeWrapper({
         status={status}
         shown={overview || faceOnly}
         bypassed={isBypassed}
-        height={faceOnly && readings && !overview ? minHeight : undefined}
         reserveRight={meter && !overview ? FACE_METER_ROOM : 0}
         spl={SPL_DB[typeKey]}
       />
@@ -296,15 +269,6 @@ function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
       label={spl === undefined ? t.meters.output : t.meters.sound}
       nodeId={nodeId} at="out" spl={spl}
     />
-  )
-}
-
-/** The readings under a line across the card (`hidden`: kept in place, unseen; `status` said there instead). */
-function ReadingsBlock({ nodeId, hidden, status }: { nodeId: string; hidden?: boolean; status?: string }) {
-  return (
-    <div style={{ borderTop: '1px solid var(--lsc-border-soft)', paddingTop: 8 }}>
-      <SignalReadings nodeId={nodeId} hidden={hidden} status={status} />
-    </div>
   )
 }
 

@@ -18,9 +18,14 @@ import { COLUMN_W } from '../../utils/twoColumns'
 // reading. While the chain plays (hooks/useLiveMeter.ts) the curve's Peaks and Average marks, the
 // turning-down bar and the card's Open / Limiting word move with the sound.
 
+/** A dynamics card's knobs (px): as big as the card's height allows, now its readings are gone. */
+export const DYNAMICS_KNOB = 56
+/** A dynamics card with only two knobs (Limiter, De-esser): they take the room the third would. */
+export const DYNAMICS_KNOB_BIG = 72
+
 /** Knobs one under the other, value and label beside each knob. */
 export function KnobStack({ children }: { children: ReactNode }) {
-  return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{children}</div>
 }
 
 /** Zoomed out a card shows its face: what is in its body need not move. */
@@ -87,7 +92,7 @@ export function ReductionReadout({ nodeId, db, maxDb, label, style }: {
 // Peaks mark above the curve got through before the Attack turned it down.
 
 const GW = COLUMN_W - 2   // SVG width (px — drawn 1:1; with its border the box fills its column)
-const GH = 112
+const GH = 160
 const GP = 14    // padding inside the SVG
 const STEPS = 100
 

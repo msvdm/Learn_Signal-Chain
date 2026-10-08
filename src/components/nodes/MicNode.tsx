@@ -80,10 +80,11 @@ export function MicNode({ id, type }: CardProps) {
 
   return (
     <NodeWrapper nodeId={id} typeKey={typeKey} label={label} align="start" overviewArt={art}>
-      <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>
+      <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 28, fontWeight: 700, lineHeight: 1.1 }}>
         {levelDb} dBu
       </span>
-      {choosing && <CharacterButtons nodeId={id} typeKey={typeKey} columns={2} />}
+      {/* Taller buttons: the room the readings had */}
+      {choosing && <div style={{ alignSelf: 'stretch' }}><CharacterButtons nodeId={id} typeKey={typeKey} columns={2} height={64} /></div>}
     </NodeWrapper>
   )
 }

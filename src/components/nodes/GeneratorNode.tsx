@@ -55,7 +55,8 @@ export function GeneratorNode({ id }: CardProps) {
           label={text.sound}
           columns={1}
           item="row"
-          style={{ width: 156 }}
+          // As tall as the card leaves room for: the three buttons share it
+          style={{ width: 156, height: 150 }}
         />
         <KnobControl
           value={p('levelDb')}
@@ -65,7 +66,8 @@ export function GeneratorNode({ id }: CardProps) {
           label={text.level}
           formatValue={(v) => `${v > 0 ? '+' : ''}${v} dBu`}
           onChange={(v) => updateNodeParams(id, { levelDb: v })}
-          size={52}
+          size={72}
+          labelBelow
         />
       </div>
     </NodeWrapper>

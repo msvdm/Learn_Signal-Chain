@@ -47,8 +47,6 @@ export function portPoint(card: Box, type: 'source' | 'target', index: number): 
 // registry: the mixing buses).
 export const CARD_MIN_W = 280
 export const CARD_MIN_H = 210
-/** From Intermediate up a card ends with its readings: wide enough for each to fit on one line */
-export const READINGS_MIN_W = 320
 
 /** The smallest a card of this type can be (it grows with its content). */
 export function cardMinSize(typeKey: TypeKey): Size {

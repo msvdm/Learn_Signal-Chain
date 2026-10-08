@@ -9,7 +9,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
-import { KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
+import { DYNAMICS_KNOB_BIG, KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { MeterSides } from './MeterSides'
 import { limiter } from '../../signal/process'
 
@@ -46,7 +46,7 @@ export function LimiterNode({ id }: CardProps) {
               formatValue={(v) => `${v} dB`}
               onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color="var(--signal-hot)"
-              size={44}
+              size={DYNAMICS_KNOB_BIG}
               layout="side"
             />
             <KnobControl
@@ -58,7 +58,7 @@ export function LimiterNode({ id }: CardProps) {
               formatValue={(v) => `+${v} dB`}
               onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
               color="var(--signal-good)"
-              size={44}
+              size={DYNAMICS_KNOB_BIG}
               layout="side"
             />
           </KnobStack>

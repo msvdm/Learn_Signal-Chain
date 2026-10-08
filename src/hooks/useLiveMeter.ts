@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { RefObject } from 'react'
 import { useSignalStore } from '../store/signalStore'
-import { READINGS_LEVEL, atLeast } from '../data/levels'
+import { DETAIL_LEVEL, atLeast } from '../data/levels'
 import { unwiredSource } from '../graph/queries'
 import { graphSignal } from '../signal/engine'
 import type { LiveStage } from '../signal/moving'
@@ -105,7 +105,7 @@ function rebuild() {
 /** Start or stop playing, as the level and the render say. */
 function update() {
   const { complexityLevel } = useSignalStore.getState()
-  const should = atLeast(complexityLevel, READINGS_LEVEL) && stages.size > 0
+  const should = atLeast(complexityLevel, DETAIL_LEVEL) && stages.size > 0
   if (should === playing) return
   playing = should
   document.documentElement.classList.toggle('lsc-meters-live', playing)

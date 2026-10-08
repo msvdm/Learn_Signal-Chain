@@ -77,7 +77,11 @@ export type NodeTypeDef = {
   linked?: true
   /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
   freeSize?: Size
-  /** A card bigger than the usual minimum (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). */
+  /**
+   * A card's size, the same at every level (its content grows to fill it); none: the usual minimum
+   * (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). A face-only card's upright meter adds its
+   * room to the width (NodeWrapper).
+   */
   minSize?: Size
 }
 
@@ -135,30 +139,34 @@ const SIDES: NodePort[] = [
   { id: 'out-l' },
   { id: 'out-r' },
 ]
-// Mixing buses: the size of the Compressor card, so their long names stay big in overview
-const BUS_SIZE: Size = { w: 398, h: 298 }
+// The cards' sizes (minSize): what they were with the readings under them at Intermediate, now the
+// same at every level, their content grown into the room (2026-10-08). The mixing buses are big
+// enough that their long names stay big in overview.
+const BUS_SIZE: Size  = { w: 398, h: 361 }
+const FACE_SIZE: Size = { w: 320, h: 328 }
+const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
 export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   mic: {
     // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
     category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
-    minLevel: 'beginner', bypass: false,
+    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
     defaultParams: { sensitivityDb: -60, character: 'speech' },
   },
   'line-in': {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
-    minLevel: 'beginner', bypass: false,
+    minLevel: 'beginner', bypass: false, minSize: { w: 320, h: 250 },
     defaultParams: { levelDb: -10, stereo: false, character: 'music' },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
-    minLevel: 'beginner', bypass: false,
+    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -30 },
   },
   generator: {
     // A test sound of its own, at the level its knob sets (0 dBu: unity); Stereo: the same on both sides
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
-    minLevel: 'intermediate', bypass: false,
+    minLevel: 'intermediate', bypass: false, minSize: { w: 320, h: 285 },
     defaultParams: { sound: 'sine', levelDb: 0, stereo: false },
   },
   gain: {
@@ -170,12 +178,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   hpf: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true,
+    minLevel: 'intermediate', bypass: true, minSize: { w: 320, h: 268 },
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true,
+    minLevel: 'intermediate', bypass: true, minSize: { w: 410, h: 361 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -193,24 +201,24 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
     // Attack / Release are shown on the card but do not change the sound yet
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
   'noise-gate': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
     // Range sets how far it turns down when closed; Hold / Attack / Release are shown, not simulated
     defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, linked: true, splits: 'mix',
+    minLevel: 'intermediate', bypass: true, minSize: { w: 618, h: 361 }, linked: true, splits: 'mix',
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   deesser: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: { w: 412, h: 361 }, linked: true,
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
   pad: {
@@ -233,13 +241,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   'guitar-amp': {
     // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
     category: 'processor', inputs: IN, outputs: [{ id: SOUND_PORT }], stereo: 'never',
-    minLevel: 'intermediate', bypass: false,
+    minLevel: 'intermediate', bypass: false, minSize: FACE_SIZE,
     // Its Volume knob goes to 11 (signal/process.ts guitarAmpGainDb)
     defaultParams: { volume: 5 },
   },
   amp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'advanced', bypass: false, splits: true,
+    minLevel: 'advanced', bypass: false, minSize: { w: 412, h: 361 }, splits: true,
     defaultParams: { gainDb: 0 },
   },
   fader: {
@@ -273,7 +281,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in' }],
     outputs: [{ id: 'out' }],
-    minLevel: 'advanced', bypass: false,
+    minLevel: 'advanced', bypass: false, minSize: { w: 320, h: 218 },
     // alignmentDb: how far below the digital ceiling unity sits (EBU R68: 0 dBu = −18 dBFS,
     // so 0 dBFS = +18 dBu). dBFS = dBu − alignmentDb.
     defaultParams: { alignmentDb: 18 },
@@ -282,7 +290,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in' }],
     outputs: [{ id: 'out' }],
-    minLevel: 'advanced', bypass: false,
+    minLevel: 'advanced', bypass: false, minSize: { w: 320, h: 259 },
     defaultParams: { alignmentDb: 18 },
   },
   'master-bus': {
@@ -296,7 +304,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // The input accepts any number of wires; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
     category: 'merge', inputs: IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
-    minLevel: 'intermediate', bypass: true, minSize: BUS_SIZE,
+    minLevel: 'intermediate', bypass: true, minSize: { w: 398, h: 397 },
     defaultParams: { faderDb: 0, stereo: false },
   },
   'matrix-bus': {
@@ -311,19 +319,19 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   speaker: {
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'advanced', bypass: false,
+    minLevel: 'advanced', bypass: false, minSize: FACE_SIZE,
     defaultParams: { outputTrimDb: 0 },
   },
   'active-speaker': {
     // Active/powered speaker — has built-in amplification, works directly from line level
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'beginner', bypass: false,
+    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
   },
   headphones: {
     // Works as an Active Speaker does (amplifier built in): there to show where a listener plugs in
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'beginner', bypass: false,
+    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
   },
 }

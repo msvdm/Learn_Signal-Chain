@@ -20,7 +20,8 @@ export function MeterSides({ nodeId, input = true, output = true, children }: {
   const levels = useStereoLevels(nodeId)
   const { t }  = useTranslation()
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: METER_GAP }}>
+    // As tall as the card's body: the meters take its whole height
+    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', gap: METER_GAP }}>
       {input && <MeterStrip {...levels.input} label={t.meters.input} nodeId={nodeId} at="in" />}
       <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {children}

@@ -36,10 +36,10 @@ export function AdcDacNode({ id, type }: CardProps) {
       label={label}
       align="center"
     >
-      {/* Conversion label */}
+      {/* Conversion label — the text as big as the card leaves room for */}
       <div
         style={{
-          fontSize: 'var(--node-text-2xs)', fontWeight: 700,
+          fontSize: 15, fontWeight: 700,
           fontFamily: 'var(--lsc-font-mono)',
           textAlign: 'center',
           color: hasWarning ? 'var(--signal-clipping)' : 'var(--lsc-accent)',
@@ -52,7 +52,7 @@ export function AdcDacNode({ id, type }: CardProps) {
       {/* Input → output level display — always shown, numbers keep their widest width */}
       <div
         style={{
-          fontSize: 'var(--node-text-2xs)',
+          fontSize: 16,
           fontFamily: 'var(--lsc-font-mono)',
           textAlign: 'center',
           color: 'var(--lsc-fg)',
@@ -84,7 +84,7 @@ export function AdcDacNode({ id, type }: CardProps) {
         <div
           className="lsc-wrap-text"
           style={{
-            fontSize: 'var(--node-text-2xs)', fontWeight: 700,
+            fontSize: 13, fontWeight: 700,
             color: 'var(--signal-clipping)',
             textAlign: 'center',
             textTransform: 'uppercase',
@@ -102,7 +102,7 @@ export function AdcDacNode({ id, type }: CardProps) {
       {/* Domain indicator */}
       <div
         style={{
-          fontSize: 'var(--node-text-2xs)',
+          fontSize: 15,
           textAlign: 'center',
           color: domain === 'digital' ? 'var(--lsc-accent)' : 'var(--signal-good)',
           fontWeight: 600,

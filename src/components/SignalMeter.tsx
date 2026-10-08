@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
 import { healthColor, getHealth, louder, shifted, SPL_SCALE_DB, meterFloorOf, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
-import { useReadingsShown } from '../hooks/useReadingsShown'
+import { useDetailShown } from '../hooks/useDetailShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
 import { useHeight } from '../hooks/useHeight'
 import { useSignalStore } from '../store/signalStore'
@@ -15,7 +15,7 @@ import { alongScale, paintBar, paintStyle, paintText, readingOf } from './meterP
 // The meters, as a DAW draws them (D16, after Sound Forge's): one bar per side, coloured along its
 // scale — blue where a level is too quiet, green good, yellow hot, red in the top 2 dB (meterZones) —
 // with the dB numbers beside it (scaleMarks), down to −∞ at the bottom. The solid bar is the average
-// (RMS); from Intermediate up (useReadingsShown) a white mark shows the peaks and a grey fog from the
+// (RMS); from Intermediate up (useDetailShown) a white mark shows the peaks and a grey fog from the
 // quiet end the noise, once it is loud enough to reach the even part of the scale (−60 dBu, −80
 // dBFS). A red line across the top lights up while that side clips. Beginner sees the bar alone.
 // React draws the still picture — the render's readings over the whole loop; while the chain plays
@@ -293,7 +293,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
   spl?: number
 }) {
   const { t }    = useTranslation()
-  const detailed = useReadingsShown()
+  const detailed = useDetailShown()
   // Zoomed out the card shows its face, and this meter is hidden: it need not move
   const shown    = !useSignalStore((s) => s.overview)
   const color    = healthColor(health)

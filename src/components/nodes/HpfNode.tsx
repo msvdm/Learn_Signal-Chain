@@ -10,7 +10,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 // ── HPF curve math ────────────────────────────────────────────────────────────
 
 const SVG_W    = 160   // viewBox width; the graph stretches to the card width
-const SVG_H    = 52
+const SVG_H    = 110  // as tall as the card leaves room for
 const FREQ_MIN = 20
 const FREQ_MAX = 20000
 const DB_FLOOR = -48  // bottom of graph = fully blocked
