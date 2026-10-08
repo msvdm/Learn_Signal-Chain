@@ -88,16 +88,17 @@ const GRILLE = Array.from({ length: 15 }, (_, i) => {
 }).join('')
 
 /**
- * An electric guitar (Instrument): a double-cut body with two horns, three pickups and two knobs, a
- * long neck up to the right ending in a one-sided triangle — one edge carrying on from the neck's,
- * the tuning pegs along the other. Drawn upright round (0, 0), then turned.
+ * An electric guitar (Instrument): a single-cut body, three pickups and two knobs, a long neck up to
+ * the right ending in a one-sided triangle — one edge carrying on from the neck's, the tuning pegs
+ * along the other. Drawn upright round (0, 0), then turned.
  */
 export function GuitarIcon({ size = 24 }: { size?: number }) {
   return (
     <svg viewBox="-15.5 -15.5 31 31" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-      <g transform="translate(0.85 -1.05) rotate(45)">
-        {/* Body, from the neck's left side: the long horn, round the bottom, the short horn */}
-        <path d="M-0.9 5.4C-1.6 4.2 -2 1.6 -2.6 0.5C-3 -0.3 -4 -0.3 -4.1 0.9C-4.2 2.6 -3.9 4.8 -4.7 6.6C-5.5 8.2 -7.4 9.2 -7.4 12.3C-7.4 16 -3.6 18 0.2 17.7C4 17.3 7.4 15.4 7.2 12.4C7 10 5 9.8 4.8 7.8C4.6 6.2 5.3 5 4.5 4.1C3.9 3.4 3.1 3.8 2.5 4.6C1.9 5.4 1.5 6.7 0.9 6.9" />
+      <g transform="translate(0.96 -1.28) rotate(45)">
+        {/* Body, from the neck's left side round to its right, the cutaway last: the same either side
+            of the neck's line but for the cutaway, so it never looks crooked */}
+        <path d="M-0.9 -0.2C-3.2 -1.4 -5.6 0.6 -5.6 3.2C-5.6 5 -4.8 6.2 -4.8 7.4C-4.8 8.6 -7.6 10 -7.6 12.6C-7.6 15.8 -4.2 18 0 18C4.2 18 7.6 15.8 7.6 12.6C7.6 10 4.8 8.6 4.8 7.4C4.8 5.6 5.6 2.2 4.2 1.4C3 0.7 1.8 2.6 0.9 3.8" />
         {/* Neck, its end on the body */}
         <path d="M-0.9 8.4V-9.6H0.9V8.4Z" />
         {/* Headstock: a one-sided triangle, its tuning pegs along the slope */}
