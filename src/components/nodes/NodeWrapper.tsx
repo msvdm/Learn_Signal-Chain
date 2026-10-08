@@ -45,6 +45,11 @@ interface NodeWrapperProps {
    * (SPL_DB) — and the level under it zoomed out.
    */
   faceOnly?: boolean
+  /**
+   * A face-only card that draws its own face, at every zoom, in place of the overview face: over
+   * the whole card, in its own pixels, so its lines can meet the ports (the Relay Switch's symbol)
+   */
+  ownFace?: ReactNode
 }
 
 /**
@@ -65,6 +70,7 @@ export function NodeWrapper({
   overviewLevel = true,
   overviewBare = false,
   faceOnly = false,
+  ownFace,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
@@ -247,7 +253,7 @@ export function NodeWrapper({
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports.
           A face-only card shows its face at every zoom: zoomed in beside its meter, zoomed out with
           its level under it */}
-      <OverviewFace
+      {ownFace ?? <OverviewFace
         nodeId={nodeId}
         typeKey={typeKey}
         label={label}
@@ -259,7 +265,7 @@ export function NodeWrapper({
         bypassed={isBypassed}
         reserveRight={meter && !overview ? FACE_METER_ROOM : 0}
         spl={SPL_DB[typeKey]}
-      />
+      />}
     </div>
   )
 }

@@ -268,9 +268,10 @@
       "gainReduction": "Sibilance reduction"
     },
     "relay": {
-      "label": "Pre / Post switch",
-      "pre": "PRE",
-      "post": "POST"
+      "label": "Relay Switch",
+      "a": "A",
+      "b": "B",
+      "toggle": "Switch to the other input"
     },
     "pan": {
       "label": "Pan"
@@ -371,7 +372,7 @@
       "graphic-eq": "Graphic EQ",
       "fader": "Fader",
       "switch": "On Off Switch",
-      "relay": "Pre / Post switch",
+      "relay": "Relay Switch",
       "pan": "Pan / Balance",
       "adc": "Analog to Digital Converter",
       "dac": "Digital to Analog Converter",
@@ -520,9 +521,9 @@
       "tip": "Set the frequency to where the sibilance is worst — usually 5–8 kHz for most voices, sometimes up to 10 kHz for brighter voices. The gain reduction meter shows how much de-essing is happening. A little (1–3 dB) is transparent. Heavy de-essing (6+ dB) can make voices sound lispy."
     },
     "relay": {
-      "what": "A relay switch: two inputs, one output. Press a button and the signal comes from that input; the other one is cut off.",
-      "why": "It picks the point a signal is taken from with one press, without re-wiring: before or after a fader (PRE / POST), or before or after a group of elements — so it can skip several of them at once.",
-      "tip": "PRE is the top input, POST the one below; the chosen button is lit green. To skip elements, wire the signal from before them into one input and their output into the other."
+      "what": "A relay switch: two inputs, A and B, and one output. Press A or B — or click the switch itself — and the signal comes from that input; the other one is cut off. The switch's arm shows which input is connected.",
+      "why": "It picks where a signal comes from with one click, without re-wiring: for an aux send, before or after the channel's fader (pre-fader / post-fader), or before or after a group of elements — so it can skip several of them at once.",
+      "tip": "A is the top input, B the one below. For an aux send, wire the channel from before its fader into A and from after it into B: on A the send stays the same when you move the fader (good for a musician's monitor), on B it follows the fader (good for effects such as reverb). To skip elements, wire the signal from before them into one input and their output into the other."
     },
     "pan": {
       "what": "Feed it a mono signal and this is a Pan knob: it spreads that one signal between Left and Right and sends both out on one stereo wire. Fully left, only the left side gets it; fully right, only the right side. At centre each side gets it 3 dB quieter, so the overall loudness stays the same. Feed it a stereo wire and it turns into a Balance knob on its own.",

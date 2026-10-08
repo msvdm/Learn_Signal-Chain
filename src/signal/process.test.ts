@@ -117,7 +117,7 @@ describe('cards that pass the level on', () => {
     expect(out('switch', -10, { on: false })).toBe(S)
   })
 
-  it('the Pre / Post switch and Pan pass on what reaches them (the engine picks and spreads it)', () => {
+  it('the Relay Switch and Pan pass on what reaches them (the engine picks and spreads it)', () => {
     expect(out('relay', -12)).toBe(-12)
     expect(out('pan', -12)).toBe(-12)
   })

@@ -190,3 +190,15 @@ export function AdcIcon({ size }: { size?: number }) {
 export function DacIcon({ size }: { size?: number }) {
   return <ConverterIcon size={size} inside={`${digital(4.8, 5.4)}${wave(11, 17)}`} />
 }
+
+/** A relay switch's symbol (the Relay Switch): two inputs with their contacts, the arm on the top one, the output. */
+export function RelayIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M1.5 7.5H7.2M1.5 16.5H7.2M16.8 12H22.5M15.4 10.9L10.2 7.9" />
+      <circle cx="8.8" cy="7.5" r="1.6" />
+      <circle cx="8.8" cy="16.5" r="1.6" />
+      <circle cx="15.2" cy="12" r="1.6" />
+    </svg>
+  )
+}

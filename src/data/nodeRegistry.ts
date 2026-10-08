@@ -263,14 +263,15 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { on: true },
   },
   relay: {
-    // The Pre / Post switch of an aux send: in-a = PRE (from before the fader), in-b = POST (after it)
+    // The Relay Switch: two inputs, A (in-a, top) and B (in-b), one goes out — an aux send's
+    // pre-fader (A) or post-fader (B) copy, say
     category: 'processor', stereo: 'follow',
     inputs: [
       { id: 'in-a' },
       { id: 'in-b' },
     ],
     outputs: OUT,
-    minLevel: 'intermediate', bypass: false,
+    minLevel: 'intermediate', bypass: false, minSize: { w: 240, h: 156 },
     defaultParams: { selectedInput: 'a' },
   },
   pan: {

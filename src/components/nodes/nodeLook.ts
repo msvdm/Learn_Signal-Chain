@@ -4,10 +4,10 @@ import {
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus,
   Merge, Volume2,
-  SlidersHorizontal, GitBranch, MoveHorizontal, Headphones,
+  SlidersHorizontal, MoveHorizontal, Headphones,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon } from './icons'
+import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -53,7 +53,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },
-  relay:             { icon: GitBranch,         group: 'routing' },
+  relay:             { icon: RelayIcon,         group: 'routing' },
   pan:               { icon: MoveHorizontal,    group: 'routing' },
   'master-bus':      { icon: Merge,             group: 'routing' },
   'aux-bus':         { icon: Merge,             group: 'routing' },

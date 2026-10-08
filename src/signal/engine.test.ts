@@ -578,7 +578,7 @@ describe('the Matrix Bus: finished mixes, each through its send knob', () => {
   })
 })
 
-describe('an aux send: the Pre / Post switch takes its copy before or after the fader', () => {
+describe('an aux send: a Relay Switch takes its copy before (A) or after (B) the fader', () => {
   const send = (selectedInput: 'a' | 'b') => signalOf([
     card('mic', 'mic'),
     card('pre', 'gain'),

@@ -45,7 +45,7 @@ interface OverviewFaceProps {
   label: string
   /** Shown instead of the name (a big icon, the control itself). */
   art?: OverviewArt
-  /** false = no level block: the art fills the card (a face-only card zoomed in, the Pre / Post switch). */
+  /** false = no level block: the art fills the card (a face-only card zoomed in). */
   showLevel?: boolean
   /** The level block is the meter alone: its bar(s) and scale, no numbers or health word */
   barOnly?: boolean

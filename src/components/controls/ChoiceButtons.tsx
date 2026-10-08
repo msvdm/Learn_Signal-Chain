@@ -24,7 +24,7 @@ interface ChoiceButtonsProps<T extends string> {
 
 /**
  * A few buttons, one of them chosen — the Generator's Sound, a Microphone's or Line Input's
- * Melodic / Percussive. The chosen one is lit like the Pre / Post switch. The buttons share the
+ * Melodic / Percussive. The chosen one is lit like the Relay Switch's A / B. The buttons share the
  * grid's space evenly, so choosing never resizes the card.
  */
 export function ChoiceButtons<T extends string>({
