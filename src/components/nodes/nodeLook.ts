@@ -1,13 +1,13 @@
 import type { ComponentType } from 'react'
 import {
-  Mic, Guitar, Plug,
+  Mic, Plug,
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus,
   Merge, Volume2,
   SlidersHorizontal, GitBranch, MoveHorizontal, Headphones,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon } from './icons'
+import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -33,7 +33,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Sources
   mic:               { icon: Mic,               group: 'source' },
   'line-in':         { icon: JackPlugIcon,      group: 'source', headerSize: 20 },
-  instrument:        { icon: Guitar,            group: 'source' },
+  instrument:        { icon: GuitarIcon,        group: 'source' },
   'di-box':          { icon: Plug,              group: 'source' },
   'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
   generator:         { icon: GeneratorIcon,     group: 'source', headerSize: 18 },
