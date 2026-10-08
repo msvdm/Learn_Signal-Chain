@@ -37,7 +37,7 @@ const paramOf = (side: Side, band: number) => (side === 'r' ? `r${band}` : `b${b
 /**
  * 31-band graphic EQ, a third of an octave per slider (20 Hz … 20 kHz), like the one on a
  * PA system's master output. Each slider boosts or cuts its band by up to 12 dB in 0.5 dB steps;
- * the line through the caps shows the curve. Its In and Out meters stand at its sides.
+ * the caps themselves show the curve. Its In and Out meters stand at its sides.
  * Fed a stereo wire it is a two-channel EQ: the sliders split into L (top) and R (bottom),
  * in the same space. The right side copies the left until it is first touched.
  */
@@ -182,7 +182,7 @@ function gainAt(clientY: number, el: HTMLElement): number {
 }
 
 /**
- * One row of 31 sliders with its dB scale, grid, curve and caps. Press anywhere in a column,
+ * One row of 31 sliders with its dB scale, grid and caps. Press anywhere in a column,
  * then drag up / down; double-click = 0 dB. In stereo, `channel` (L / R) is shown beside it.
  */
 function SliderBank({ gains, height, channel, activeBand, onDown, onHover, onReset }: {
@@ -195,7 +195,6 @@ function SliderBank({ gains, height, channel, activeBand, onDown, onHover, onRes
   onReset: (band: number) => void
 }) {
   const axis  = channel ? AXIS_DB_HALF : GRID_DB
-  const curve = gains.map((g, i) => `${i === 0 ? 'M' : 'L'} ${capX(i).toFixed(1)},${yOf(g, height).toFixed(1)}`).join(' ')
 
   return (
     <div style={{ display: 'flex' }}>
@@ -254,14 +253,6 @@ function SliderBank({ gains, height, channel, activeBand, onDown, onHover, onRes
             }}
           />
         ))}
-
-        {/* The curve through the caps */}
-        <svg
-          width={COL_W * BANDS} height={height}
-          style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}
-        >
-          <path d={curve} fill="none" stroke="var(--lsc-accent)" strokeWidth={2} strokeLinejoin="round" opacity={0.85} />
-        </svg>
 
         {/* Caps: small fader caps, the white line marks the setting */}
         {gains.map((g, i) => (
