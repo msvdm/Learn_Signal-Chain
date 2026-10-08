@@ -25,7 +25,7 @@ const format = (v: number) => (v <= FADER_MIN_DB ? '−∞' : `${v > 0 ? '+' : v
 /**
  * A plain fader (its cap black, white on the dark theme), or — wired straight after a stereo
  * bus — the Main Fader: one handle for the whole mix, with the bus's Left and Right outputs moved
- * onto it (its cap red). An Aux Bus's fader is blue, mono or stereo.
+ * onto it (its cap red). An Aux Bus's fader is blue, mono or stereo; a Matrix Bus's magenta.
  * Drawn as a bare fader (no card).
  */
 export function FaderNode({ id }: CardProps) {
@@ -35,8 +35,9 @@ export function FaderNode({ id }: CardProps) {
 
   const faderDb = p('faderDb')
   const main    = stage?.role === 'main-fader'
-  // An Aux Bus's fader is blue, mono or stereo (a stereo one is its Main Fader too)
-  const aux     = useSignalStore((s) => faderBusOf(id, s)?.typeKey === 'aux-bus')
+  // An Aux Bus's fader is blue, mono or stereo (a stereo one is its Main Fader too); a Matrix Bus's magenta
+  const bus     = useSignalStore((s) => faderBusOf(id, s)?.typeKey)
+  const cap     = bus === 'aux-bus' ? 'blue' : bus === 'matrix-bus' ? 'magenta' : main ? 'red' : 'plain'
 
   return (
     <FreeControl
@@ -57,7 +58,7 @@ export function FaderNode({ id }: CardProps) {
         height={FADER_H}
         scale={FADER_SCALE}
         showReadout={false}
-        capColor={aux ? 'blue' : main ? 'red' : 'plain'}
+        capColor={cap}
       />
     </FreeControl>
   )

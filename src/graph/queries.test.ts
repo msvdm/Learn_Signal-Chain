@@ -38,8 +38,8 @@ describe('a source not connected yet', () => {
   })
 })
 
-// A Fader's cap says what it sets: an Aux Bus's level blue, a Main Fader red, a channel's plain
-// (FaderNode)
+// A Fader's cap says what it sets: an Aux Bus's level blue, a Matrix Bus's magenta, a Main Fader
+// red, a channel's plain (FaderNode)
 
 describe('the bus a Fader sets the level of', () => {
   it("an Aux Bus's, mono or stereo, through effects", () => {
@@ -49,9 +49,11 @@ describe('the bus a Fader sets the level of', () => {
     expect(faderBusOf('sf', view)?.id).toBe('saux')
   })
 
-  it("a Master Bus's: its Main Fader", () => {
-    const view = { nodes: [node('bus', 'master-bus'), node('f', 'fader')], edges: [wire('bus', 'f', MIX_PORT)] }
+  it("a Master or Matrix Bus's: its Main Fader", () => {
+    const nodes = [node('bus', 'master-bus'), node('f', 'fader'), node('mx', 'matrix-bus'), node('mf', 'fader')]
+    const view  = { nodes, edges: [wire('bus', 'f', MIX_PORT), wire('mx', 'mf', MIX_PORT)] }
     expect(faderBusOf('f', view)?.typeKey).toBe('master-bus')
+    expect(faderBusOf('mf', view)?.typeKey).toBe('matrix-bus')
   })
 
   it("a channel's fader, or one after the bus's own fader: none", () => {

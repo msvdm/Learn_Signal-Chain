@@ -60,7 +60,7 @@ interface VerticalFaderProps {
   showReadout?: boolean
   /** Uneven scale (a desk fader's); default: even from min to max in `step`s */
   taper?: FaderTaper
-  /** Cap colour, like a desk's: plain (a channel's — black, white on the dark theme), red (the Main Fader), blue (an Aux Bus's) */
+  /** Cap colour, like a desk's: plain (a channel's — black, white on the dark theme), red (the Main Fader), blue (an Aux Bus's), magenta (a Matrix Bus's) */
   capColor?: CapColor
 }
 
@@ -219,8 +219,8 @@ export function VerticalFader({
 }
 
 // Solid cap colours: a lit top edge, the body, the dark underside, the ridge across the middle
-// and the value line on it. The plain cap follows the theme (index.css); red and blue never change.
-export type CapColor = 'plain' | 'red' | 'blue'
+// and the value line on it. The plain cap follows the theme (index.css); the others never change.
+export type CapColor = 'plain' | 'red' | 'blue' | 'magenta'
 const CAP_COLORS: Record<CapColor, { hi: string; base: string; lo: string; ridge: string; line: string }> = {
   plain: {
     hi: 'var(--lsc-fader-cap-hi)', base: 'var(--lsc-fader-cap-base)', lo: 'var(--lsc-fader-cap-lo)',
@@ -228,6 +228,7 @@ const CAP_COLORS: Record<CapColor, { hi: string; base: string; lo: string; ridge
   },
   red:  { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d', line: '#f4f4f4' },
   blue: { hi: '#6ea6f7', base: '#1f5fc4', lo: '#0e2d63', ridge: '#3d7fe3', line: '#f4f4f4' },
+  magenta: { hi: '#f27ad9', base: '#c0189a', lo: '#650a50', ridge: '#dc3cb8', line: '#f4f4f4' },
 }
 
 /** A desk fader's cap: sloped upper face, a ridge with a line across the middle, sloped lower face. */

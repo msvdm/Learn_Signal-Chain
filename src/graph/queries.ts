@@ -1,7 +1,7 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import {
   NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT,
-  canSplit, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
+  canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
@@ -153,13 +153,13 @@ export function sourceBusOf(nodeId: string, view: GraphView): string | null {
 }
 
 /**
- * The Master or Aux Bus whose level this Fader sets: the first one back through one-input
- * effects — mono or stereo, a Main Fader or not. Null when another Fader comes first (that one
- * sets it) or no bus feeds it.
+ * The bus (Master, Aux or Matrix) whose level this Fader sets: the first one back through
+ * one-input effects — mono or stereo, a Main Fader or not. Null when another Fader comes first
+ * (that one sets it) or no bus feeds it.
  */
 export function faderBusOf(nodeId: string, view: GraphView): SignalNode | null {
   for (const { source } of walkPassthrough(nodeId, view)) {
-    if (isMixBus(source.typeKey)) return source
+    if (isBus(source.typeKey)) return source
     if (source.typeKey === 'fader') return null
   }
   return null
