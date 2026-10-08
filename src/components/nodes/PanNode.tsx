@@ -90,8 +90,7 @@ function Direction({ position }: { position: number }) {
             borderRadius: 9999, background: 'var(--lsc-accent)', transform: 'translate(-50%, -50%)',
             // A ring of the canvas's colour keeps the dot clear of the centre mark
             boxShadow: '0 0 0 2px var(--lsc-canvas)',
-            // Eased like the knob's own dot
-            transition: 'left 80ms ease-out',
+            // No easing: it stays exactly on the value (eased, it trailed behind the knob)
           }}
         />
       </div>
