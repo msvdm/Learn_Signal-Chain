@@ -67,6 +67,19 @@ bun test       # tests of the signal maths and the audio processors (without Bun
 - **Lucide React** — icons
 - **Web Audio API** — the chain played on real sound, measured in an OfflineAudioContext (the sound loops are made by `scripts/make-loops.py`)
 
+## Sources
+
+The noise each element adds — a preamp's noise rising with its gain, every stage's own noise floor, the converters' — follows the published figures of real gear.
+
+Sources for the noise figures:
+
+* [Yamaha MG10XU specs](https://nl.yamaha.com/files/download/other_assets/2/1507032/MG10XU_technical_specifications_En_B0.pdf)
+* [Behringer MX1604A specs](https://cf3.zzounds.com/media/MX1604A_B_Specs-3705148b1ccedb25a17d465301e37686.pdf)
+* [Sound On Sound: what makes a good mic preamp](https://www.soundonsound.com/sound-advice/q-what-makes-good-mic-preamp)
+* [Elliott Sound Products: noise figure](https://sound-au.com/noisefigure.htm)
+* [Rane converter specs](https://www.rane.com/jp/seventy-jp)
+* [Focusrite Scarlett 8i6 specs](https://userguides.focusrite.com/hc/en-gb/articles/23031453082258-Scarlett-8i6-3rd-Gen-specifications)
+
 ## Contributing
 
 Contributions of all kinds are welcome — whether that's fixing a bug, improving an explanation, adding a new language, or suggesting a feature. There is no "right" level of experience required.
