@@ -110,9 +110,9 @@
     "axisIn": "0 dB in",
     "peak": "Peak",
     "rms": "RMS",
-    "tipBeginner": "How strong the signal is: the taller the bar, the louder. Blue: too quiet. Green: good. Yellow: getting hot. Red: it distorts.",
-    "tip": "A meter like a recording program's. The solid bar is the average over the last 0.3 seconds — how loud it sounds. The light bar shows the peaks, the loudest moments, falling back slowly. The mark is the loudest peak of the last 3 seconds. The grey fog at the bottom is the noise you hear when the music stops. Under it, Peak is the mark's level and RMS (the average) the solid bar's: both move with the sound. The colour and the word judge the whole 10 seconds of sound.",
-    "splTip": "The number is how loud the sound is in the air, in dB SPL (sound pressure level): about 60 is a conversation, 85 a loud mix in a studio, 100 or more harms your hearing if it goes on, and a powerful PA speaker reaches 130 a metre away. The colour and the word judge the signal in the cable, as on every card — a microphone's is weak until a Preamp lifts it.",
+    "tipBeginner": "How strong the signal is: the taller the bar, the louder. The numbers beside it are decibels (dB); at the bottom, −∞ is silence. The colours are painted on the scale, so where the bar ends tells you: blue — too quiet, green — good, yellow — getting hot, red at the very top — about to distort. A red line across the top lights up when it distorts.",
+    "tip": "A meter like a recording program's. The numbers beside it are decibels — dBu, or dBFS after an Analog to Digital Converter — down to −∞ (silence) at the bottom. The colours belong to the scale: blue where a signal is too quiet, green where it is good, yellow where it gets hot, red at the very top. The solid bar is the average over the last 0.3 seconds — how loud it sounds. The pale part above it shows the peaks, the loudest moments, falling back slowly. The thin line is the loudest peak of the last 3 seconds. The grey fog at the bottom is the noise you hear when the music stops. A red line across the top lights up while the signal distorts (clips). Under it, Peak is the thin line's level and RMS (the average) the solid bar's: both move with the sound. The word judges the whole 10 seconds of sound.",
+    "splTip": "The number is how loud the sound is in the air, in dB SPL (sound pressure level): about 60 is a conversation, 85 a loud mix in a studio, 100 or more harms your hearing if it goes on, and a powerful PA speaker reaches 130 a metre away. The colours and the word judge the signal in the cable, as on every card — a microphone's is weak until a Preamp lifts it.",
     "curve": {
       "peak": "Peaks",
       "rms": "Average",
@@ -152,7 +152,7 @@
       "loud": "very noisy"
     },
     "tips": {
-      "peaks": "The average is how loud it sounds; the peaks are its loudest moments — what clips first. On a meter, the solid bar is the average, the light bar and the thin line beyond it the peaks. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
+      "peaks": "The average is how loud it sounds; the peaks are its loudest moments — what clips first. On a meter, the solid bar is the average, the pale part above it and the thin line beyond it the peaks. A voice peaks about 12 dB above its average, drums about 18. A compressor brings them closer; clipping cuts them off.",
       "room": "How far the loudest moments are below the clip level (+20 dBu, or 0 dBFS after an ADC), where every stage distorts. Engineers call this room headroom. {careful} dB or less: careful, a louder note will distort.",
       "hiss": "Every powered device adds a little hiss. This is how far it sits below the music — engineers call it the signal-to-noise ratio: {audible} dB or more and you won't notice it; less, and you hear it in the quiet moments. Make the gain early, at the Preamp: turning up later lifts the hiss too. The grey fog on the meter is the noise."
     },

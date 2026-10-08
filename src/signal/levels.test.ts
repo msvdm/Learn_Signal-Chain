@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, HUM_DBU, SILENCE_DB, SILENT, SPL_DB, TAPER_UNITY, UNITY_DBU,
-  ceilingOf, crestOf, dbToPercent, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, shifted, snrOf,
-  sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
+  ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_RANGE_DB, METER_TAIL, SILENCE_DB, SILENT, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
+  ceilingOf, crestOf, dbToPercent, fitScaleMarks, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, meterZones,
+  scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb,
 } from './levels'
 import { AT_THE_MIC_DB, GUITAR_AMP_MAX, GUITAR_REF_DB, guitarAmpGainDb } from './process'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
@@ -170,21 +170,91 @@ describe('taperToDb (the Matrix Bus send knobs)', () => {
 })
 
 describe('meters', () => {
-  it('dbToPercent maps −60 … +20 onto the bar, held at both ends', () => {
-    expect(dbToPercent(-60)).toBe(0)
-    expect(dbToPercent(-20)).toBe(50)
+  // D16: the even part −60 … +20 takes the top 90 % of the bar; the bottom 10 % (METER_TAIL) runs
+  // on down to silence, so the bar's bottom is −∞ (it was −60 dBu: 0 %, −20: 50 %)
+  it('dbToPercent maps −60 … +20 onto the bar above a 10 % tail down to −∞, held at both ends', () => {
+    expect(dbToPercent(-60)).toBe(METER_TAIL)
+    expect(dbToPercent(-20)).toBe(55)
     expect(dbToPercent(20)).toBe(100)
-    expect(dbToPercent(S)).toBe(0)
     expect(dbToPercent(30)).toBe(100)
+    // The tail: −60 … −100 dBu (silence) squeezed into 10 %
+    expect(dbToPercent(-80)).toBe(5)
+    expect(dbToPercent(SILENCE_DB)).toBe(0)
+    expect(dbToPercent(-120)).toBe(0)
+    expect(dbToPercent(S)).toBe(0)
   })
 
-  it('a digital meter runs −80 … 0 dBFS: the top of the bar is where it clips, as analog', () => {
+  it('a digital meter runs −80 … 0 dBFS, then down to −∞: the top of the bar is where it clips, as analog', () => {
     expect(dbToPercent(0, 'digital')).toBe(100)
     expect(dbToPercent(ceilingOf('digital'), 'digital')).toBe(dbToPercent(ceilingOf('analog'), 'analog'))
-    expect(dbToPercent(-80, 'digital')).toBe(0)
-    expect(dbToPercent(-40, 'digital')).toBe(50)
-    // Unity on either side of a converter: within 2.5 % of the bar of each other
-    expect(dbToPercent(UNITY_DBU - ALIGNMENT_DB, 'digital') - dbToPercent(UNITY_DBU)).toBe(2.5)
+    expect(dbToPercent(-80, 'digital')).toBe(METER_TAIL)
+    expect(dbToPercent(-40, 'digital')).toBe(55)
+    expect(dbToPercent(-90, 'digital')).toBe(5)
+    expect(dbToPercent(S, 'digital')).toBe(0)
+    // Unity on either side of a converter: within 2.25 % of the bar of each other (2 dB)
+    expect(dbToPercent(UNITY_DBU - ALIGNMENT_DB, 'digital') - dbToPercent(UNITY_DBU)).toBeCloseTo(2.25, 9)
+  })
+
+  it('meterZones colours the bar at the health edges: blue, green, yellow, red in the top 2 dB', () => {
+    const at = (db: number, domain: 'analog' | 'digital' = 'analog') => dbToPercent(db, domain)
+    expect(meterZones()).toEqual([
+      { health: 'too-quiet', from: 0, to: at(-40) },
+      { health: 'good', from: at(-40), to: at(0) },
+      { health: 'hot', from: at(0), to: at(CLIP_DBU - CLIP_ZONE_DB) },
+      { health: 'clipping', from: at(CLIP_DBU - CLIP_ZONE_DB), to: 100 },
+    ])
+    // Digital: the same zones moved down by the alignment — good up to −18 dBFS, red from −2
+    expect(meterZones('digital').map((z) => z.to)).toEqual([at(-58, 'digital'), at(-18, 'digital'), at(-2, 'digital'), 100])
+    // Every edge is where getHealth changes its verdict
+    for (const domain of ['analog', 'digital'] as const) {
+      for (const zone of meterZones(domain).slice(0, 2)) {
+        const edge = ceilingOf(domain) - METER_RANGE_DB + ((zone.to - METER_TAIL) / (100 - METER_TAIL)) * METER_RANGE_DB
+        expect(getHealth(edge - 0.01, domain)).toBe(zone.health)
+      }
+    }
+  })
+
+  it('meterZones on a dB SPL meter: the colours still judge the signal in the cable', () => {
+    // A Microphone (+36 on its bar): blue up to a −40 dBu signal (106 dB SPL), green above, nothing else on the bar
+    expect(meterZones('analog', SPL_DB.mic! - SPL_SCALE_DB)).toEqual([
+      { health: 'too-quiet', from: 0, to: dbToPercent(-4) },
+      { health: 'good', from: dbToPercent(-4), to: 100 },
+    ])
+    // Headphones (−15): red from a +18 dBu signal (113 dB SPL) to the top of the bar
+    const phones = meterZones('analog', SPL_DB.headphones! - SPL_SCALE_DB)
+    expect(phones.map((z) => z.health)).toEqual(['too-quiet', 'good', 'hot', 'clipping'])
+    expect(phones[3]).toEqual({ health: 'clipping', from: dbToPercent(3), to: 100 })
+  })
+
+  it('scaleMarks: every 10 dB, then −∞ — dBu, dBFS (−18 for −20) or dB SPL', () => {
+    const labels = (...args: Parameters<typeof scaleMarks>) => scaleMarks(...args).map((m) => m.label)
+    expect(labels()).toEqual(['+20', '+10', '0', '-10', '-20', '-30', '-40', '-50', '-60', '-∞'])
+    expect(labels('digital')).toEqual(['0', '-10', '-18', '-30', '-40', '-50', '-60', '-70', '-80', '-∞'])
+    expect(labels('analog', { spl: 110 })).toEqual(['130', '120', '110', '100', '90', '80', '70', '60', '50', '-∞'])
+    // Each where its level sits; −∞ at the very bottom; unity strong, the clip level the top
+    expect(scaleMarks().map((m) => m.at)).toEqual([100, 88.75, 77.5, 66.25, 55, 43.75, 32.5, 21.25, METER_TAIL, 0])
+    expect(scaleMarks('digital').find((m) => m.strong)).toEqual({ at: dbToPercent(-18, 'digital'), label: '-18', strong: true, top: false })
+    expect(scaleMarks().filter((m) => m.top).map((m) => m.label)).toEqual(['+20'])
+    // dB SPL: neither (the top of the bar is not where every card clips)
+    expect(scaleMarks('analog', { spl: 146 }).some((m) => m.strong || m.top)).toBe(false)
+  })
+
+  it('fitScaleMarks keeps the numbers a short meter has room for, never two on top of each other', () => {
+    const labels = (length: number) => fitScaleMarks(scaleMarks(), length, 10).map((m) => m.label)
+    // 100 px (a card's meter): 10 dB is 11.25 px, the tail 10 — all of them
+    expect(labels(100)).toEqual(['+20', '+10', '0', '-10', '-20', '-30', '-40', '-50', '-60', '-∞'])
+    // 90 px: the tail is 9 px — −60 goes, the rest (10.1 px apart) stays
+    expect(labels(90)).toEqual(['+20', '+10', '0', '-10', '-20', '-30', '-40', '-50', '-∞'])
+    // 60 px: every other one, from the top; unity and −∞ always
+    expect(labels(60)).toEqual(['+20', '0', '-20', '-40', '-∞'])
+    expect(fitScaleMarks(scaleMarks('digital'), 0, 10).map((m) => m.label)).toEqual(['0', '-18', '-∞'])
+  })
+
+  it('scaleMarks zoomed out: only the top, unity and −∞', () => {
+    const labels = (...args: Parameters<typeof scaleMarks>) => scaleMarks(...args).map((m) => m.label)
+    expect(labels('analog', { overview: true })).toEqual(['+20', '0', '-∞'])
+    expect(labels('digital', { overview: true })).toEqual(['0', '-18', '-∞'])
+    expect(labels('analog', { spl: 110, overview: true })).toEqual(['130', '110', '-∞'])
   })
 
   it('humStrength grows from 0 where a hum starts to 1 at 60 dB louder', () => {

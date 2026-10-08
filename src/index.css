@@ -235,17 +235,23 @@ kbd {
 }
 
 /* ── Meters (components/SignalMeter.tsx) ─────────────────────────────────────
-   Each moving part sits at a share (0 … 1) of its bar: React draws the still picture into
-   --rms / --peak / --peak-on. While the chain plays, the painters write each part's own
-   transform over it (components/meterPaint.ts); removing it puts the still picture back. The parts
-   are full-size and slide along the bar (the track clips them), so a picture lays nothing out. */
-.lsc-meter-fill { position: absolute; inset: 0; background: var(--bar); }
-.lsc-meter-peak { opacity: 0.38; }
-.lsc-meter-up .lsc-meter-rms     { transform: translateY(calc((1 - var(--rms)) * 100%)); }
-.lsc-meter-up .lsc-meter-peak    { transform: translateY(100%); }
-.lsc-meter-right .lsc-meter-fill { border-radius: 9999px; }
-.lsc-meter-right .lsc-meter-rms  { transform: translateX(calc((var(--rms) - 1) * 100%)); }
-.lsc-meter-right .lsc-meter-peak { transform: translateX(-100%); }
+   The colours belong to the scale (D16): a zones layer painted once, and two covers in the
+   track's colour sliding over it — the pale one down to the average (the peaks show pale under
+   it), the dark one down to the peaks. Each moving part sits at a share (0 … 1) of its bar: React
+   draws the still picture into --rms / --peak / --peak-on (still, both covers at the average).
+   While the chain plays, the painters write each part's own transform over it
+   (components/meterPaint.ts); removing it puts the still picture back. The parts are full-size and
+   slide along the bar (the track clips them), so a picture lays nothing out. */
+.lsc-meter-fill { position: absolute; inset: 0; background: var(--bar); } /* a plain sliding bar: the dynamics cards' turning-down bar */
+.lsc-meter-zones { position: absolute; inset: 0; }
+.lsc-meter-cover { position: absolute; inset: 0; background: var(--lsc-sunken); }
+.lsc-meter-pale  { opacity: 0.62; }
+.lsc-meter-up .lsc-meter-cover    { transform: translateY(calc(var(--rms) * -100%)); }
+.lsc-meter-right .lsc-meter-cover { transform: translateX(calc(var(--rms) * 100%)); }
+/* While it clips: a red line across the end of the bar, twice as thick as the peak mark */
+.lsc-meter-clip { position: absolute; background: var(--signal-clipping); opacity: var(--clip-on); }
+.lsc-meter-up .lsc-meter-clip    { left: 0; right: 0; top: 0; height: calc(var(--mark) * 2); }
+.lsc-meter-right .lsc-meter-clip { top: 0; bottom: 0; right: 0; width: calc(var(--mark) * 2); }
 .lsc-meter-fog { position: absolute; left: 0; bottom: 0; }
 .lsc-meter-up .lsc-meter-fog    { right: 0; }
 .lsc-meter-right .lsc-meter-fog { top: 0; }
@@ -258,7 +264,7 @@ kbd {
 .lsc-meter-hold { position: absolute; inset: 0; opacity: var(--peak-on); }
 .lsc-meter-up .lsc-meter-hold    { transform: translateY(calc(var(--peak) * -100%)); }
 .lsc-meter-right .lsc-meter-hold { transform: translateX(calc(var(--peak) * 100%)); }
-.lsc-meter-hold::after { content: ''; position: absolute; background: var(--bar); }
+.lsc-meter-hold::after { content: ''; position: absolute; background: var(--lsc-fg); }
 .lsc-meter-up .lsc-meter-hold::after    { left: 0; right: 0; bottom: 0; height: var(--mark); }
 .lsc-meter-right .lsc-meter-hold::after { top: 0; bottom: 0; left: 0; width: var(--mark); }
 
@@ -278,11 +284,11 @@ kbd {
 .lsc-curve-off { opacity: calc((1 - var(--live-active, var(--active))) * var(--word)); }
 
 /* A still reading glides to a new one; a moving meter follows the sound at once */
-.lsc-meter-fill, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
+.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 .lsc-meter-fog { transition: width 0.3s ease-out, height 0.3s ease-out; }
-.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
+.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
 
 /* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
    and at the start when showing, so nothing hidden stays clickable. */
@@ -306,7 +312,7 @@ kbd {
   .react-flow__panel.lsc-left-tools { transition: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
-  .lsc-meter-fill, .lsc-meter-hold, .lsc-meter-fog, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
+  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-fog, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
 }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */

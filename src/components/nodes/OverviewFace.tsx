@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
-import { LiveLevel, MeterBar } from '../SignalMeter'
+import { LiveLevel, MeterBar, MeterScaleRow, SCALE_ROW } from '../SignalMeter'
 import type { LiveReading } from '../SignalMeter'
 import { levelParts } from '../../utils/readout'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { healthColor, getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
+import { getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
 import type { SideLevels } from '../../signal/levels'
 import { useReadingsShown } from '../../hooks/useReadingsShown'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -18,7 +18,9 @@ import { FaceNote, WithNote } from './FaceNote'
 // ── Geometry (all sizes follow the card's measured width W) ─────────────────────
 const PAD         = 20     // around the name and the level block
 const NAME_GAP    = 12     // between the name area and the level block
-const METER_GAP   = 10     // between the meter and the level row
+const METER_GAP   = 10     // between the meter's scale and the level row
+const SCALE_GAP   = 4      // between the meter and its scale (−∞, unity, the top — D16)
+const SCALE_RATIO = 0.75   // the scale's numbers, relative to the unit
 const ROW_GAP     = 6      // between the Peak and the RMS rows (from Intermediate)
 const LEVEL_SHARE = 0.5    // the most of the face's height the level block takes
 const SIDES_BAR   = 0.7    // stereo: each of the L and R bars, relative to the one mono bar
@@ -99,21 +101,22 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       const meter  = number
       const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
       const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
+      const scale  = Math.round(unit * SCALE_RATIO)
       const labelW = detailed ? Math.ceil(labelEm * unit + unit * 0.4) : 0
       const numberW = labelW + textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
       const beside = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
       const ownRow = beside < number * HEALTH_MIN
       const health = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
-      // The meter and its numbers (a status, "Not connected", takes the same height)
-      const blockH = meterH + METER_GAP + number + (detailed ? ROW_GAP + number : 0) + (ownRow ? 4 + health : 0)
-      return { number, unit, bar, meterH, labelW, ownRow, health, blockH }
+      // The meter, its scale and its numbers (a status, "Not connected", takes the same height)
+      const blockH = meterH + SCALE_GAP + Math.round(scale * SCALE_ROW) + METER_GAP + number + (detailed ? ROW_GAP + number : 0) + (ownRow ? 4 + health : 0)
+      return { number, unit, bar, meterH, scale, labelW, ownRow, health, blockH }
     }
     let level = sized(Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1))))
     // At most half the face: on a small card the name (or the icon) keeps its room, the numbers get smaller
     while (showLevel && level.number > NUMBER_MIN && level.blockH + NAME_GAP > (H - 2 - PAD * 2) * LEVEL_SHARE) {
       level = sized(level.number - 1)
     }
-    const { number, unit, bar, meterH, labelW, ownRow, health, blockH } = level
+    const { number, unit, bar, meterH, scale, labelW, ownRow, health, blockH } = level
     const levelH = showLevel ? blockH + NAME_GAP : 0
     const tag    = Math.round(number * 0.5)
     const tagH   = bypassed ? tag * 1.4 + 2 + 8 : 0
@@ -122,7 +125,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
       maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
     })
-    return { number, unit, bar, meterH, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
+    return { number, unit, bar, meterH, scale, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
   }, [sizeKey, label, t, bypassed, typeKey, showLevel, height, stereo, reserveRight, spl, detailed])
 
   if (!layout) return null
@@ -152,11 +155,11 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
       </span>
     </span>
   )
-  // One bar: the louder side in the card's colour; L / R each in the colour of its own health
-  const bar = (s: SideLevels, which: 'l' | 'r' | 'louder', color?: string) => (
+  // One bar (L / R each its own), coloured along its scale; the red line at its end while that side clips
+  const bar = (s: SideLevels, which: 'l' | 'r' | 'louder') => (
     <MeterBar
       db={s.rms} height={layout.bar} domain={levels.outDomain} shift={spl === undefined ? undefined : spl - SPL_SCALE_DB}
-      color={color ?? (isFinite(s.rms) ? healthColor(getHealth(s.rms, levels.outDomain, s.peak)) : 'var(--lsc-border)')}
+      clipping={getHealth(s.rms, levels.outDomain, s.peak) === 'clipping'}
       peak={detailed ? s.peak : undefined} noise={detailed ? s.noise : undefined}
       // Moves only while it is shown (zoomed out, or a face-only card)
       source={shown ? { nodeId, at: 'out', side: which } : undefined}
@@ -248,7 +251,14 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, st
               </div>
             ))}
           </div>
-        ) : bar(side, 'louder', healthColor(state))}
+        ) : bar(side, 'louder')}
+        {/* Its scale: −∞, unity and the top — under the bars, past the L / R letters in stereo */}
+        <div style={{ marginTop: SCALE_GAP, display: 'flex', gap: r ? layout.bar * 0.6 : 0 }}>
+          {r && (
+            <span aria-hidden style={{ fontSize: layout.meterH - layout.bar, fontWeight: 700, lineHeight: 1, height: 0, overflow: 'hidden', visibility: 'hidden' }}>L</span>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}><MeterScaleRow domain={levels.outDomain} spl={spl} size={layout.scale} /></div>
+        </div>
         <div
           style={{
             marginTop: METER_GAP, height: layout.number,

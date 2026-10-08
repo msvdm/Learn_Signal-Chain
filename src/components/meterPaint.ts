@@ -75,27 +75,32 @@ export function paintText(el: HTMLElement | null | undefined, text: string | nul
   textWritten.set(el, now)
 }
 
-/** The moving parts of a meter bar. */
+/**
+ * The moving parts of a meter bar: its colours stay put (they belong to the scale — D16); two
+ * covers slide over them — `pale` from the end of the bar down to the average (the peaks show pale
+ * under it), `dark` down to the peak (nothing lit beyond) — and the peak hold's mark.
+ */
 export interface BarParts {
-  rms: HTMLElement | null
-  peak: HTMLElement | null
+  pale: HTMLElement | null
+  dark: HTMLElement | null
   hold: HTMLElement | null
 }
 
 /** A meter bar at a reading in `domain`, rising `up` or growing to the `right` (null: still). */
 export function paintBar(parts: BarParts, up: boolean, r: MeterReading | null, domain: SignalDomain = 'analog') {
   if (!r) {
-    paintStyle(parts.rms, 'transform', null)
-    paintStyle(parts.peak, 'transform', null)
+    paintStyle(parts.pale, 'transform', null)
+    paintStyle(parts.dark, 'transform', null)
     paintStyle(parts.hold, 'transform', null)
     paintStyle(parts.hold, 'opacity', null)
     return
   }
-  // Full-size parts slid along the bar (the track clips them): as index.css places the still ones
-  const fill = (f: number) => (up ? `translateY(${((1 - f) * 100).toFixed(2)}%)` : `translateX(${((f - 1) * 100).toFixed(2)}%)`)
+  // Full-size parts slid along the bar (the track clips them): as index.css places the still ones —
+  // a cover's near edge, and the mark, at share f of the bar
+  const at = (f: number) => (up ? `translateY(${(-f * 100).toFixed(2)}%)` : `translateX(${(f * 100).toFixed(2)}%)`)
   const hold = alongScale(r.hold, domain)
-  paintStyle(parts.rms, 'transform', fill(alongScale(r.rms, domain)))
-  paintStyle(parts.peak, 'transform', fill(alongScale(r.peak, domain)))
-  paintStyle(parts.hold, 'transform', up ? `translateY(${(-hold * 100).toFixed(2)}%)` : `translateX(${(hold * 100).toFixed(2)}%)`)
+  paintStyle(parts.pale, 'transform', at(alongScale(r.rms, domain)))
+  paintStyle(parts.dark, 'transform', at(alongScale(r.peak, domain)))
+  paintStyle(parts.hold, 'transform', at(hold))
   paintStyle(parts.hold, 'opacity', hold > 0 ? '1' : '0')
 }

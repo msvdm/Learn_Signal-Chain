@@ -18,6 +18,11 @@ export function ceilingOf(domain: SignalDomain): number {
   return domain === 'digital' ? 0 : CLIP_DBU
 }
 
+/** Unity in a domain: 0 dBu analog, −18 dBFS digital (the converter alignment). */
+export function unityOf(domain: SignalDomain): number {
+  return domain === 'digital' ? UNITY_DBU - ALIGNMENT_DB : UNITY_DBU
+}
+
 // ── The readings ──────────────────────────────────────────────────────────────
 
 /**
@@ -108,7 +113,7 @@ export function humStrength(db: number): number {
  * −18 dBFS (unity).
  */
 export function getHealth(db: number, domain: SignalDomain = 'analog', peakDb: number = db): SignalHealth {
-  const unity = domain === 'digital' ? UNITY_DBU - ALIGNMENT_DB : UNITY_DBU
+  const unity = unityOf(domain)
   if (Math.max(db, peakDb) >= ceilingOf(domain)) return 'clipping'
   if (db < unity - 40) return 'too-quiet'
   if (db <= unity) return 'good'
@@ -120,17 +125,110 @@ export function healthColor(health: SignalHealth): string {
   return `var(--signal-${health})`
 }
 
-/** How many dB a meter's bar spans: from 80 dB under the ceiling up to it. */
+/** How many dB a meter's bar spans evenly: from 80 dB under the ceiling up to it. */
 export const METER_RANGE_DB = 80
 
 /**
+ * The share of a meter's bar (%) under its even part: everything quieter, squeezed, down to silence
+ * (SILENCE_DB) — the bottom of the bar is −∞ (D16).
+ */
+export const METER_TAIL = 10
+
+/** The bottom of a meter's even part: −60 dBu analog, −80 dBFS digital. */
+export function meterFloorOf(domain: SignalDomain): number {
+  return ceilingOf(domain) - METER_RANGE_DB
+}
+
+/**
  * Where a level sits along a meter's bar (0 … 100 %): the bar ends at the domain's ceiling — the
- * clip level analog (−60 … +20 dBu), 0 dBFS digital (−80 … 0 dBFS) — so a bar reaching the top
- * clips, either way.
+ * clip level analog (−60 … +20 dBu evenly), 0 dBFS digital (−80 … 0 dBFS) — so a bar reaching the
+ * top clips, either way. Under the even part, the bottom METER_TAIL % hold everything quieter down
+ * to silence: 0 % is −∞.
  */
 export function dbToPercent(db: number, domain: SignalDomain = 'analog'): number {
-  const bottom = ceilingOf(domain) - METER_RANGE_DB
-  return Math.max(0, Math.min(100, ((db - bottom) / METER_RANGE_DB) * 100))
+  const floor = meterFloorOf(domain)
+  if (db >= floor) return Math.min(100, METER_TAIL + ((db - floor) / METER_RANGE_DB) * (100 - METER_TAIL))
+  if (db <= SILENCE_DB) return 0
+  return ((db - SILENCE_DB) / (floor - SILENCE_DB)) * METER_TAIL
+}
+
+/** The top of a meter's scale painted red: this close under the ceiling, the peaks are about to clip. */
+export const CLIP_ZONE_DB = 2
+
+/** One colour along a meter's bar: where its health zone runs (%, bottom to top). */
+export interface MeterZone {
+  health: SignalHealth
+  from: number
+  to: number
+}
+
+/**
+ * A meter's colours along its bar (D16): each health zone where a level would be judged so — too
+ * quiet below unity − 40, good up to unity, hot above it, clipping in the top CLIP_ZONE_DB under the
+ * ceiling (and anything above). `shift`: every reading is moved by this on the bar (a dB SPL meter),
+ * so the colours still judge the signal in the cable. Zones with no room are left out.
+ */
+export function meterZones(domain: SignalDomain = 'analog', shift = 0): MeterZone[] {
+  const unity = unityOf(domain)
+  const upTo: [SignalHealth, number][] = [
+    ['too-quiet', unity - 40], ['good', unity], ['hot', ceilingOf(domain) - CLIP_ZONE_DB], ['clipping', Infinity],
+  ]
+  const zones: MeterZone[] = []
+  let from = 0
+  for (const [health, db] of upTo) {
+    const to = dbToPercent(db + shift, domain)
+    if (to > from) zones.push({ health, from, to })
+    from = Math.max(from, to)
+  }
+  return zones
+}
+
+/** A number beside a meter. */
+export interface ScaleMark {
+  /** Where along the bar (%) */
+  at: number
+  /** As printed: "+20", "0", "-18", "130", "-∞" */
+  label: string
+  /** Unity: the level the chain is built around */
+  strong: boolean
+  /** The ceiling of a dBu / dBFS meter: where it clips */
+  top: boolean
+}
+
+/**
+ * The numbers beside a meter (D16), top to bottom: every 10 dB of its even part, then −∞ at the
+ * bottom — dBu (+20 … −60), dBFS (0 … −80, unity −18 in place of −20), or dB SPL on a meter reading
+ * the sound in the air (`spl`: 130 … 50, the bar's own scale — SPL_SCALE_DB). `overview`: only the
+ * top, unity and −∞ (+20 0 −∞, 0 −18 −∞, 130 110 −∞) — the meter zoomed out.
+ */
+export function scaleMarks(domain: SignalDomain = 'analog', { spl, overview = false }: { spl?: number; overview?: boolean } = {}): ScaleMark[] {
+  const ceiling = ceilingOf(domain)
+  const unity   = unityOf(domain)
+  const steps = overview
+    ? [ceiling, unity]
+    // The step nearest unity is unity itself (digital: −18 for −20)
+    : Array.from({ length: METER_RANGE_DB / 10 + 1 }, (_, i) => ceiling - 10 * i).map((db) => (Math.abs(db - unity) < 5 ? unity : db))
+  const label = (db: number) => (spl !== undefined ? String(db + SPL_SCALE_DB) : db > 0 ? `+${db}` : String(db))
+  return [
+    ...steps.map((db) => ({
+      at: dbToPercent(db, domain), label: label(db), strong: spl === undefined && db === unity, top: spl === undefined && db === ceiling,
+    })),
+    { at: 0, label: '-∞', strong: false, top: false },
+  ]
+}
+
+/**
+ * The marks that fit a meter `length` px long, each label `label` px tall: the top, unity and −∞
+ * always; every other one, from the top down, only if it stays a label's height clear of those
+ * kept — a short meter drops −60 (10 % above −∞) first.
+ */
+export function fitScaleMarks(marks: ScaleMark[], length: number, label: number): ScaleMark[] {
+  const always = (m: ScaleMark) => m.top || m.strong || m === marks[0] || m === marks[marks.length - 1]
+  const kept = marks.filter(always)
+  for (const m of marks) {
+    if (!always(m) && kept.every((k) => (Math.abs(k.at - m.at) * length) / 100 >= label)) kept.push(m)
+  }
+  return marks.filter((m) => kept.includes(m))
 }
 
 /** At or below this a level counts as silence: written −∞, no readings (a microphone sits at −60 dBu). */
