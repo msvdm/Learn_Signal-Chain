@@ -34,7 +34,6 @@ const UNIT_RATIO  = 0.65
 const HEALTH_MAX  = 0.75   // health word, relative to the number
 const HEALTH_MIN  = 0.55   // below this it moves to its own row
 const NUMBER_SAMPLE = '-00.0'   // widest level reading (formatDb, mono font)
-const BAR_ONLY    = 1.5    // the meter alone (barOnly): its bar, relative to the number it would have
 
 /** Drawn instead of the name, given the box it may fill (px). */
 export type OverviewArt = (box: { w: number; h: number }) => ReactNode
@@ -101,7 +100,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
     const sized = (number: number) => {
       const unit   = Math.round(number * UNIT_RATIO)
       // As thick as the number is tall: a bar to read from afar
-      const meter  = barOnly ? Math.round(number * BAR_ONLY) : number
+      const meter  = number
       const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
       const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
       const scale  = Math.round(unit * SCALE_RATIO)

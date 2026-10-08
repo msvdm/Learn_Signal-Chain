@@ -10,7 +10,7 @@ import { GAIN_OFF_DB } from '../../signal/process'
 import { widestFormat } from '../../utils/readout'
 
 // A free-standing knob, big enough to read zoomed out
-const KNOB = 110
+const KNOB = 165
 
 const formatPreamp = (v: number) => `+${v} dB`
 const formatGain   = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v > 0 ? '+' : ''}${v} dB`)

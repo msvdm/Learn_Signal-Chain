@@ -173,7 +173,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, freeSize: { w: 162, h: 216 },
+    minLevel: 'beginner', bypass: false, freeSize: { w: 165, h: 232 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
