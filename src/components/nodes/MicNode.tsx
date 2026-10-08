@@ -29,7 +29,8 @@ const MIC_BUTTONS_H = 132
  * icon (its meter beside it — D13), "Not connected" under it until something is wired to its
  * output (NodeWrapper). Microphone and Line Input are cards of one size, their meter on the right
  * (hidden, its place kept, until something is wired to their output — D11); zoomed out their icon
- * over a horizontal level bar, no numbers. From Intermediate up they pick what they pick up — a Microphone Speech, Singing or Drums
+ * over a horizontal level bar, no numbers, and no card around them — like the Gain knob (the
+ * Instrument the same). From Intermediate up they pick what they pick up — a Microphone Speech, Singing or Drums
  * (whose hits reach far above their average), a Line Input Music or Drums. A Microphone's buttons
  * sit beside its meter (dB SPL — D13), its icon in their place at Beginner or while it hears a
  * Guitar Amp (it picks up the amp, not a sound of its own). An Instrument going into the desk without
@@ -70,7 +71,7 @@ export function MicNode({ id, type }: CardProps) {
 
   if (typeKey === 'mic') {
     return (
-      <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBarOnly>
+      <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBare>
         <MeterSides nodeId={id} input={false} spl={SPL_DB.mic} hideOutput={notConnected}>
           {choosing
             ? <CharacterButtons nodeId={id} typeKey={typeKey} columns={1} height={MIC_BUTTONS_H} />
@@ -81,11 +82,11 @@ export function MicNode({ id, type }: CardProps) {
   }
 
   if (typeKey !== 'line-in') {
-    return <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} faceOnly />
+    return <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} faceOnly overviewBare />
   }
 
   return (
-    <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBarOnly>
+    <NodeWrapper nodeId={id} typeKey={typeKey} label={label} overviewArt={art} overviewBare>
       <MeterSides nodeId={id} input={false} outputLabel={t.meters.input} hideOutput={notConnected}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 28, fontWeight: 700, lineHeight: 1.1 }}>

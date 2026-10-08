@@ -34,8 +34,11 @@ interface NodeWrapperProps {
   overviewArt?: OverviewArt
   /** Overview: false = no level block, the art takes the whole card. */
   overviewLevel?: boolean
-  /** Overview: the level block is the meter bar alone, no numbers (Microphone, Line Input) */
-  overviewBarOnly?: boolean
+  /**
+   * Overview: no card — no frame, no background — like a free-standing control: the art over the
+   * meter bar alone, no numbers (Microphone, Line Input, Instrument)
+   */
+  overviewBare?: boolean
   /**
    * Show only the overview face (its icon) at every zoom: no header, no body. With a level
    * (`overviewLevel`), an upright meter beside it zoomed in — dB SPL where the card meets the air
@@ -60,7 +63,7 @@ export function NodeWrapper({
   style,
   overviewArt,
   overviewLevel = true,
-  overviewBarOnly = false,
+  overviewBare = false,
   faceOnly = false,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
@@ -86,7 +89,9 @@ export function NodeWrapper({
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
 
-  const borderColor = isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
+  // Zoomed out with no card around it (overviewBare): only a selection still draws its ring
+  const bare        = overview && overviewBare
+  const borderColor = bare && !selected ? 'transparent' : isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
   // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
   const ring = overview ? 12 : 4
 
@@ -104,12 +109,12 @@ export function NodeWrapper({
         flexDirection: 'column',
         background: selected
           ? 'linear-gradient(var(--lsc-select-tint), var(--lsc-select-tint)), var(--lsc-node-bg)'
-          : 'var(--lsc-node-bg)',
+          : bare ? 'transparent' : 'var(--lsc-node-bg)',
         border: `1px solid ${borderColor}`,
         borderRadius: 'var(--lsc-radius-lg)',
         boxShadow: selected
           ? `0 0 0 ${ring}px var(--lsc-accent), 0 0 0 ${ring * 3}px var(--lsc-select-halo), var(--lsc-shadow-node)`
-          : 'var(--lsc-shadow-node)',
+          : bare ? 'none' : 'var(--lsc-shadow-node)',
         color: 'var(--lsc-fg)',
         transition: 'border-color 0.15s, box-shadow 0.15s',
         pointerEvents: 'auto',
@@ -119,7 +124,7 @@ export function NodeWrapper({
       {wireTarget && <WireTargetBadge label={label} />}
 
       {/* Chain colour stripe — one segment per source feeding this card */}
-      {chains.length > 0 && (
+      {chains.length > 0 && !bare && (
         <div
           aria-hidden
           style={{
@@ -251,7 +256,7 @@ export function NodeWrapper({
         label={label}
         art={overviewArt}
         showLevel={overviewLevel && (!faceOnly || overview)}
-        barOnly={overviewBarOnly}
+        barOnly={overviewBare}
         status={status}
         shown={overview || faceOnly}
         bypassed={isBypassed}
