@@ -228,7 +228,8 @@ const CAP_COLORS: Record<CapColor, { hi: string; base: string; lo: string; ridge
   },
   red:  { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d', line: '#f4f4f4' },
   blue: { hi: '#6ea6f7', base: '#1f5fc4', lo: '#0e2d63', ridge: '#3d7fe3', line: '#f4f4f4' },
-  magenta: { hi: '#f27ad9', base: '#c0189a', lo: '#650a50', ridge: '#dc3cb8', line: '#f4f4f4' },
+  // A bright magenta: light enough that its value line is dark, like the white cap's
+  magenta: { hi: '#ffb3f2', base: '#f050d8', lo: '#a3238f', ridge: '#f77be6', line: '#3b0a33' },
 }
 
 /** A desk fader's cap: sloped upper face, a ridge with a line across the middle, sloped lower face. */
