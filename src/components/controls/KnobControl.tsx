@@ -121,13 +121,12 @@ export function KnobControl({
           />
         )}
 
-        {/* Indicator dot — a plain circle, eased by a CSS transition */}
+        {/* Indicator dot — a plain circle, exactly on the value (eased, it trailed behind) */}
         <circle
           cx={indicatorTip.x}
           cy={indicatorTip.y}
           r={Math.max(3, size * 0.05)}
           fill="var(--lsc-fg)"
-          style={{ transition: 'cx 80ms ease-out, cy 80ms ease-out' }}
         />
       </svg>
       {showReadout && side && (
