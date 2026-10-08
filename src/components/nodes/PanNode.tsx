@@ -6,17 +6,18 @@ import { useParams } from '../../hooks/useParams'
 import { KnobControl } from '../controls/KnobControl'
 import { StableText } from '../controls/StableText'
 
-// A free-standing knob, big enough to read zoomed out
-const KNOB = 110
+// A free-standing knob, big enough to read zoomed out — the Gain's size
+const KNOB = 165
 // The direction indicator under it
 const TRACK_W = 180
 const DOT     = 16
 
+/** 0 = hard left (L), L49 … L1, C, R1 … R49, 100 = hard right (R): L / R only where one side is off. */
 function positionLabel(pos: number): string {
-  if (pos <= 2)  return 'L'
-  if (pos >= 98) return 'R'
-  if (pos < 50)  return `L${50 - pos}`
-  if (pos > 50)  return `R${pos - 50}`
+  if (pos <= 0)   return 'L'
+  if (pos >= 100) return 'R'
+  if (pos < 50)   return `L${50 - pos}`
+  if (pos > 50)   return `R${pos - 50}`
   return 'C'
 }
 
@@ -41,6 +42,7 @@ export function PanNode({ id }: CardProps) {
       typeKey="pan"
       label={label}
       portLine={KNOB / 2}
+      textScale={2}
       value={<StableText reserve={['L50', 'R50']} align="center">{positionLabel(panPosition)}</StableText>}
       footer={<Direction position={panPosition} />}
     >

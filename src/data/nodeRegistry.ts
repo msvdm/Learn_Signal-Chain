@@ -183,7 +183,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, freeSize: { w: 165, h: 232 },
+    minLevel: 'beginner', bypass: false, freeSize: { w: 217, h: 285 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
@@ -288,7 +288,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   pan: {
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 239 },
+    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 308 },
     defaultParams: { panPosition: 50 },
   },
   adc: {

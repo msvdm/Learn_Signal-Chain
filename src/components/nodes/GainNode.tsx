@@ -39,6 +39,7 @@ export function GainNode({ id }: CardProps) {
       typeKey="gain"
       label={label}
       portLine={KNOB / 2}
+      textScale={2}
       value={
         <StableText reserve={[widestFormat(knob.min, knob.max, 1, knob.format)]} align="center">
           {knob.format(knob.value)}

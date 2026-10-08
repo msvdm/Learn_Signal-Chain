@@ -25,6 +25,8 @@ interface FreeControlProps {
   children: ReactNode
   /** Under the reading (Pan's direction indicator) */
   footer?: ReactNode
+  /** The name and reading this many times their usual size (the Gain and Pan knobs: 2, read zoomed out) */
+  textScale?: number
 }
 
 /**
@@ -33,8 +35,12 @@ interface FreeControlProps {
  * enough to read zoomed out. Help and Remove are in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.
  */
-export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer }: FreeControlProps) {
+export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1 }: FreeControlProps) {
   const { ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
+  // Room above the control so its port line sits at PORT_TOP. A control whose port line is lower
+  // than that (a 165px knob: 82.5) reaches above the box instead — a negative padding would void
+  // the whole padding rule, its side room for the port rings with it
+  const lift = PORT_TOP - portLine
 
   return (
     <div
@@ -42,7 +48,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
       style={{
         position: 'relative',
         width: 'max-content',
-        padding: `${PORT_TOP - portLine}px ${SIDE}px 14px`,
+        padding: `${Math.max(0, lift)}px ${SIDE}px 14px`,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         color: 'var(--lsc-fg)',
         pointerEvents: 'auto',
@@ -68,24 +74,24 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
       <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
       <EdgeTags nodeId={nodeId} overview={overview} />
 
-      {children}
+      {lift < 0 ? <div style={{ marginTop: lift }}>{children}</div> : children}
 
       {/* Name and reading, like the print under a desk's control */}
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         {showName && (
           <span
             style={{
-              fontSize: 15, fontWeight: 700, lineHeight: 1.15, letterSpacing: '0.06em',
+              fontSize: 15 * textScale, fontWeight: 700, lineHeight: 1.15, letterSpacing: '0.06em',
               textTransform: 'uppercase', color: 'var(--lsc-fg-muted)',
               // Long names wrap instead of widening the control
-              maxWidth: 200, textAlign: 'center',
+              maxWidth: 200 * textScale, textAlign: 'center',
             }}
           >
             {label}
           </span>
         )}
         {value !== undefined && (
-          <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 22, fontWeight: 700, lineHeight: 1.1 }}>
+          <span style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 22 * textScale, fontWeight: 700, lineHeight: 1.1 }}>
             {value}
           </span>
         )}
