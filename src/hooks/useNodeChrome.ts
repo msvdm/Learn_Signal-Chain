@@ -7,11 +7,18 @@ import { getPorts, unwiredSource } from '../graph/queries'
 import { nodeAcceptsWire } from '../utils/connectionRules'
 import { chainColorsOf } from '../utils/chainColors'
 
-/** A card's port ids as one string ("in|out-l,out-r"), so "did they change?" is one comparison. */
+/**
+ * A card's ports as one string ("in|out-l,out-r"; a port on its own line "in-b@2"), so "did they
+ * change?" is one comparison.
+ */
+const portText   = (p: NodePort) => (p.row === undefined ? p.id : `${p.id}@${p.row}`)
 const portLayout = (ports: { inputs: NodePort[]; outputs: NodePort[] }) =>
-  `${ports.inputs.map((p) => p.id).join(',')}|${ports.outputs.map((p) => p.id).join(',')}`
+  `${ports.inputs.map(portText).join(',')}|${ports.outputs.map(portText).join(',')}`
 
-const toPorts = (ids: string): NodePort[] => (ids === '' ? [] : ids.split(',').map((id) => ({ id })))
+const toPorts = (text: string): NodePort[] => (text === '' ? [] : text.split(',').map((t) => {
+  const [id, row] = t.split('@')
+  return row === undefined ? { id } : { id, row: Number(row) }
+}))
 
 /**
  * What the shell around an element's controls shows (NodeWrapper, FreeControl): its ports, the

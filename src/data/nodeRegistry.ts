@@ -7,6 +7,16 @@ import { atLeast } from './levels'
 /** A connection point. */
 export type NodePort = {
   id: string
+  /**
+   * Its port line (0 = the first, PORT_TOP; one PORT_GAP apart), when not its place in the
+   * stack: the Relay Switch's inputs on lines 0 and 2, its output centred between them on 1
+   */
+  row?: number
+}
+
+/** The port line of each port of a stack (its `row`, else its place). */
+export function portRows(ports: NodePort[]): number[] {
+  return ports.map((port, i) => port.row ?? i)
 }
 
 export type NodeCategory = 'source' | 'processor' | 'merge' | 'sink'
@@ -267,11 +277,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // pre-fader (A) or post-fader (B) copy, say
     category: 'processor', stereo: 'follow',
     inputs: [
-      { id: 'in-a' },
-      { id: 'in-b' },
+      { id: 'in-a', row: 0 },
+      { id: 'in-b', row: 2 },
     ],
-    outputs: OUT,
-    minLevel: 'intermediate', bypass: false, minSize: { w: 240, h: 156 },
+    // Centred between them, straight out of the switch's pivot
+    outputs: [{ id: 'out', row: 1 }],
+    minLevel: 'intermediate', bypass: false, minSize: { w: 240, h: 196 },
     defaultParams: { selectedInput: 'a' },
   },
   pan: {

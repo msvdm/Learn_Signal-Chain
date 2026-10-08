@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { NodePort as Port, TypeKey } from '../../data/nodeRegistry'
-import { availableAt } from '../../data/nodeRegistry'
+import { availableAt, portRows } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useStage } from '../../hooks/useGraphSignal'
 import { formatDb, humStrength } from '../../signal/levels'
@@ -22,13 +22,17 @@ export function PortStack({ nodeId, typeKey, ports }: {
 }) {
   const noInputs = useSignalStore((s) =>
     typeKey === 'mic' && !availableAt('guitar-amp', s.complexityLevel) && !s.edges.some((e) => e.target === nodeId))
+  const inRows   = portRows(ports.inputs)
+  const outRows  = portRows(ports.outputs)
+  // Ports on neighbouring lines share the room between them (NodePort's reach)
+  const near = (rows: number[], row: number) => ({ above: rows.includes(row - 1), below: rows.includes(row + 1) })
   return (
     <>
       {!noInputs && ports.inputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" index={i} last={i === ports.inputs.length - 1} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" row={inRows[i]} near={near(inRows, inRows[i])} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" index={i} last={i === ports.outputs.length - 1} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" row={outRows[i]} near={near(outRows, outRows[i])} />
       ))}
     </>
   )

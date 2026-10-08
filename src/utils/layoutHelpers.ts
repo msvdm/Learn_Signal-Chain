@@ -38,11 +38,11 @@ export const PORT_GAP = 36   // spacing between stacked ports on the same side (
 // closer than twice this share the room between them half and half (NodePort).
 export const PORT_REACH = 28
 
-/** The centre of a port ring: on the left edge (inputs) or right edge (outputs), `index` down the stack. */
-export function portPoint(card: Box, type: 'source' | 'target', index: number): Pt {
+/** The centre of a port ring: on the left edge (inputs) or right edge (outputs), on port line `row` (portRows). */
+export function portPoint(card: Box, type: 'source' | 'target', row: number): Pt {
   return {
     x: type === 'source' ? card.position.x + card.size.w : card.position.x,
-    y: card.position.y + PORT_TOP + index * PORT_GAP,
+    y: card.position.y + PORT_TOP + row * PORT_GAP,
   }
 }
 

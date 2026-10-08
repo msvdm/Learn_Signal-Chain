@@ -4,7 +4,7 @@ import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { getPorts } from '../graph/queries'
 import { healthColor, humStrength } from '../signal/levels'
-import { SOUND_PORT } from '../data/nodeRegistry'
+import { SOUND_PORT, portRows } from '../data/nodeRegistry'
 import { healthOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
@@ -109,9 +109,12 @@ export function useFlowElements() {
       const srcNode = graphNodes.find((n) => n.id === edge.source)
       const tgtNode = graphNodes.find((n) => n.id === edge.target)
       if (!src || !tgt || !srcNode || !tgtNode) return false
-      const out = getPorts(srcNode, graph).outputs.findIndex((p) => p.id === edge.sourceHandle)
-      const inp = getPorts(tgtNode, graph).inputs.findIndex((p) => p.id === edge.targetHandle)
-      const points = [portPoint(src, 'source', Math.max(out, 0)), ...(edge.waypoints ?? []), portPoint(tgt, 'target', Math.max(inp, 0))]
+      const outs = getPorts(srcNode, graph).outputs
+      const ins  = getPorts(tgtNode, graph).inputs
+      // Each port on its own line (a port's row, else its place)
+      const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
+      const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
+      const points = [portPoint(src, 'source', out), ...(edge.waypoints ?? []), portPoint(tgt, 'target', inp)]
       return wirePassesThroughNode(points, cards, [edge.source, edge.target])
     }
 

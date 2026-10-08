@@ -5,18 +5,18 @@ import { NodeWrapper } from './NodeWrapper'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { PORT_GAP, PORT_TOP, cardMinSize } from '../../utils/layoutHelpers'
+import { NODE_REGISTRY, portRows } from '../../data/nodeRegistry'
 
 // The face is drawn in the card's own pixels (inside its 1px border), so the symbol's lines meet
-// the ports: input A on the first port line, B on the next, the output level with A
+// the ports, each on its port line (the registry's rows): A on the first, B two lines down, the
+// output centred between them — straight out of the pivot
 const SIZE      = cardMinSize('relay')
 const W         = SIZE.w - 2
-const Y_A       = PORT_TOP
-const Y_B       = PORT_TOP + PORT_GAP
-const Y_PIVOT   = (Y_A + Y_B) / 2            // the arm turns here, half way between the contacts
-const X_CONTACT = Math.round(W * 0.4)
-const X_PIVOT   = Math.round(W * 0.6)
-const X_BEND    = W - 36                     // the output steps up to its port here
-const BEND_R    = 8
+const lineY     = (row: number) => PORT_TOP + row * PORT_GAP
+const [Y_A, Y_B] = portRows(NODE_REGISTRY.relay.inputs).map(lineY)
+const Y_PIVOT   = lineY(portRows(NODE_REGISTRY.relay.outputs)[0])
+const X_CONTACT = Math.round(W * 0.36)
+const X_PIVOT   = Math.round(W * 0.64)
 // From A to B the arm turns through twice its angle to the horizontal
 const SWING     = (2 * Math.atan2((Y_B - Y_A) / 2, X_PIVOT - X_CONTACT) * 180) / Math.PI
 
@@ -35,10 +35,10 @@ const CONTACT_R   = { normal: 5, overview: 10 }
 
 /**
  * The Relay Switch (type `relay`): two inputs, A (top) and B, one output — the chosen input goes
- * out, the other is cut off. Drawn as a relay's symbol whose arm swings to the chosen contact:
- * zoomed in under its A / B buttons, zoomed out the symbol alone, no card around it (like the
- * Gain knob), and a click on it flips it. An aux send's pre-fader (A) or post-fader (B) copy is
- * one use; skipping a group of elements is another.
+ * out, the other is cut off. Drawn as a relay's symbol whose arm swings to the chosen contact, on
+ * its card at every zoom: zoomed in under its A / B buttons, zoomed out the symbol alone, and a
+ * click on it flips it. An aux send's pre-fader (A) or post-fader (B) copy is one use; skipping a
+ * group of elements is another.
  */
 export function RelayNode({ id }: CardProps) {
   const p                = useParams(id, 'relay')
@@ -53,7 +53,7 @@ export function RelayNode({ id }: CardProps) {
   // The path the signal takes in the card's colour, the input cut off faint
   const live    = 'var(--lsc-fg)'
   const cut     = 'var(--lsc-fg-fainter)'
-  const hole    = overview ? 'var(--lsc-canvas)' : 'var(--lsc-node-bg)'
+  const hole    = 'var(--lsc-node-bg)'
   const buttonW = (W - 2 * BUTTON_X - BUTTON_GAP) / 2
 
   const face = (
@@ -89,12 +89,8 @@ export function RelayNode({ id }: CardProps) {
         {/* The inputs, from their ports to their contacts */}
         <path d={`M0 ${Y_A}H${X_CONTACT}`} stroke={onB ? cut : live} strokeWidth={stroke} />
         <path d={`M0 ${Y_B}H${X_CONTACT}`} stroke={onB ? live : cut} strokeWidth={stroke} />
-        {/* The output, from the pivot up to its port */}
-        <path
-          d={`M${X_PIVOT} ${Y_PIVOT}H${X_BEND - BEND_R}Q${X_BEND} ${Y_PIVOT} ${X_BEND} ${Y_PIVOT - BEND_R}`
-            + `V${Y_A + BEND_R}Q${X_BEND} ${Y_A} ${X_BEND + BEND_R} ${Y_A}H${W}`}
-          stroke={live} strokeWidth={stroke} strokeLinejoin="round"
-        />
+        {/* The output, straight from the pivot to its port */}
+        <path d={`M${X_PIVOT} ${Y_PIVOT}H${W}`} stroke={live} strokeWidth={stroke} />
         {/* The arm: drawn to A, swung round the pivot to B */}
         <line
           x1={X_PIVOT} y1={Y_PIVOT} x2={X_CONTACT} y2={Y_A}
@@ -132,7 +128,6 @@ export function RelayNode({ id }: CardProps) {
       label={useNodeName(id, 'relay')}
       faceOnly
       overviewLevel={false}
-      overviewBare
       ownFace={face}
     />
   )

@@ -4,7 +4,7 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
+import { NODE_REGISTRY, isNodeStereo, portRows } from '../../data/nodeRegistry'
 import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
 import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
 import { NODE_LOOK } from './nodeLook'
@@ -85,12 +85,12 @@ export function NodeWrapper({
   // A source with nothing on its output says so instead of a level (D11)
   const status     = notConnected ? t.status.notConnected : undefined
 
-  // One size at every level (the registry's minSize), tall enough for the longest stack of ports
-  const portRows  = Math.max(inputs.length, outputs.length, 1)
+  // One size at every level (the registry's minSize), tall enough for its lowest port
+  const lastRow   = Math.max(0, ...portRows(inputs), ...portRows(outputs))
   const minSize   = cardMinSize(typeKey)
   // A face-only card with a level: its meter
   const meter     = faceOnly && overviewLevel
-  const minHeight = Math.max(minSize.h, PORT_TOP + (portRows - 1) * PORT_GAP + 24)
+  const minHeight = Math.max(minSize.h, PORT_TOP + lastRow * PORT_GAP + 24)
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}

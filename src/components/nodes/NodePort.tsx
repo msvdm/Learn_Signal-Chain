@@ -26,10 +26,10 @@ interface NodePortProps {
   nodeId: string
   portId: string
   type: 'source' | 'target'
-  /** Position in the stack of ports on this side (0 = top, just below the header). */
-  index: number
-  /** The bottom port of its stack */
-  last: boolean
+  /** Its port line (0 = the first, just below the header) */
+  row: number
+  /** Another port of its stack on the line above / below */
+  near: { above: boolean; below: boolean }
 }
 
 /**
@@ -42,7 +42,7 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, index, last }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
@@ -79,13 +79,14 @@ export function NodePort({ nodeId, portId, type, index, last }: NodePortProps) {
   const isSend     = type === 'source' && portId === MATRIX_PORT
   const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
-  const top        = PORT_TOP + index * PORT_GAP
+  const top        = PORT_TOP + row * PORT_GAP
   // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the
   // port above or below, so each part of the room between two ports belongs to the nearer one
+  const shared = Math.min(PORT_REACH, PORT_GAP / 2)
   const reach = {
     '--lsc-port-reach': `${PORT_REACH}px`,
-    '--lsc-port-up':    `${index > 0 ? Math.min(PORT_REACH, PORT_GAP / 2) : PORT_REACH}px`,
-    '--lsc-port-down':  `${last ? PORT_REACH : Math.min(PORT_REACH, PORT_GAP / 2)}px`,
+    '--lsc-port-up':    `${near.above ? shared : PORT_REACH}px`,
+    '--lsc-port-down':  `${near.below ? shared : PORT_REACH}px`,
   } as CSSProperties
 
   function unplug(e: React.MouseEvent) {
