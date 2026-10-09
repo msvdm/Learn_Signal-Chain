@@ -12,6 +12,16 @@ export interface WireSource {
   handleId: string
 }
 
+/** An output's key: what the engine's `wires` (what each output sends) are keyed by. */
+export function outputKey(nodeId: string, portId: string): string {
+  return `${nodeId}:${portId}`
+}
+
+/** The card an output key belongs to (a port id never holds ':'). */
+export function nodeOfOutput(key: string): string {
+  return key.slice(0, key.lastIndexOf(':'))
+}
+
 /** A graph that can look up a card and the wires into / out of it without scanning. */
 export interface Graph extends GraphView {
   node(id: string): SignalNode | undefined

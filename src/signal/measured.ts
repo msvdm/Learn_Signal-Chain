@@ -1,5 +1,6 @@
 import type { SideLevels } from './levels'
 import { ceilingOf, eachReading, louder } from './levels'
+import { nodeOfOutput } from '../graph/graph'
 import type { WireSignal } from './chain'
 import { healthOf, humOf } from './chain'
 import type { GraphSignalResult, StageResult } from './engine'
@@ -84,7 +85,7 @@ export function withMeasured(now: GraphSignalResult, measured: MeasuredChain | n
   const wires = new Map<string, WireSignal>()
   const hums  = new Map<string, number>()
   for (const [key, wire] of now.wires) {
-    const from = stages[key.slice(0, key.lastIndexOf(':'))]
+    const from = stages[nodeOfOutput(key)]
     const sent = signalMovedOn(wire, measured.at.wires.get(key), measured.wires.get(key), ceilingOf(from?.domain ?? 'analog'))
     wires.set(key, sent)
     const h = humOf(sent)

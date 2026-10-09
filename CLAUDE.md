@@ -89,7 +89,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 
 - `data/nodeRegistry.ts` — `TypeKey` and `NODE_REGISTRY`, the one source of truth for what a type is; `param(node, key)` reads a setting typed, its default when unset (never write `(params.x as number) ?? …`). Type-level only: what reads the wires is in `graph/`
 - `data/levels.ts` — the levels, `atLeast`, `DETAIL_LEVEL` (D3)
-- `graph/graph.ts` — the graph with lookups (`graphOf`, built once per change) and its walks
+- `graph/graph.ts` — the graph with lookups (`graphOf`, built once per change), its walks, and `outputKey` (what the engine's `wires` are keyed by — never build or split one by hand)
 - `graph/queries.ts` — what the wiring makes of a card: `outputKind`, `getPorts` (pass the graph: ports are read from the wires), the Preamp, guitars and DI Boxes, `unwiredSource` (D11), `faderBusOf`
 - `graph/edits.ts` — pure graph edits (`newEdge`: the one way to make a wire)
 - `graph/mainFader.ts` — the L / R takeovers and the Matrix send

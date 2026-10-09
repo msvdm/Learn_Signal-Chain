@@ -8,6 +8,7 @@ import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
 import { buildWirePath } from '../utils/wirePath'
 import { SOUND_PORT } from '../data/nodeRegistry'
+import { outputKey } from '../graph/graph'
 
 /**
  * What is drawn over the canvas, in flow coordinates: the drag handles on wires' corners, the
@@ -121,7 +122,7 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   const color = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
   // A wire drawn from a stereo output previews as a twin line, like the wire it will become;
   // a Guitar Amp's sound as dots
-  const stereo = wires.get(`${wire.source.nodeId}:${wire.source.handleId}`)?.kind === 'stereo'
+  const stereo = wires.get(outputKey(wire.source.nodeId, wire.source.handleId))?.kind === 'stereo'
   const sound  = wire.source.handleId === SOUND_PORT
 
   return (

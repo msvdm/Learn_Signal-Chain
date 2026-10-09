@@ -8,6 +8,7 @@ import type { SignalEdge } from '../data/nodeRegistry'
 import { useTranslation } from '../i18n/useTranslation'
 import { useGraphSignal } from '../hooks/useGraphSignal'
 import { chainSourcesOfEdge } from '../graph/chainColors'
+import { outputKey } from '../graph/graph'
 import { nodeName, sideLetter } from '../utils/nodeName'
 
 interface UnplugMenuProps {
@@ -76,7 +77,7 @@ export function UnplugMenu({ wires, anchor, onClose }: UnplugMenuProps) {
         const via     = start && from && start.id !== from.id
           ? fmt(t.unplugMenu.via, { node: nodeName(t, from, stages[from.id]) })
           : null
-        const side    = sideLetter(signals.get(`${wire.source}:${wire.sourceHandle}`)?.kind)
+        const side    = sideLetter(signals.get(outputKey(wire.source, wire.sourceHandle))?.kind)
         return (
           <div
             key={wire.id}

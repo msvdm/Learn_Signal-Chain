@@ -103,7 +103,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
 
 ## Phase C — the engine: one source of truth per card
 
-- [ ] **5. Wire keys: built in one place, never parsed**
+- [x] **5. Wire keys: built in one place, never parsed**
   - `` `${nodeId}:${portId}` `` is built in 9 places and split back with `lastIndexOf(':')` in 4:
     - `signal/engine.ts:132`;
     - `signal/measured.ts:87`;

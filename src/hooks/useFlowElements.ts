@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
+import { outputKey } from '../graph/graph'
 import { getPorts } from '../graph/queries'
 import { healthColor, humStrength } from '../signal/levels'
 import { SOUND_PORT, portRows } from '../data/nodeRegistry'
@@ -120,7 +121,7 @@ export function useFlowElements() {
 
     return keepSame(lastFlowEdges, graphEdges.map((edge): Edge => {
       const sourceStage = stages[edge.source]
-      const key         = `${edge.source}:${edge.sourceHandle}`
+      const key         = outputKey(edge.source, edge.sourceHandle)
       // Clipping from the peaks, the rest from the average — as the card it leaves
       const health      = sourceStage ? healthOf(wires.get(key) ?? sourceStage.out, sourceStage.domain) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'

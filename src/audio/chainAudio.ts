@@ -96,7 +96,7 @@ function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
   const guess = new Set(['eq', 'graphic-eq', 'hpf'])
   for (const card of plans) {
     const own = guess.has(card.node.typeKey) || Boolean(NODE_REGISTRY[card.node.typeKey].linked) || stereoFileOf(card, sounds) !== undefined
-    if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.from.slice(0, u.from.lastIndexOf(':'))))) ids.add(card.node.id)
+    if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.nodeId))) ids.add(card.node.id)
   }
   return ids
 }
@@ -200,7 +200,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   const arriving = (card: CardPlan, channels: 1 | 2): Sig => {
     const all: Sig[] = []
     for (const u of card.used) {
-      const feed = wires.get(u.from)
+      const feed = wires.get(u.key)
       if (!feed) continue
       // A Matrix Bus's send knob
       const sent: Feed = u.sendDb === 0 ? feed : { ...gain(u.sendDb, feed), kind: feed.kind }
@@ -223,7 +223,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   /** What arrives at a card is the one wire before it as it is: measured there already. */
   const sameAsWire = (card: CardPlan, channels: 1 | 2) => {
     if (card.used.length !== 1 || card.used[0].sendDb !== 0) return false
-    const feed = wires.get(card.used[0].from)
+    const feed = wires.get(card.used[0].key)
     return !feed || (feed.channels === channels && (channels === 1 || feed.kind === 'stereo'))
   }
 

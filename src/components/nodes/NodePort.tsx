@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
 import { graphSignal, levelOf, peakOf } from '../../signal/engine'
-import { graphOf } from '../../graph/graph'
+import { graphOf, outputKey } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../graph/connectionRules'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
@@ -57,8 +57,8 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
     const { wires, stages } = graphSignal(s.nodes, s.edges, s.measured)
     // An input holding several wires shows the health of their sum (clipping from the peaks)
     const signals = type === 'source'
-      ? [wires.get(`${nodeId}:${portId}`)]
-      : plugged.map((e) => wires.get(`${e.source}:${e.sourceHandle}`))
+      ? [wires.get(outputKey(nodeId, portId))]
+      : plugged.map((e) => wires.get(outputKey(e.source, e.sourceHandle)))
     const db   = sumSignalsToDb(signals.map(levelOf))
     const peak = sumSignalsToDb(signals.map(peakOf))
     // Judged in the domain of the card the signal comes from (dBu or dBFS)
@@ -77,7 +77,7 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   const showUnplug = canUnplug && (hovered || menuAt !== null)
   // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
   const isSend     = type === 'source' && portId === MATRIX_PORT
-  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(`${nodeId}:${portId}`)?.kind : undefined)
+  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(outputKey(nodeId, portId))?.kind : undefined)
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + row * PORT_GAP
   // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the

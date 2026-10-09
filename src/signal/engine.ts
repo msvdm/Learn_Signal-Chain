@@ -72,7 +72,7 @@ export function curveInputOf(stage: StageResult | undefined): SideLevels {
 export interface GraphSignalResult {
   /** Keyed by node id. Cards in a loop (and after one) have none. */
   stages: Record<string, StageResult>
-  /** What each output sends, keyed `${nodeId}:${portId}`. */
+  /** What each output sends, keyed by outputKey (graph/graph.ts). */
   wires: Map<string, WireSignal>
   /** The hum on each output that carries one (its level), keyed like `wires`. */
   hums: Map<string, number>
@@ -129,7 +129,7 @@ function withDistortion(result: GraphSignalResult, plans: CardPlan[]): GraphSign
     const id    = card.node.id
     const stage = result.stages[id]
     if (!stage || levelOf(stage.out) <= SILENCE_DB) continue
-    const before = card.used.some((u) => clipped.has(u.from.slice(0, u.from.lastIndexOf(':'))))
+    const before = card.used.some((u) => clipped.has(u.nodeId))
     if (!before && stage.health !== 'clipping') continue
     clipped.add(id)
     if (stages === result.stages) stages = { ...result.stages }

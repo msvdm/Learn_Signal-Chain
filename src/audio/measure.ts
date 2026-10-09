@@ -93,7 +93,7 @@ function settleSecondsOf(plans: CardPlan[]): number {
   const settled = new Map<string, number>()
   let longest = 0
   for (const card of plans) {
-    const before = Math.max(0, ...card.used.map((u) => settled.get(u.from.slice(0, u.from.lastIndexOf(':'))) ?? 0))
+    const before = Math.max(0, ...card.used.map((u) => settled.get(u.nodeId) ?? 0))
     const mine = before + settleOf(card)
     settled.set(card.node.id, mine)
     longest = Math.max(longest, mine)
@@ -245,13 +245,13 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
     }
     // What arrives was measured on the one wire before it, unless the card adds wires up (or folds
     // a stereo wire into one, or spreads a mono one over two sides)
-    const wire   = card.used.length === 1 ? wires.get(card.used[0].from) : undefined
+    const wire   = card.used.length === 1 ? wires.get(card.used[0].key) : undefined
     const inSig  = card.mode === 'source' ? levels.in
       : at('in', levels.in) ?? (wire ? asKind(wire, levels.in.kind) : signalOf([], [], levels.in))
     const outSig = at('out', levels.out) ?? signalOf([], [], levels.out)
     const stage: MeasuredStage = { in: inSig, out: outSig }
 
-    const wireMoving = card.used.length === 1 ? movingWires.get(card.used[0].from) : undefined
+    const wireMoving = card.used.length === 1 ? movingWires.get(card.used[0].key) : undefined
     const inMoving   = card.mode === 'source' ? undefined
       : slicesAtTap('in', levels.in.kind) ?? (wireMoving ? slicesAsKind(wireMoving, levels.in.kind) : slicesOf([], levels.in.kind, silent))
     const outMoving  = slicesAtTap('out', levels.out.kind) ?? slicesOf([], levels.out.kind, silent)

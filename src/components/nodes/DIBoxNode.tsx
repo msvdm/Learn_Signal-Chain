@@ -11,6 +11,7 @@ import { LEVEL_SAMPLE } from '../../utils/readout'
 import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { DI_DIRECT_PORT } from '../../data/nodeRegistry'
+import { outputKey } from '../../graph/graph'
 
 /** Its controls and the two outputs' levels and what they are for, between its meter and its outputs */
 const MIDDLE_W = 300
@@ -28,8 +29,8 @@ export function DIBoxNode({ id }: CardProps) {
   const text       = t.nodes['di-box']
   const groundLift = p('groundLift')
   const hum        = useStage(id)?.hum !== undefined
-  const xlr        = levelOf(useWire(`${id}:out`))
-  const direct     = levelOf(useWire(`${id}:${DI_DIRECT_PORT}`))
+  const xlr        = levelOf(useWire(outputKey(id, 'out')))
+  const direct     = levelOf(useWire(outputKey(id, DI_DIRECT_PORT)))
 
   const output = (name: string, db: number, what: string, main: boolean) => (
     <div>

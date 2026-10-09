@@ -19,7 +19,7 @@ export function useStage(nodeId: string): StageResult | undefined {
   return useSignalStore((s) => graphSignal(s.nodes, s.edges, s.measured).stages[nodeId])
 }
 
-/** What one output sends; `key` is `${nodeId}:${portId}`. */
+/** What one output sends; `key` is its outputKey (graph/graph.ts). */
 export function useWire(key: string): WireSignal | undefined {
   return useSignalStore((s) => graphSignal(s.nodes, s.edges, s.measured).wires.get(key))
 }
