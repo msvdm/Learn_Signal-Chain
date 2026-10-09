@@ -218,7 +218,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
   - On top of it, a full card (header, Mono | Stereo, body) and a face card (face + its meter). Fewer flags.
   - No pixel may change: screenshots.
 
-- [ ] **13. Stable selectors without text round-trips; smaller hooks**
+- [x] **13. Stable selectors without text round-trips; smaller hooks**
   - `getPorts` (`graph/queries.ts:98`) makes a new array only for the Matrix-send case. Keep that variant
     per base array (a WeakMap), so the same layout is always the same arrays. Then:
     - `useNodeChrome` reads `useShallow((s) => getPorts(…))`, and `portText` / `toPorts` go;

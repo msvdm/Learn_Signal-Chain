@@ -6,6 +6,7 @@ import { outputKey } from '../graph/graph'
 import { getPorts } from '../graph/queries'
 import { healthColor, humStrength } from '../signal/levels'
 import { SOUND_PORT, portRows } from '../data/nodeRegistry'
+import type { NodePort } from '../data/nodeRegistry'
 import { healthOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
@@ -18,7 +19,8 @@ import { keepSame } from '../utils/sameShape'
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
 const OVERVIEW_WIRE_WIDTH = 8
 
-type MeasuredSize = { width: number; height: number; ports: string }
+/** A card's size as React Flow measured it, and the outputs it had then */
+type MeasuredSize = { width: number; height: number; outputs: NodePort[] }
 
 // What React Flow was handed last time: a card or wire that comes out the same is handed over as the
 // same object, and React Flow does not redraw it (one canvas, so one of each)
@@ -26,11 +28,12 @@ const lastFlowNodes = new Map<string, FlowNode>()
 const lastFlowEdges = new Map<string, Edge>()
 
 /**
- * What a card's outputs are (a stereo Aux's L / R, a bus or fader taken over by a Main Fader …;
- * inputs never change). When this changes, React Flow must re-read the ports.
+ * A card's outputs (a stereo Aux's L / R, a bus or fader taken over by a Main Fader …; inputs never
+ * change): the same array while they stay the same (getPorts). When they change, React Flow must
+ * re-read the ports.
  */
-function portLayoutKey(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): string {
-  return getPorts(node, { nodes, edges }).outputs.map((p) => p.id).join(',')
+function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): NodePort[] {
+  return getPorts(node, { nodes, edges }).outputs
 }
 
 /**
@@ -56,7 +59,7 @@ export function useFlowElements() {
       const node = nodes.find((n) => n.id === c.id)
       if (!node) continue
       recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height)
-      sizes[c.id] = { ...c.dimensions, ports: portLayoutKey(node, nodes, edges) }
+      sizes[c.id] = { ...c.dimensions, outputs: outputsOf(node, nodes, edges) }
     }
     if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))
   }
@@ -85,7 +88,7 @@ export function useFlowElements() {
           id:        node.id,
           type:      node.typeKey,
           position:  node.position,
-          measured:  size && size.ports === portLayoutKey(node, graphNodes, graphEdges)
+          measured:  size && size.outputs === outputsOf(node, graphNodes, graphEdges)
             ? { width: size.width, height: size.height }
             : undefined,
           selected:  selectedNodeIds.includes(node.id),

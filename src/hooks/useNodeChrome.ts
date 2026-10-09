@@ -1,24 +1,10 @@
-import { useMemo } from 'react'
 import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../store/signalStore'
-import type { NodePort, TypeKey } from '../data/nodeRegistry'
+import type { TypeKey } from '../data/nodeRegistry'
 import { graphOf } from '../graph/graph'
 import { getPorts, unwiredSource } from '../graph/queries'
 import { nodeAcceptsWire } from '../graph/connectionRules'
 import { chainColorsOf } from '../graph/chainColors'
-
-/**
- * A card's ports as one string ("in|out-l,out-r"; a port on its own line "in-b@2"), so "did they
- * change?" is one comparison.
- */
-const portText   = (p: NodePort) => (p.row === undefined ? p.id : `${p.id}@${p.row}`)
-const portLayout = (ports: { inputs: NodePort[]; outputs: NodePort[] }) =>
-  `${ports.inputs.map(portText).join(',')}|${ports.outputs.map(portText).join(',')}`
-
-const toPorts = (text: string): NodePort[] => (text === '' ? [] : text.split(',').map((t) => {
-  const [id, row] = t.split('@')
-  return row === undefined ? { id } : { id, row: Number(row) }
-}))
 
 /**
  * What the shell around an element's controls shows (CardFrame, FreeControl): its ports, the
@@ -30,12 +16,9 @@ const toPorts = (text: string): NodePort[] => (text === '' ? [] : text.split(','
 export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   // (Gone for the moment the card is drawn while being removed)
   const node     = useSignalStore((s) => graphOf(s).node(nodeId))
-  // The outputs follow the wiring (a bus's L / R taken over by its Main Fader …)
-  const layout   = useSignalStore((s) => portLayout(getPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s)))
-  const ports    = useMemo(() => {
-    const [inputs, outputs] = layout.split('|')
-    return { inputs: toPorts(inputs), outputs: toPorts(outputs) }
-  }, [layout])
+  // The outputs follow the wiring (a bus's L / R taken over by its Main Fader …); a layout is always
+  // the same arrays (getPorts), so this changes only when the ports do
+  const ports    = useSignalStore(useShallow((s) => getPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s)))
   /** Colours of the chains (sources) passing through, in a stable order */
   const chains   = useSignalStore(useShallow((s) => chainColorsOf(nodeId, s.nodes, s.edges)))
   const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.help?.nodeId === nodeId)

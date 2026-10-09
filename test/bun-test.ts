@@ -33,6 +33,7 @@ export interface Matchers {
   toBeUndefined(): void
   toBeGreaterThan(expected: number): void
   toBeLessThan(expected: number): void
+  toBeLessThanOrEqual(expected: number): void
 }
 
 function matchers(actual: unknown, negate: boolean): Matchers {
@@ -54,6 +55,7 @@ function matchers(actual: unknown, negate: boolean): Matchers {
     toBeUndefined:   () => check(actual === undefined, 'toBeUndefined'),
     toBeGreaterThan: (expected) => check(num > expected, 'toBeGreaterThan', expected),
     toBeLessThan:    (expected) => check(num < expected, 'toBeLessThan', expected),
+    toBeLessThanOrEqual: (expected) => check(num <= expected, 'toBeLessThanOrEqual', expected),
   }
 }
 

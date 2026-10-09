@@ -67,6 +67,14 @@ const SIDE_OUTPUTS: NodePort[] = [
   { id: 'out-r' },
 ]
 
+/** Outputs with the Matrix send below them — one array per layout, so a layout is always the same arrays. */
+const withMatrixSend = new WeakMap<NodePort[], NodePort[]>()
+function matrixSendAdded(outputs: NodePort[]): NodePort[] {
+  let added = withMatrixSend.get(outputs)
+  if (!added) withMatrixSend.set(outputs, added = [...outputs, MATRIX_SEND_OUTPUT])
+  return added
+}
+
 /**
  * The ports a node shows right now. Inputs never change. Outputs:
  * - a bus switched to Stereo splits its output into Left and Right;
@@ -75,7 +83,8 @@ const SIDE_OUTPUTS: NodePort[] = [
  * - any of these whose L / R were taken over by the next card (a Main Fader, an EQ, an amp) has
  *   one Mix output instead;
  * - a Matrix send output below R while a wire uses it.
- * Pass the graph so the layout can be read from the wires.
+ * Pass the graph so the layout can be read from the wires. The same layout is always the same
+ * arrays, so "did the ports change?" is one comparison per array.
  */
 export function getPorts(
   node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
@@ -95,7 +104,7 @@ export function getPorts(
       outputs = passing ? MIX_OUTPUTS : SIDE_OUTPUTS
     }
     if (out.some((e) => e.sourceHandle === MATRIX_PORT)) {
-      outputs = [...outputs, MATRIX_SEND_OUTPUT]
+      outputs = matrixSendAdded(outputs)
     }
   }
   return { inputs: def.inputs, outputs }

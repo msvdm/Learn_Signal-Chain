@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
-import { LiveLevel, MeterBar, MeterScaleRow, SCALE_ROW } from '../SignalMeter'
+import { shallow } from 'zustand/shallow'
+import { LiveLevel, MeterBar, MeterScaleRow } from '../SignalMeter'
 import { zoneTextColor } from '../meterPaint'
 import type { LiveReading } from '../SignalMeter'
 import { levelParts } from '../../utils/readout'
@@ -11,30 +12,11 @@ import { getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
 import type { SideLevels } from '../../signal/levels'
 import { useDetailShown } from '../../hooks/useDetailShown'
 import { useTranslation } from '../../i18n/useTranslation'
-import { fitText, textWidth, cssVar } from '../../utils/fitText'
+import { textWidth, cssVar } from '../../utils/fitText'
+import { HEALTH_GAP, METER_GAP, NUMBER_SAMPLE, PAD, ROW_GAP, SCALE_GAP, overviewLayout } from './overviewLayout'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NODE_LOOK } from './nodeLook'
 import { FaceNote, WithNote } from './FaceNote'
-
-// ── Geometry (all sizes follow the card's measured width W) ─────────────────────
-const PAD         = 20     // around the name and the level block
-const NAME_GAP    = 12     // between the name area and the level block
-const METER_GAP   = 10     // between the meter's scale and the level row
-const SCALE_GAP   = 4      // between the meter and its scale (−∞, unity, the top — D16)
-const SCALE_RATIO = 0.75   // the scale's numbers, relative to the unit
-const ROW_GAP     = 6      // between the Peak, RMS and Noise rows (from Intermediate)
-const LEVEL_SHARE = 0.5    // the most of the face's height the level block takes
-const SIDES_BAR   = 0.7    // stereo: each of the L and R bars, relative to the one mono bar
-const SIDES_GAP   = 0.35   // stereo: between them, relative to the mono bar
-const HEALTH_GAP  = 12     // between the level number and the health word
-const NAME_MAX    = 96
-const NUMBER_MIN  = 24
-const BAR_H       = 24     // the meter's bar: one thickness on every card (stereo: SIDES_BAR of it each)
-const NUMBER_MAX  = 44
-const UNIT_RATIO  = 0.65
-const HEALTH_MAX  = 0.75   // health word, relative to the number
-const HEALTH_MIN  = 0.55   // below this it moves to its own row
-const NUMBER_SAMPLE = '-00.0'   // widest level reading (formatDb, mono font)
 
 /** Drawn instead of the name, given the box it may fill (px). */
 export type OverviewArt = (box: { w: number; h: number }) => ReactNode
@@ -75,62 +57,21 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
   const detailed = useDetailShown()
   // The Peak, RMS and Noise rows (from Intermediate), unless the meter stands alone
   const rows     = detailed && !barOnly
-  // A string, so dragging the card (a new internal node each frame) does not re-render it
-  const sizeKey = useStore((s) => {
+  // Compared by its numbers, so dragging the card (a new internal node each frame) does not re-render it
+  const size = useStore((s) => {
     const m = s.nodeLookup.get(nodeId)?.measured
-    return m?.width && m?.height ? `${m.width}x${m.height}` : ''
-  })
+    return m?.width && m?.height ? { w: m.width, h: m.height } : null
+  }, shallow)
   const levels = useStereoLevels(nodeId)
   // A stereo signal leaving: two bars, L above R
   const stereo = levels.output.r !== undefined
 
-  const layout = useMemo(() => {
-    if (!sizeKey) return null
-    const [W, H] = sizeKey.split('x').map(Number)
-    const sans = cssVar('--lsc-font-sans')
-    const mono = cssVar('--lsc-font-mono')
-    // Inside the 1px border
-    const innerW = W - 2 - PAD * 2 - reserveRight
-
-    // From Intermediate a Peak and an RMS row, each with its name in front (as wide as the longer, per px of its size)
-    const labelEm = rows ? Math.max(...[t.meters.peak, t.meters.rms, t.meters.noise].map((w) => textWidth(w, sans, 600))) : 0
-    // The health word: one size for all four words (the longest fits), so it never resizes the row
-    const longest = Math.max(...Object.values(t.health).map((w) => textWidth(w, sans, 700)))
-
-    /** The level block at a number size: the meter, the rows, the health word beside them or under. */
-    const sized = (number: number) => {
-      const unit   = Math.round(number * UNIT_RATIO)
-      // One thickness on every card, whatever its size
-      const meter  = BAR_H
-      const bar    = stereo ? Math.round(meter * SIDES_BAR) : meter
-      const meterH = stereo ? bar * 2 + Math.round(meter * SIDES_GAP) : meter
-      const scale  = Math.round(unit * SCALE_RATIO)
-      const labelW = rows ? Math.ceil(labelEm * unit + unit * 0.4) : 0
-      const numberW = labelW + textWidth(NUMBER_SAMPLE, mono, 700) * number + unit * 0.25 + textWidth(spl === undefined ? 'dBu' : 'dB SPL', sans, 600) * unit
-      const beside = Math.floor(Math.min(number * HEALTH_MAX, ((innerW - numberW - HEALTH_GAP) * 0.96) / longest))
-      const ownRow = beside < number * HEALTH_MIN
-      const health = ownRow ? Math.floor(Math.min(number * HEALTH_MAX, (innerW * 0.96) / longest)) : beside
-      // The meter, its scale and its numbers (a status, "Not connected", takes the same height)
-      const meterBlock = meterH + SCALE_GAP + Math.round(scale * SCALE_ROW)
-      const blockH = barOnly ? meterBlock : meterBlock + METER_GAP + number + (rows ? 2 * (ROW_GAP + number) : 0) + (ownRow ? 4 + health : 0)
-      return { number, unit, bar, meterH, scale, labelW, ownRow, health, blockH }
-    }
-    let level = sized(Math.round(Math.min(NUMBER_MAX, Math.max(NUMBER_MIN, W * 0.1))))
-    // At most half the face: on a small card the name (or the icon) keeps its room, the numbers get smaller
-    while (showLevel && level.number > NUMBER_MIN && level.blockH + NAME_GAP > (H - 2 - PAD * 2) * LEVEL_SHARE) {
-      level = sized(level.number - 1)
-    }
-    const { number, unit, bar, meterH, scale, labelW, ownRow, health, blockH } = level
-    const levelH = showLevel ? blockH + NAME_GAP : 0
-    const tag    = Math.round(number * 0.5)
-    const tagH   = bypassed ? tag * 1.4 + 2 + 8 : 0
-    const nameH  = H - 2 - PAD * 2 - levelH - tagH
-    const name   = fitText(label, innerW, nameH, {
-      family: sans, weight: 600, letterSpacing: -0.02, lineHeight: 1.1,
-      maxSize: NODE_LOOK[typeKey].nameMax ?? NAME_MAX, maxLines: 2,
-    })
-    return { number, unit, bar, meterH, scale, labelW, blockH, health, ownRow, nameW: innerW, nameH: nameH + tagH, name, tag }
-  }, [sizeKey, label, t, bypassed, typeKey, showLevel, barOnly, stereo, reserveRight, spl, rows])
+  const layout = useMemo(() => size && overviewLayout({
+    W: size.w, H: size.h, label, nameMax: NODE_LOOK[typeKey].nameMax,
+    sans: cssVar('--lsc-font-sans'), mono: cssVar('--lsc-font-mono'),
+    rows, rowNames: [t.meters.peak, t.meters.rms, t.meters.noise], healthWords: Object.values(t.health),
+    showLevel, barOnly, stereo, bypassed, reserveRight, spl: spl !== undefined,
+  }, textWidth), [size, label, t, bypassed, typeKey, showLevel, barOnly, stereo, reserveRight, spl, rows])
 
   if (!layout) return null
 

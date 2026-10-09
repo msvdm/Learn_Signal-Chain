@@ -24,6 +24,9 @@ export interface FitResult {
 const SAFETY = 0.96
 const REF_SIZE = 100
 
+/** A text's width at font size 1 (textWidth, or a stand-in where there is no canvas — tests). */
+export type TextWidth = (text: string, family: string, weight: number, letterSpacing?: number) => number
+
 let ctx: CanvasRenderingContext2D | null = null
 const widthCache = new Map<string, number>()
 
@@ -42,8 +45,8 @@ export function textWidth(text: string, family: string, weight: number, letterSp
 }
 
 /** The largest font size (whole pixels) at which `text` fits `maxW` × `maxH`, on one line or two. */
-export function fitText(text: string, maxW: number, maxH: number, o: FitOptions): FitResult {
-  const measure = (s: string) => textWidth(s, o.family, o.weight, o.letterSpacing)
+export function fitText(text: string, maxW: number, maxH: number, o: FitOptions, width: TextWidth = textWidth): FitResult {
+  const measure = (s: string) => width(s, o.family, o.weight, o.letterSpacing)
   const sizeFor = (lines: string[]) => Math.floor(Math.min(
     (maxW * SAFETY) / Math.max(...lines.map(measure)),
     maxH / (lines.length * o.lineHeight),

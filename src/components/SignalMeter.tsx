@@ -11,6 +11,7 @@ import { StableText } from './controls/StableText'
 import { LEVEL_SAMPLE, levelParts } from '../utils/readout'
 import type { MeterAt, MeterSide, MeterSource } from './meterPaint'
 import { alongScale, paintBar, paintStyle, paintText, readingOf, zoneTextColor } from './meterPaint'
+import { SCALE_ROW } from './nodes/overviewLayout'
 
 // The meters, as a DAW draws them (D16, after Sound Forge's): one bar per side, coloured along its
 // scale (meterZones) — from Intermediate up (useDetailShown) blue from the bottom up to the noise
@@ -143,9 +144,6 @@ export function MeterBar({ db, height = 6, domain = 'analog', peak, noise, clipp
     />
   )
 }
-
-/** A MeterScaleRow's height per px of its labels: the labels and their ticks up to the bar. */
-export const SCALE_ROW = 1.3
 
 /**
  * The numbers under a horizontal meter zoomed out (D16): only −∞, unity and the top — −∞ 0 +20 dBu,

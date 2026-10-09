@@ -27,6 +27,7 @@ bun run preview  # Preview the production build locally
 - `src/audio/meters.test.ts`, `sounds.test.ts` — the meters' movement (D10); the Generator's sounds and the hiss
 - `src/utils/chainFile.test.ts` — what a source picks up, from today's files and older ones
 - `src/graph/mainFader.test.ts`, `queries.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`
+- `src/components/nodes/overviewLayout.test.ts` — the zoomed-out face's layout (`overviewLayout`: the level block at most half the face, the name in the rest)
 
 ## Working on this project
 
@@ -224,7 +225,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - Import React Flow's `Node` as `type Node as FlowNode` (the DOM has a `Node` too).
 - `MasterBusNode` serves `master-bus`, `aux-bus` and `matrix-bus`.
 - **Handle hit-testing**: custom `<Handle>`s default to `isConnectable`, so React Flow gives them `connectionindicator` and `pointer-events: all` even in Select mode — that is what lets the mouse-follow switch find them with `document.elementsFromPoint` (`.lsc-connect-mode` forces it too). A handle's type is `classList.contains('source' / 'target')`: there is no `data-handletype`.
-- **Display nodes carry `measured`.** A node without it is new to React Flow, which hides it until re-measured on the next frame — a click in that gap lands on the pane. `useFlowElements` hands React Flow's sizes back (`keepSizes`), except for a card whose ports changed (`portLayoutKey`), left unmeasured on purpose so its ports are re-read. `NodePort` re-reads its ring on `transitionend` so wires end at its edge.
+- **Display nodes carry `measured`.** A node without it is new to React Flow, which hides it until re-measured on the next frame — a click in that gap lands on the pane. `useFlowElements` hands React Flow's sizes back (`keepSizes`), except for a card whose outputs changed (`getPorts` hands back the same array for the same layout, so one comparison), left unmeasured on purpose so its ports are re-read. `NodePort` re-reads its ring on `transitionend` so wires end at its edge.
 - The overlay SVGs (`CanvasOverlays`) are siblings of the React Flow div; each `ViewportLayer` applies the canvas's `translate / scale` (`useViewport()`) to stay aligned.
 - Zoom control labels are translated through `ariaLabelConfig` (`toolbar.zoom*` keys).
 

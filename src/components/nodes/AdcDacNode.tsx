@@ -15,6 +15,7 @@ const levelText = (db: number) => levelParts(db, 'analog')[0]
 
 export function AdcDacNode({ id, type }: CardProps) {
   const levels              = useStereoLevels(id)
+  const { input, output }   = levels
   const { t }               = useTranslation()
 
   const typeKey    = type as TypeKey
@@ -63,8 +64,8 @@ export function AdcDacNode({ id, type }: CardProps) {
       >
         {/* One line per side when stereo: "L  -10.0 dBu → 8.0 dBFS" */}
         {(levels.stereo
-          ? [['L ', levels.in, levels.out], ['R ', levels.inR ?? -Infinity, levels.outR ?? -Infinity]] as const
-          : [['', levels.in, levelOf(result?.out)]] as const
+          ? [['L ', input.l.rms, output.l.rms], ['R ', input.r?.rms ?? -Infinity, output.r?.rms ?? -Infinity]] as const
+          : [['', input.l.rms, levelOf(result?.out)]] as const
         ).map(([side, inDb, outDb]) => (
           <div key={side}>
             {side && <span style={{ fontWeight: 700, color: 'var(--lsc-fg-muted)' }}>{side}</span>}
