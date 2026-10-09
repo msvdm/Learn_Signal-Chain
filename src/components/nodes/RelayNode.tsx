@@ -1,10 +1,11 @@
 import type { CardProps } from './cardProps'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeName } from '../../hooks/useNodeName'
-import { NodeWrapper } from './NodeWrapper'
+import { CardFrame } from './CardFrame'
+import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { PORT_GAP, PORT_TOP, cardMinSize } from '../../utils/layoutHelpers'
+import { PORT_GAP, PORT_TOP, cardHeight, cardMinSize } from '../../utils/layoutHelpers'
 import { NODE_REGISTRY, portRows } from '../../data/nodeRegistry'
 
 // The face is drawn in the card's own pixels (inside its 1px border), so the symbol's lines meet
@@ -43,7 +44,9 @@ const CONTACT_R   = { normal: 5, overview: 10 }
 export function RelayNode({ id }: CardProps) {
   const p                = useParams(id, 'relay')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const overview         = useSignalStore((s) => s.overview)
+  const chrome           = useNodeChrome(id, 'relay')
+  const overview         = chrome.overview
+  const label            = useNodeName(id, 'relay')
   const { t }            = useTranslation()
   const onB              = p('selectedInput') === 'b'
   const choose           = (input: 'a' | 'b') => updateNodeParams(id, { selectedInput: input })
@@ -121,14 +124,10 @@ export function RelayNode({ id }: CardProps) {
     </div>
   )
 
+  // No header, no level: its own face over the whole card, at every zoom
   return (
-    <NodeWrapper
-      nodeId={id}
-      typeKey="relay"
-      label={useNodeName(id, 'relay')}
-      faceOnly
-      overviewLevel={false}
-      ownFace={face}
-    />
+    <CardFrame nodeId={id} typeKey="relay" label={label} chrome={chrome} size={{ w: SIZE.w, h: cardHeight('relay', chrome.ports) }}>
+      {face}
+    </CardFrame>
   )
 }

@@ -21,7 +21,7 @@ const toPorts = (text: string): NodePort[] => (text === '' ? [] : text.split(','
 }))
 
 /**
- * What the shell around an element's controls shows (NodeWrapper, FreeControl): its ports, the
+ * What the shell around an element's controls shows (CardFrame, FreeControl): its ports, the
  * colours of the chains passing through it, whether it is selected (or its help is open), whether
  * the wire being drawn could land on it, and whether it is a source not connected yet. Each part is
  * read on its own, so the shell is redrawn only when one of them changes — not on every change of
@@ -51,3 +51,6 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
 
   return { node, ports, chains, selected, overview, wireTarget, notConnected }
 }
+
+/** What the shell around an element's controls shows (useNodeChrome). */
+export type NodeChrome = ReturnType<typeof useNodeChrome>

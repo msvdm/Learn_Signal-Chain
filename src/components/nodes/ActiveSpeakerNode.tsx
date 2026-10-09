@@ -1,6 +1,6 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
-import { NodeWrapper } from './NodeWrapper'
+import { FaceCard } from './FaceCard'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { VolumeFace } from './VolumeFace'
@@ -39,12 +39,11 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
   const hum       = stage?.hum !== undefined
 
   return (
-    <NodeWrapper
+    <FaceCard
       nodeId={id}
       typeKey={typeKey}
       label={useNodeName(id, typeKey)}
-      faceOnly
-      overviewArt={(box) => {
+      art={(box) => {
         if (condition === 'blown') {
           return (
             <ConditionNote

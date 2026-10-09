@@ -1,6 +1,6 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
-import { NodeWrapper } from './NodeWrapper'
+import { FaceCard } from './FaceCard'
 import { NODE_LOOK } from './nodeLook'
 import { VolumeFace } from './VolumeFace'
 import { ConditionNote } from './conditions'
@@ -17,12 +17,11 @@ const Icon = NODE_LOOK['guitar-amp'].icon
 export function GuitarAmpNode({ id }: CardProps) {
   const condition = useStage(id)?.condition
   return (
-    <NodeWrapper
+    <FaceCard
       nodeId={id}
       typeKey="guitar-amp"
       label={useNodeName(id, 'guitar-amp')}
-      faceOnly
-      overviewArt={(box) => {
+      art={(box) => {
         const face = (h: number) => <VolumeFace nodeId={id} typeKey="guitar-amp" icon={<Icon />} box={{ w: box.w, h }} />
         return condition ? <ConditionNote condition={condition} typeKey="guitar-amp" box={box} face={face} /> : face(box.h)
       }}

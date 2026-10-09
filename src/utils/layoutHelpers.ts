@@ -1,5 +1,5 @@
-import type { SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isTypeKey } from '../data/nodeRegistry'
+import type { NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
+import { NODE_REGISTRY, isTypeKey, portRows } from '../data/nodeRegistry'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
 import type { Box, Pt, Size } from './geometry'
@@ -53,6 +53,12 @@ export const CARD_MIN_H = 210
 /** The smallest a card of this type can be (it grows with its content). */
 export function cardMinSize(typeKey: TypeKey): Size {
   return NODE_REGISTRY[typeKey].minSize ?? { w: CARD_MIN_W, h: CARD_MIN_H }
+}
+
+/** A card's height at least: its type's, or tall enough for its lowest port. */
+export function cardHeight(typeKey: TypeKey, ports: { inputs: NodePort[]; outputs: NodePort[] }): number {
+  const lastRow = Math.max(0, ...portRows(ports.inputs), ...portRows(ports.outputs))
+  return Math.max(cardMinSize(typeKey).h, PORT_TOP + lastRow * PORT_GAP + 24)
 }
 
 /**

@@ -113,7 +113,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `hooks/useStableHandlers.ts` — handlers that never change identity (for React Flow); `useLatestRef.ts` — the latest value for listeners (synced in a layout effect: never assign `ref.current` during render)
 - `components/SignalChain.tsx` — the React Flow canvas; `CanvasOverlays.tsx` — what is drawn over it (`ViewportLayer`)
 - `components/nodes/index.ts` — `NODE_COMPONENTS` (each type's card); `nodeLook.ts` — `NODE_LOOK` (icon, palette group; its order is the palette's)
-- `components/nodes/NodeWrapper.tsx` — the card shell; `FreeControl.tsx` — the bare controls' shell; `OverviewFace.tsx` — the zoomed-out face; `MeterSides.tsx` — meters at a card's sides
+- `components/nodes/CardFrame.tsx` — what every card has (box, selection ring, chain stripe, ports, edge tags); on it `NodeWrapper.tsx` — a full card (header, Mono | Stereo, body) — and `FaceCard.tsx` — a card that is only its face; `FreeControl.tsx` — the bare controls' shell; `OverviewFace.tsx` — the zoomed-out face; `MeterSides.tsx` — meters at a card's sides
 - `components/nodes/conditions.tsx` — what a card says in each `StageCondition` (its text, colour and place: a note under a face, a red label, a converter's line)
 - `components/SignalMeter.tsx` — the meters; `meterPaint.ts` — their painters
 - `components/controls/StableText.tsx` — a reading that keeps the width of its widest value; `ParamKnob.tsx` — a knob turning one of its card's settings (reads `useParams`, writes `updateNodeParams`)
@@ -143,11 +143,11 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 
 ### Cards
 
-- Every card uses `NodeWrapper`. **Gain, Pan, Fader, Switch and Pad are not cards**: bare controls with their ports (`FreeControl`, a `freeSize` in the registry), the same at every zoom.
+- Every card uses `NodeWrapper` (a full card) or `FaceCard` (only its face), both on `CardFrame`. **Gain, Pan, Fader, Switch and Pad are not cards**: bare controls with their ports (`FreeControl`, a `freeSize` in the registry), the same at every zoom.
 - **One size per card, at every level**: the registry's `minSize` (`cardMinSize()`); the content grows into it, in Bulgarian too. **A card never changes size while values change** (no flicker): wrap every changing reading in `StableText`, which reserves the width of its widest value (`LEVEL_SAMPLE`, `widestFormat()` in `utils/readout.ts`); text that only sometimes shows keeps its space (`visibility: hidden`). `KnobControl`, `VerticalFader`, `ControlSlider` and the meters already do this.
 - **Wires between cards stay straight**: a fixed 56 px header, the first port line at `PORT_TOP`, stacked ports `PORT_GAP` apart (a later line: `row` in the registry). A free-standing control's port line is at `PORT_TOP` too — one lower than that reaches above its box rather than taking a negative padding.
 - The header is icon · title · On/Off (none where the control itself is the state: `bypass: false`). Help and Remove are in the right-click menu; no status chip.
-- **Face-only cards** (`faceOnly`: Instrument, Guitar Amp, Speakers, Headphones; the Relay Switch draws its own face, `ownFace`): a big icon with its buttons or knob and its meter (D13); what is wrong is said under the icon (`FaceNote`; a condition's words from `conditions.tsx`, every other card's in a red label).
+- **Face-only cards** (`FaceCard`: Instrument, Guitar Amp, Speakers, Headphones; the Relay Switch draws its own face on a bare `CardFrame`): a big icon with its buttons or knob and its meter (D13); what is wrong is said under the icon (`FaceNote`; a condition's words from `conditions.tsx`, every other card's in a red label).
 - Only types with `stereo: 'optional'` get a **Mono | Stereo** switch.
 - **Overview** (`overview` in the store — cards read this flag, never the zoom): the header and body stay mounted with `visibility: hidden`, so the card keeps exactly its size and its ports stay put; `OverviewFace` is drawn over them.
 - Only the left button moves a knob or fader (a right-click opens the menu and changes nothing).
@@ -236,7 +236,7 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
 2. What it does to the signal. A card whose job is a gain: its gain in `GAINS` (`src/signal/gains.ts`; dB, −∞ off) — the number engine and the render both read it; in `PROCESS` (`src/signal/process.ts`) it is then `gained`. Any other card: its function in `PROCESS` — to every reading (`dynamics` for a curve; read settings with `param(node, key)`; add new keys to `ParamTypes`). A card with no power of its own goes in `PASSIVE` (no hiss); a source gets its noise in `NOISE_BELOW` and its peaks in `soundOf` / `PEAKS_ABOVE` (and a loop or a sound in `audio/`); a setting that takes one of a few words goes in `PARAM_CHOICES` (or `paramChoices` when types differ)
    - And, unless it is a gain, what it does to real sound: its entry in `OTHERS` in `src/audio/chainAudio.ts` (Web Audio nodes — a new type does not compile without one; a dynamics card a processor in `audio/processors.ts` with its tests, and its row in `DYNAMICS` — `audio/dynamics.ts`: its knobs, how long it settles, its makeup). A condition it can be in goes in `StageCondition` and `SILENCES`, and what its card says in `CONDITIONS` (`components/nodes/conditions.tsx`)
 3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
-   - A card → use `NodeWrapper` (`align="center"` centres a single control); its In / Out meters → `MeterSides` around its controls (they move by themselves)
+   - A card → use `NodeWrapper` (`align="center"` centres a single control); its In / Out meters → `MeterSides` around its controls (they move by themselves). A card that is only a big icon (a source or a speaker) → `FaceCard`
    - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad) → use `FreeControl`, and give it a `freeSize` in the registry
    - A knob for a setting → `ParamKnob` (a Compressor-like card's Attack / Release: `AttackRelease` in `DynamicsLayout.tsx`)
 4. `NODE_COMPONENTS` in `src/components/nodes/index.ts` (its card) and `NODE_LOOK` in `src/components/nodes/nodeLook.ts` (icon, palette group — its place in that table is its place in the palette)

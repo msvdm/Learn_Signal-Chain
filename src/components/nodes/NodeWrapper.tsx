@@ -4,14 +4,12 @@ import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import type { TypeKey } from '../../data/nodeRegistry'
-import { NODE_REGISTRY, isNodeStereo, portRows } from '../../data/nodeRegistry'
-import { HEADER_H, PORT_TOP, PORT_GAP, cardMinSize } from '../../utils/layoutHelpers'
-import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
+import { NODE_REGISTRY, isNodeStereo } from '../../data/nodeRegistry'
+import { HEADER_H, cardHeight, cardMinSize } from '../../utils/layoutHelpers'
+import { CardFrame } from './CardFrame'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
-import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { MeterStrip, STRIP_W } from '../SignalMeter'
 import { SPL_DB } from '../../signal/levels'
 import { cssVar, textWidth } from '../../utils/fitText'
 
@@ -37,10 +35,6 @@ function titleWidth(label: string, cardW: number): number {
   if (twoRows <= TITLE_W) return TITLE_W
   return Math.min(twoRows, Math.max(TITLE_W, cardW - TITLE_ROOM))
 }
-// A face-only card's upright meter, zoomed in: on the right of its face, which keeps this much room
-// free for it (the card is its registry minSize plus this room, as tall as the minSize)
-const FACE_METER_PAD  = '14px 20px 12px'
-const FACE_METER_ROOM = STRIP_W + 16
 
 interface NodeWrapperProps {
   nodeId: string
@@ -49,35 +43,22 @@ interface NodeWrapperProps {
   children?: ReactNode
   /** Horizontal alignment of the body content. */
   align?: 'stretch' | 'start' | 'center'
-  className?: string
-  style?: CSSProperties
-  /** Overview (zoomed out): drawn instead of the name, e.g. a big icon or the control itself. */
+  /** Overview (zoomed out): drawn instead of the name, e.g. a big icon. */
   overviewArt?: OverviewArt
-  /** Overview: false = no level block, the art takes the whole card. */
-  overviewLevel?: boolean
   /**
    * Overview: no card — no frame, no background — like a free-standing control: the art over the
-   * meter bar alone, no numbers (Microphone, Line Input, Instrument)
+   * meter bar alone, no numbers (Microphone, Line Input)
    */
   overviewBare?: boolean
-  /**
-   * Show only the overview face (its icon) at every zoom: no header, no body. With a level
-   * (`overviewLevel`), an upright meter beside it zoomed in — dB SPL where the card meets the air
-   * (SPL_DB) — and the level under it zoomed out.
-   */
-  faceOnly?: boolean
-  /**
-   * A face-only card that draws its own face, at every zoom, in place of the overview face: over
-   * the whole card, in its own pixels, so its lines can meet the ports (the Relay Switch's symbol)
-   */
-  ownFace?: ReactNode
 }
 
 /**
- * The single card shell every node uses.
- * Width follows the content (controls, graphs); text wraps to fit.
- * The 56px header keeps the first port line at the same height on every card,
- * so wires between cards stay straight no matter how tall each card is.
+ * A full card: its header (icon, title, On / Off), a Mono | Stereo switch where it has one, and its
+ * body, in the frame every card shares (CardFrame). Width follows the content (controls, graphs);
+ * text wraps to fit. The 56px header keeps the first port line at the same height on every card,
+ * so wires between cards stay straight no matter how tall each card is. Zoomed out its name (or
+ * art) and the level leaving it are drawn over the hidden controls (OverviewFace). A card that is
+ * only its face: FaceCard.
  */
 export function NodeWrapper({
   nodeId,
@@ -85,224 +66,137 @@ export function NodeWrapper({
   label,
   children,
   align = 'stretch',
-  className = '',
-  style,
   overviewArt,
-  overviewLevel = true,
   overviewBare = false,
-  faceOnly = false,
-  ownFace,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
-  const { node, ports, chains, selected, overview, wireTarget, notConnected } = useNodeChrome(nodeId, typeKey)
+  const chrome           = useNodeChrome(nodeId, typeKey)
+  const { node, ports, overview, notConnected } = chrome
   const { t }            = useTranslation()
 
   const isBypassed = node?.bypassed ?? false
   const look       = NODE_LOOK[typeKey]
   const canBypass  = NODE_REGISTRY[typeKey].bypass
   const canStereo  = NODE_REGISTRY[typeKey].stereo === 'optional'
-  const { inputs, outputs } = ports
-  // A source with nothing on its output says so instead of a level (D11)
-  const status     = notConnected ? t.status.notConnected : undefined
-
   // One size at every level (the registry's minSize), tall enough for its lowest port
-  const lastRow   = Math.max(0, ...portRows(inputs), ...portRows(outputs))
-  const minSize   = cardMinSize(typeKey)
-  // A face-only card with a level: its meter
-  const meter     = faceOnly && overviewLevel
-  const minHeight = Math.max(minSize.h, PORT_TOP + lastRow * PORT_GAP + 24)
+  const minSize    = cardMinSize(typeKey)
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
 
-  // Zoomed out with no card around it (overviewBare): only a selection still draws its ring
-  const bare        = overview && overviewBare
-  const borderColor = bare && !selected ? 'transparent' : isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
-  // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
-  const ring = overview ? 12 : 4
-
   return (
-    <div
-      className={`lsc-node-card select-none ${selected ? 'lsc-selected' : ''} ${className}`}
-      style={{
-        position: 'relative',
-        width: 'max-content',
-        minWidth: minSize.w + (meter ? FACE_METER_ROOM : 0),
-        minHeight,
-        display: 'flex',
-        flexDirection: 'column',
-        background: selected
-          ? 'linear-gradient(var(--lsc-select-tint), var(--lsc-select-tint)), var(--lsc-node-bg)'
-          : bare ? 'transparent' : 'var(--lsc-node-bg)',
-        border: `1px solid ${borderColor}`,
-        borderRadius: 'var(--lsc-radius-lg)',
-        boxShadow: selected
-          ? `0 0 0 ${ring}px var(--lsc-accent), 0 0 0 ${ring * 3}px var(--lsc-select-halo), var(--lsc-shadow-node)`
-          : bare ? 'none' : 'var(--lsc-shadow-node)',
-        color: 'var(--lsc-fg)',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-        pointerEvents: 'auto',
-        ...style,
-      }}
+    <CardFrame
+      nodeId={nodeId} typeKey={typeKey} label={label} chrome={chrome}
+      size={{ w: minSize.w, h: cardHeight(typeKey, ports) }}
+      bare={overview && overviewBare}
+      // A source with nothing on its output says so instead of a level (D11)
+      notConnectedTag={notConnected}
     >
-      {wireTarget && <WireTargetBadge label={label} />}
-
-      {/* Chain colour stripe — one segment per source feeding this card */}
-      {chains.length > 0 && !bare && (
-        <div
-          aria-hidden
+      {/* Header — fixed height keeps the port line aligned across cards */}
+      <div
+        className="lsc-fade"
+        style={{
+          ...hideInOverview,
+          position: 'relative',
+          minHeight: HEADER_H,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '0 10px 0 12px',
+          borderBottom: '1px solid var(--lsc-border-soft)',
+          flexShrink: 0,
+        }}
+      >
+        <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>
+          <look.icon size={look.headerSize ?? 16} />
+        </span>
+        {/* Short titles stay on one line (the card grows); long ones wrap — onto two rows at most
+            where the card has room (Bulgarian's Допълнителна смесителна шина (Aux)) */}
+        <span
           style={{
-            position: 'absolute', top: 0, left: 10, right: 10, height: 3,
-            display: 'flex', borderRadius: '0 0 3px 3px', overflow: 'hidden',
-            pointerEvents: 'none',
+            flex: '0 1 auto', width: 'max-content', maxWidth: titleWidth(label, minSize.w),
+            fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
+            padding: '6px 0',
           }}
         >
-          {chains.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
+          {label}
+        </span>
+        {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
+        {isBypassed && (
+          <span
+            style={{
+              position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
+              fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
+              padding: '0 6px', borderRadius: 9999,
+              background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
+              color: 'var(--signal-hot)',
+              border: '1px solid var(--signal-hot-border)',
+              pointerEvents: 'none',
+            }}
+          >
+            {t.nodeControls.bypassedShort}
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
+        <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {canBypass && (
+            <button
+              className="lsc-node-btn"
+              aria-label={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
+              aria-pressed={!isBypassed}
+              onClick={() => toggleBypassNode(nodeId)}
+              style={{
+                ...headerBtn,
+                borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
+                background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
+                color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+              }}
+            >
+              <Power size={12} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
+      {canStereo && node && (
+        <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
+          <StereoToggle
+            stereo={isNodeStereo(node)}
+            onChange={(on) => setNodeStereo(nodeId, on)}
+            labels={[t.stereo.mono, t.stereo.stereo]}
+          />
         </div>
       )}
 
-      <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
-      <EdgeTags nodeId={nodeId} overview={overview} notConnected={notConnected && !faceOnly} />
+      {/* Body — dimmed when bypassed; centred in cards bigger than their controls */}
+      <div
+        className="lsc-fade"
+        style={{
+          flex: 1,
+          padding: `10px ${BODY_PAD_X}px 12px`,
+          display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center',
+          alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
+          opacity: isBypassed ? 0.5 : 1,
+          ...hideInOverview,
+        }}
+      >
+        {children}
+      </div>
 
-      {/* Face-only cards (sources, speakers) have no header or body: the face is all they show */}
-      {!faceOnly && <>
-        {/* Header — fixed height keeps the port line aligned across cards */}
-        <div
-          className="lsc-fade"
-          style={{
-            ...hideInOverview,
-            position: 'relative',
-            minHeight: HEADER_H,
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '0 10px 0 12px',
-            borderBottom: '1px solid var(--lsc-border-soft)',
-            flexShrink: 0,
-          }}
-        >
-          <span className="lsc-node-icon" style={{ display: 'flex', flexShrink: 0 }}>
-            <look.icon size={look.headerSize ?? 16} />
-          </span>
-          {/* Short titles stay on one line (the card grows); long ones wrap — onto two rows at most
-              where the card has room (Bulgarian's Допълнителна смесителна шина (Aux)) */}
-          <span
-            style={{
-              flex: '0 1 auto', width: 'max-content', maxWidth: titleWidth(label, minSize.w),
-              fontSize: 'var(--node-text-md)', fontWeight: 600, lineHeight: 1.15,
-              padding: '6px 0',
-            }}
-          >
-            {label}
-          </span>
-          {/* "Bypassed" tag sits on the header's bottom line — it never changes the card's size */}
-          {isBypassed && (
-            <span
-              style={{
-                position: 'absolute', left: 12, bottom: 0, transform: 'translateY(50%)', zIndex: 2,
-                fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
-                padding: '0 6px', borderRadius: 9999,
-                background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
-                color: 'var(--signal-hot)',
-                border: '1px solid var(--signal-hot-border)',
-                pointerEvents: 'none',
-              }}
-            >
-              {t.nodeControls.bypassedShort}
-            </span>
-          )}
-          <span style={{ flex: 1 }} />
-          {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
-          <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-            {canBypass && (
-              <button
-                className="lsc-node-btn"
-                aria-label={isBypassed ? t.nodeControls.turnOn : t.nodeControls.turnOff}
-                aria-pressed={!isBypassed}
-                onClick={() => toggleBypassNode(nodeId)}
-                style={{
-                  ...headerBtn,
-                  borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
-                  background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
-                  color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
-                }}
-              >
-                <Power size={12} strokeWidth={2.5} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
-        {canStereo && node && (
-          <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
-            <StereoToggle
-              stereo={isNodeStereo(node)}
-              onChange={(on) => setNodeStereo(nodeId, on)}
-              labels={[t.stereo.mono, t.stereo.stereo]}
-            />
-          </div>
-        )}
-
-        {/* Body — dimmed when bypassed; centred in cards bigger than their controls */}
-        <div
-          className="lsc-fade"
-          style={{
-            flex: 1,
-            padding: `10px ${BODY_PAD_X}px 12px`,
-            display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center',
-            alignItems: align === 'center' ? 'center' : align === 'start' ? 'flex-start' : 'stretch',
-            opacity: isBypassed ? 0.5 : 1,
-            ...hideInOverview,
-          }}
-        >
-          {children}
-        </div>
-      </>}
-
-      {/* A face-only card is its face: zoomed in with its meter on the right, zoomed out with its
-          level under it. Not connected: the face says so */}
-      {faceOnly && <>
-        {/* The face's place; zoomed in, its meter on the right (hidden, its space kept, when not connected) */}
-        <div style={{ height: minHeight - 2, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', padding: FACE_METER_PAD, boxSizing: 'border-box' }}>
-          {meter && (
-            <div className="lsc-fade" style={{ display: 'flex', ...(notConnected ? { visibility: 'hidden' } : {}), ...hideInOverview }}>
-              <FaceMeter nodeId={nodeId} typeKey={typeKey} />
-            </div>
-          )}
-        </div>
-      </>}
-
-      {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports.
-          A face-only card shows its face at every zoom: zoomed in beside its meter, zoomed out with
-          its level under it */}
-      {ownFace ?? <OverviewFace
+      {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
+      <OverviewFace
         nodeId={nodeId}
         typeKey={typeKey}
         label={label}
         art={overviewArt}
-        showLevel={overviewLevel && (!faceOnly || overview)}
         barOnly={overviewBare}
-        status={status}
-        shown={overview || faceOnly}
+        status={notConnected ? t.status.notConnected : undefined}
+        shown={overview}
         bypassed={isBypassed}
-        reserveRight={meter && !overview ? FACE_METER_ROOM : 0}
         spl={SPL_DB[typeKey]}
-      />}
-    </div>
-  )
-}
-
-/** A face-only card's upright meter: what it plays or picks up — dB SPL where that is sound in the air. */
-function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
-  const { t }  = useTranslation()
-  const levels = useStereoLevels(nodeId)
-  const spl    = SPL_DB[typeKey]
-  return (
-    <MeterStrip
-      {...levels.output}
-      label={spl === undefined ? t.meters.output : t.meters.sound}
-      nodeId={nodeId} at="out" spl={spl}
-    />
+      />
+    </CardFrame>
   )
 }
 

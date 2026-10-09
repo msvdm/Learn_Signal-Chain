@@ -8,7 +8,7 @@ import type { SignalDomain } from '../../signal/levels'
 import { useTranslation } from '../../i18n/useTranslation'
 import { NodePort } from './NodePort'
 
-// Pieces every element's shell draws around its controls (NodeWrapper, FreeControl; useNodeChrome)
+// Pieces every element's shell draws around its controls (CardFrame, FreeControl; useNodeChrome)
 
 /**
  * The element's inputs down its left edge and outputs down its right, from the first port line.

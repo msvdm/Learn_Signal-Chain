@@ -1,7 +1,7 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { VolumeX } from 'lucide-react'
-import { NodeWrapper } from './NodeWrapper'
+import { FaceCard } from './FaceCard'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { FaceNote, WithNote } from './FaceNote'
@@ -26,12 +26,11 @@ export function SpeakerNode({ id }: CardProps) {
   const hum        = stage?.hum !== undefined
 
   return (
-    <NodeWrapper
+    <FaceCard
       nodeId={id}
       typeKey="speaker"
       label={useNodeName(id, 'speaker')}
-      faceOnly
-      overviewArt={(box) => {
+      art={(box) => {
         if (condition) {
           return (
             <ConditionNote

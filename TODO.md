@@ -210,7 +210,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
     `CharacterButtons`.
   - Update `NODE_COMPONENTS`.
 
-- [ ] **12. Split `NodeWrapper`**
+- [x] **12. Split `NodeWrapper`**
   - It switches modes through five flags (`faceOnly`, `ownFace`, `overviewBare`, `overviewLevel`,
     `overviewArt`).
   - Make a shared frame: border, selection ring, chain stripe, ports, edge tags, wire-target badge, the

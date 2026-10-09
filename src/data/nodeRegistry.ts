@@ -93,7 +93,7 @@ export type NodeTypeDef = {
   /**
    * A card's size, the same at every level (its content grows to fill it); none: the usual minimum
    * (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). A face-only card's upright meter adds its
-   * room to the width (NodeWrapper).
+   * room to the width (FaceCard).
    */
   minSize?: Size
 }
