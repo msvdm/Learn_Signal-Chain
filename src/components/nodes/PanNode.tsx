@@ -1,9 +1,8 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
-import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
-import { KnobControl } from '../controls/KnobControl'
+import { ParamKnob } from '../controls/ParamKnob'
 import { StableText } from '../controls/StableText'
 
 // A free-standing knob, big enough to read zoomed out — the Gain's size
@@ -32,7 +31,6 @@ function positionLabel(pos: number): string {
  */
 export function PanNode({ id }: CardProps) {
   const p                = useParams(id, 'pan')
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
 
   const panPosition = p('panPosition')
 
@@ -49,15 +47,16 @@ export function PanNode({ id }: CardProps) {
       footer={<Direction position={panPosition} />}
     >
       {/* 0 = full left, 50 = centre, 100 = full right */}
-      <KnobControl
-        value={panPosition}
+      <ParamKnob
+        nodeId={id}
+        typeKey="pan"
+        param="panPosition"
         min={0}
         max={100}
         step={STEP}
         dragPx={DRAG_PX}
         label="L ← → R"
         formatValue={positionLabel}
-        onChange={(v) => updateNodeParams(id, { panPosition: v })}
         color="var(--lsc-accent)"
         size={KNOB}
         showReadout={false}

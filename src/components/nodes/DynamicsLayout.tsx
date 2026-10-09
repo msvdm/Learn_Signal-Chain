@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { StableText } from '../controls/StableText'
+import { ParamKnob } from '../controls/ParamKnob'
 import type { Transfer } from '../../signal/process'
 import { throughCurve } from '../../signal/process'
 import type { SideLevels, SignalDomain } from '../../signal/levels'
@@ -26,6 +27,42 @@ export const DYNAMICS_KNOB_BIG = 72
 /** Knobs one under the other, value and label beside each knob. */
 export function KnobStack({ children }: { children: ReactNode }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{children}</div>
+}
+
+/** A knob's range */
+interface KnobRange {
+  min: number
+  max: number
+  step: number
+}
+
+const formatMs = (v: number) => `${v} ms`
+
+/**
+ * How fast a Compressor or a Noise Gate acts (Attack) and lets go again (Release): two knobs, each
+ * a cell of the card's grid. Their ranges differ by card.
+ */
+export function AttackRelease({ nodeId, typeKey, attack, release }: {
+  nodeId: string
+  typeKey: 'comp' | 'noise-gate'
+  attack: KnobRange
+  release: KnobRange
+}) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <ParamKnob
+        nodeId={nodeId} typeKey={typeKey} param="attackMs" {...attack}
+        label={t.nodes.comp.attack} formatValue={formatMs}
+        color="var(--lsc-accent)" size={DYNAMICS_KNOB} layout="side"
+      />
+      <ParamKnob
+        nodeId={nodeId} typeKey={typeKey} param="releaseMs" {...release}
+        label={t.nodes.comp.release} formatValue={formatMs}
+        color="var(--lsc-accent)" size={DYNAMICS_KNOB} layout="side"
+      />
+    </>
+  )
 }
 
 /** Zoomed out a card shows its face: what is in its body need not move. */

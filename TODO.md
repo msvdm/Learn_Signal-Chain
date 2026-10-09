@@ -195,7 +195,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
   - Check the wording against the #1 rule (say what a DAC is), in both languages. The label must fit
     without resizing the card, in Bulgarian too.
 
-- [ ] **10. `ParamKnob`**
+- [x] **10. `ParamKnob`**
   - There are 29 hand-written `value={p('x')}` / `onChange={(v) => updateNodeParams(id, { x: v })}` pairs
     in 17 cards.
   - Add `components/controls/ParamKnob.tsx`, taking `nodeId`, `typeKey`, `param` and KnobControl's display

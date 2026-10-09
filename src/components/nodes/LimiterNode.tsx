@@ -1,7 +1,7 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
-import { KnobControl } from '../controls/KnobControl'
+import { ParamKnob } from '../controls/ParamKnob'
 import { useStage } from '../../hooks/useGraphSignal'
 import { louderSide } from '../../signal/engine'
 import { SILENT } from '../../signal/levels'
@@ -20,7 +20,6 @@ const LIMITING_DB = 0.5
 
 export function LimiterNode({ id }: CardProps) {
   const p                = useParams(id, 'limiter')
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
 
   const ceiling       = p('thresholdDb')
@@ -40,26 +39,28 @@ export function LimiterNode({ id }: CardProps) {
       <MeterSides nodeId={id}>
         <div style={twoColumns}>
           <KnobStack>
-            <KnobControl
-              value={ceiling}
+            <ParamKnob
+              nodeId={id}
+              typeKey="limiter"
+              param="thresholdDb"
               min={-20}
               max={0}
               step={0.5}
               label={t.nodes.limiter.ceiling}
               formatValue={(v) => `${v} dB`}
-              onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color="var(--signal-hot)"
               size={DYNAMICS_KNOB_BIG}
               layout="side"
             />
-            <KnobControl
-              value={makeupGain}
+            <ParamKnob
+              nodeId={id}
+              typeKey="limiter"
+              param="makeupGainDb"
               min={0}
               max={20}
               step={0.5}
               label={t.nodes.limiter.makeupGain}
               formatValue={(v) => `+${v} dB`}
-              onChange={(v) => updateNodeParams(id, { makeupGainDb: v })}
               color="var(--signal-good)"
               size={DYNAMICS_KNOB_BIG}
               layout="side"

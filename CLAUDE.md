@@ -116,7 +116,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `components/nodes/NodeWrapper.tsx` — the card shell; `FreeControl.tsx` — the bare controls' shell; `OverviewFace.tsx` — the zoomed-out face; `MeterSides.tsx` — meters at a card's sides
 - `components/nodes/conditions.tsx` — what a card says in each `StageCondition` (its text, colour and place: a note under a face, a red label, a converter's line)
 - `components/SignalMeter.tsx` — the meters; `meterPaint.ts` — their painters
-- `components/controls/StableText.tsx` — a reading that keeps the width of its widest value
+- `components/controls/StableText.tsx` — a reading that keeps the width of its widest value; `ParamKnob.tsx` — a knob turning one of its card's settings (reads `useParams`, writes `updateNodeParams`)
 - `utils/layoutHelpers.ts` — canvas placement maths on `Box`es (`cardMinSize`, `PORT_TOP`, `PORT_GAP`, `PORT_REACH`)
 - `utils/chainFile.ts` — the saved-chain format; `utils/nodeName.ts` — an element's name and help key wherever it is shown
 - `i18n/locales/en.json`, `bg.json` — all text, and the help popover's (`theory`: `what`, `why`, `tip`); `i18n/translations.ts` types it from `en.json`, so `bg.json` must have every key (the build fails otherwise)
@@ -238,6 +238,7 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
 3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
    - A card → use `NodeWrapper` (`align="center"` centres a single control); its In / Out meters → `MeterSides` around its controls (they move by themselves)
    - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad) → use `FreeControl`, and give it a `freeSize` in the registry
+   - A knob for a setting → `ParamKnob` (a Compressor-like card's Attack / Release: `AttackRelease` in `DynamicsLayout.tsx`)
 4. `NODE_COMPONENTS` in `src/components/nodes/index.ts` (its card) and `NODE_LOOK` in `src/components/nodes/nodeLook.ts` (icon, palette group — its place in that table is its place in the palette)
 5. Its palette name (`palette.items`) and educational text (`theory`: `what`, `why`, `tip`) in **both** `src/i18n/locales/en.json` and `bg.json` (the build fails without them). No English in the components: even ON / OFF and "0 dB in" come from the locales
 

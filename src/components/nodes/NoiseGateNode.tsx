@@ -1,7 +1,7 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
-import { KnobControl } from '../controls/KnobControl'
+import { ParamKnob } from '../controls/ParamKnob'
 import { useStage } from '../../hooks/useGraphSignal'
 import { louderSide } from '../../signal/engine'
 import { SILENT } from '../../signal/levels'
@@ -11,7 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useParams } from '../../hooks/useParams'
 import { twoColumns } from '../../utils/twoColumns'
-import { DYNAMICS_KNOB, KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
+import { AttackRelease, DYNAMICS_KNOB, KnobStack, ReductionReadout, TransferCurve } from './DynamicsLayout'
 import { MeterSides } from './MeterSides'
 import { noiseGate } from '../../signal/process'
 
@@ -20,15 +20,11 @@ const GATE_OPEN_DB = 3
 
 export function NoiseGateNode({ id }: CardProps) {
   const p                = useParams(id, 'noise-gate')
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
   const tg               = t.nodes['noise-gate']
 
   const threshold  = p('thresholdDb')
   const range      = p('rangeDb')
-  const holdMs     = p('holdMs')
-  const attackMs   = p('attackMs')
-  const releaseMs  = p('releaseMs')
   const levels     = useStereoLevels(id)
   const inputLevel = levels.inLevel
   const result     = useStage(id)
@@ -44,39 +40,42 @@ export function NoiseGateNode({ id }: CardProps) {
       <MeterSides nodeId={id}>
         <div style={twoColumns}>
           <KnobStack>
-            <KnobControl
-              value={threshold}
+            <ParamKnob
+              nodeId={id}
+              typeKey="noise-gate"
+              param="thresholdDb"
               min={-80}
               max={0}
               step={1}
               label={tg.threshold}
               formatValue={(v) => `${v} dB`}
-              onChange={(v) => updateNodeParams(id, { thresholdDb: v })}
               color={isOpen ? 'var(--signal-good)' : 'var(--signal-hot)'}
               size={DYNAMICS_KNOB}
               layout="side"
             />
             {/* How far it turns down when closed: −80 dB = silence */}
-            <KnobControl
-              value={range}
+            <ParamKnob
+              nodeId={id}
+              typeKey="noise-gate"
+              param="rangeDb"
               min={-80}
               max={0}
               step={1}
               label={tg.range}
               formatValue={(v) => `${v} dB`}
-              onChange={(v) => updateNodeParams(id, { rangeDb: v })}
               color="var(--signal-hot)"
               size={DYNAMICS_KNOB}
               layout="side"
             />
-            <KnobControl
-              value={holdMs}
+            <ParamKnob
+              nodeId={id}
+              typeKey="noise-gate"
+              param="holdMs"
               min={0}
               max={500}
               step={5}
               label={tg.hold}
               formatValue={(v) => `${v} ms`}
-              onChange={(v) => updateNodeParams(id, { holdMs: v })}
               color="var(--lsc-accent)"
               size={DYNAMICS_KNOB}
               layout="side"
@@ -104,30 +103,7 @@ export function NoiseGateNode({ id }: CardProps) {
           </div>
 
           {/* How fast it opens (Attack) and closes again (Release) */}
-          <KnobControl
-            value={attackMs}
-            min={1}
-            max={50}
-            step={1}
-            label={t.nodes.comp.attack}
-            formatValue={(v) => `${v} ms`}
-            onChange={(v) => updateNodeParams(id, { attackMs: v })}
-            color="var(--lsc-accent)"
-            size={DYNAMICS_KNOB}
-            layout="side"
-          />
-          <KnobControl
-            value={releaseMs}
-            min={10}
-            max={1000}
-            step={10}
-            label={t.nodes.comp.release}
-            formatValue={(v) => `${v} ms`}
-            onChange={(v) => updateNodeParams(id, { releaseMs: v })}
-            color="var(--lsc-accent)"
-            size={DYNAMICS_KNOB}
-            layout="side"
-          />
+          <AttackRelease nodeId={id} typeKey="noise-gate" attack={{ min: 1, max: 50, step: 1 }} release={{ min: 10, max: 1000, step: 10 }} />
         </div>
       </MeterSides>
     </NodeWrapper>

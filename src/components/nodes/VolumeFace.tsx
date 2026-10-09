@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
-import { KnobControl } from '../controls/KnobControl'
+import { ParamKnob } from '../controls/ParamKnob'
 import { OverviewIcon } from './OverviewFace'
-import { useSignalStore } from '../../store/signalStore'
-import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { widestFormat } from '../../utils/readout'
@@ -46,9 +44,7 @@ export function VolumeFace({ nodeId, typeKey, icon, box }: {
   icon: ReactNode
   box: { w: number; h: number }
 }) {
-  const p                = useParams(nodeId, typeKey)
-  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const { t }            = useTranslation()
+  const { t } = useTranslation()
 
   const k     = KNOBS[typeKey]
   const label = t.nodes[typeKey].volume
@@ -60,14 +56,15 @@ export function VolumeFace({ nodeId, typeKey, icon, box }: {
       <OverviewIcon icon={icon} box={{ w: size, h: size }} />
       {/* The face ignores the pointer; the knob takes it back */}
       <div className="nodrag nopan" style={{ pointerEvents: 'auto' }}>
-        <KnobControl
-          value={p(k.param)}
+        <ParamKnob
+          nodeId={nodeId}
+          typeKey={typeKey}
+          param={k.param}
           min={k.min}
           max={k.max}
           step={k.step}
           label={label}
           formatValue={k.format}
-          onChange={(v) => updateNodeParams(nodeId, { [k.param]: v })}
           color="var(--signal-good)"
           size={knob}
           labelBelow

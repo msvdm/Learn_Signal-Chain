@@ -9,7 +9,7 @@ import { OverviewIcon } from './OverviewFace'
 import { ClickIcon, NoiseIcon, SineIcon } from './icons'
 import { ChoiceButtons } from '../controls/ChoiceButtons'
 import type { Choice } from '../controls/ChoiceButtons'
-import { KnobControl } from '../controls/KnobControl'
+import { ParamKnob } from '../controls/ParamKnob'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -58,14 +58,15 @@ export function GeneratorNode({ id }: CardProps) {
           // As tall as the card leaves room for: the three buttons share it
           style={{ width: 156, height: 150 }}
         />
-        <KnobControl
-          value={p('levelDb')}
+        <ParamKnob
+          nodeId={id}
+          typeKey="generator"
+          param="levelDb"
           min={LEVEL_MIN}
           max={LEVEL_MAX}
           step={1}
           label={text.level}
           formatValue={(v) => `${v > 0 ? '+' : ''}${v} dBu`}
-          onChange={(v) => updateNodeParams(id, { levelDb: v })}
           size={72}
           labelBelow
         />
