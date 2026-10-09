@@ -25,7 +25,16 @@ Build chains like:
 
 Right-click any element and choose *What is this?*: it explains what the element does, why it is in the chain and what to watch out for — in plain language, without jargon. *Next* walks you along the chain, element by element.
 
-## What's New
+## What's New in 1.0
+
+- **It tells you what is wrong.** An amplifier, speaker, headphones or guitar amp fed a digital signal stays silent and says why in a red note: *Silent — the signal is digital. Pass it through a Digital to Analog Converter first.* Converters and buses fed the wrong kind of signal say so in the same plain words.
+- **The Relay Switch** replaces the Pre / Post switch: a relay's symbol whose arm swings to input A or B — an aux send's copy before or after the fader, say.
+- **Pan and Balance read like a recording program's:** L100 … C … R100, with a dot showing where the sound sits between the two speakers.
+- **Faders mute at the bottom** (−∞, like the bottom of a meter), and their caps show the bus they set: red on the main fader, blue on an aux bus, magenta on a matrix bus.
+- **The Microphone is a card like the Line Input**, its meter beside its buttons. Zoomed out, the sources stand without a card around them, and every meter bar is the same thickness.
+- **Easier wiring:** a port is found twice as far from its ring.
+
+## Earlier
 
 - **Noise like a real mixing desk.** Every powered element adds a little noise of its own, at the levels real gear has (see *Sources* below). A preamp's noise grows as you turn it up, and a fader pulled down still leaves the noise of its own stage. Set the preamp 30 dB too low and make it up later, and the speaker ends up about 10 dB noisier. Make it up digitally after the converter, and you lose 5 dB more. That is why the gain is made at the preamp, before the converter.
 - **The meter shows the noise.** From Intermediate on, the blue part at the bottom of every meter is the noise — what you hear when the music stops — and it grows when the noise does. Under each meter, *Peak*, *RMS* and *Noise* give the numbers, each in the colour of where it sits on the scale.
@@ -43,8 +52,8 @@ Right-click any element and choose *What is this?*: it explains what the element
 
 | Level | What's available |
 |---|---|
-| Beginner | Microphone, line input, instrument, DI box, gain (it becomes the preamp after a microphone), fader, active speaker |
-| Intermediate | + guitar amp, signal generator, high-pass filter, equalizer, compressor, pad, noise gate, limiter, de-esser, on / off and pre / post switches, pan / balance, master bus, aux bus — and on every meter the peaks, the noise and the Peak / RMS / Noise numbers, moving with the sound |
+| Beginner | Microphone, line input, instrument, DI box, gain (it becomes the preamp after a microphone), fader, active speaker, headphones |
+| Intermediate | + guitar amp, signal generator, high-pass filter, equalizer, compressor, pad, noise gate, limiter, de-esser, on / off switch, relay switch, pan / balance, master bus, aux bus — and on every meter the peaks, the noise and the Peak / RMS / Noise numbers, moving with the sound |
 | Advanced | + parametric equalizer, graphic EQ, amplifier, passive speaker, ADC / DAC, matrix bus |
 
 Switch levels from the header at any time.
