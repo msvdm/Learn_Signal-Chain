@@ -139,9 +139,9 @@ export function TransferCurve({
   transfer: Transfer
   /** Where it starts to act (threshold, ceiling): a dashed upright line */
   thresholdDb: number
-  /** What goes into the curve (curveInputOf in signal/engine.ts): its peaks, average and noise are the marks; none when silent */
+  /** What goes into the curve (the louder side arriving — the dynamics run linked): its peaks, average and noise are the marks; none when silent */
   signal: SideLevels
-  /** What leaves (the stage's curveOut, measured over time); bypassed, none: the marks go through the curve */
+  /** What leaves (the louder side, measured over time); bypassed, none: the marks go through the curve */
   leaving?: SideLevels
   /** Analog (dBu) or digital (dBFS), arriving: the axes end at its clip level / ceiling */
   domain: SignalDomain

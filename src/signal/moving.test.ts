@@ -34,7 +34,7 @@ describe('how far the movement is moved', () => {
 })
 
 describe('a card ready to play', () => {
-  const measured: MeasuredStage = { in: mono(side(2, -10)), out: mono(side(-4, -16)), gainReductionDb: 6, curveIn: side(2, -10) }
+  const measured: MeasuredStage = { in: mono(side(2, -10)), out: mono(side(-4, -16)), gainReductionDb: 6 }
   const moving: MovingStage = {
     in: { l: frames(-10, 2), r: frames(-10, 2) },
     out: { l: frames(-16, -4), r: frames(-16, -4) },
@@ -44,19 +44,25 @@ describe('a card ready to play', () => {
   }
 
   it('as rendered: the frames as they are', () => {
-    const live = liveStageOf(stage(measured.in, measured.out, { gainReductionDb: 6, curveIn: side(2, -10), curveOut: side(-4, -16) }), measured, moving)
+    const live = liveStageOf(stage(measured.in, measured.out, { gainReductionDb: 6 }), measured, moving)
     expect(readingAt(live.out!.l, 3)).toEqual({ rms: -16, peak: -4, hold: -4 })
     expect(live.reduction?.shift).toBe(0)
     expect(readingAt(live.curve!.in, 0).rms).toBe(-10)
   })
 
   it('a fader before it turned down 6 dB: everything moves down 6 dB at once', () => {
-    const shown = stage(mono(side(-4, -16)), mono(side(-8, -20)), { gainReductionDb: 4, curveIn: side(-4, -16), curveOut: side(-8, -20) })
+    const shown = stage(mono(side(-4, -16)), mono(side(-8, -20)), { gainReductionDb: 4 })
     const live  = liveStageOf(shown, measured, moving)
     expect(readingAt(live.in!.l, 0)).toEqual({ rms: -16, peak: -4, hold: -4 })
     expect(readingAt(live.out!.l, 0)).toEqual({ rms: -20, peak: -8, hold: -8 })
     expect(live.reduction?.shift).toBe(-2)
     expect(readingAt(live.curve!.out, 0).rms).toBe(-20)
+  })
+
+  it('bypassed since the render: not at work (no turning down) — the marks on its curve stand still', () => {
+    const live = liveStageOf(stage(measured.in, measured.out), measured, moving)
+    expect(live.curve).toBeUndefined()
+    expect(live.reduction).toBeUndefined()
   })
 
   it('switched to stereo since the render: its sides are not the frames’ — it stays still until the next', () => {

@@ -1,11 +1,9 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
-import type { SideLevels, SignalDomain, SignalHealth } from './levels'
-import { SILENCE_DB, SILENT, louder } from './levels'
+import type { SignalDomain, SignalHealth } from './levels'
+import { SILENCE_DB } from './levels'
 import type { StageCondition } from './process'
-import { withInputNoise } from './process'
 import type { CardPlan, ChainLevels, StageRole, WireSignal } from './chain'
-import { contextOf, healthOf, humOf, levelOf, planChain, runChain } from './chain'
+import { healthOf, humOf, levelOf, planChain, runChain } from './chain'
 import type { MeasuredChain } from './measured'
 import { withMeasured } from './measured'
 import { sameShape } from '../utils/sameShape'
@@ -17,7 +15,7 @@ import { sameShape } from '../utils/sameShape'
 
 // What the cards import from here; the walk itself is chain.ts
 export type { StageRole, WireSignal } from './chain'
-export { SILENT_WIRE, healthOf, humOf, levelOf, peakOf } from './chain'
+export { SILENT_WIRE, healthOf, humOf, levelOf, louderSide, peakOf } from './chain'
 
 /** What one card does to the signal. */
 export interface StageResult {
@@ -31,20 +29,13 @@ export interface StageResult {
   domain: SignalDomain
   /** Analog or digital, arriving */
   inDomain: SignalDomain
-  /** How far a dynamics card turns the signal (its average) down: over a loop, makeup gain left out */
+  /**
+   * How far a dynamics card at work turns the signal (its average) down: over a loop, makeup gain
+   * left out. Undefined for every other card, and for a dynamics card bypassed. The marks on its
+   * curve are the louder sides of `in` (left to right) and `out` (bottom to top: measured on real
+   * sound — a peak above the curve got through before the Attack turned it down).
+   */
   gainReductionDb?: number
-  /**
-   * What a dynamics card's level curve works on (Compressor, Noise Gate, Limiter, De-esser; none
-   * when bypassed): the louder side's peaks, average and noise, its own hiss included — where the
-   * marks on the card's curve sit, left to right.
-   */
-  curveIn?: SideLevels
-  /**
-   * What leaves it (with `curveIn`): the louder side's peaks and average over a loop, its noise when
-   * the music stops — where the marks sit, bottom to top. Measured on real sound (until the first
-   * render: through the curve); a peak above the curve got through before the Attack turned it down.
-   */
-  curveOut?: SideLevels
   condition?: StageCondition
   role?: StageRole
   /**
@@ -61,12 +52,6 @@ export interface StageResult {
    * through silence. Undefined: clean.
    */
   distorted?: true
-}
-
-/** What a dynamics card's curve works on (`curveIn`); bypassed, what arrives — its louder side. */
-export function curveInputOf(stage: StageResult | undefined): SideLevels {
-  if (!stage) return SILENT
-  return stage.curveIn ?? louder(stage.in.l, stage.in.r)
 }
 
 export interface GraphSignalResult {
@@ -167,9 +152,6 @@ function keepUnchanged(fresh: GraphSignalResult, before: GraphSignalResult): Gra
 }
 // ── The number engine's picture ─────────────────────────────────────────────────
 
-/** A dynamics card at work (Compressor, Noise Gate, Limiter, De-esser — not bypassed). */
-const atWork = (node: SignalNode) => Boolean(NODE_REGISTRY[node.typeKey].linked) && !node.bypassed
-
 function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
   const { cards, wires } = levels
   const stages: Record<string, StageResult> = {}
@@ -178,10 +160,6 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
   for (const card of plans) {
     const { node } = card
     const at = cards.get(node.id)!
-    // The dynamics run linked: one curve for both sides, driven by the louder one
-    const curveIn = atWork(node)
-      ? withInputNoise(node, louder(at.in.l, at.in.r), contextOf(card, at.inDomain, at.mixedDomains, null))
-      : undefined
     const hum = humOf(at.out)
 
     stages[node.id] = {
@@ -192,7 +170,6 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
       domain: at.domain,
       inDomain: at.inDomain,
       gainReductionDb: at.gainReductionDb,
-      ...(curveIn ? { curveIn, curveOut: louder(at.out.l, at.out.r) } : {}),
       condition: at.condition,
       role: card.role,
       ...(isFinite(hum) ? { hum } : {}),

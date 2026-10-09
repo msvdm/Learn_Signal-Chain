@@ -1,20 +1,19 @@
 import type { GeneratorSound } from '../data/nodeRegistry'
-import { NODE_REGISTRY, param } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels, WireSignal } from '../signal/chain'
-import { contextOf, levelOf, onPort } from '../signal/chain'
+import { levelOf, onPort } from '../signal/chain'
 import type { SideLevels } from '../signal/levels'
-import { louder } from '../signal/levels'
 import type { MeasuredStage } from '../signal/measured'
 import type { MeterFrames, MovingSignal, MovingStage } from '../signal/moving'
-import { soundKindOf, withInputNoise } from '../signal/process'
+import { soundKindOf } from '../signal/process'
 import type { ChainSounds, Tap } from './chainAudio'
 import { HUM_HZ, buildChain } from './chainAudio'
+import { dynamicsOf } from './dynamics'
 import type { LoopKind } from './loops'
 import { loopOf } from './loops'
 import { SLICE_S, fromLoopStart, louderSlices, meterFrames, reductionFrames } from './meters'
 import type { ChannelReading, ChannelSlices, MeterMessage, MeterOptions } from './processors'
-import { DEESSER_ATTACK_MS, DEESSER_RELEASE_MS, LIMITER_RELEASE_MS, METER_PROCESSOR, dbOf } from './processors'
+import { METER_PROCESSOR, dbOf } from './processors'
 import processors from './processors.ts?worklet'
 import { LOOP_S, generatorSound, whiteNoise } from './sounds'
 
@@ -73,16 +72,9 @@ async function soundsOf(plans: CardPlan[]): Promise<ChainSounds> {
   return { loops, generator, noise }
 }
 
-/** How long a dynamics card takes to forget where it started (s): seven times its slowest time, and a gate's Hold. */
-function settleOf(card: CardPlan): number {
-  const { node } = card
-  if (!NODE_REGISTRY[node.typeKey].linked || node.bypassed) return 0
-  switch (node.typeKey) {
-    case 'comp':       return 7 * Math.max(param(node, 'attackMs'), param(node, 'releaseMs')) / 1000
-    case 'noise-gate': return (param(node, 'holdMs') + 7 * Math.max(param(node, 'attackMs'), param(node, 'releaseMs'))) / 1000
-    case 'limiter':    return 7 * LIMITER_RELEASE_MS / 1000
-    default:           return 7 * Math.max(DEESSER_ATTACK_MS, DEESSER_RELEASE_MS) / 1000
-  }
+/** How long a card takes to forget where it started (s): a dynamics card at work its settling time (audio/dynamics.ts), any other none. */
+function settleOf({ node }: CardPlan): number {
+  return node.bypassed ? 0 : dynamicsOf(node)?.settleS(node) ?? 0
 }
 
 /**
@@ -152,10 +144,6 @@ function asKind(w: WireSignal, kind: WireKind): WireSignal {
   const side = w.kind === 'right' ? w.r : w.l
   return { kind, l: side, r: side }
 }
-
-/** A dynamics card's makeup gain: it lifts everything after turning it down. */
-const makeupOf = (card: CardPlan) =>
-  card.node.typeKey === 'comp' || card.node.typeKey === 'limiter' ? param(card.node, 'makeupGainDb') : 0
 
 /** How a signal moved, slice by slice: what it carries and each side (one channel: r is l). */
 interface MovingSlices {
@@ -258,15 +246,15 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
     const moves: MovingStage = { out: movingOf(outMoving) }
     if (inMoving) moves.in = movingOf(inMoving)
 
-    // A dynamics card at work: how far it turned the average down (a De-esser: its sibilant band);
-    // what its curve worked on
-    if (NODE_REGISTRY[node.typeKey].linked && !node.bypassed) {
-      const bandIn  = at('band-in', levels.in)
-      const bandOut = at('band-out', levels.out)
+    // A dynamics card at work: how far it turned the average down (a De-esser: its sibilant band)
+    const dynamics = node.bypassed ? undefined : dynamicsOf(node)
+    if (dynamics) {
+      const makeupDb = dynamics.makeupDb(node)
+      const bandIn   = at('band-in', levels.in)
+      const bandOut  = at('band-out', levels.out)
       stage.gainReductionDb = Math.max(0, bandIn && bandOut
         ? levelOf(bandIn) - levelOf(bandOut)
-        : levelOf(inSig) + makeupOf(card) - levelOf(outSig))
-      stage.curveIn = withInputNoise(node, louder(inSig.l, inSig.r), contextOf(card, levels.inDomain, levels.mixedDomains, null))
+        : levelOf(inSig) + makeupDb - levelOf(outSig))
 
       // And as it moved: its curve hears the louder side; turning down, moment by moment
       const curveIn  = louderSlices((inMoving ?? outMoving).l, (inMoving ?? outMoving).r)
@@ -275,7 +263,7 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
       const bandOutMoving = slicesAtTap('band-out', levels.out.kind)
       moves.reduction = bandInMoving && bandOutMoving
         ? reductionFrames(louderSlices(bandInMoving.l, bandInMoving.r).power, louderSlices(bandOutMoving.l, bandOutMoving.r).power)
-        : reductionFrames(curveIn.power, curveOut.power, makeupOf(card))
+        : reductionFrames(curveIn.power, curveOut.power, makeupDb)
       moves.curveIn  = frames(curveIn)
       moves.curveOut = frames(curveOut)
     }

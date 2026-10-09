@@ -83,8 +83,11 @@ export type NodeTypeDef = {
    * bus's mix (`'mix'`: a stereo channel through them stays one wire).
    */
   splits?: true | 'mix'
-  /** Dynamics that run "linked" in stereo: the louder side decides, both sides get the same change. */
-  linked?: true
+  /**
+   * A dynamics card (Compressor, Noise Gate, Limiter, De-esser): a level curve that turns its signal
+   * down. In stereo it runs linked: the louder side decides, both sides get the same change.
+   */
+  dynamics?: true
   /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
   freeSize?: Size
   /**
@@ -213,25 +216,25 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
   'noise-gate': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
     // Range sets how far it turns down when closed; Hold / Attack / Release: how long it stays open,
     // how fast it opens and closes (audio/processors.ts)
     defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 618, h: 361 }, linked: true, splits: 'mix',
+    minLevel: 'intermediate', bypass: true, minSize: { w: 618, h: 361 }, dynamics: true, splits: 'mix',
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   deesser: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 412, h: 361 }, linked: true,
+    minLevel: 'intermediate', bypass: true, minSize: { w: 412, h: 361 }, dynamics: true,
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
   pad: {
@@ -458,6 +461,11 @@ export function isBus(typeKey: TypeKey): boolean {
 /** A Master or Aux Bus: its mix may feed a Matrix Bus. */
 export function isMixBus(typeKey: TypeKey): boolean {
   return NODE_REGISTRY[typeKey].bus === 'mix'
+}
+
+/** A Compressor, Noise Gate, Limiter or De-esser: a level curve, linked in stereo (NodeTypeDef `dynamics`). */
+export function isDynamics(typeKey: TypeKey): boolean {
+  return NODE_REGISTRY[typeKey].dynamics === true
 }
 
 /** A Fader, Limiter, Graphic EQ or Amplifier: takes a stereo mix's L / R over (NodeTypeDef `splits`). */

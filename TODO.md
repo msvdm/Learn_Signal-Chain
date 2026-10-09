@@ -118,7 +118,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
   - Add `CardPlan.domainFrom: string[]`: the Relay's selected input's card, for any other card every card
     plugged in. Then `runChain` (`chain.ts:242-246`) loses its Relay special case and `drivingFrom` goes.
 
-- [ ] **6. Dynamics: an honest flag; `curveIn` / `curveOut` become derived**
+- [x] **6. Dynamics: an honest flag; `curveIn` / `curveOut` become derived**
   - The registry's `linked: true` is used to mean "a dynamics card" in `engine.ts:171`, `measure.ts:79`,
     `measure.ts:263` and `chainAudio.ts:98`. Replace it with `dynamics: true` (all four dynamics cards are
     linked in stereo, nothing else is) and an `isDynamics(typeKey)` helper. `chain.ts:154`'s linked mode

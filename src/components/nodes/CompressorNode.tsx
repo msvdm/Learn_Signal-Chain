@@ -3,7 +3,9 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { useStage } from '../../hooks/useGraphSignal'
-import { curveInputOf } from '../../signal/engine'
+import { louderSide } from '../../signal/engine'
+import { SILENT } from '../../signal/levels'
+import { graphOf } from '../../graph/graph'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -20,6 +22,7 @@ export function CompressorNode({ id }: CardProps) {
 
   const levels      = useStereoLevels(id)
   const result      = useStage(id)
+  const bypassed    = useSignalStore((s) => graphOf(s).node(id)?.bypassed ?? false)
   const threshold   = p('thresholdDb')
   const ratio       = p('ratio')
   const makeupGain  = p('makeupGainDb')
@@ -79,8 +82,8 @@ export function CompressorNode({ id }: CardProps) {
               nodeId={id}
               transfer={compressor(threshold, ratio, makeupGain)}
               thresholdDb={threshold}
-              signal={curveInputOf(result)}
-              leaving={result?.curveOut}
+              signal={result ? louderSide(result.in) : SILENT}
+              leaving={result && !bypassed ? louderSide(result.out) : undefined}
               domain={levels.inDomain}
             />
             <ReductionReadout nodeId={id} db={gainReduction} maxDb={20} label={t.nodes.comp.turningDown} style={{ marginTop: 12 }} />

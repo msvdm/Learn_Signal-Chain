@@ -3,7 +3,9 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { useStage } from '../../hooks/useGraphSignal'
-import { curveInputOf } from '../../signal/engine'
+import { louderSide } from '../../signal/engine'
+import { SILENT } from '../../signal/levels'
+import { graphOf } from '../../graph/graph'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
@@ -25,6 +27,7 @@ export function LimiterNode({ id }: CardProps) {
   const makeupGain    = p('makeupGainDb')
   const levels        = useStereoLevels(id)
   const result        = useStage(id)
+  const bypassed      = useSignalStore((s) => graphOf(s).node(id)?.bypassed ?? false)
   const gainReduction = result?.gainReductionDb ?? 0
   const limiting      = gainReduction > 0
 
@@ -69,8 +72,8 @@ export function LimiterNode({ id }: CardProps) {
               nodeId={id}
               transfer={limiter(ceiling, makeupGain)}
               thresholdDb={ceiling}
-              signal={curveInputOf(result)}
-              leaving={result?.curveOut}
+              signal={result ? louderSide(result.in) : SILENT}
+              leaving={result && !bypassed ? louderSide(result.out) : undefined}
               domain={levels.inDomain}
               ceilingDb={ceiling + makeupGain}
               state={{

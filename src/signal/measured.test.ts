@@ -4,7 +4,7 @@ import { initialParams } from '../data/nodeRegistry'
 import type { SideLevels } from './levels'
 import { CLIP_DBU } from './levels'
 import type { WireSignal } from './chain'
-import { graphSignal, stillPicture } from './engine'
+import { graphSignal, louderSide, stillPicture } from './engine'
 import type { MeasuredChain, MeasuredStage } from './measured'
 import { withMeasured } from './measured'
 
@@ -45,7 +45,7 @@ function rendered(faderPeak = 1.86): MeasuredChain {
     ['pre',   { in: mono(side(-48.14, -60, -126)), out: pre }],
     ['sw',    { in: pre, out: pre }],
     ['fader', { in: pre, out: fader }],
-    ['comp',  { in: fader, out: mono(side(2.25, -16.95, -69.94)), gainReductionDb: 6.95, curveIn: side(1.86, -10, -72.0) }],
+    ['comp',  { in: fader, out: mono(side(2.25, -16.95, -69.94)), gainReductionDb: 6.95 }],
   ])
   const wires = new Map([...stages].map(([id, s]) => [`${id}:out`, s.out]))
   return { at, stages, wires }
@@ -64,9 +64,9 @@ describe('a render put into the picture', () => {
     expect(shown.stages.mic.out.l).toEqual(side(-48.14, -60, -126))
     expect(shown.stages.comp.out.l).toEqual(side(2.25, -16.95, -69.94))
     expect(shown.stages.comp.gainReductionDb).toBeCloseTo(6.95, 6)
-    // The marks on its curve: what went in, what came out
-    expect(shown.stages.comp.curveIn).toEqual(side(1.86, -10, -72.0))
-    expect(shown.stages.comp.curveOut).toEqual(side(2.25, -16.95, -69.94))
+    // The marks on its curve: what went in, what came out (the louder sides)
+    expect(louderSide(shown.stages.comp.in)).toEqual(side(1.86, -10, -72.94))
+    expect(louderSide(shown.stages.comp.out)).toEqual(side(2.25, -16.95, -69.94))
     expect(shown.wires.get('comp:out')?.l).toEqual(side(2.25, -16.95, -69.94))
     // Health is judged on what is shown
     expect(shown.stages.comp.health).toBe('good')

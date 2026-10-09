@@ -1,5 +1,5 @@
-import type { GeneratorSound, SignalNode } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isNodeStereo, param } from '../data/nodeRegistry'
+import type { GeneratorSound } from '../data/nodeRegistry'
+import { isDynamics, isNodeStereo, param } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
@@ -9,6 +9,7 @@ import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, NOISE_BELOW, balanceSides, fade
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
+import { DYNAMICS } from './dynamics'
 import type { Loop, LoopKind } from './loops'
 import { LOOP_S } from './sounds'
 
@@ -95,7 +96,7 @@ function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
   const ids = new Set<string>()
   const guess = new Set(['eq', 'graphic-eq', 'hpf'])
   for (const card of plans) {
-    const own = guess.has(card.node.typeKey) || Boolean(NODE_REGISTRY[card.node.typeKey].linked) || stereoFileOf(card, sounds) !== undefined
+    const own = guess.has(card.node.typeKey) || isDynamics(card.node.typeKey) || stereoFileOf(card, sounds) !== undefined
     if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.nodeId))) ids.add(card.node.id)
   }
   return ids
@@ -355,7 +356,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       case 'comp':
       case 'noise-gate':
       case 'limiter':
-      case 'deesser':    return dynamics(x, settingsOf(node))
+      case 'deesser':    return dynamics(x, DYNAMICS[node.typeKey].settings(node))
       case 'pad':        return param(node, 'engaged') ? gain(-20, x) : x
       case 'fader':      return gain(faderGainDb(param(node, 'faderDb')), x)
       case 'switch':     return param(node, 'on') ? x : silence(x.channels)
@@ -403,25 +404,5 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     // One side of a two-sided signal
     const split = into(x, new ChannelSplitterNode(ctx, { numberOfOutputs: 2 }))
     return { ...one(split, 1, kind === 'right' ? 1 : 0), kind }
-  }
-}
-
-/** A dynamics card's knobs, as its processor takes them. */
-export function settingsOf(node: SignalNode): DynamicsSettings {
-  switch (node.typeKey) {
-    case 'noise-gate':
-      return {
-        type: 'noise-gate', thresholdDb: param(node, 'thresholdDb'), rangeDb: param(node, 'rangeDb'),
-        holdMs: param(node, 'holdMs'), attackMs: param(node, 'attackMs'), releaseMs: param(node, 'releaseMs'),
-      }
-    case 'limiter':
-      return { type: 'limiter', thresholdDb: param(node, 'thresholdDb'), makeupDb: param(node, 'makeupGainDb') }
-    case 'deesser':
-      return { type: 'deesser', thresholdDb: param(node, 'thresholdDb'), frequencyHz: param(node, 'frequencyHz') }
-    default:
-      return {
-        type: 'comp', thresholdDb: param(node, 'thresholdDb'), ratio: param(node, 'ratio'),
-        attackMs: param(node, 'attackMs'), releaseMs: param(node, 'releaseMs'), makeupDb: param(node, 'makeupGainDb'),
-      }
   }
 }

@@ -3,7 +3,7 @@ import type { NodeParamValue, SignalEdge, SignalNode, TypeKey } from '../src/dat
 import { initialParams } from '../src/data/nodeRegistry'
 import type { WireKind } from '../src/graph/queries'
 import type { GraphSignalResult, StageResult, StageRole, WireSignal } from '../src/signal/engine'
-import { curveInputOf, graphSignal } from '../src/signal/engine'
+import { graphSignal, louderSide } from '../src/signal/engine'
 import type { SideLevels, SignalDomain, SignalHealth } from '../src/signal/levels'
 import { CLIP_DBU, louder, sumNoiseToDb } from '../src/signal/levels'
 import type { StageCondition, Transfer } from '../src/signal/process'
@@ -128,12 +128,18 @@ export function expectSide(actual: SideLevels | undefined, [peak, rms, noise]: r
   expectDb(actual?.noise, noise)
 }
 
+/** The marks on a dynamics card's curve: what goes in — the louder side arriving (the dynamics run linked). */
+export const curveIn = (stage: StageResult): SideLevels => louderSide(stage.in)
+
+/** … and where the card sends them: the louder side leaving. */
+export const curveOut = (stage: StageResult): SideLevels => louderSide(stage.out)
+
 /**
  * The readings through the card's curve on their own (peaks flattened at the clip level, as the
  * engine does), then its own noise after it (a dynamics card: a line stage's, D18).
  */
 export function marksOf(stage: StageResult, curve: Transfer): SideLevels {
-  const out = throughCurve(curve, curveInputOf(stage))
+  const out = throughCurve(curve, curveIn(stage))
   return { ...out, peak: Math.min(out.peak, CLIP_DBU), noise: sumNoiseToDb([out.noise, LINE_NOISE_DBU]) }
 }
 
@@ -143,6 +149,6 @@ export function marksOf(stage: StageResult, curve: Transfer): SideLevels {
  */
 export function expectMarksLeave(result: GraphSignalResult, id: string, curve: Transfer) {
   const out = leaving(result, id)
-  expectSide(result.stages[id].curveOut, [out.peak, out.rms, out.noise])
-  expectDb(result.stages[id].curveOut?.noise, marksOf(result.stages[id], curve).noise)
+  expectSide(curveOut(result.stages[id]), [out.peak, out.rms, out.noise])
+  expectDb(curveOut(result.stages[id]).noise, marksOf(result.stages[id], curve).noise)
 }

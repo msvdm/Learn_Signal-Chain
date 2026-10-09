@@ -101,7 +101,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `signal/measured.ts`, `signal/moving.ts` — a render's readings and movement in the number engine's picture (D9, D10)
 - `audio/chainAudio.ts` — the plan as Web Audio nodes; `processed()` is each card on real sound
 - `audio/measure.ts` — `measureChain`: two renders (the music; the quiet: noise and hum), every card measured, its movement recorded
-- `audio/processors.ts` — the AudioWorklet's dynamics and meter as plain functions (it imports nothing: its text goes to the worklet)
+- `audio/processors.ts` — the AudioWorklet's dynamics and meter as plain functions (it imports nothing: its text goes to the worklet); `audio/dynamics.ts` — what the render knows of each dynamics type
 - `store/signalStore.ts` — all mutable state. **Every graph change goes through `commitGraph`**: it settles the L / R takeovers and drops what points at what is gone; undo / redo restore a snapshot as it was
 - `store/measuring.ts` — when the chain is rendered (once nothing has changed for 100 ms; one render at a time)
 - `hooks/useGraphSignal.ts` — `useStage(id)` / `useWire(key)` for cards; `useGraphSignal()` (the whole result) only for one-off components; every caller passes `measured`
@@ -229,9 +229,9 @@ In full in `docs/decisions.md`; the code cites them by number:
 
 Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed by it then fails to compile until the type is in it.
 
-1. `NODE_REGISTRY` (`src/data/nodeRegistry.ts`): ports, category, `stereo` (a processor gets `'follow'`: it passes on stereo by itself, and reads its meters through `useStereoLevels`), `defaultParams`, `minLevel` (the easiest level whose palette shows it), `bypass` (false where the control itself is the state). Flags when they apply: `bus`, `splits`, `linked`, `freeSize` (a bare control), `minSize`
+1. `NODE_REGISTRY` (`src/data/nodeRegistry.ts`): ports, category, `stereo` (a processor gets `'follow'`: it passes on stereo by itself, and reads its meters through `useStereoLevels`), `defaultParams`, `minLevel` (the easiest level whose palette shows it), `bypass` (false where the control itself is the state). Flags when they apply: `bus`, `splits`, `dynamics` (a level curve, linked in stereo), `freeSize` (a bare control), `minSize`
 2. `PROCESS` in `src/signal/process.ts`: what it does to one channel — to every reading (`shifted` for a gain, `dynamics` for a curve; read settings with `param(node, key)`; add new keys to `ParamTypes`). A card with no power of its own goes in `PASSIVE` (no hiss); a source gets its noise in `NOISE_BELOW` and its peaks in `soundOf` / `PEAKS_ABOVE` (and a loop or a sound in `audio/`); a setting that takes one of a few words goes in `PARAM_CHOICES` (or `paramChoices` when types differ)
-   - And what it does to real sound: its case in `processed()` in `src/audio/chainAudio.ts` (Web Audio nodes; a dynamics card a processor in `audio/processors.ts` with its tests, and its knobs in `settingsOf`). A card left out passes the sound on unchanged — the render then disagrees with the number engine
+   - And what it does to real sound: its case in `processed()` in `src/audio/chainAudio.ts` (Web Audio nodes; a dynamics card a processor in `audio/processors.ts` with its tests, and its row in `DYNAMICS` — `audio/dynamics.ts`: its knobs, how long it settles, its makeup). A card left out passes the sound on unchanged — the render then disagrees with the number engine
 3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
    - A card → use `NodeWrapper` (`align="center"` centres a single control); its In / Out meters → `MeterSides` around its controls (they move by themselves)
    - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad) → use `FreeControl`, and give it a `freeSize` in the registry

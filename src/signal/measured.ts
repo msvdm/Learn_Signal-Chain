@@ -1,5 +1,5 @@
 import type { SideLevels } from './levels'
-import { ceilingOf, eachReading, louder } from './levels'
+import { ceilingOf, eachReading } from './levels'
 import { nodeOfOutput } from '../graph/graph'
 import type { WireSignal } from './chain'
 import { healthOf, humOf } from './chain'
@@ -18,8 +18,6 @@ export interface MeasuredStage {
   out: WireSignal
   /** A dynamics card at work: how far it turned the average down over the loop (its makeup left out) */
   gainReductionDb?: number
-  /** A dynamics card at work: what its curve worked on (the louder side, its own hiss in) */
-  curveIn?: SideLevels
 }
 
 /** A render's readings, and the number engine's picture of the chain it rendered. */
@@ -65,17 +63,10 @@ export function withMeasured(now: GraphSignalResult, measured: MeasuredChain | n
     }
     const inSig  = signalMovedOn(stage.in, at.in, m.in, ceilingOf(stage.inDomain))
     const outSig = signalMovedOn(stage.out, at.out, m.out, ceilingOf(stage.domain))
-    const curveIn = stage.curveIn && at.curveIn && m.curveIn
-      ? eachReading((k) => movedOn(stage.curveIn![k], at.curveIn![k], m.curveIn![k]))
-      : stage.curveIn
     const reduction = stage.gainReductionDb !== undefined && at.gainReductionDb !== undefined && m.gainReductionDb !== undefined
       ? Math.max(0, movedOn(stage.gainReductionDb, at.gainReductionDb, m.gainReductionDb))
       : stage.gainReductionDb
     const next: StageResult = { ...stage, in: inSig, out: outSig, health: healthOf(outSig, stage.domain), gainReductionDb: reduction }
-    if (curveIn) {
-      next.curveIn  = curveIn
-      next.curveOut = louder(outSig.l, outSig.r)
-    }
     const hum = humOf(outSig)
     if (isFinite(hum)) next.hum = hum
     else delete next.hum

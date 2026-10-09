@@ -1,12 +1,12 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, DI_DIRECT_PORT, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import { graphOf, drivingWire, fedBy, flowOrder, outputKey } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
 import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, preampSourceOf } from '../graph/queries'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideContext, SideResult, StageCondition } from './process'
-import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processJob, processSide, withInputNoise, withOutputNoise } from './process'
+import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processJob, processSide, withOutputNoise } from './process'
 
 // The walk through a chain: what the wiring makes of each card (planChain, once per change of the
 // graph) and the levels the number engine gives every card and every wire (runChain) — per side,
@@ -34,6 +34,11 @@ export function levelOf(w: WireSignal | undefined): number {
 /** How loud its loudest moments are: its louder side's peaks. */
 export function peakOf(w: WireSignal | undefined): number {
   return w ? Math.max(w.l.peak, w.r.peak) : -Infinity
+}
+
+/** Its louder side, reading by reading (one channel: itself) — a linked dynamics card's curve works on it. */
+export function louderSide(w: WireSignal): SideLevels {
+  return louder(w.l, w.r)
 }
 
 /** Its hum (louder side; −∞: none). */
@@ -155,7 +160,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       node.typeKey === 'speaker' && fed && !fedBy(node.id, 'amp', graph) ? 'needs-amp'
       : node.typeKey === 'pan' ? 'pan'
       : def.category === 'source' ? 'source'
-      : isStereo && def.linked && !node.bypassed ? 'linked'
+      : isStereo && isDynamics(node.typeKey) && !node.bypassed ? 'linked'
       : isStereo ? 'stereo'
       : 'mono'
 
@@ -206,7 +211,7 @@ export interface ChainLevels {
 }
 
 /** The context a card's maths gets for one side. */
-export function contextOf(card: CardPlan, domain: SignalDomain, mixedDomains: boolean, side: 'l' | 'r' | null): SideContext {
+function contextOf(card: CardPlan, domain: SignalDomain, mixedDomains: boolean, side: 'l' | 'r' | null): SideContext {
   return { domain, mixedDomains, side, preamp: card.preamp, fed: card.fed }
 }
 
@@ -291,16 +296,15 @@ export function runChain(plans: CardPlan[]): ChainLevels {
       outSig = isNodeStereo(node) ? stereo(only.out, only.out) : mono(only.out)
     } else if (card.mode === 'linked') {
       // The louder side drives the detector (reading by reading); the same change goes to both
-      // sides, then each gets the card's own output noise (D18)
+      // sides, then each gets the card's own output noise (D18 — a dynamics card has no input noise)
       const l   = arriving('l')
       const r   = arriving('r')
       const ctx = contextOf(card, inputDomain, mixedDomains, null)
-      const job      = processJob(node, louder(l, r), ctx)
+      const detector = louder(l, r)
+      const job      = processJob(node, detector, ctx)
       const result   = { ...job, out: flattenPeaks(withOutputNoise(node, job, ctx), job.domain) }
-      const detector = withInputNoise(node, louder(l, r), ctx)
       const linked   = (s: SideLevels) => {
-        const own     = withInputNoise(node, s, ctx)
-        const changed = eachReading((k) => (isFinite(detector[k]) ? own[k] + (job.out[k] - detector[k]) : own[k]))
+        const changed = eachReading((k) => (isFinite(detector[k]) ? s[k] + (job.out[k] - detector[k]) : s[k]))
         return withOutputNoise(node, { ...job, out: changed }, ctx)
       }
       side   = result

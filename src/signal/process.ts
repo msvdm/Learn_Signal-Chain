@@ -244,7 +244,7 @@ const withNoise = (s: SideLevels, db: number): SideLevels => {
 }
 
 /** What a card works on: `input` with the noise it adds before its gain (only a Gain adds any). */
-export function withInputNoise(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
+function withInputNoise(node: SignalNode, input: SideLevels, ctx: SideContext): SideLevels {
   return withNoise(input, ownNoiseOf(node, ctx).in)
 }
 

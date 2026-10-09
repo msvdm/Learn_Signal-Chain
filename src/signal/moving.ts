@@ -1,8 +1,8 @@
 import type { SideLevels } from './levels'
 import type { WireSignal } from './chain'
+import { louderSide } from './chain'
 import type { StageResult } from './engine'
 import type { MeasuredStage } from './measured'
-import { louder } from './levels'
 
 // How the signal moves (decision D10): the render on real sound (audio/measure.ts) records one loop of
 // the chain slice by slice, and works out how a DAW's meters would move over it (audio/meters.ts).
@@ -109,9 +109,11 @@ export function liveStageOf(shown: StageResult, measured: MeasuredStage, moving:
   if (moving.reduction && shown.gainReductionDb !== undefined && measured.gainReductionDb !== undefined) {
     live.reduction = { frames: moving.reduction, shift: shown.gainReductionDb - measured.gainReductionDb }
   }
-  if (moving.curveIn && moving.curveOut && shown.curveIn && shown.curveOut && measured.curveIn) {
-    const shiftIn  = shiftOf(shown.curveIn, measured.curveIn)
-    const shiftOut = shiftOf(shown.curveOut, louder(measured.out.l, measured.out.r))
+  // The marks on a dynamics card's curve: its louder sides in and out — while it is at work (its
+  // turning down; bypassed since the render: still)
+  if (moving.curveIn && moving.curveOut && shown.gainReductionDb !== undefined) {
+    const shiftIn  = shiftOf(louderSide(shown.in), louderSide(measured.in))
+    const shiftOut = shiftOf(louderSide(shown.out), louderSide(measured.out))
     if (shiftIn && shiftOut) live.curve = { in: { frames: moving.curveIn, shift: shiftIn }, out: { frames: moving.curveOut, shift: shiftOut } }
   }
   return live
