@@ -21,7 +21,7 @@ bun run preview  # Preview the production build locally
 
 - `src/signal/levels.test.ts` — the dB scale, a meter's colours and numbers, health with peaks, sums, dB SPL
 - `src/signal/process.test.ts` — each card on one channel, the dynamics curves, the sources' peaks and noise
-- `src/signal/engine.test.ts` — reference chains: every card's level, health, domain, condition, role and hum (`expectCards`); peak, average and noise (`expectReadings`: gain staging — D18 —, peaks, noise, the hum); the marks on a dynamics card's curve (`expectMarksLeave`). Lines marked `D9` put each reading through the curve
+- `src/signal/engine.chains.test.ts` — reference chains: every card's level, health, domain, condition, role and hum (`expectCards`); `engine.readings.test.ts` — peak, average and noise at every card (`expectReadings`: gain staging — D18 —, peaks, noise, the hum); `engine.curve.test.ts` — the marks on a dynamics card's curve (`expectMarksLeave`). Lines marked `D9` put each reading through the curve. Their helpers (`card`, `wire`, `signalOf` …) are in `test/chains.ts`
 - `src/signal/measured.test.ts`, `moving.test.ts` — a render's readings and movement in the number engine's picture
 - `src/audio/processors.test.ts` — the AudioWorklet's processors on plain blocks of samples
 - `src/audio/meters.test.ts`, `sounds.test.ts` — the meters' movement (D10); the Generator's sounds and the hiss

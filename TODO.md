@@ -91,7 +91,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
     - the 2,000-character *Tests* paragraph. Replace it with a short list: one line per test file.
   - Nothing the user instructed may be lost. Diff the rules section before and after.
 
-- [ ] **4. Split `src/signal/engine.test.ts`** (1,149 lines: over the 1,000 limit)
+- [x] **4. Split `src/signal/engine.test.ts`** (1,149 lines: over the 1,000 limit)
   - Move the shared helpers (`card`, `wire`, `expectCards`, `expectReadings`, `expectMarksLeave`, … — the
     first ~140 lines and those near lines 689, 1019 and 1029) to `test/chains.ts`.
     `tsconfig.test.json` includes `test/`; the app build leaves it out.

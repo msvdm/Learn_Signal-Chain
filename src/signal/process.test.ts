@@ -9,7 +9,7 @@ import {
   balanceSides, compressor, flattenPeaks, limiter, noiseGate, panSides, processSide,
 } from './process'
 
-// What each card does to one channel, on its own (the engine tests, engine.test.ts, put the cards
+// What each card does to one channel, on its own (the engine tests, engine.*.test.ts, put the cards
 // together). processSide works on a peak, an average and a noise: `run` passes the average in and
 // reads it out, so the numbers here are the averages. Peaks and noise: `levels` and the tests at the end.
 
