@@ -1,5 +1,6 @@
 import type { SignalNode, TypeKey } from '../data/nodeRegistry'
 import { param } from '../data/nodeRegistry'
+import type { Side } from './sided'
 
 // What a card whose job is a gain does to a signal: one number of dB (−∞: off), read from its
 // knobs. The number engine (signal/process.ts PROCESS) moves every reading by it; the render on
@@ -33,9 +34,6 @@ export const GUITAR_AMP_MAX = 11
 export function guitarAmpGainDb(volume: number): number {
   return volume <= 0 ? -Infinity : 14 + (volume - 1) * 1.5
 }
-
-/** Which side of a stereo signal a card works on (null: its only channel). */
-export type Side = 'l' | 'r' | null
 
 /** What a gain depends on besides the card's knobs. */
 export interface GainContext {

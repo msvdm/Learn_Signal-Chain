@@ -169,7 +169,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
   - Type `SILENCED` (`chainAudio.ts:68`) as `Set<StageCondition>`, or better, say in `process.ts` beside
     `StageCondition` which conditions silence a card.
 
-- [ ] **8. One generic "sided" signal**
+- [x] **8. One generic "sided" signal**
   - Add `Sided<T> = { kind: WireKind; l: T; r: T }`. Then `WireSignal = Sided<SideLevels>` and
     `MovingSlices = Sided<ChannelSlices>`.
   - Write one generic `onPort` and one generic `asKind`. They replace `onPort` (`chain.ts:58`) and

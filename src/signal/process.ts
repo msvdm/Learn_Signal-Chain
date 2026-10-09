@@ -3,7 +3,7 @@ import { MIC_CHARACTERS, param } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain } from './levels'
 import { SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
-import type { Side } from './gains'
+import type { Side } from './sided'
 import { gainDbOf, geqBandDb } from './gains'
 
 // What each card does to one channel, as the number engine reads it (signal/chain.ts runChain runs

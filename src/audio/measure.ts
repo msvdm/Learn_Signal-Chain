@@ -2,7 +2,9 @@ import type { GeneratorSound } from '../data/nodeRegistry'
 import { isGeneratorSound } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels, WireSignal } from '../signal/chain'
-import { levelOf, onPort } from '../signal/chain'
+import { LEVEL_SIDES, levelOf } from '../signal/chain'
+import type { SideOps, Sided } from '../signal/sided'
+import { asKind, onPort } from '../signal/sided'
 import type { SideLevels } from '../signal/levels'
 import type { MeasuredStage } from '../signal/measured'
 import type { MeterFrames, MovingSignal, MovingStage } from '../signal/moving'
@@ -139,44 +141,13 @@ function signalOf(music: ChannelReading[], quiet: ChannelReading[], like: WireSi
   return { kind: like.kind, l, r: like.kind === 'mono' ? l : side(1, like.r) }
 }
 
-/** A wire's signal as a card takes it: one channel (one side of a mix: that side), or both sides. */
-function asKind(w: WireSignal, kind: WireKind): WireSignal {
-  if (kind !== 'mono') return { kind, l: w.l, r: w.r }
-  const side = w.kind === 'right' ? w.r : w.l
-  return { kind, l: side, r: side }
-}
-
 /** How a signal moved, slice by slice: what it carries and each side (one channel: r is l). */
-interface MovingSlices {
-  kind: WireKind
-  l: ChannelSlices
-  r: ChannelSlices
-}
+type MovingSlices = Sided<ChannelSlices>
 
 /** A tap's channels as a signal of `kind` (a card's in or out: mono or stereo). */
 function slicesOf(channels: ChannelSlices[], kind: WireKind, silent: ChannelSlices): MovingSlices {
   const l = channels[0] ?? silent
   return { kind, l, r: kind === 'mono' ? l : (channels[1] ?? l) }
-}
-
-/** A wire's movement as a card takes it (as asKind does for the readings). */
-function slicesAsKind(w: MovingSlices, kind: WireKind): MovingSlices {
-  if (kind !== 'mono') return { kind, l: w.l, r: w.r }
-  const side = w.kind === 'right' ? w.r : w.l
-  return { kind, l: side, r: side }
-}
-
-/** What an output carrying `kind` sends of a card's movement (as chain.ts onPort does for the readings). */
-function slicesOnPort(kind: WireKind, x: MovingSlices, silent: ChannelSlices): MovingSlices {
-  switch (kind) {
-    case 'left':   return { kind, l: x.l, r: silent }
-    case 'right':  return { kind, l: silent, r: x.r }
-    case 'stereo': return { kind, l: x.l, r: x.r }
-    default: {
-      const one = louderSlices(x.l, x.r)
-      return { kind, l: one, r: one }
-    }
-  }
 }
 
 /**
@@ -211,6 +182,7 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
   // The meters' movement, worked out once for slices that several cards share (a wire's both ends)
   const count  = Math.round(LOOP_S / SLICE_S)
   const silent: ChannelSlices = { peak: new Float32Array(count), power: new Float32Array(count) }
+  const sliceSides: SideOps<ChannelSlices> = { silent, louder: louderSlices }
   const framesOf = new Map<ChannelSlices, MeterFrames>()
   const frames = (s: ChannelSlices) => {
     let f = framesOf.get(s)
@@ -242,7 +214,7 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
 
     const wireMoving = card.used.length === 1 ? movingWires.get(card.used[0].key) : undefined
     const inMoving   = card.mode === 'source' ? undefined
-      : slicesAtTap('in', levels.in.kind) ?? (wireMoving ? slicesAsKind(wireMoving, levels.in.kind) : slicesOf([], levels.in.kind, silent))
+      : slicesAtTap('in', levels.in.kind) ?? (wireMoving ? asKind(wireMoving, levels.in.kind) : slicesOf([], levels.in.kind, silent))
     const outMoving  = slicesAtTap('out', levels.out.kind) ?? slicesOf([], levels.out.kind, silent)
     const moves: MovingStage = { out: movingOf(outMoving) }
     if (inMoving) moves.in = movingOf(inMoving)
@@ -271,8 +243,8 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
     stages.set(node.id, stage)
     moving.set(node.id, moves)
     for (const o of card.outputs) {
-      wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig))
-      movingWires.set(o.key, slicesOnPort(o.kind, o.direct && inMoving ? inMoving : outMoving, silent))
+      wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
+      movingWires.set(o.key, onPort(o.kind, o.direct && inMoving ? inMoving : outMoving, sliceSides))
     }
   }
   return { stages, wires, moving }

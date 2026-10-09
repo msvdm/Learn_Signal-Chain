@@ -99,6 +99,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `signal/process.ts` — one card on one channel (`PROCESS`), a card's own noise (`ownNoiseOf`, D18), the sources' sounds, the dynamics curves, `StageCondition` (and which conditions silence a card)
 - `signal/gains.ts` — every card whose job is a gain and its gain (`GAINS`, `gainDbOf`), and the knobs that follow the other side (`ampVolumeDb`, `geqBandDb`): the number engine, the render and the cards read them from here
 - `signal/levels.ts` — the dB scale, health, the meters' zones and numbers, `SideLevels`
+- `signal/sided.ts` — `Sided<T>`: a signal's kind and its two sides, whatever is known of each (`WireSignal` is `Sided<SideLevels>`; the render's slices too), with the one `onPort` / `asKind`
 - `signal/measured.ts`, `signal/moving.ts` — a render's readings and movement in the number engine's picture (D9, D10)
 - `audio/chainAudio.ts` — the plan as Web Audio nodes; `processed()` is each card on real sound (a gain from `GAINS`, every other type its entry in `OTHERS`)
 - `audio/measure.ts` — `measureChain`: two renders (the music; the quiet: noise and hum), every card measured, its movement recorded
