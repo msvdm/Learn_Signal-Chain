@@ -2,6 +2,7 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { NodeWrapper } from './NodeWrapper'
+import { ConditionLabel } from './conditions'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { levelOf } from '../../signal/engine'
@@ -79,25 +80,8 @@ export function AdcDacNode({ id, type }: CardProps) {
         ))}
       </div>
 
-      {/* Warning banner */}
-      {hasWarning && (
-        <div
-          className="lsc-wrap-text"
-          style={{
-            fontSize: 13, fontWeight: 700,
-            color: 'var(--signal-clipping)',
-            textAlign: 'center',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {warning === 'adcExpectsAnalog'
-            ? t.warnings.adcExpectsAnalog
-            : warning === 'dacExpectsDigital'
-              ? t.warnings.dacExpectsDigital
-              : '⚠'}
-        </div>
-      )}
+      {/* What is wrong: an ADC fed a digital signal, a DAC an analog one */}
+      {warning && <ConditionLabel condition={warning} typeKey={typeKey} />}
 
       {/* Domain indicator */}
       <div

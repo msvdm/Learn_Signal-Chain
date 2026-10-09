@@ -14,8 +14,8 @@ import { gainDbOf, geqBandDb } from './gains'
 
 /**
  * Why a card sends nothing out, or what is wrong with what it sends (`blown`: far too much,
- * `needsDi`: a guitar losing its high notes). The names are the locale keys of the note the card
- * shows (`warnings.*`, `nodes.speaker.needsAmp`, `nodes.active-speaker.blown`, `nodes.instrument.needsDi`).
+ * `needsDi`: a guitar losing its high notes). What the card says about each, and how:
+ * components/nodes/conditions.tsx.
  */
 export type StageCondition =
   | 'domainMixedBus'    // a bus fed analog and digital signals at once

@@ -4,6 +4,7 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { MeterSides } from './MeterSides'
+import { ConditionLabel } from './conditions'
 import { KnobControl } from '../controls/KnobControl'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
@@ -40,7 +41,8 @@ export function MasterBusNode({ id, type }: CardProps) {
   const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
   const { t, fmt }    = useTranslation()
   const p        = useParams(id, typeKey)
-  const domainWarning = result?.condition === 'domainMixedBus'
+  // Analog and digital signals arriving at once (domainMixedBus)
+  const condition = result?.condition
   const tm       = t.nodes['matrix-bus']
 
   const n = incomingEdges.length
@@ -124,19 +126,7 @@ export function MasterBusNode({ id, type }: CardProps) {
           </span>
         )}
 
-        {domainWarning && (
-          <div
-            className="lsc-wrap-text"
-            style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--signal-clipping)',
-              padding: '4px 8px', borderRadius: 'var(--lsc-radius-sm)',
-              border: '1px solid var(--signal-clipping-border)',
-              background: 'var(--signal-clipping-bg)',
-            }}
-          >
-            {t.warnings.domainMixedBus}
-          </div>
-        )}
+        {condition && <ConditionLabel condition={condition} typeKey={typeKey} />}
         </div>
       </MeterSides>
     </NodeWrapper>

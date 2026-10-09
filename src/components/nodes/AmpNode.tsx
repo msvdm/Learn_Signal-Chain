@@ -3,6 +3,8 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { MeterSides } from './MeterSides'
+import { ConditionLabel } from './conditions'
+import { useStage } from '../../hooks/useGraphSignal'
 import { GAIN_OFF_DB, ampVolumeDb } from '../../signal/gains'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -22,6 +24,8 @@ export function AmpNode({ id }: CardProps) {
   const { t }               = useTranslation()
 
   const levels = useStereoLevels(id)
+  // Fed a digital signal (digitalToAmp): silent, and a label says why
+  const condition = useStage(id)?.condition
   const settings = useSettings(id, 'amp')
   const gainDb   = ampVolumeDb(settings, 'l')
   const gainDbR  = ampVolumeDb(settings, 'r')
@@ -66,6 +70,7 @@ export function AmpNode({ id }: CardProps) {
               layout="side"
             />
           )}
+          {condition && <ConditionLabel condition={condition} typeKey="amp" />}
         </div>
       </MeterSides>
     </NodeWrapper>

@@ -7,6 +7,7 @@ import { VolumeFace } from './VolumeFace'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 import { FaceNote, WithNote } from './FaceNote'
+import { ConditionNote } from './conditions'
 
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
 function BlownSpeakerIcon() {
@@ -23,9 +24,9 @@ function BlownSpeakerIcon() {
 /**
  * Active speaker (amplifier built in), and Headphones, which work the same: a card with a big icon
  * and its Volume knob, at every zoom (its meter in dB SPL — D13). Fed from an Amplifier it blows (condition
- * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why. A signal clipped
- * on its way here says "Bad sound" (`distorted`: its meter may be green); a hum from a DI Box
- * ground loop shows under it.
+ * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why; fed a digital
+ * signal, a note says so (conditions.tsx). A signal clipped on its way here says "Bad sound"
+ * (`distorted`: its meter may be green); a hum from a DI Box ground loop shows under it.
  */
 export function ActiveSpeakerNode({ id, type }: CardProps) {
   const typeKey = type as 'active-speaker' | 'headphones'
@@ -33,7 +34,7 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
   const stage   = useStage(id)
   const { t }   = useTranslation()
 
-  const blown     = stage?.condition === 'blown'
+  const condition = stage?.condition
   const distorted = stage?.distorted === true
   const hum       = stage?.hum !== undefined
 
@@ -44,17 +45,17 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
       label={useNodeName(id, typeKey)}
       faceOnly
       overviewArt={(box) => {
-        if (blown) {
+        if (condition === 'blown') {
           return (
-            <WithNote
-              box={box} lines={2}
+            <ConditionNote
+              condition={condition} typeKey={typeKey} box={box}
               face={(h) => <OverviewIcon icon={typeKey === 'headphones' ? <Icon /> : <BlownSpeakerIcon />} box={{ w: box.w, h }} color="var(--signal-clipping-text)" />}
-              note={<FaceNote box={box} color="var(--signal-clipping-text)">{t.nodes[typeKey].blown}</FaceNote>}
             />
           )
         }
         // The icon and the Volume knob, side by side, in the height they are given
         const face = (h: number) => <VolumeFace nodeId={id} typeKey={typeKey} icon={<Icon />} box={{ w: box.w, h }} />
+        if (condition) return <ConditionNote condition={condition} typeKey={typeKey} box={box} face={face} />
         // Something before it clips: its meter may be green, but you hear it
         if (distorted) {
           return (

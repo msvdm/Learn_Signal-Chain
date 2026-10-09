@@ -179,7 +179,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
 
 ## Phase D — the cards
 
-- [ ] **9. Conditions in one place, and the missing red labels** (decision 1)
+- [x] **9. Conditions in one place, and the missing red labels** (decision 1)
   - The engine silences cards fed a digital signal (`digitalToAmp`: the Amplifier; `digitalToSpeaker`:
     Speaker, Active Speaker, Headphones, Guitar Amp), but **no card says so**. The texts already exist
     (`warnings.digitalToAmp`, `warnings.digitalToSpeaker`).

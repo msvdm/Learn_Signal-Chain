@@ -5,6 +5,7 @@ import { NodeWrapper } from './NodeWrapper'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { FaceNote, WithNote } from './FaceNote'
+import { ConditionNote } from './conditions'
 import { useStage } from '../../hooks/useGraphSignal'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -13,13 +14,14 @@ const Icon = NODE_LOOK.speaker.icon
 /**
  * Passive speaker: a card with a big icon, at every zoom (its meter in dB SPL — D13; from Intermediate its
  * readings under it). It has no amplifier inside — fed without an Amplifier before it, it stays silent,
- * and the card says so (crossed-out speaker + a note). A signal clipped on its way here says "Bad
- * sound" (`distorted`: its meter may be green); a hum from a DI Box ground loop shows too.
+ * and the card says so (crossed-out speaker + a note); fed a digital signal, a note says so too
+ * (conditions.tsx). A signal clipped on its way here says "Bad sound" (`distorted`: its meter may be
+ * green); a hum from a DI Box ground loop shows too.
  */
 export function SpeakerNode({ id }: CardProps) {
   const stage      = useStage(id)
   const { t }      = useTranslation()
-  const needsAmp   = stage?.condition === 'needsAmp'
+  const condition  = stage?.condition
   const distorted  = stage?.distorted === true
   const hum        = stage?.hum !== undefined
 
@@ -30,12 +32,14 @@ export function SpeakerNode({ id }: CardProps) {
       label={useNodeName(id, 'speaker')}
       faceOnly
       overviewArt={(box) => {
-        if (needsAmp) {
+        if (condition) {
           return (
-            <WithNote
-              box={box} lines={2}
-              face={(h) => <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h }} color="var(--signal-hot-text)" />}
-              note={<FaceNote box={box} color="var(--signal-hot-text)">{t.nodes.speaker.needsAmp}</FaceNote>}
+            <ConditionNote
+              condition={condition} typeKey="speaker" box={box}
+              // No amplifier: the speaker crossed out
+              face={(h) => condition === 'needsAmp'
+                ? <OverviewIcon icon={<VolumeX />} box={{ w: box.w, h }} color="var(--signal-hot-text)" />
+                : <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />}
             />
           )
         }

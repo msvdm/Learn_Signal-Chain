@@ -10,8 +10,7 @@ import { OverviewIcon } from './OverviewFace'
 import { MeterSides } from './MeterSides'
 import { unwiredSource } from '../../graph/queries'
 import { SPL_DB } from '../../signal/levels'
-import { FaceNote, WithNote } from './FaceNote'
-import { DullToneIcon } from './icons'
+import { ConditionNote } from './conditions'
 import { ChoiceButtons } from '../controls/ChoiceButtons'
 import type { Choice } from '../controls/ChoiceButtons'
 import { useSignalStore } from '../../store/signalStore'
@@ -34,7 +33,7 @@ const MIC_BUTTONS_H = 132
  * (whose hits reach far above their average), a Line Input Music or Drums. A Microphone's buttons
  * sit beside its meter (dB SPL — D13), its icon in their place at Beginner or while it hears a
  * Guitar Amp (it picks up the amp, not a sound of its own). An Instrument going into the desk without
- * a DI Box says so (condition 'needsDi': a dull-tone curve and a note).
+ * a DI Box says so (condition 'needsDi': a dull-tone curve and a note — conditions.tsx).
  */
 export function MicNode({ id, type }: CardProps) {
 
@@ -46,28 +45,15 @@ export function MicNode({ id, type }: CardProps) {
   const choosing = useSignalStore((s) => typeKey !== 'instrument' && atLeast(s.complexityLevel, CHARACTER_LEVEL)
     && !(typeKey === 'mic' && s.edges.some((e) => e.target === id)))
   const levelDb  = typeKey === 'mic' ? p('sensitivityDb') : p('levelDb')
-  const needsDi  = stage?.condition === 'needsDi'
+  const condition = stage?.condition
   const Icon     = NODE_LOOK[typeKey].icon
   const label    = useNodeName(id, typeKey)
   // No connection, no signal (D11): its meter keeps its place, unseen
   const notConnected = useSignalStore((s) => typeKey !== 'instrument' && unwiredSource(id, s))
 
-  const art = (box: { w: number; h: number }) => {
-    if (needsDi) {
-      return (
-        <WithNote
-          box={box} lines={2}
-          face={(h) => <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />}
-          note={
-            <FaceNote box={box} color="var(--signal-hot-text)" icon={(size) => <DullToneIcon size={size} />}>
-              {t.nodes.instrument.needsDi}
-            </FaceNote>
-          }
-        />
-      )
-    }
-    return <OverviewIcon icon={<Icon />} box={box} />
-  }
+  const art = (box: { w: number; h: number }) => condition
+    ? <ConditionNote condition={condition} typeKey={typeKey} box={box} face={(h) => <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />} />
+    : <OverviewIcon icon={<Icon />} box={box} />
 
   if (typeKey === 'mic') {
     return (

@@ -118,11 +118,10 @@
     "clipping": "Clipping!"
   },
   "warnings": {
-    "domainMixedBus": "Cannot mix analog and digital signals — insert a DAC before this bus, or keep signals in the same domain.",
-    "digitalToAmp": "Amp cannot amplify a digital signal. Insert a DAC before the amp to convert back to analog.",
-    "digitalToSpeaker": "Speaker cannot receive a digital signal. Insert a DAC before the speaker.",
-    "adcExpectsAnalog": "ADC expects an analog input. Connect it after analog gear, not after another ADC or digital node.",
-    "dacExpectsDigital": "DAC expects a digital input. Connect it after an ADC or other digital node."
+    "domainMixedBus": "Silent — analog and digital signals can't be mixed. Pass the digital ones through a Digital to Analog Converter first.",
+    "digitalSignal": "Silent — the signal is digital. Pass it through a Digital to Analog Converter first.",
+    "adcExpectsAnalog": "Silent — the signal is already digital.",
+    "dacExpectsDigital": "Silent — the signal is analog. Put an Analog to Digital Converter before this one."
   },
   "hum": {
     "tag": "Hum"
