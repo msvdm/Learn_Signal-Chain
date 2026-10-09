@@ -73,30 +73,30 @@ function App() {
   return (
     // Around the header too: the File menu saves the canvas with each card's real size
     <ReactFlowProvider>
-      <div className="flex flex-col h-screen" style={{ background: 'var(--lsc-canvas)', color: 'var(--lsc-fg)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--lsc-canvas)', color: 'var(--lsc-fg)' }}>
         {/* Header */}
         <header
-          className="flex items-center justify-between flex-shrink-0"
           style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
             height: 56, padding: '0 16px', gap: 16,
             background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)',
           }}
         >
           {/* Left: palette toggle, brand — the only group that gives way: the title wraps onto a second line */}
-          <div className="flex items-center" style={{ gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               onClick={() => setPaletteOpen(!paletteOpen)}
               aria-label={paletteOpen ? t.palette.hide : t.palette.show}
               aria-expanded={paletteOpen}
               aria-controls="lsc-palette"
-              className="lsc-btn-outline flex-shrink-0"
-              style={{ ...headerBtn, width: 34, padding: 0, justifyContent: 'center' }}
+              className="lsc-btn-outline"
+              style={{ ...headerBtn, flexShrink: 0, width: 34, padding: 0, justifyContent: 'center' }}
             >
               {paletteOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
             <div
-              className="flex-shrink-0"
               style={{
+                flexShrink: 0,
                 width: 32, height: 32, borderRadius: 8,
                 background: 'var(--signal-good-bg)', color: 'var(--signal-good)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -117,7 +117,7 @@ function App() {
           </div>
 
           {/* Centre: level stepper */}
-          <nav aria-label={t.app.level} className="flex items-center flex-shrink-0" style={{ gap: 6 }}>
+          <nav aria-label={t.app.level} style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
             {LEVELS.map((id, i) => {
               const active = complexityLevel === id
               return (
@@ -155,7 +155,7 @@ function App() {
           </nav>
 
           {/* Right: file, snap to grid, theme, language */}
-          <div className="flex items-center flex-shrink-0" style={{ gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
             <FileMenu onNew={() => setPending({ kind: 'reset' })} buttonStyle={headerBtn} />
 
             <button
@@ -199,7 +199,7 @@ function App() {
               {isWideHeader && themeLabel}
             </button>
 
-            <div className="relative" ref={languageRef}>
+            <div ref={languageRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowLanguages((v) => !v)}
                 aria-label={t.app.language}
@@ -219,8 +219,8 @@ function App() {
               {showLanguages && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full z-50"
                   style={{
+                    position: 'absolute', right: 0, top: '100%', zIndex: 50,
                     marginTop: 6, width: 176, padding: 4, borderRadius: 10,
                     background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
                     boxShadow: 'var(--lsc-shadow-popup)',
@@ -253,8 +253,7 @@ function App() {
 
         {/* Main canvas with left palette */}
         <main
-          className="flex-1 overflow-hidden min-h-0 relative"
-          style={{ '--lsc-palette-w': `${paletteWidth}px` } as CSSProperties}
+          style={{ flex: 1, overflow: 'hidden', minHeight: 0, position: 'relative', '--lsc-palette-w': `${paletteWidth}px` } as CSSProperties}
         >
           {/* Collapsible: slides over the canvas (the canvas keeps its size and nothing on it moves) */}
           <div

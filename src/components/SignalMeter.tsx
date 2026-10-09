@@ -100,8 +100,9 @@ function MeterTrack({ side: levels, domain, detailed, direction, thickness, leng
   return (
     <div
       ref={ref}
-      className={`relative overflow-hidden ${up ? 'lsc-meter-up' : 'lsc-meter-right'}`}
+      className={up ? 'lsc-meter-up' : 'lsc-meter-right'}
       style={{
+        position: 'relative', overflow: 'hidden',
         ...(up ? { width: thickness, height: length ?? '100%' } : { height: thickness, width: length ?? '100%' }),
         borderRadius: METER_RADIUS, background: 'var(--lsc-sunken)', border: '1px solid var(--lsc-border-soft)',
         ...vars, ...style,

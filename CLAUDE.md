@@ -58,6 +58,8 @@ bun run preview  # Preview the production build locally
 
 The app is a **pure client-side React SPA** — no backend, no API calls. The signal is worked out in the browser twice: at once by the number engine (arithmetic on levels, `src/signal/`), and a moment later by a silent render of the chain on real sound (Web Audio in an OfflineAudioContext, `src/audio/`), whose readings the cards show (D9). The render also records how every card's signal moves over its loop, and from Intermediate the meters play that back (D10).
 
+**Styles are plain CSS**, no framework: `src/index.css` holds the two themes (CSS variables on `data-theme`), a reset in `@layer base` (Tailwind v4's preflight, kept when Tailwind went — every unlayered rule beats it) and the app's classes (`lsc-*`, unlayered); components style themselves inline, reading those variables.
+
 Layers: `data/` (types, registry) ← `graph/` (pure queries, edits and wiring rules) ← `signal/` (pure maths) ← `audio/` (Web Audio: the render on real sound; its processors and the sounds made in code are pure) ← `hooks/`, `store/`, `components/`. Nothing in `graph/`, `signal/` or `audio/` imports React or the store; `utils/` (layout, files, text helpers) never imports the store.
 
 ### Data flow (read this first)

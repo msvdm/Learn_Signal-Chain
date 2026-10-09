@@ -44,7 +44,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
 
   return (
     <div
-      className={`lsc-free-control select-none ${selected ? 'lsc-selected' : ''}`}
+      className={`lsc-free-control${selected ? ' lsc-selected' : ''}`}
       style={{
         position: 'relative',
         width: 'max-content',

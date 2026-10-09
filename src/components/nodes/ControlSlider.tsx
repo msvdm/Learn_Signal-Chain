@@ -28,14 +28,13 @@ export function ControlSlider({
   const format  = formatValue ?? ((v: number) => String(v))
   const display = format(value)
   return (
-    <div className={`nodrag nopan space-y-1 ${className}`}>
-      <div className="flex items-center justify-between" style={{ gap: 8 }}>
-        <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+    <div className={`nodrag nopan ${className}`}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <span style={{ color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
         <StableText
           reserve={reserve ?? [widestFormat(min, max, step, format)]}
           align="end"
-          className="text-[var(--node-text-sm)] font-mono font-bold"
-          style={{ color: 'var(--lsc-fg)' }}
+          style={{ fontFamily: 'var(--lsc-font-mono)', fontWeight: 700, color: 'var(--lsc-fg)' }}
         >
           {display}
         </StableText>
@@ -47,8 +46,11 @@ export function ControlSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="nodrag nopan w-full h-1.5 appearance-none rounded-full cursor-pointer"
-        style={{ accentColor: 'var(--lsc-accent)', background: 'var(--lsc-track)' }}
+        className="nodrag nopan"
+        style={{
+          width: '100%', height: 6, appearance: 'none', borderRadius: 9999, cursor: 'pointer',
+          accentColor: 'var(--lsc-accent)', background: 'var(--lsc-track)',
+        }}
       />
     </div>
   )

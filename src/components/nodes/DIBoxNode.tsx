@@ -34,18 +34,15 @@ export function DIBoxNode({ id }: CardProps) {
 
   const output = (name: string, db: number, what: string, main: boolean) => (
     <div>
-      <div className="flex items-center justify-between">
-        <span
-          className="text-[var(--node-text-xs)] uppercase tracking-wide"
-          style={{ color: main ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)', fontWeight: 700 }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ textTransform: 'uppercase', letterSpacing: '0.025em', color: main ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)', fontWeight: 700 }}>
           {name}
         </span>
-        <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" className="text-[var(--node-text-xs)] font-mono" style={{ color: 'var(--lsc-fg)' }}>
+        <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)' }}>
           {formatDb(db, 'analog')}
         </StableText>
       </div>
-      <div className="text-[var(--node-text-xs)]" style={{ color: 'var(--lsc-fg-muted)' }}>{what}</div>
+      <div style={{ color: 'var(--lsc-fg-muted)' }}>{what}</div>
     </div>
   )
 
@@ -59,8 +56,8 @@ export function DIBoxNode({ id }: CardProps) {
       <MeterSides nodeId={id} output={false}>
         <div style={{ width: MIDDLE_W, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Ground lift: lights up while there is a hum to fix */}
-          <div className="flex items-center justify-between" style={{ gap: 8 }}>
-            <span className="text-[var(--node-text-sm)]" style={{ color: 'var(--lsc-fg)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ color: 'var(--lsc-fg)' }}>
               {text.groundLift}
             </span>
             <button
@@ -88,14 +85,14 @@ export function DIBoxNode({ id }: CardProps) {
           {/* The description, or the hum note in its place: both keep their space, so the card never resizes */}
           <div style={{ display: 'grid', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}>
             <div
-              className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
-              style={{ gridArea: '1 / 1', color: 'var(--lsc-fg-muted)', visibility: hum ? 'hidden' : 'visible' }}
+              className="lsc-wrap-text"
+              style={{ gridArea: '1 / 1', lineHeight: 1.375, color: 'var(--lsc-fg-muted)', visibility: hum ? 'hidden' : 'visible' }}
             >
               {text.description}
             </div>
             <div
-              className="lsc-wrap-text text-[var(--node-text-sm)] leading-snug"
-              style={{ gridArea: '1 / 1', color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
+              className="lsc-wrap-text"
+              style={{ gridArea: '1 / 1', lineHeight: 1.375, color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
             >
               {text.hum}
             </div>

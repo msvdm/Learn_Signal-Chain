@@ -231,7 +231,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
 
 ## Phase E — Tailwind (decision 3)
 
-- [ ] **14. Remove Tailwind**
+- [x] **14. Remove Tailwind**
   - Where it is:
     - `@import "tailwindcss";` in `src/index.css:1`;
     - `tailwindcss()` in `vite.config.ts`;

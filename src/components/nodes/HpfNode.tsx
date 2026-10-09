@@ -118,7 +118,7 @@ export function HpfNode({ id }: CardProps) {
       typeKey="hpf"
       label={useNodeName(id, 'hpf')}
     >
-      <div className="space-y-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <HPFGraph cutoffHz={cutoffHz} bypassed={bypassed} />
 
         <ControlSlider

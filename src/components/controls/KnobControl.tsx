@@ -88,8 +88,8 @@ export function KnobControl({
 
   return (
     <div
-      className={`nodrag flex ${side ? 'flex-row' : 'flex-col'} items-center select-none ${className}`}
-      style={{ minWidth: size, gap: side ? 10 : 4 }}
+      className={`nodrag ${className}`}
+      style={{ display: 'flex', flexDirection: side ? 'row' : 'column', alignItems: 'center', userSelect: 'none', WebkitUserSelect: 'none', minWidth: size, gap: side ? 10 : 4 }}
     >
       <svg
         width={size}

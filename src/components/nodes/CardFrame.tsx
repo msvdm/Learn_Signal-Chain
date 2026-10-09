@@ -30,7 +30,7 @@ export function CardFrame({ nodeId, typeKey, label, chrome, size, bare = false, 
 
   return (
     <div
-      className={`lsc-node-card select-none${selected ? ' lsc-selected' : ''}`}
+      className={`lsc-node-card${selected ? ' lsc-selected' : ''}`}
       style={{
         position: 'relative',
         width: 'max-content',

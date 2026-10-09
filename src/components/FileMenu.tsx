@@ -82,7 +82,7 @@ export function FileMenu({ onNew, buttonStyle }: {
   const act = (fn: () => void) => () => { setOpen(false); fn() }
 
   return (
-    <div className="relative" ref={ref}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
@@ -101,8 +101,8 @@ export function FileMenu({ onNew, buttonStyle }: {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-50"
           style={{
+            position: 'absolute', right: 0, top: '100%', zIndex: 50,
             marginTop: 6, minWidth: 260, padding: 4, borderRadius: 10,
             background: 'var(--lsc-header)', border: '1px solid var(--lsc-border)',
             boxShadow: 'var(--lsc-shadow-popup)',

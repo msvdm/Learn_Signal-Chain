@@ -1,4 +1,142 @@
-@import "tailwindcss";
+/* ── Reset ───────────────────────────────────────────────────────────────────
+   Tailwind CSS v4.2.4's preflight (MIT License, Copyright (c) Tailwind Labs, Inc.
+   — https://github.com/tailwindlabs/tailwindcss), which came with Tailwind until it was removed
+   (2026-10-09). Kept as it was but for its theme variables (the app's fonts instead) and the
+   rules for elements the app never shows (tables, lists, links, other form fields …). In a layer, as it was: every unlayered rule — the app's
+   below, React Flow's — beats it. */
+@layer base {
+  /*
+    1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+    2. Remove default margins and padding
+    3. Reset all borders.
+  */
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    box-sizing: border-box; /* 1 */
+    margin: 0; /* 2 */
+    padding: 0; /* 2 */
+    border: 0 solid; /* 3 */
+  }
+
+  /*
+    1. Use a consistent sensible line-height in all browsers.
+    2. Prevent adjustments of font size after orientation changes in iOS.
+    3. Use a more readable tab size.
+    4. The app's font.
+    5. Disable tap highlights on iOS.
+  */
+  html {
+    line-height: 1.5; /* 1 */
+    -webkit-text-size-adjust: 100%; /* 2 */
+    tab-size: 4; /* 3 */
+    font-family: var(--lsc-font-sans); /* 4 */
+    font-feature-settings: normal; /* 4 */
+    font-variation-settings: normal; /* 4 */
+    -webkit-tap-highlight-color: transparent; /* 5 */
+  }
+
+  /* Remove the default font size and weight for headings. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  /* Add the correct font weight in Edge and Safari. */
+  b,
+  strong {
+    font-weight: bolder;
+  }
+
+  /*
+    1. The app's monospace font.
+    2. Correct the odd `em` font sizing in all browsers.
+  */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--lsc-font-mono); /* 1 */
+    font-feature-settings: normal; /* 1 */
+    font-variation-settings: normal; /* 1 */
+    font-size: 1em; /* 2 */
+  }
+
+  /* Use the modern Firefox focus style for all focusable elements. */
+  :-moz-focusring {
+    outline: auto;
+  }
+
+  /*
+    1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+    2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+  */
+  img,
+  svg {
+    display: block; /* 1 */
+    vertical-align: middle; /* 2 */
+  }
+
+  /*
+    1. Inherit font styles in all browsers.
+    2. Remove border radius in all browsers.
+    3. Remove background color in all browsers.
+    4. Ensure consistent opacity for disabled states in all browsers.
+  */
+  button,
+  input {
+    font: inherit; /* 1 */
+    font-feature-settings: inherit; /* 1 */
+    font-variation-settings: inherit; /* 1 */
+    letter-spacing: inherit; /* 1 */
+    color: inherit; /* 1 */
+    border-radius: 0; /* 2 */
+    background-color: transparent; /* 3 */
+    opacity: 1; /* 4 */
+  }
+
+  /* Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300) */
+  ::placeholder {
+    opacity: 1;
+  }
+
+  /*
+    Set the default placeholder color to a semi-transparent version of the current text color in browsers that do not
+    crash when using `color-mix(…)` with `currentcolor`. (https://github.com/tailwindlabs/tailwindcss/issues/17194)
+  */
+  @supports (not (-webkit-appearance: -apple-pay-button)) /* Not Safari */ or
+    (contain-intrinsic-size: 1px) /* Safari 17+ */ {
+    ::placeholder {
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+  }
+
+  /* Remove the inner padding in Chrome and Safari on macOS. */
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+
+  /* Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737) */
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+
+  /* Correct the inability to style the border radius in iOS Safari. */
+  button {
+    appearance: button;
+  }
+
+  /* Make elements with the HTML hidden attribute stay hidden by default. */
+  [hidden]:where(:not([hidden='until-found'])) {
+    display: none !important;
+  }
+}
 
 /* =======================================================================
    Learn Signal Chain — "Studio Canvas" theme
@@ -613,6 +751,12 @@ kbd {
 
 /* React Flow sets cursor:grab on node wrappers — controls get pointers */
 .react-flow__node { cursor: default; }
+/* Dragging across a card or a bare control never selects its text */
+.lsc-node-card,
+.lsc-free-control {
+  -webkit-user-select: none;
+  user-select: none;
+}
 .react-flow__node button,
 .react-flow__node input[type="range"] { cursor: pointer; }
 

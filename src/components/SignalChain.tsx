@@ -153,7 +153,6 @@ export function SignalChain() {
     : drag.ghosts
 
   const wrapperClass = [
-    'w-full h-full relative',
     toolMode === 'connect' ? 'lsc-connect-mode' : '',
     wiring ? 'lsc-wiring' : '',
     leftTool === 'remove' ? 'lsc-remove-mode' : '',
@@ -163,7 +162,7 @@ export function SignalChain() {
 
   return (
     // `isolation`: everything drawn on the canvas stays under the palette that slides over it
-    <div ref={wrapperRef} className={wrapperClass} style={{ isolation: 'isolate' }} onDragLeave={drop.onDragLeave}>
+    <div ref={wrapperRef} className={wrapperClass} style={{ width: '100%', height: '100%', position: 'relative', isolation: 'isolate' }} onDragLeave={drop.onDragLeave}>
       <ReactFlow
         nodes={flow.nodes}
         edges={flow.edges}

@@ -65,7 +65,7 @@ bun test       # tests of the signal maths and the audio processors (without Bun
 - **React + TypeScript** via Vite
 - **React Flow** — node-based canvas
 - **Zustand** — state management
-- **Tailwind CSS v4**
+- **Plain CSS** — the themes as CSS variables in `src/index.css`, inline styles in the components
 - **Lucide React** — icons
 - **Web Audio API** — the chain played on real sound, measured in an OfflineAudioContext (the sound loops are made by `scripts/make-loops.py`)
 
