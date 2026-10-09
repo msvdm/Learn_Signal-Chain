@@ -1,6 +1,8 @@
 import type { NodeTypes } from '@xyflow/react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import { MicNode }            from './MicNode'
+import { LineInNode }         from './LineInNode'
+import { InstrumentNode }     from './InstrumentNode'
 import { GainNode }           from './GainNode'
 import { FaderNode }          from './FaderNode'
 import { MasterBusNode }      from './MasterBusNode'
@@ -29,8 +31,8 @@ import { GeneratorNode }      from './GeneratorNode'
  */
 export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   mic:               MicNode,
-  'line-in':         MicNode,
-  instrument:        MicNode,
+  'line-in':         LineInNode,
+  instrument:        InstrumentNode,
   generator:         GeneratorNode,
   'di-box':          DIBoxNode,
   'guitar-amp':      GuitarAmpNode,

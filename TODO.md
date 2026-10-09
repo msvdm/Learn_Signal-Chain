@@ -204,7 +204,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
     mode.
   - Add a shared Attack / Release block for the Compressor and Noise Gate (their ranges differ: pass them in).
 
-- [ ] **11. Split `MicNode`**
+- [x] **11. Split `MicNode`**
   - `components/nodes/MicNode.tsx` draws the Microphone, Line Input and Instrument, with 7 type checks.
   - Make `MicNode`, `LineInNode` and `InstrumentNode`, sharing the face art (with the needs-DI note) and
     `CharacterButtons`.
