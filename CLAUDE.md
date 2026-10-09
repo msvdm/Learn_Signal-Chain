@@ -93,7 +93,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `data/nodeRegistry.ts` — `TypeKey` and `NODE_REGISTRY`, the one source of truth for what a type is; `param(node, key)` reads a setting typed, its default when unset (never write `(params.x as number) ?? …`). Type-level only: what reads the wires is in `graph/`
 - `data/levels.ts` — the levels, `atLeast`, `DETAIL_LEVEL` (D3)
 - `graph/graph.ts` — the graph with lookups (`graphOf`, built once per change), its walks, and `outputKey` (what the engine's `wires` are keyed by — never build or split one by hand)
-- `graph/queries.ts` — what the wiring makes of a card: `outputKind`, `getPorts` (pass the graph: ports are read from the wires), the Preamp, guitars and DI Boxes, `unwiredSource` (D11), `faderBusOf`
+- `graph/queries.ts` — what the wiring makes of a card: `outputKind`, `getPorts` (pass the graph: ports are read from the wires; the same layout is always the same arrays), the Preamp, guitars and DI Boxes, `unwiredSource` (D11), `faderBusOf`
 - `graph/edits.ts` — pure graph edits (`newEdge`: the one way to make a wire)
 - `graph/mainFader.ts` — the L / R takeovers and the Matrix send
 - `graph/connectionRules.ts` — which inputs may take a wire; `wireTakesCard` (a card dropped onto a wire)
@@ -116,11 +116,11 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `hooks/useStableHandlers.ts` — handlers that never change identity (for React Flow); `useLatestRef.ts` — the latest value for listeners (synced in a layout effect: never assign `ref.current` during render)
 - `components/SignalChain.tsx` — the React Flow canvas; `CanvasOverlays.tsx` — what is drawn over it (`ViewportLayer`)
 - `components/nodes/index.ts` — `NODE_COMPONENTS` (each type's card); `nodeLook.ts` — `NODE_LOOK` (icon, palette group; its order is the palette's)
-- `components/nodes/CardFrame.tsx` — what every card has (box, selection ring, chain stripe, ports, edge tags); on it `NodeWrapper.tsx` — a full card (header, Mono | Stereo, body) — and `FaceCard.tsx` — a card that is only its face; `FreeControl.tsx` — the bare controls' shell; `OverviewFace.tsx` — the zoomed-out face; `MeterSides.tsx` — meters at a card's sides
+- `components/nodes/CardFrame.tsx` — what every card has (box, selection ring, chain stripe, ports, edge tags); on it `NodeWrapper.tsx` — a full card (header, Mono | Stereo, body) — and `FaceCard.tsx` — a card that is only its face; `FreeControl.tsx` — the bare controls' shell; `OverviewFace.tsx` — the zoomed-out face (its layout: `overviewLayout.ts`, pure and tested); `MeterSides.tsx` — meters at a card's sides
 - `components/nodes/conditions.tsx` — what a card says in each `StageCondition` (its text, colour and place: a note under a face, a red label, a converter's line)
 - `components/SignalMeter.tsx` — the meters; `meterPaint.ts` — their painters
 - `components/controls/StableText.tsx` — a reading that keeps the width of its widest value; `ParamKnob.tsx` — a knob turning one of its card's settings (reads `useParams`, writes `updateNodeParams`)
-- `utils/layoutHelpers.ts` — canvas placement maths on `Box`es (`cardMinSize`, `PORT_TOP`, `PORT_GAP`, `PORT_REACH`)
+- `utils/layoutHelpers.ts` — canvas placement maths on `Box`es (`cardMinSize`, `cardHeight`, `PORT_TOP`, `PORT_GAP`, `PORT_REACH`)
 - `utils/chainFile.ts` — the saved-chain format; `utils/nodeName.ts` — an element's name and help key wherever it is shown
 - `i18n/locales/en.json`, `bg.json` — all text, and the help popover's (`theory`: `what`, `why`, `tip`); `i18n/translations.ts` types it from `en.json`, so `bg.json` must have every key (the build fails otherwise)
 - `vite-offline.ts` (below), `vite-worklet.ts` (`?worklet`: a file's code as a string — the file must import nothing), `scripts/make-loops.py` (the loops; deterministic: run it again after a change)
@@ -150,7 +150,7 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 - **One size per card, at every level**: the registry's `minSize` (`cardMinSize()`); the content grows into it, in Bulgarian too. **A card never changes size while values change** (no flicker): wrap every changing reading in `StableText`, which reserves the width of its widest value (`LEVEL_SAMPLE`, `widestFormat()` in `utils/readout.ts`); text that only sometimes shows keeps its space (`visibility: hidden`). `KnobControl`, `VerticalFader`, `ControlSlider` and the meters already do this.
 - **Wires between cards stay straight**: a fixed 56 px header, the first port line at `PORT_TOP`, stacked ports `PORT_GAP` apart (a later line: `row` in the registry). A free-standing control's port line is at `PORT_TOP` too — one lower than that reaches above its box rather than taking a negative padding.
 - The header is icon · title · On/Off (none where the control itself is the state: `bypass: false`). Help and Remove are in the right-click menu; no status chip.
-- **Face-only cards** (`FaceCard`: Instrument, Guitar Amp, Speakers, Headphones; the Relay Switch draws its own face on a bare `CardFrame`): a big icon with its buttons or knob and its meter (D13); what is wrong is said under the icon (`FaceNote`; a condition's words from `conditions.tsx`, every other card's in a red label).
+- **Face-only cards** (`FaceCard`: Instrument, Guitar Amp, Speakers, Headphones; the Relay Switch draws its own face on a bare `CardFrame`): a big icon with its buttons or knob and its meter (D13); what is wrong is said under the icon (`FaceNote`). A condition's words come from `conditions.tsx`: under a face's icon, in a red label in a full card's body, a converter's line in capitals.
 - Only types with `stereo: 'optional'` get a **Mono | Stereo** switch.
 - **Overview** (`overview` in the store — cards read this flag, never the zoom): the header and body stay mounted with `visibility: hidden`, so the card keeps exactly its size and its ports stay put; `OverviewFace` is drawn over them.
 - Only the left button moves a knob or fader (a right-click opens the menu and changes nothing).
