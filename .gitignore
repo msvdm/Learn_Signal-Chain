@@ -25,3 +25,7 @@ dist-ssr
 
 # Python (scripts/make-loops.py)
 __pycache__/
+
+# Claude Code: per-machine settings and launch configs
+.claude/settings.local.json
+.claude/launch.json
