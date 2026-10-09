@@ -134,24 +134,18 @@
     "whatIsThis": "What is this?",
     "whyIsItHere": "Why is it here?",
     "proTip": "Pro tip",
-    "next": "Next",
     "finishTour": "Finish Tour",
     "nextNode": "Next: {name}",
     "previous": "Previous",
     "stepOf": "Step {n} of {total}",
-    "close": "Close help",
-    "help": "What does this do?"
-  },
-  "banner": {
-    "gainStaging": "Gain Staging"
+    "close": "Close help"
   },
   "nodes": {
     "mic": {
       "label": "Microphone"
     },
     "preamp": {
-      "label": "Preamp",
-      "gain": "Gain"
+      "label": "Preamp"
     },
     "amp": {
       "level": "Volume",
@@ -185,7 +179,6 @@
       "threshold": "Threshold",
       "ratio": "Ratio",
       "makeupGain": "Makeup gain",
-      "gainReduction": "Gain reduction",
       "turningDown": "Turning down",
       "attack": "Attack",
       "release": "Release"

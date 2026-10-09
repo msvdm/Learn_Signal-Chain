@@ -13,8 +13,8 @@ import { useSignalStore } from './signalStore'
 /** A render starts once the chain has not changed for this long (ms). */
 const QUIET_MS = 100
 
-/** What a chain sounds like: everything about its cards but where they sit on the canvas. */
-function soundOf(plans: CardPlan[]): string {
+/** A fingerprint of what a chain sounds like: everything about its cards but where they sit on the canvas. */
+function soundFingerprint(plans: CardPlan[]): string {
   return JSON.stringify(plans.map((p) => [
     p.node.id, p.node.typeKey, p.node.params, p.node.bypassed, p.mode, p.followKind, p.fed, p.preamp,
     p.plays, p.amped, p.groundLoop, p.used, p.outputs,
@@ -46,7 +46,7 @@ async function renderWanted() {
       const { nodes, edges } = wanted
       wanted = null
       const still = stillPicture(nodes, edges)
-      const sound = soundOf(still.plans)
+      const sound = soundFingerprint(still.plans)
       if (sound === measuredSound) continue
       const before = measuredSound
       const startedOn = canvas

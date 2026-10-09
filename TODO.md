@@ -42,7 +42,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
 
 ## Phase A — hygiene
 
-- [ ] **1. Stale comments and leftovers**
+- [x] **1. Stale comments and leftovers**
   - Comments that are no longer true:
     - `src/data/nodeRegistry.ts:217` (Compressor: "Attack / Release … do not change the sound yet") and
       `:223` (Noise Gate: "Hold / Attack / Release are shown, not simulated"). `audio/processors.ts`

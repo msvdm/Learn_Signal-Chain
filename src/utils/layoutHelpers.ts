@@ -46,9 +46,8 @@ export function portPoint(card: Box, type: 'source' | 'target', row: number): Pt
   }
 }
 
-// Every card is at least this big and landscape (never taller than wide, except a tall stack of
-// ports), so its name has room to grow in overview (zoomed out). Some are bigger (`minSize` in the
-// registry: the mixing buses).
+// A card's size when its type has no `minSize` in the registry (most cards have one: the same at
+// every level).
 export const CARD_MIN_W = 280
 export const CARD_MIN_H = 210
 

@@ -7,7 +7,7 @@ import { louder } from './levels'
 // How the signal moves (decision D10): the render on real sound (audio/measure.ts) records one loop of
 // the chain slice by slice, and works out how a DAW's meters would move over it (audio/meters.ts).
 // Every sound is one loop long, so the loop is everything the chain plays: the meters play it back
-// in time with the clock, round and round (components/meters/live.ts). Between a change and the
+// in time with the clock, round and round (hooks/useLiveMeter.ts). Between a change and the
 // next render the movement is moved by the number engine's step, as the still readings are
 // (signal/measured.ts, decision D9): a fader moves the meters at once. Pure — no React, no store.
 

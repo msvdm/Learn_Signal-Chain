@@ -95,7 +95,7 @@ export type NodeTypeDef = {
   minSize?: Size
 }
 
-// Graph node — the authoritative model for Phase 2+ rendering.
+// Graph node — the authoritative model: what the user built (the store holds them).
 export type SignalNode = {
   id: string
   typeKey: TypeKey
@@ -214,13 +214,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
-    // Attack / Release are shown on the card but do not change the sound yet
+    // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
   'noise-gate': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, linked: true,
-    // Range sets how far it turns down when closed; Hold / Attack / Release are shown, not simulated
+    // Range sets how far it turns down when closed; Hold / Attack / Release: how long it stays open,
+    // how fast it opens and closes (audio/processors.ts)
     defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {

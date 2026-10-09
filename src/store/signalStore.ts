@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import type { ComplexityLevel } from '../data/levels'
-import { LEVELS } from '../data/levels'
+import { LEVELS, atLeast } from '../data/levels'
 import type { NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
 import type { GraphView } from '../graph/graph'
 import { reconcileMainFaders } from '../utils/mainFader'
@@ -309,7 +309,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   },
 
   raiseLevel: (level) => {
-    if (LEVELS.indexOf(level) <= LEVELS.indexOf(get().complexityLevel)) return
+    if (atLeast(get().complexityLevel, level)) return
     set({ complexityLevel: level })
   },
 

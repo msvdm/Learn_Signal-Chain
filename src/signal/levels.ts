@@ -40,8 +40,7 @@ export interface SideLevels {
   hum: number
 }
 
-export const READINGS = ['peak', 'rms', 'noise', 'hum'] as const
-export type Reading = typeof READINGS[number]
+export type Reading = keyof SideLevels
 
 export const SILENT: SideLevels = { peak: -Infinity, rms: -Infinity, noise: -Infinity, hum: -Infinity }
 
