@@ -11,7 +11,7 @@ import { LINE_NOISE_DBU, compressor, limiter, noiseGate, throughCurve } from './
 
 // Reference chains: the level, health, domain and condition at every card. Every wire carries a
 // peak and a noise reading too, but the average — the one number before them — stays what it was,
-// so old chains keep their levels. Where a design decision (CLAUDE.md → Design decisions) changed a
+// so old chains keep their levels. Where a design decision (docs/decisions.md) changed a
 // reading on purpose, the line says so:
 // - D1: a hum follows the signal (a fader turns it down too); before, it only ever grew
 // - D4: a card clips as soon as its peaks reach the clip level; before, a hot average stayed "hot"

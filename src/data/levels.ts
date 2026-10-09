@@ -13,6 +13,6 @@ export function atLeast(level: ComplexityLevel, min: ComplexityLevel): boolean {
 
 /**
  * The easiest level whose meters show the peaks and the noise, move with the sound, and give their
- * Peak / RMS / Noise numbers. Beginner shows only the average (decision D3, CLAUDE.md).
+ * Peak / RMS / Noise numbers. Beginner shows only the average (decision D3, docs/decisions.md).
  */
 export const DETAIL_LEVEL: ComplexityLevel = 'intermediate'

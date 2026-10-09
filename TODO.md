@@ -73,7 +73,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
 
 ## Phase B — documentation and tests first (smaller files for the engine work)
 
-- [ ] **3. Trim CLAUDE.md** (135 KB today; aim for about a fifth)
+- [x] **3. Trim CLAUDE.md** (135 KB today; aim for about a fifth)
   - First write `docs/decisions.md` holding D1–D19 **in full**, word for word. The code cites them by
     number, so the full text must stay findable.
   - CLAUDE.md keeps:
