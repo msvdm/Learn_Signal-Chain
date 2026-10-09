@@ -1,5 +1,4 @@
-import type { SignalEdge } from '../store/signalStore'
-import type { TypeKey } from '../data/nodeRegistry'
+import type { SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { NODE_REGISTRY, isTypeKey } from '../data/nodeRegistry'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'

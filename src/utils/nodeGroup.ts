@@ -1,6 +1,6 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, matrixSendParam } from '../data/nodeRegistry'
-import { nodeAcceptsWire, portAcceptsWire } from './connectionRules'
+import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { newEdge } from '../graph/edits'
 import { GRID, MIN_NODE_GAP } from './layoutHelpers'
 import type { Box, Pt, Size } from './geometry'

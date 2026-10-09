@@ -1,7 +1,7 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { MATRIX_PORT, MIX_PORT, canSplit, isStereoBus, portSide, splitsOnlyMix } from '../data/nodeRegistry'
-import type { GraphView } from '../graph/graph'
-import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '../graph/queries'
+import type { GraphView } from './graph'
+import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from './queries'
 
 // Taking over a stereo mix's Left / Right outputs.
 // Main Fader: a Fader wired to a stereo bus's L or R output takes over the bus's outputs.

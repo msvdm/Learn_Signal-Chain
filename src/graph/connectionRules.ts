@@ -1,8 +1,7 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { MATRIX_PORT, NODE_REGISTRY, SOUND_PORT, isBus } from '../data/nodeRegistry'
-import type { GraphView } from '../graph/graph'
-import { getPorts, instrumentAt, isMatrixSource } from '../graph/queries'
-import type { WireSource } from '../store/signalStore'
+import type { GraphView, WireSource } from './graph'
+import { getPorts, instrumentAt, isMatrixSource } from './queries'
 
 type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
 

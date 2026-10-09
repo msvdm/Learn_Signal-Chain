@@ -17,7 +17,7 @@ import { stillPicture } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { TAPER_UNITY } from '../../signal/levels'
-import { chainSourcesOfEdge } from '../../utils/chainColors'
+import { chainSourcesOfEdge } from '../../graph/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
 /**

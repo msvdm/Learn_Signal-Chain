@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { upstreamOf } from '../graph/graph'
+import { upstreamOf } from './graph'
 
 /**
  * Colours that tag each chain (everything fed by one source).

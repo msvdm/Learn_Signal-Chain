@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { getPorts } from '../graph/queries'
+import { getPorts } from './queries'
 import { planChain } from '../signal/chain'
 import { reconcileMainFaders } from './mainFader'
 

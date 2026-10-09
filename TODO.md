@@ -61,7 +61,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
   - Rename `soundOf` in `src/store/measuring.ts:17`, e.g. to `soundFingerprint`. It's a JSON fingerprint
     of the chain and clashes with `soundOf` in `signal/process.ts`, which means something else.
 
-- [ ] **2. Layers: lower layers never import the store; graph logic lives in `graph/`**
+- [x] **2. Layers: lower layers never import the store; graph logic lives in `graph/`**
   - `src/utils/connectionRules.ts:5` imports the type `WireSource` from the store. Move `WireSource` to
     `graph/` (the store imports it from there).
   - `src/utils/layoutHelpers.ts:1` imports `SignalEdge` from the store. Import it from `data/nodeRegistry`.

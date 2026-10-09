@@ -6,7 +6,7 @@ import { newEdge } from '../graph/edits'
 import { enforceGap } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
-import { nodeAcceptsWire, portAcceptsWire } from '../utils/connectionRules'
+import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { useCanvasLayout } from './useCanvasLayout'
 
 /** The loose end of the wire being drawn: the cursor, the input it would land on, and whether it crosses a card. */

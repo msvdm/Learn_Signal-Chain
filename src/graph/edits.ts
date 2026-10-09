@@ -2,10 +2,10 @@ import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { getPorts } from './queries'
-import { pickChainColor } from '../utils/chainColors'
+import { pickChainColor } from './chainColors'
 
 // Pure edits of the graph: each takes a graph and gives the new one. The store runs the result
-// through commitGraph (signalStore.ts), which settles the L / R takeovers (utils/mainFader.ts).
+// through commitGraph (signalStore.ts), which settles the L / R takeovers (graph/mainFader.ts).
 
 let lastStamp = 0
 

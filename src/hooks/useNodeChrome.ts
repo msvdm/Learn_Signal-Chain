@@ -4,8 +4,8 @@ import { useSignalStore } from '../store/signalStore'
 import type { NodePort, TypeKey } from '../data/nodeRegistry'
 import { graphOf } from '../graph/graph'
 import { getPorts, unwiredSource } from '../graph/queries'
-import { nodeAcceptsWire } from '../utils/connectionRules'
-import { chainColorsOf } from '../utils/chainColors'
+import { nodeAcceptsWire } from '../graph/connectionRules'
+import { chainColorsOf } from '../graph/chainColors'
 
 /**
  * A card's ports as one string ("in|out-l,out-r"; a port on its own line "in-b@2"), so "did they

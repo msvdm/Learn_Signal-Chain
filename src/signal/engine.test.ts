@@ -33,7 +33,7 @@ function card(id: string, typeKey: TypeKey, params: Record<string, NodeParamValu
 
 /**
  * A wire from `card:output` to `card:input` (`out` / `in` when left out). Written as the app holds
- * it once settled (utils/mainFader.ts): a Main Fader on its bus's `mix`, a Matrix send on `send`.
+ * it once settled (graph/mainFader.ts): a Main Fader on its bus's `mix`, a Matrix send on `send`.
  */
 function wire(from: string, to: string): SignalEdge {
   const [source, sourceHandle = 'out'] = from.split(':')

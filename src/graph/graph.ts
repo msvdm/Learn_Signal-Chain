@@ -6,6 +6,12 @@ import { param, passesThrough } from '../data/nodeRegistry'
 /** The cards and the wires between them. */
 export type GraphView = { nodes: SignalNode[]; edges: SignalEdge[] }
 
+/** The output port a wire is drawn from. */
+export interface WireSource {
+  nodeId: string
+  handleId: string
+}
+
 /** A graph that can look up a card and the wires into / out of it without scanning. */
 export interface Graph extends GraphView {
   node(id: string): SignalNode | undefined

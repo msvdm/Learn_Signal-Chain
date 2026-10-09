@@ -4,8 +4,8 @@ import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS, atLeast } from '../data/levels'
 import type { NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
-import type { GraphView } from '../graph/graph'
-import { reconcileMainFaders } from '../utils/mainFader'
+import type { GraphView, WireSource } from '../graph/graph'
+import { reconcileMainFaders } from '../graph/mainFader'
 import {
   withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,
 } from '../graph/edits'
@@ -30,12 +30,6 @@ const EMPTY_GRAPH: GraphSnapshot = { nodes: [], edges: [] }
 export interface HelpOpen {
   nodeId: string
   key: string
-}
-
-/** The output port a wire is drawn from. */
-export interface WireSource {
-  nodeId: string
-  handleId: string
 }
 
 /**
@@ -360,7 +354,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
       return next ? commitGraph(s, next) : {}
     }),
 
-  // A Fader wired to a stereo bus's L or R becomes its Main Fader (see utils/mainFader.ts)
+  // A Fader wired to a stereo bus's L or R becomes its Main Fader (see graph/mainFader.ts)
   addEdge: (edge) => set((s) => commitGraph(s, { nodes: s.nodes, edges: [...s.edges, edge] })),
 
   // Unplugging a Main Fader hands the bus's L / R wires back to the bus
@@ -396,7 +390,7 @@ const NO_WIRE = { toolMode: 'select', wire: null } as const
 /**
  * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
  * plugging or unplugging a wire, removing an element, switching a bus to Mono or a Relay to its
- * other input can each change it (utils/mainFader.ts) — and drops what pointed at elements or
+ * other input can each change it (graph/mainFader.ts) — and drops what pointed at elements or
  * wires that are gone. A new canvas (New, a level change, an opened chain) comes from nothing:
  * nothing is handed back to it, and nothing that pointed at the old canvas is kept, even where
  * the new one reuses its ids.
