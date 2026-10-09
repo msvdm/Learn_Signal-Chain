@@ -1,4 +1,4 @@
-import { FADER_OFF_DB } from '../signal/process'
+import { FADER_OFF_DB } from '../signal/gains'
 
 /**
  * A mixing-desk fader's scale: not even in dB. The top of the travel gives fine control around

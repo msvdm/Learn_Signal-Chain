@@ -6,7 +6,7 @@ import { StableText } from '../controls/StableText'
 import { useSignalStore } from '../../store/signalStore'
 import { useParams } from '../../hooks/useParams'
 import { useStage } from '../../hooks/useGraphSignal'
-import { GAIN_OFF_DB } from '../../signal/process'
+import { GAIN_OFF_DB } from '../../signal/gains'
 import { widestFormat } from '../../utils/readout'
 
 // A free-standing knob, big enough to read zoomed out

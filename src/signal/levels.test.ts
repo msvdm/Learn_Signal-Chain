@@ -4,7 +4,8 @@ import {
   ceilingOf, crestOf, dbToPercent, fitScaleMarks, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, meterZones,
   scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb, zoneAt,
 } from './levels'
-import { AT_THE_MIC_DB, GUITAR_AMP_MAX, GUITAR_REF_DB, guitarAmpGainDb } from './process'
+import { AT_THE_MIC_DB, GUITAR_REF_DB } from './process'
+import { GUITAR_AMP_MAX, guitarAmpGainDb } from './gains'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 
 // The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,

@@ -3,11 +3,11 @@ import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { KnobControl } from '../controls/KnobControl'
 import { MeterSides } from './MeterSides'
-import { GAIN_OFF_DB } from '../../signal/process'
+import { GAIN_OFF_DB, ampVolumeDb } from '../../signal/gains'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { useParams } from '../../hooks/useParams'
+import { useParams, useSettings } from '../../hooks/useParams'
 import { COLUMN_W } from '../../utils/twoColumns'
 
 // The amp only turns down: line level is already loud, so full (0 dB) passes it on unchanged
@@ -22,8 +22,9 @@ export function AmpNode({ id }: CardProps) {
   const { t }               = useTranslation()
 
   const levels = useStereoLevels(id)
-  const gainDb  = Math.min(p('gainDb'), 0)
-  const gainDbR = Math.min(p('gainDbR') ?? gainDb, 0)
+  const settings = useSettings(id, 'amp')
+  const gainDb   = ampVolumeDb(settings, 'l')
+  const gainDbR  = ampVolumeDb(settings, 'r')
   // Fed a stereo wire it is a two-channel amp: channel A takes the left side, B the right, each
   // with its own Volume. Until B is turned it follows A, so A's first turn keeps B where it is.
   const stereo  = levels.stereo

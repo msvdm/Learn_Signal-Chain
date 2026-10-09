@@ -6,7 +6,7 @@ import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { widestFormat } from '../../utils/readout'
-import { GUITAR_AMP_MAX } from '../../signal/process'
+import { GUITAR_AMP_MAX } from '../../signal/gains'
 
 const GAP = 16
 // Value, then label, under the knob

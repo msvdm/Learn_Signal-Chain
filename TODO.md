@@ -144,7 +144,7 @@ makes the next smaller. Line numbers are as they were on 2026-10-09; they drift 
     to be moved on as one value and is now the louder of two moved sides, so it may move by a hair.
     Measure it and report it.
 
-- [ ] **7. One table of card gains** (the biggest duplication)
+- [x] **7. One table of card gains** (the biggest duplication)
   - `PROCESS` (`signal/process.ts:364`) and `processed()` (`audio/chainAudio.ts:322`) each describe every
     card. These rules are written in both:
     - the Gain's preamp / `GAIN_OFF_DB` logic;

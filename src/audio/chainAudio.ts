@@ -1,11 +1,13 @@
-import type { GeneratorSound } from '../data/nodeRegistry'
-import { isDynamics, isNodeStereo, param } from '../data/nodeRegistry'
+import type { GeneratorSound, TypeKey } from '../data/nodeRegistry'
+import { isDynamics, isGeneratorSound, isNodeStereo, param } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { DI_DROP_DB, GAIN_OFF_DB, GUITAR_REF_DB, NOISE_BELOW, balanceSides, faderGainDb, guitarAmpGainDb, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
+import { GUITAR_REF_DB, NOISE_BELOW, SILENCES, balanceSides, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
+import type { GainType } from '../signal/gains'
+import { gainDbOf, geqBandDb } from '../signal/gains'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -65,9 +67,6 @@ export interface Tap {
   parts: Part[]
 }
 
-/** Conditions under which a card sends nothing (signal/process.ts `blocked`; the engine's `needsAmp`). */
-const SILENCED = new Set(['domainMixedBus', 'digitalToAmp', 'digitalToSpeaker', 'adcExpectsAnalog', 'dacExpectsDigital', 'needsAmp'])
-
 /** How far past its ceiling a clipper reaches (60 dB): the curve's ceiling is 1 / CLIP_REACH of it. */
 const CLIP_REACH = 1000
 
@@ -106,7 +105,7 @@ function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
 function stereoFileOf(card: CardPlan, sounds: ChainSounds): AudioBuffer | undefined {
   if (card.mode !== 'source' || !card.plays || !isNodeStereo(card.node)) return undefined
   const kind = soundKindOf(card.node)
-  return kind === 'sine' || kind === 'noise' || kind === 'click' ? undefined : sounds.loops.get(kind)?.stereo
+  return isGeneratorSound(kind) ? undefined : sounds.loops.get(kind)?.stereo
 }
 
 /**
@@ -228,6 +227,38 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     return !feed || (feed.channels === channels && (channels === 1 || feed.kind === 'stereo'))
   }
 
+  /**
+   * What every card whose job is not a gain does to real sound (a new type does not compile until
+   * it is here, or a gain in signal/gains.ts).
+   */
+  const OTHERS: Record<Exclude<TypeKey, GainType>, (card: CardPlan, x: Sig) => Sig> = {
+    // A source's sound is source(), Pan's the 'pan' mode above: nothing reaches here for them
+    mic: (_, x) => x,
+    'line-in': (_, x) => x,
+    instrument: (_, x) => x,
+    generator: (_, x) => x,
+    pan: (_, x) => x,
+    hpf: ({ node }, x) => filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }]),
+    eq: ({ node }, x) => filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
+      type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',
+      frequency: b.freqHz, gain: b.gainDb, Q: b.Q ?? 1.4,
+    }))),
+    'graphic-eq': ({ node }, x) => {
+      // The sliders of a side (the right copies the left until touched: geqBandDb)
+      const bands = (side: 'l' | 'r'): BiquadFilterOptions[] => GEQ_CENTERS.flatMap((hz, i) => {
+        const db = geqBandDb(node, side, i)
+        return db === 0 ? [] : [{ type: 'peaking', frequency: hz, gain: db, Q: GEQ_Q }]
+      })
+      const sameSides = GEQ_CENTERS.every((_, i) => geqBandDb(node, 'r', i) === geqBandDb(node, 'l', i))
+      if (x.channels === 1 || sameSides) return filtered(x, bands('l'))
+      return sideBySide(x, (l) => filtered(l, bands('l')), (r) => filtered(r, bands('r')))
+    },
+    comp: ({ node }, x) => dynamics(x, DYNAMICS.comp.settings(node)),
+    'noise-gate': ({ node }, x) => dynamics(x, DYNAMICS['noise-gate'].settings(node)),
+    limiter: ({ node }, x) => dynamics(x, DYNAMICS.limiter.settings(node)),
+    deesser: ({ node }, x) => dynamics(x, DYNAMICS.deesser.settings(node)),
+  }
+
   for (const card of plans) {
     const { node } = card
     const levels = still.cards.get(node.id)
@@ -256,7 +287,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       // dynamics hear both and give both the same gain)
       const channels: 1 | 2 = card.mode === 'mono' ? 1 : 2
       inSig = arriving(card, channels)
-      if (levels.condition !== undefined && SILENCED.has(levels.condition)) {
+      if (levels.condition !== undefined && SILENCES[levels.condition]) {
         outSig = silence(channels)
       } else if (node.bypassed && card.fed) {
         // Passed on as it is, with no hiss of its own (a bus still adds its wires up)
@@ -307,7 +338,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     if (!music) return noise
     const kind = soundKindOf(node)
     let sound: Sig
-    if (kind === 'sine' || kind === 'noise' || kind === 'click') {
+    if (isGeneratorSound(kind)) {
       sound = playing(sounds.generator.get(kind)!)
     } else {
       const loop = sounds.loops.get(kind)!
@@ -319,59 +350,17 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     return plus(atLevel(level + loudnessOf(node), sound), noise)
   }
 
-  /** What a card does to what it works on (a Gain's input noise already in). */
+  /**
+   * What a card does to what it works on (a Gain's input noise already in): a gain card its gain
+   * (signal/gains.ts — one gain node, or one per side when they differ), every other type its own.
+   */
   function processed(card: CardPlan, x: Sig): Sig {
     const { node } = card
-    switch (node.typeKey) {
-      case 'gain': {
-        if (card.preamp) return gain(param(node, 'preampDb'), x)
-        const db = param(node, 'gainDb')
-        return gain(db <= GAIN_OFF_DB ? -Infinity : db, x)
-      }
-      case 'amp': {
-        // Only turns down; in stereo each side has its own volume (the Right follows the Left until turned)
-        const volume = (db: number) => (Math.min(db, 0) <= GAIN_OFF_DB ? -Infinity : Math.min(db, 0))
-        const left = volume(param(node, 'gainDb'))
-        const right = volume(param(node, 'gainDbR') ?? param(node, 'gainDb'))
-        if (x.channels === 1 || left === right) return gain(left, x)
-        return sideBySide(x, (l) => gain(left, l), (r) => gain(right, r))
-      }
-      case 'hpf':
-        return filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }])
-      case 'eq':
-        return filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
-          type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',
-          frequency: b.freqHz, gain: b.gainDb, Q: b.Q ?? 1.4,
-        })))
-      case 'graphic-eq': {
-        const bands = (right: boolean): BiquadFilterOptions[] => GEQ_CENTERS.flatMap((hz, i) => {
-          const left = param(node, `b${i}`)
-          const db = right ? (param(node, `r${i}`) ?? left) : left
-          return db === 0 ? [] : [{ type: 'peaking', frequency: hz, gain: db, Q: GEQ_Q }]
-        })
-        const sameSides = GEQ_CENTERS.every((_, i) => param(node, `r${i}`) === undefined || param(node, `r${i}`) === param(node, `b${i}`))
-        if (x.channels === 1 || sameSides) return filtered(x, bands(false))
-        return sideBySide(x, (l) => filtered(l, bands(false)), (r) => filtered(r, bands(true)))
-      }
-      case 'comp':
-      case 'noise-gate':
-      case 'limiter':
-      case 'deesser':    return dynamics(x, DYNAMICS[node.typeKey].settings(node))
-      case 'pad':        return param(node, 'engaged') ? gain(-20, x) : x
-      case 'fader':      return gain(faderGainDb(param(node, 'faderDb')), x)
-      case 'switch':     return param(node, 'on') ? x : silence(x.channels)
-      case 'adc':        return gain(-param(node, 'alignmentDb'), x)
-      case 'dac':        return gain(param(node, 'alignmentDb'), x)
-      case 'master-bus':
-      case 'aux-bus':
-      case 'matrix-bus': return gain(param(node, 'faderDb'), x)
-      case 'speaker':    return gain(param(node, 'outputTrimDb'), x)
-      case 'active-speaker':
-      case 'headphones': return gain(param(node, 'volumeDb'), x)
-      case 'guitar-amp': return gain(guitarAmpGainDb(param(node, 'volume')), x)
-      case 'di-box':     return gain(-DI_DROP_DB, x)
-      default:           return x
-    }
+    const left = gainDbOf(node, { preamp: card.preamp, side: x.channels === 1 ? null : 'l' })
+    if (left === undefined) return OTHERS[node.typeKey as Exclude<TypeKey, GainType>](card, x)
+    if (x.channels === 1) return gain(left, x)
+    const right = gainDbOf(node, { preamp: card.preamp, side: 'r' })!
+    return right === left ? gain(left, x) : sideBySide(x, (l) => gain(left, l), (r) => gain(right, r))
   }
 
   /** Minus what is below `hz` in a signal: a De-esser's split (audio/processors.ts) — the rest is its sibilant band. */

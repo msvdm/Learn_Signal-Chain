@@ -1,4 +1,5 @@
 import type { GeneratorSound } from '../data/nodeRegistry'
+import { isGeneratorSound } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels, WireSignal } from '../signal/chain'
 import { levelOf, onPort } from '../signal/chain'
@@ -61,7 +62,7 @@ async function soundsOf(plans: CardPlan[]): Promise<ChainSounds> {
   for (const card of plans) {
     if (!card.plays) continue
     const kind = soundKindOf(card.node)
-    if (kind === 'sine' || kind === 'noise' || kind === 'click') {
+    if (isGeneratorSound(kind)) {
       if (!generator.has(kind)) generator.set(kind, bufferOf(generatorSound(kind, MEASURE_RATE)))
     } else if (!loops.has(kind)) {
       waiting.push(loopOf(kind, MEASURE_RATE).then((loop) => { loops.set(kind, loop) }))

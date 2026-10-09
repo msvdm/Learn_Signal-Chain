@@ -6,9 +6,10 @@ import { MeterSides } from './MeterSides'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
-import { useParams } from '../../hooks/useParams'
+import { useParams, useSettings } from '../../hooks/useParams'
 import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import { GEQ_CENTERS, GEQ_RANGE, geqShortLabel, geqLongLabel } from '../../signal/eqMath'
+import { geqBandDb } from '../../signal/gains'
 
 // The sliders' panel: wide enough for 31 sliders and their frequencies (the meters stand beside it)
 const BODY_W    = 640
@@ -48,8 +49,9 @@ export function GraphicEQNode({ id }: CardProps) {
 
   const levels = useStereoLevels(id)
   const stereo = levels.stereo
-  const left   = GEQ_CENTERS.map((_, i) => p(`b${i}`))
-  const right  = GEQ_CENTERS.map((_, i) => p(`r${i}`) ?? left[i])
+  const settings = useSettings(id, 'graphic-eq')
+  const left   = GEQ_CENTERS.map((_, i) => geqBandDb(settings, 'l', i))
+  const right  = GEQ_CENTERS.map((_, i) => geqBandDb(settings, 'r', i))
   const gainsOf = (side: Side) => (side === 'r' ? right : left)
 
   // The band under the pointer or being dragged — only for the readout and highlight

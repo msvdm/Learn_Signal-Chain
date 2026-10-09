@@ -146,6 +146,11 @@ export const CHARACTER_LEVEL: ComplexityLevel = 'intermediate'
 export const GENERATOR_SOUNDS = ['sine', 'noise', 'click'] as const
 export type GeneratorSound = typeof GENERATOR_SOUNDS[number]
 
+/** One of the Generator's sounds (made in code, audio/sounds.ts) — not a loop of real sound. */
+export function isGeneratorSound(kind: string): kind is GeneratorSound {
+  return (GENERATOR_SOUNDS as readonly string[]).includes(kind)
+}
+
 const IN: NodePort[]    = [{ id: 'in' }]
 const OUT: NodePort[]   = [{ id: 'out' }]
 const SIDES: NodePort[] = [
