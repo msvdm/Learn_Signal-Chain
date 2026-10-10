@@ -239,7 +239,7 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
     band colours), its name under them; the Parametric card (Advanced) keeps its meters. The HPF:
     `NamedButton`, the high-pass sign over "HPF" (`HpfSign`, after the user's drawing), its On / Off
     is the card's bypass, 80 Hz under its name (`levelNames.intermediate.hpf`: "High-Pass Filter" /
-    "Срязване на ниските"); the Advanced card lost its zoomed-out level (`NodeWrapper`
+    "Високочестотен филтър"); the Advanced card lost its zoomed-out level (`NodeWrapper`
     `showLevel={false}`). `NamedButton` moved to its own file. `isOneKnob` / `oneKnobSize` became
     `isBareAt` / `bareSize` (the three types).
   - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob),
