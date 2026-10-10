@@ -1,5 +1,5 @@
 import type { NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isOneKnob, isTypeKey, portRows } from '../data/nodeRegistry'
+import { NODE_REGISTRY, isBareAt, isTypeKey, portRows } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
@@ -65,13 +65,13 @@ export function cardHeight(typeKey: TypeKey, ports: { inputs: NodePort[]; output
 /**
  * Size of a node that React Flow has not measured yet (a node about to be dropped): its minimum
  * size. Nodes size themselves to their content, so once any node of a type has been measured its
- * real size is remembered and used instead — per shape: the Compressor is a knob below Advanced,
- * a card above (isOneKnob).
+ * real size is remembered and used instead — per shape: the Compressor, the Equalizer and the HPF
+ * are bare controls below Advanced, cards above (isBareAt).
  */
 const measuredSizeByType = new Map<string, Size>()
 
 const shapeKey = (typeKey: string, level?: ComplexityLevel) =>
-  (level && isTypeKey(typeKey) && isOneKnob(typeKey, level) ? `${typeKey}:knob` : typeKey)
+  (level && isTypeKey(typeKey) && isBareAt(typeKey, level) ? `${typeKey}:bare` : typeKey)
 
 export function recordMeasuredSize(typeKey: string, w: number, h: number, level?: ComplexityLevel) {
   if (w > 0 && h > 0) measuredSizeByType.set(shapeKey(typeKey, level), { w, h })
@@ -81,12 +81,12 @@ export const HIT_THRESHOLD = 48
 
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
-/** A type never measured: a free-standing control's usual size (a one-knob card's), else a card's minimum. */
+/** A type never measured: a free-standing control's usual size (a card's below Advanced: bareSize), else a card's minimum. */
 function unmeasuredSize(typeKey: string, level?: ComplexityLevel): Size {
   if (!isTypeKey(typeKey)) return { w: CARD_MIN_W, h: CARD_MIN_H }
   const def  = NODE_REGISTRY[typeKey]
-  const knob = level && isOneKnob(typeKey, level) ? def.oneKnobSize : undefined
-  return knob ?? def.freeSize ?? cardMinSize(typeKey)
+  const bare = level && isBareAt(typeKey, level) ? def.bareSize : undefined
+  return bare ?? def.freeSize ?? cardMinSize(typeKey)
 }
 
 /**

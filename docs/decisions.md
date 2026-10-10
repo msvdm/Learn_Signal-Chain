@@ -82,5 +82,10 @@ the descriptions). Each is what the user asked for; change one only when they as
   "OFF"); it starts On.
 - **The Compressor below Advanced is one bare knob** (2026-10-10): no card, no curve — a big knob
   like the Gain's and Pan's, yellow (the hot colour), readable zoomed out.
+- **The Equalizer below Advanced is three bare knobs** (2026-10-10): Low · Mid · High side by side,
+  no card, no meters — an analogue desk's EQ and compressor have none; the next card shows the level.
+- **The HPF shows no level** (2026-10-10): no meter or level at any zoom, at every level (the next
+  card shows it). Below Advanced it is one button, "HPF", lit or greyed out (its bypass), at a
+  fixed 80 Hz; Advanced keeps the cutoff to choose.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

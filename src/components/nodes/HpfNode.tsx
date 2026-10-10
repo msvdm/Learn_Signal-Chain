@@ -1,6 +1,8 @@
 import type { CardProps } from './cardProps'
+import { isBareAt } from '../../data/nodeRegistry'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
+import { NamedButton } from './NamedButton'
 import { ControlSlider } from './ControlSlider'
 import { widestFormat } from '../../utils/readout'
 import { useSignalStore } from '../../store/signalStore'
@@ -98,7 +100,35 @@ function HPFGraph({ cutoffHz, bypassed }: { cutoffHz: number; bypassed: boolean 
 
 // ── Node component ────────────────────────────────────────────────────────────
 
+function formatHz(hz: number): string {
+  return hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${hz} Hz`
+}
+
+/**
+ * The High-Pass Filter: no meters, at any zoom — the level it leaves shows on the next card.
+ * Advanced: its card, the curve and the cutoff to choose. Below: one button, as on a small desk —
+ * HPF lit: the filter in, at 80 Hz; greyed out: out (its bypass).
+ */
 export function HpfNode({ id }: CardProps) {
+  const bare = useSignalStore((s) => isBareAt('hpf', s.complexityLevel))
+  return bare ? <HpfButton id={id} /> : <HpfCard id={id} />
+}
+
+function HpfButton({ id }: { id: string }) {
+  const p                = useParams(id, 'hpf')
+  const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
+  const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
+  const { t }            = useTranslation()
+  const word = t.nodes.hpf.button
+  return (
+    <NamedButton
+      id={id} typeKey="hpf" on={!bypassed} words={{ on: word, off: word }}
+      onToggle={() => toggleBypassNode(id)} value={formatHz(p('cutoffHz'))}
+    />
+  )
+}
+
+function HpfCard({ id }: { id: string }) {
   const p                = useParams(id, 'hpf')
   const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -108,15 +138,12 @@ export function HpfNode({ id }: CardProps) {
 
   const sliderVal = hzToSlider(cutoffHz)
 
-  function formatHz(hz: number): string {
-    return hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${hz} Hz`
-  }
-
   return (
     <NodeWrapper
       nodeId={id}
       typeKey="hpf"
       label={useNodeName(id, 'hpf')}
+      showLevel={false}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <HPFGraph cutoffHz={cutoffHz} bypassed={bypassed} />

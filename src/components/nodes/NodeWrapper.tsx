@@ -50,6 +50,8 @@ interface NodeWrapperProps {
    * meter bar alone, no numbers (Keyboard, PC)
    */
   overviewBare?: boolean
+  /** Overview: false = its name alone, no level (the HPF: the level after it shows on the next card) */
+  showLevel?: boolean
 }
 
 /**
@@ -68,6 +70,7 @@ export function NodeWrapper({
   align = 'stretch',
   overviewArt,
   overviewBare = false,
+  showLevel = true,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const setNodeStereo    = useSignalStore((s) => s.setNodeStereo)
@@ -190,6 +193,7 @@ export function NodeWrapper({
         typeKey={typeKey}
         label={label}
         art={overviewArt}
+        showLevel={showLevel}
         barOnly={overviewBare}
         status={notConnected ? t.status.notConnected : undefined}
         shown={overview}

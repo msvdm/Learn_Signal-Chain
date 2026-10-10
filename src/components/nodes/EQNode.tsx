@@ -1,6 +1,8 @@
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
+import { FreeControl } from './FreeControl'
+import { widestFormat } from '../../utils/readout'
 import { MeterSides, METER_GAP } from './MeterSides'
 import { STRIP_W } from '../SignalMeter'
 import { KnobControl } from '../controls/KnobControl'
@@ -9,7 +11,7 @@ import { EQGraph, type GraphBand } from '../controls/EQGraph'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import type { EQBand } from '../../data/nodeRegistry'
-import { NODE_REGISTRY } from '../../data/nodeRegistry'
+import { NODE_REGISTRY, isBareAt } from '../../data/nodeRegistry'
 import type { Translations } from '../../i18n/translations'
 import { useParams } from '../../hooks/useParams'
 import {
@@ -190,21 +192,67 @@ function BandTable({ specs, bands, onChange }: {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
+/**
+ * The Equalizer. Advanced: the Parametric Equalizer's card — its meters at its sides, the curve
+ * and the four bands. Below: three bare knobs side by side, Low · Mid · High, as on a small desk's
+ * channel strip — no card and no meters (a desk's EQ has none: the next card shows the level).
+ */
 export function EQNode({ id }: CardProps) {
+  const bare = useSignalStore((s) => isBareAt('eq', s.complexityLevel))
+  return bare ? <DeskEQ id={id} /> : <ParametricEQ id={id} />
+}
+
+/** The bands' settings, and the one way to change one. */
+function useBands(id: string) {
   const p                = useParams(id, 'eq')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
-  const complexityLevel  = useSignalStore((s) => s.complexityLevel)
-  const { t }            = useTranslation()
-
-  const bands  = getBands(p('bands'))
-
+  const bands = getBands(p('bands'))
   const updateBand = (i: number, patch: Partial<EQBand>) => {
     updateNodeParams(id, { bands: bands.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) })
   }
+  return { bands, updateBand }
+}
 
-  // The EQ is not in the Beginner palette; anything below Advanced gets the three-knob card
-  const advanced = complexityLevel === 'advanced'
-  const specs    = bandSpecs(advanced, t)
+// The three knobs below Advanced: big enough to read zoomed out
+const DESK_KNOB = 120
+const DESK_GAP  = 20
+
+/** Low · Mid · High: each turns its range up or down at its fixed frequency (Low and High are shelves). */
+function DeskEQ({ id }: { id: string }) {
+  const { bands, updateBand } = useBands(id)
+  const { t } = useTranslation()
+  const specs = bandSpecs(false, t)
+  const gainReserve = widestFormat(DB_MIN, DB_MAX, 0.5, formatGain)
+
+  return (
+    <FreeControl nodeId={id} typeKey="eq" label={useNodeName(id, 'eq')} portLine={DESK_KNOB / 2} textScale={2}>
+      <div style={{ display: 'flex', gap: DESK_GAP }}>
+        {specs.map((s) => (
+          <div key={s.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <KnobControl
+              value={bands[s.index].gainDb} min={DB_MIN} max={DB_MAX} step={0.5}
+              label={s.name} formatValue={formatGain}
+              onChange={(v) => updateBand(s.index, { gainDb: v })}
+              color={BAND_COLORS[s.index]} size={DESK_KNOB} showReadout={false}
+            />
+            {/* Its band and its setting, like the print under a desk's knob */}
+            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lsc-fg-muted)' }}>
+              {s.name}
+            </span>
+            <StableText reserve={[gainReserve]} align="center" style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 22, fontWeight: 700, lineHeight: 1.1 }}>
+              {formatGain(bands[s.index].gainDb)}
+            </StableText>
+          </div>
+        ))}
+      </div>
+    </FreeControl>
+  )
+}
+
+function ParametricEQ({ id }: { id: string }) {
+  const { bands, updateBand } = useBands(id)
+  const { t } = useTranslation()
+  const specs = bandSpecs(true, t)
 
   const graphBands: GraphBand[] = specs.map((s) => ({
     band: bands[s.index], name: s.name, color: BAND_COLORS[s.index], freqRange: s.freqRange,
@@ -216,43 +264,25 @@ export function EQNode({ id }: CardProps) {
       typeKey="eq"
       label={useNodeName(id, 'eq')}
     >
-      {advanced ? (
-        // As wide as it always was: its meters at its sides, the curve and the bands between them
-        <div style={{ width: BODY_W }}>
-          <MeterSides nodeId={id}>
-            <div style={{ width: MIDDLE_W, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <EQGraph
-                bands={graphBands}
-                onBandChange={(i, patch) => updateBand(specs[i].index, patch)}
-                width={MIDDLE_W}
-                height={GRAPH_H}
-                adjustableWidth
-              />
-              <p style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--lsc-fg-dim)' }}>
-                {t.nodes.eq.graphHint}
-                {t.nodes.eq.graphHintWidth && ` ${t.nodes.eq.graphHintWidth}`}
-              </p>
-              <BandTable specs={specs} bands={bands} onChange={updateBand} />
-            </div>
-          </MeterSides>
-        </div>
-      ) : (
-        // A simple mixing desk's EQ: no curve, just turn a range up or down — its knobs one above
-        // another, High on top, as on a desk's channel strip
+      {/* As wide as it always was: its meters at its sides, the curve and the bands between them */}
+      <div style={{ width: BODY_W }}>
         <MeterSides nodeId={id}>
-          <div style={{ alignSelf: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {[...specs].reverse().map((s) => (
-              <KnobControl
-                key={s.index}
-                value={bands[s.index].gainDb} min={DB_MIN} max={DB_MAX} step={0.5}
-                label={s.name} formatValue={formatGain}
-                onChange={(v) => updateBand(s.index, { gainDb: v })}
-                color={BAND_COLORS[s.index]} size={56} layout="side"
-              />
-            ))}
+          <div style={{ width: MIDDLE_W, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <EQGraph
+              bands={graphBands}
+              onBandChange={(i, patch) => updateBand(specs[i].index, patch)}
+              width={MIDDLE_W}
+              height={GRAPH_H}
+              adjustableWidth
+            />
+            <p style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--lsc-fg-dim)' }}>
+              {t.nodes.eq.graphHint}
+              {t.nodes.eq.graphHintWidth && ` ${t.nodes.eq.graphHintWidth}`}
+            </p>
+            <BandTable specs={specs} bands={bands} onChange={updateBand} />
           </div>
         </MeterSides>
-      )}
+      </div>
     </NodeWrapper>
   )
 }

@@ -1,5 +1,5 @@
 import type { CardProps } from './cardProps'
-import { ONE_KNOB_MAX, isOneKnob, oneKnobAt, oneKnobComp } from '../../data/nodeRegistry'
+import { ONE_KNOB_MAX, isBareAt, oneKnobAt, oneKnobComp } from '../../data/nodeRegistry'
 import { useNodeName } from '../../hooks/useNodeName'
 import { NodeWrapper } from './NodeWrapper'
 import { ParamKnob } from '../controls/ParamKnob'
@@ -31,7 +31,7 @@ const formatAmount = (v: number) => `${v}`
  * how far it turns the signal down under it.
  */
 export function CompressorNode({ id }: CardProps) {
-  const oneKnob = useSignalStore((s) => isOneKnob('comp', s.complexityLevel))
+  const oneKnob = useSignalStore((s) => isBareAt('comp', s.complexityLevel))
   return oneKnob ? <OneKnobCompressor id={id} /> : <CompressorCard id={id} />
 }
 

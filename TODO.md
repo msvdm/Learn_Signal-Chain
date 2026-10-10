@@ -225,14 +225,23 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
     Advanced it is **no card** (the user's call): a bare 165px knob in the hot colour like the Gain's
     and Pan's (`FreeControl`, `textScale` 2), its position (0 … 10) under its name and the Turning
     down bar as its footer; no curve, no meters, no On/Off (Bypass stays in the right-click menu).
-    `isOneKnob(type, level)` picks the face; the registry's `oneKnobSize` and the size memory keyed by
+    `isBareAt(type, level)` picks the face; the registry's `bareSize` and the size memory keyed by
     shape (`usualSize(type, level)` in `layoutHelpers.ts`) keep drop previews right at each level.
     Pasting from an Advanced file at Intermediate (`raiseLevel`) turns a knob into the full card in
     place: it can overlap its neighbours. Measured on a voice at 0 dBu: it starts turning down at ~6,
     2.2–2.4 dB at 7, 7.5–8.5 at 10; the makeup leaves it ~2.5 dB louder at 7 (the meters after it read
     Hot); speech's peaks rise up to 4.4 dB at 10 (the 25 ms attack lets each word's start through) —
     all in the help text.
-  - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob).
+  - **Equalizer and HPF below Advanced** (the user's call, after the plan said "no change" for the
+    EQ): bare too, so the Intermediate input chain is 48V · Preamp · HPF · EQ · Compressor · Fader,
+    all bare controls. The EQ: three 120px knobs side by side (Low · Mid · High, band colours), its
+    name under them; the Parametric card (Advanced) keeps its meters. The HPF: `NamedButton` "HPF",
+    its On / Off is the card's bypass, 80 Hz under its name (`levelNames.intermediate.hpf`: "High-Pass
+    Filter" / "Срязване на ниските"); the Advanced card lost its zoomed-out level (`NodeWrapper`
+    `showLevel={false}`). `NamedButton` moved to its own file. `isOneKnob` / `oneKnobSize` became
+    `isBareAt` / `bareSize` (the three types).
+  - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob),
+    the HPF's `what` (the button) and `tip`.
 
 ## Stage 3 — New outputs, passive speaker and amp  ☐
 

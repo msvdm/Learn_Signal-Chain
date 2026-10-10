@@ -157,6 +157,7 @@
     },
     "hpf": {
       "label": "HPF",
+      "button": "HPF",
       "cutoff": "Cutoff frequency"
     },
     "eq": {
@@ -437,9 +438,9 @@
       "tip": "Aim for the output to land well inside Good — about −20 to −10 dBu for a voice. This is called gain staging, and it starts right here at the preamp. At the bottom of Good (−40 dBu) the signal is so weak that the noise of the devices after it comes close to it; turn up much further and the loudest moments come close to clipping. Its own noise rises as you turn it up — far less than the voice does, so this is the place to make the gain."
     },
     "hpf": {
-      "what": "The High-Pass Filter (HPF) removes frequencies below a chosen cutoff point. Everything below that frequency is rolled off — \"blocked\". Everything above it \"passes\" through unchanged.",
+      "what": "The High-Pass Filter (HPF) removes frequencies below a chosen cutoff point. Everything below that frequency is rolled off — \"blocked\". Everything above it \"passes\" through unchanged. In Intermediate it is one button, as on a small desk: HPF lit, it cuts the rumble below 80 Hz; greyed out, everything passes. In Advanced you choose the cutoff yourself.",
       "why": "Microphones and instruments pick up low-frequency rumble: air conditioning, footsteps, handling noise, mic stand vibration. These frequencies serve no musical purpose and just muddy the mix. The HPF cleans them up before they reach the EQ or compressor.",
-      "tip": "For most vocals start at 80–120 Hz. For acoustic guitar, try 100–150 Hz. Never use HPF on a kick drum or bass — you'll cut the fundamental frequency you actually want. The curve display shows exactly which frequencies you're removing."
+      "tip": "For most vocals start at 80–120 Hz. For acoustic guitar, try 100–150 Hz. Never use HPF on a kick drum or bass — you'll cut the fundamental frequency you actually want. In Advanced the curve shows exactly which frequencies you're removing."
     },
     "eq": {
       "what": "The equalizer (EQ) shapes the tonal character of the signal by boosting or cutting frequency ranges. Each band targets a frequency area: Low (body), Mid (presence), High (air and clarity). A Bell band makes a peak or dip around its frequency; a Shelf band boosts or cuts everything below or above it, evenly.",
@@ -573,6 +574,6 @@
     }
   },
   "levelNames": {
-    "intermediate": { "eq": "Equalizer" }
+    "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" }
   }
 }

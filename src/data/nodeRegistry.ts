@@ -94,10 +94,11 @@ export type NodeTypeDef = {
   /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
   freeSize?: Size
   /**
-   * Below Advanced drawn as one bare knob, not a card (the Compressor, as a small desk's —
-   * oneKnobComp): its usual size there, for drop previews.
+   * Below Advanced drawn as a bare control, not a card, as on a small desk: the Compressor's one
+   * knob (oneKnobComp), the Equalizer's three, the HPF's button. Its usual size there, for drop
+   * previews.
    */
-  oneKnobSize?: Size
+  bareSize?: Size
   /**
    * A card's size, the same at every level (its content grows to fill it); none: the usual minimum
    * (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). A face-only card's upright meter adds its
@@ -232,7 +233,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // 48V phantom power: a bare button like the Pad (D21). It passes the signal on unchanged; a
     // condenser microphone before it, ahead of the Preamp, gets its power (graph/queries.ts phantomPowered)
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 188 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 197, h: 188 },
     defaultParams: { on: true },
   },
   gain: {
@@ -244,12 +245,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   hpf: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 },
+    // Below Advanced one button at 80 Hz (its On / Off: bypass)
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 }, bareSize: { w: 196, h: 216 },
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 },
+    // Below Advanced three bare knobs, Low · Mid · High (see initialParams)
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 452, h: 269 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -267,7 +270,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, oneKnobSize: { w: 273, h: 325 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, bareSize: { w: 273, h: 325 },
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
@@ -423,9 +426,9 @@ const ONE_KNOB = { thresholdDb: [22, -8], ratio: [1, 4], makeupGainDb: [0, 7], a
 /** Where the one knob starts: a little compression — 2 to 3 dB off a voice at unity, measured. */
 const ONE_KNOB_START = 7
 
-/** Drawn at this level as one bare knob, not as its card (NodeTypeDef `oneKnobSize`). */
-export function isOneKnob(typeKey: TypeKey, level: ComplexityLevel): boolean {
-  return NODE_REGISTRY[typeKey].oneKnobSize !== undefined && level !== 'advanced'
+/** Drawn at this level as a bare control, not as its card (NodeTypeDef `bareSize`). */
+export function isBareAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
+  return NODE_REGISTRY[typeKey].bareSize !== undefined && level !== 'advanced'
 }
 
 /** What the Compressor's one knob at `amount` (0 … 10) sets. */
