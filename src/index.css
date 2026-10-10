@@ -221,6 +221,10 @@
   --lsc-accent:      #6366f1;
   --lsc-accent-soft: #a5b4fc;
   --lsc-accent-bg:   rgba(99,102,241,0.14);
+  /* A button lit in the accent (the HPF): its rim, its fill, its word */
+  --lsc-accent-lit:    var(--lsc-accent);
+  --lsc-accent-lit-bg: var(--lsc-accent-bg);
+  --lsc-accent-text:   var(--lsc-accent-soft);
   --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
   --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
@@ -294,6 +298,10 @@
   --lsc-accent:      #9a7fd4;
   --lsc-accent-soft: #b8a3de;
   --lsc-accent-bg:   rgba(154,127,212,0.08);
+  /* The pale accent fades on the cream: a lit button gets a deeper violet (its word over 4.5:1) */
+  --lsc-accent-lit:    #7d5fc9;
+  --lsc-accent-lit-bg: rgba(125,95,201,0.14);
+  --lsc-accent-text:   #5b3fa8;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */

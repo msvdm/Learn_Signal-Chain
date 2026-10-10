@@ -10,8 +10,8 @@ const TONES = {
   good:     { rim: 'var(--signal-good)',     fill: 'var(--signal-good-bg)',     word: 'var(--signal-good-text)' },
   hot:      { rim: 'var(--signal-hot)',      fill: 'var(--signal-hot-bg)',      word: 'var(--signal-hot-text)' },
   clipping: { rim: 'var(--signal-clipping)', fill: 'var(--signal-clipping-bg)', word: 'var(--signal-clipping-text)' },
-  // Violet, as the Pan's knob; its word a shade towards the text colour, readable on both themes
-  accent:   { rim: 'var(--lsc-accent)',      fill: 'var(--lsc-accent-bg)',      word: 'color-mix(in srgb, var(--lsc-accent) 75%, var(--lsc-fg))' },
+  // Violet, as the Pan's knob (deeper on the light theme: index.css)
+  accent:   { rim: 'var(--lsc-accent-lit)',  fill: 'var(--lsc-accent-lit-bg)',  word: 'var(--lsc-accent-text)' },
 } as const
 
 export type ButtonTone = keyof typeof TONES
