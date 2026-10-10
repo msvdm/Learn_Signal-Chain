@@ -106,11 +106,12 @@ function formatHz(hz: number): string {
 
 /**
  * The High-Pass Filter: no meters, at any zoom — the level it leaves shows on the next card.
- * Advanced: its card, the curve and the cutoff to choose. Below: one button, as on a small desk —
- * its sign and HPF lit: the filter in, at 80 Hz; greyed out: out (its bypass).
+ * Advanced: its card, the curve and the cutoff to choose. Below, and zoomed out at Advanced too: one
+ * button, as on a small desk — its sign and HPF lit: the filter in (at 80 Hz below Advanced, at its
+ * cutoff at Advanced); greyed out: out (its bypass).
  */
 export function HpfNode({ id }: CardProps) {
-  const bare = useSignalStore((s) => isBareAt('hpf', s.complexityLevel))
+  const bare = useSignalStore((s) => isBareAt('hpf', s.complexityLevel, s.overview))
   return bare ? <HpfButton id={id} /> : <HpfCard id={id} />
 }
 
@@ -148,11 +149,14 @@ function HpfButton({ id }: { id: string }) {
   const p                = useParams(id, 'hpf')
   const bypassed         = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.bypassed ?? false)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
+  const ownName          = useSignalStore((s) => s.nodes.find((n) => n.id === id)?.label)
   const { t }            = useTranslation()
   const word = t.nodes.hpf.button
   return (
     <NamedButton
       id={id} typeKey="hpf" on={!bypassed} tone="accent" words={{ on: word, off: word }}
+      // Its name spelled out under its sign, at every level (its card at Advanced says HPF)
+      label={ownName ?? t.nodes.hpf.name}
       onToggle={() => toggleBypassNode(id)} value={formatHz(p('cutoffHz'))}
     >
       <HpfSign word={word} />

@@ -17,7 +17,7 @@ const WORD_MAX   = 32     // the On Off Switch's word size
  * under it (D11), the same at every zoom — its word lit while it is on, greyed out (or another word)
  * when not. One size for both words, so pressing it never changes the word's size.
  */
-export function NamedButton({ id, typeKey, on, tone, words, onToggle, value, children }: {
+export function NamedButton({ id, typeKey, on, tone, words, onToggle, label, value, children }: {
   id: string
   typeKey: TypeKey
   on: boolean
@@ -25,11 +25,14 @@ export function NamedButton({ id, typeKey, on, tone, words, onToggle, value, chi
   tone: ButtonTone
   words: { on: string; off: string }
   onToggle: () => void
-  /** Under its name (the HPF's fixed cutoff) */
+  /** Its name under it, when not its card's name (the HPF's spelled out) */
+  label?: string
+  /** Under its name (the HPF's cutoff) */
   value?: ReactNode
   /** Drawn instead of its word, in the button's colour (the HPF's sign over its word) */
   children?: ReactNode
 }) {
+  const name = useNodeName(id, typeKey)
   const fontSize = useMemo(() => {
     const room = BUTTON - 2 * (SQUARE_BORDER + BUTTON_PAD)
     return Math.min(...[words.on, words.off].map((word) => fitText(word, room, room, {
@@ -38,7 +41,7 @@ export function NamedButton({ id, typeKey, on, tone, words, onToggle, value, chi
   }, [words.on, words.off])
 
   return (
-    <FreeControl nodeId={id} typeKey={typeKey} label={useNodeName(id, typeKey)} value={value} portLine={BUTTON / 2}>
+    <FreeControl nodeId={id} typeKey={typeKey} label={label ?? name} value={value} portLine={BUTTON / 2}>
       <SquareButton on={on} tone={tone} size={BUTTON} fontSize={fontSize} onClick={onToggle}>
         {children ?? (on ? words.on : words.off)}
       </SquareButton>

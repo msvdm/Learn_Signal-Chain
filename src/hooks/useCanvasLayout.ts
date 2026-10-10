@@ -16,7 +16,8 @@ export function useCanvasLayout() {
     /** An element's real size (its type's usual size until React Flow has drawn it). */
     const sizeOf = (n: Pick<SignalNode, 'id' | 'typeKey'>): Size => {
       const m = getInternalNode(n.id)?.measured
-      return nodeDims(n.typeKey, m?.width, m?.height, useSignalStore.getState().complexityLevel)
+      const { complexityLevel, overview } = useSignalStore.getState()
+      return nodeDims(n.typeKey, m?.width, m?.height, complexityLevel, overview)
     }
     /** `p` on the grid when Snap to grid is on, else on whole pixels. */
     const snap = (p: Pt) => snapPoint(p, useSignalStore.getState().snapToGrid)

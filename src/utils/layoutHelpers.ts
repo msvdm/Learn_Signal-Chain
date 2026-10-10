@@ -70,11 +70,11 @@ export function cardHeight(typeKey: TypeKey, ports: { inputs: NodePort[]; output
  */
 const measuredSizeByType = new Map<string, Size>()
 
-const shapeKey = (typeKey: string, level?: ComplexityLevel) =>
-  (level && isTypeKey(typeKey) && isBareAt(typeKey, level) ? `${typeKey}:bare` : typeKey)
+const shapeKey = (typeKey: string, level?: ComplexityLevel, overview?: boolean) =>
+  (level && isTypeKey(typeKey) && isBareAt(typeKey, level, overview) ? `${typeKey}:bare` : typeKey)
 
-export function recordMeasuredSize(typeKey: string, w: number, h: number, level?: ComplexityLevel) {
-  if (w > 0 && h > 0) measuredSizeByType.set(shapeKey(typeKey, level), { w, h })
+export function recordMeasuredSize(typeKey: string, w: number, h: number, level?: ComplexityLevel, overview?: boolean) {
+  if (w > 0 && h > 0) measuredSizeByType.set(shapeKey(typeKey, level, overview), { w, h })
 }
 
 export const HIT_THRESHOLD = 48
@@ -82,25 +82,25 @@ export const HIT_THRESHOLD = 48
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
 /** A type never measured: a free-standing control's usual size (a card's below Advanced: bareSize), else a card's minimum. */
-function unmeasuredSize(typeKey: string, level?: ComplexityLevel): Size {
+function unmeasuredSize(typeKey: string, level?: ComplexityLevel, overview?: boolean): Size {
   if (!isTypeKey(typeKey)) return { w: CARD_MIN_W, h: CARD_MIN_H }
   const def  = NODE_REGISTRY[typeKey]
-  const bare = level && isBareAt(typeKey, level) ? def.bareSize : undefined
+  const bare = level && isBareAt(typeKey, level, overview) ? def.bareSize : undefined
   return bare ?? def.freeSize ?? cardMinSize(typeKey)
 }
 
 /**
- * The size of an element not drawn yet (a drop preview, a card about to be placed) at this level:
- * the last measured size of its type, else its type's usual size. `typeKey` may be React Flow's
- * node type (a string).
+ * The size of an element not drawn yet (a drop preview, a card about to be placed) at this level
+ * and zoom: the last measured size of its type, else its type's usual size. `typeKey` may be React
+ * Flow's node type (a string).
  */
-export function usualSize(typeKey: string, level?: ComplexityLevel): Size {
-  return measuredSizeByType.get(shapeKey(typeKey, level)) ?? unmeasuredSize(typeKey, level)
+export function usualSize(typeKey: string, level?: ComplexityLevel, overview?: boolean): Size {
+  return measuredSizeByType.get(shapeKey(typeKey, level, overview)) ?? unmeasuredSize(typeKey, level, overview)
 }
 
 /** An element's size: React Flow's measurement, else its usual size (usualSize). */
-export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number, level?: ComplexityLevel): Size {
-  const known = usualSize(typeKey, level)
+export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number, level?: ComplexityLevel, overview?: boolean): Size {
+  const known = usualSize(typeKey, level, overview)
   return {
     w: measuredW ?? known.w,
     h: measuredH ?? known.h,

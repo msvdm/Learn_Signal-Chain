@@ -99,6 +99,8 @@ export type NodeTypeDef = {
    * previews.
    */
   bareSize?: Size
+  /** Zoomed out drawn bare at Advanced too (the HPF's button, its click its On / Off) */
+  bareZoomedOut?: true
   /**
    * A card's size, the same at every level (its content grows to fill it); none: the usual minimum
    * (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). A face-only card's upright meter adds its
@@ -245,8 +247,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   hpf: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    // Below Advanced one button at 80 Hz (its On / Off: bypass)
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 }, bareSize: { w: 196, h: 216 },
+    // Below Advanced one button at 80 Hz (its On / Off: bypass); zoomed out that button at Advanced too
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 }, bareSize: { w: 196, h: 216 }, bareZoomedOut: true,
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
@@ -426,9 +428,13 @@ const ONE_KNOB = { thresholdDb: [22, -8], ratio: [1, 4], makeupGainDb: [0, 7], a
 /** Where the one knob starts: a little compression — 2 to 3 dB off a voice at unity, measured. */
 const ONE_KNOB_START = 7
 
-/** Drawn at this level as a bare control, not as its card (NodeTypeDef `bareSize`). */
-export function isBareAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
-  return NODE_REGISTRY[typeKey].bareSize !== undefined && level !== 'advanced'
+/**
+ * Drawn at this level as a bare control, not as its card (NodeTypeDef `bareSize`) — zoomed out
+ * (`overview`), at Advanced too where the type says so (`bareZoomedOut`: the HPF).
+ */
+export function isBareAt(typeKey: TypeKey, level: ComplexityLevel, overview = false): boolean {
+  const def = NODE_REGISTRY[typeKey]
+  return def.bareSize !== undefined && (level !== 'advanced' || (overview && def.bareZoomedOut === true))
 }
 
 /** What the Compressor's one knob at `amount` (0 … 10) sets. */

@@ -241,7 +241,9 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
     is the card's bypass, 80 Hz under its name (`levelNames.intermediate.hpf`: "High-Pass Filter" /
     "Високочестотен филтър"); the Advanced card lost its zoomed-out level (`NodeWrapper`
     `showLevel={false}`). `NamedButton` moved to its own file. `isOneKnob` / `oneKnobSize` became
-    `isBareAt` / `bareSize` (the three types).
+    `isBareAt` / `bareSize` (the three types). Zoomed out at Advanced the HPF is that button too (the
+    user's call; `bareZoomedOut`, `isBareAt(type, level, overview)` — the size memory keys it as
+    bare), its name spelled out under it at every level (`nodes.hpf.name`), its cutoff under that.
   - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob),
     the HPF's `what` (the button) and `tip`.
 

@@ -150,7 +150,7 @@ export function SignalChain() {
   }), [t])
 
   const ghosts = drop.preview
-    ? [{ pos: drop.preview.pos, ...usualSize(drop.preview.typeKey, level) }]
+    ? [{ pos: drop.preview.pos, ...usualSize(drop.preview.typeKey, level, overview) }]
     : drag.ghosts
 
   const wrapperClass = [

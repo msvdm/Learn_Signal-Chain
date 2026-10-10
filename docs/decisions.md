@@ -90,6 +90,6 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **The HPF shows no level** (2026-10-10): no meter or level at any zoom, at every level (the next
   card shows it). Below Advanced it is one button, "HPF" under the high-pass sign (a slope into a
   flat line, as on a desk), lit or greyed out (its bypass), at a fixed 80 Hz; Advanced keeps the
-  cutoff to choose.
+  cutoff to choose zoomed in, and zoomed out shows that same button (its click its On / Off).
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

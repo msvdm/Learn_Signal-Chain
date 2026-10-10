@@ -88,7 +88,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
       return
     }
 
-    const finalPos = resolveOverlap(layout.dropOrigin(raw), usualSize(typeKey, store.complexityLevel), layout.layoutSnapshot())
+    const finalPos = resolveOverlap(layout.dropOrigin(raw), usualSize(typeKey, store.complexityLevel, store.overview), layout.layoutSnapshot())
     store.addNode({ id: newId, typeKey, position: finalPos, params, bypassed: false })
   }
 

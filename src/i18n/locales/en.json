@@ -158,6 +158,7 @@
     "hpf": {
       "label": "HPF",
       "button": "HPF",
+      "name": "High-Pass Filter",
       "cutoff": "Cutoff frequency"
     },
     "eq": {
