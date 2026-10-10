@@ -107,11 +107,41 @@ function formatHz(hz: number): string {
 /**
  * The High-Pass Filter: no meters, at any zoom — the level it leaves shows on the next card.
  * Advanced: its card, the curve and the cutoff to choose. Below: one button, as on a small desk —
- * HPF lit: the filter in, at 80 Hz; greyed out: out (its bypass).
+ * its sign and HPF lit: the filter in, at 80 Hz; greyed out: out (its bypass).
  */
 export function HpfNode({ id }: CardProps) {
   const bare = useSignalStore((s) => isBareAt('hpf', s.complexityLevel))
   return bare ? <HpfButton id={id} /> : <HpfCard id={id} />
+}
+
+// The HPF's sign, as printed on a desk: a slope rising out of the lows into the flat pass band, the
+// word under the flat part (the user's drawing). Drawn on a 110 × 60 grid, the word's capitals 26 high;
+// as wide as the button's room for its word (about the 48V's size)
+const SIGN_W = 94
+const SIGN = { w: 110, h: 60, knee: { x: 32, y: 4 }, foot: { x: 3, y: 56 }, end: 106, baseline: 50, fontSize: 36 }
+
+/** The sign with the word, in the button's colour (lit or greyed out). */
+function HpfSign({ word }: { word: string }) {
+  const { knee, foot } = SIGN
+  return (
+    <svg
+      role="img" aria-label={word}
+      width={SIGN_W} height={(SIGN_W * SIGN.h) / SIGN.w} viewBox={`0 0 ${SIGN.w} ${SIGN.h}`}
+      style={{ display: 'block', overflow: 'visible' }}
+    >
+      <path
+        d={`M ${foot.x} ${foot.y} L ${knee.x} ${knee.y} L ${SIGN.end} ${knee.y}`}
+        fill="none" stroke="currentColor" strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round"
+      />
+      {/* As wide as the flat part, whatever the font */}
+      <text
+        x={knee.x} y={SIGN.baseline} fontSize={SIGN.fontSize} fill="currentColor"
+        textLength={SIGN.end - knee.x} lengthAdjust="spacingAndGlyphs"
+      >
+        {word}
+      </text>
+    </svg>
+  )
 }
 
 function HpfButton({ id }: { id: string }) {
@@ -124,7 +154,9 @@ function HpfButton({ id }: { id: string }) {
     <NamedButton
       id={id} typeKey="hpf" on={!bypassed} tone="accent" words={{ on: word, off: word }}
       onToggle={() => toggleBypassNode(id)} value={formatHz(p('cutoffHz'))}
-    />
+    >
+      <HpfSign word={word} />
+    </NamedButton>
   )
 }
 
