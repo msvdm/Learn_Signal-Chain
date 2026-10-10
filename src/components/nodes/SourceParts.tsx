@@ -35,7 +35,8 @@ const BUTTONS_H   = 96
 
 /**
  * A face's icon with its choice buttons beside it (a Vocal's Speech | Singing, a Microphone's
- * Dynamic | Condenser) — from Intermediate (CHOICE_LEVEL), zoomed in; otherwise the icon alone.
+ * Dynamic | Condenser) — from Intermediate (CHOICE_LEVEL), zoomed in; otherwise the icon alone. A
+ * condition's note goes under both, across the face (a condenser without its 48V).
  */
 export function FaceWithChoices({ nodeId, typeKey, box, buttons }: {
   nodeId: string
@@ -43,16 +44,21 @@ export function FaceWithChoices({ nodeId, typeKey, box, buttons }: {
   box: { w: number; h: number }
   buttons: ReactNode
 }) {
-  const choosing = useSignalStore((s) => atLeast(s.complexityLevel, CHOICE_LEVEL) && !s.overview)
+  const choosing  = useSignalStore((s) => atLeast(s.complexityLevel, CHOICE_LEVEL) && !s.overview)
+  const condition = useStage(nodeId)?.condition
   if (!choosing) return <SourceArt nodeId={nodeId} typeKey={typeKey} box={box} />
-  const icon = Math.max(0, Math.min(box.h, box.w - BUTTONS_W - BUTTONS_GAP))
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: BUTTONS_GAP }}>
-      <SourceArt nodeId={nodeId} typeKey={typeKey} box={{ w: icon, h: icon }} />
-      {/* The face ignores the pointer; the buttons take it back */}
-      <div style={{ width: BUTTONS_W, pointerEvents: 'auto' }}>{buttons}</div>
-    </div>
-  )
+  const Icon = NODE_LOOK[typeKey].icon
+  const row  = (h: number) => {
+    const icon = Math.max(0, Math.min(h, box.w - BUTTONS_W - BUTTONS_GAP))
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: BUTTONS_GAP }}>
+        <OverviewIcon icon={<Icon />} box={{ w: icon, h: icon }} />
+        {/* The face ignores the pointer; the buttons take it back */}
+        <div style={{ width: BUTTONS_W, pointerEvents: 'auto' }}>{buttons}</div>
+      </div>
+    )
+  }
+  return condition ? <ConditionNote condition={condition} typeKey={typeKey} box={box} face={row} /> : row(box.h)
 }
 
 const CHARACTER_ICONS: Record<Character, typeof Music> = { speech: Speech, singing: Music }

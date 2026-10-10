@@ -187,29 +187,45 @@ detection), `graph/connectionRules.ts`, `signal/process.ts` (sources, `soundOf`,
     starts at the Vocal. The PC is "Computer" / "Компютър", the Keyboard "Синтезатор" in Bulgarian.
   - `paramChoices(key)` lost its type argument (every word list is one per key now).
 
-## Stage 2 — The MG12-style channel strip (Intermediate)  ☐
+## Stage 2 — The MG12-style channel strip (Intermediate)  ☑
 
 Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare control),
 `components/nodes/conditions.tsx`, `signal/process.ts` (`StageCondition`, `SILENCES`),
 `components/nodes/CompressorNode.tsx`, `DynamicsLayout.tsx` (grep only), `EQNode.tsx`.
 
-- [ ] New `phantom` (48V): a bare on/off control like the Switch (`FreeControl`, `freeSize`), passes
+- [x] New `phantom` (48V): a bare on/off control like the Switch (`FreeControl`, `freeSize`), passes
   the signal unchanged, `PASSIVE`.
-- [ ] Condition `no-phantom` on a **Condenser** mic: walk downstream from the mic through
+- [x] Condition `no-phantom` on a **Condenser** mic: walk downstream from the mic through
   `passesThrough` cards up to and including the first Gain (Preamp). If no `phantom` there is On,
   the mic's output is silent (`SILENCES`). Its `FaceNote`: "No phantom power (48V) — a condenser mic
   needs it to work". Dynamic mics ignore 48V. Pure test in `queries.test.ts` / `engine.chains.test.ts`.
-- [ ] Compressor at Intermediate: **one knob** (0–10) setting threshold, ratio and makeup together,
+- [x] Compressor at Intermediate: **one knob** (0–10) setting threshold, ratio and makeup together,
   as the MG12XU's one-knob COMP does. Look up the MG12XU spec sheet for the ranges and use those;
   if it isn't reachable, use threshold +22 → −8 dBu, ratio 1:1 → 4:1, makeup 0 → +7 dB, attack
   ~25 ms, release ~300 ms, and say so at stage end. Same `comp` type and processor: the knob writes
   the existing params (`initialParams` / a level-dependent face, like the EQ). Advanced keeps the
   full card.
-- [ ] EQ at Intermediate: three knobs Low / Mid / High - as the current state - no change.
-- [ ] Locales for 48V, the condition, the one-knob compressor.
-- [ ] Browser check: Vocal → Condenser mic → 48V → Gain → HPF → EQ → Comp → Fader → Master → Active
+- [x] EQ at Intermediate: three knobs Low / Mid / High - as the current state - no change.
+- [x] Locales for 48V, the condition, the one-knob compressor.
+- [x] Browser check: Vocal → Condenser mic → 48V → Gain → HPF → EQ → Comp → Fader → Master → Active
   speaker, with 48V on and off.
-- [ ] Checks + commit. *Hand-off:* …
+- [x] Checks + commit. *Hand-off:*
+  - **48V** (`phantom`): a bare button (`NamedButton` in `PadNode.tsx`, shared with the Pad — "48V" lit
+    in the hot colour, "OFF"), param `on`, **starts On** when dropped; `PASSIVE`, passes the signal on
+    (`PROCESS` `pass`, `OTHERS` identity). Palette: first in Processing.
+  - `phantomPowered(micId, view)` (`graph/queries.ts`): from the mic's outputs through `passesThrough`
+    cards, stopping at a Gain; one branch with a 48V On is enough (a split mic), none after the
+    Preamp counts. `CardPlan.unpowered` → `runChain` sets `noPhantom` and a silent wire (no hiss; the
+    Preamp after it still hisses); the render silences it through `SILENCES`. The mic's note goes
+    under its icon and buttons (`FaceWithChoices` takes the condition).
+  - **One-knob Compressor**: `oneKnobComp(k)` / `oneKnobAt(threshold)` in `nodeRegistry.ts`, the
+    MG12XU sheet's figures (confirmed on Yamaha's spec page). No new param: the knob is read back from
+    `thresholdDb` and writes all five settings. Dropped below Advanced it starts at **7**. The card
+    keeps its size: the knob, the three settings it turned, the same curve and Turning down; no
+    Attack / Release knobs. Measured on a voice at 0 dBu: it starts turning down at ~6, 2.2–2.4 dB at
+    7, 7.5–8.5 at 10; the makeup leaves it ~2.5 dB louder at 7 (the meter reads Hot); speech's peaks
+    rise up to 4.4 dB at 10 (the 25 ms attack lets each word's start through) — all in the help text.
+  - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob).
 
 ## Stage 3 — New outputs, passive speaker and amp  ☐
 

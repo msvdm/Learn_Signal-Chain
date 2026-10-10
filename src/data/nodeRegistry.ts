@@ -42,7 +42,7 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 /** Every kind of element on the canvas. */
 export type TypeKey =
   | 'vocal' | 'drum-kit' | 'acoustic' | 'mic' | 'keyboard' | 'pc' | 'instrument' | 'guitar-amp' | 'generator'
-  | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
+  | 'phantom' | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
   | 'speaker' | 'active-speaker' | 'headphones'
@@ -222,6 +222,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 285 },
     defaultParams: { sound: 'sine', levelDb: 0, stereo: false },
+  },
+  phantom: {
+    // 48V phantom power: a bare button like the Pad (D21). It passes the signal on unchanged; a
+    // condenser microphone before it, ahead of the Preamp, gets its power (graph/queries.ts phantomPowered)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 188 },
+    defaultParams: { on: true },
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -403,10 +410,35 @@ export function availableAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
   return NODE_REGISTRY[typeKey].levels.includes(level)
 }
 
+// The Compressor below Advanced has one knob, 0 … 10, as a small desk's (Yamaha MG12XU, from its
+// spec sheet): turning it up lowers the threshold (+22 → −8 dBu), raises the ratio (1:1 → 4:1) and
+// the makeup gain (0 → +7 dB) together; attack and release are fixed (about 25 and 300 ms).
+export const ONE_KNOB_MAX = 10
+const ONE_KNOB = { thresholdDb: [22, -8], ratio: [1, 4], makeupGainDb: [0, 7], attackMs: 25, releaseMs: 300 } as const
+/** Where the one knob starts: a little compression — 2 to 3 dB off a voice at unity, measured. */
+const ONE_KNOB_START = 7
+
+/** What the Compressor's one knob at `amount` (0 … 10) sets. */
+export function oneKnobComp(amount: number) {
+  const f  = Math.min(Math.max(amount / ONE_KNOB_MAX, 0), 1)
+  const at = ([from, to]: readonly [number, number]) => Math.round((from + (to - from) * f) * 100) / 100
+  return {
+    thresholdDb: at(ONE_KNOB.thresholdDb), ratio: at(ONE_KNOB.ratio), makeupGainDb: at(ONE_KNOB.makeupGainDb),
+    attackMs: ONE_KNOB.attackMs, releaseMs: ONE_KNOB.releaseMs,
+  }
+}
+
+/** Where the one knob sits for a Compressor's threshold (0 … 10): it is what the knob turned. */
+export function oneKnobAt(thresholdDb: number): number {
+  const [from, to] = ONE_KNOB.thresholdDb
+  const at = Math.round(((thresholdDb - from) / (to - from)) * ONE_KNOB_MAX * 100) / 100
+  return Math.min(Math.max(at, 0), ONE_KNOB_MAX)
+}
+
 /**
  * Params of a node dropped on the canvas at this level. The Equalizer below Advanced works like a
  * simple mixing desk's: Low and High are shelves and cannot be switched. Advanced starts with bells
- * and lets you choose.
+ * and lets you choose. The Compressor below Advanced starts where its one knob sets it.
  */
 export function initialParams(
   typeKey: TypeKey,
@@ -417,6 +449,7 @@ export function initialParams(
     params.bands = (params.bands as EQBand[]).map((b, i): EQBand =>
       i === 0 ? { ...b, type: 'low-shelf' } : i === 3 ? { ...b, type: 'high-shelf' } : b)
   }
+  if (typeKey === 'comp' && level !== 'advanced') Object.assign(params, oneKnobComp(ONE_KNOB_START))
   return params
 }
 

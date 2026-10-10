@@ -146,7 +146,7 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 
 ### Cards
 
-- Every card uses `NodeWrapper` (a full card) or `FaceCard` (only its face), both on `CardFrame`. **Gain, Pan, Fader, Switch and Pad are not cards**: bare controls with their ports (`FreeControl`, a `freeSize` in the registry), the same at every zoom.
+- Every card uses `NodeWrapper` (a full card) or `FaceCard` (only its face), both on `CardFrame`. **Gain, Pan, Fader, Switch, Pad and 48V are not cards**: bare controls with their ports (`FreeControl`, a `freeSize` in the registry), the same at every zoom.
 - **One size per card, at every level**: the registry's `minSize` (`cardMinSize()`); the content grows into it, in Bulgarian too. **A card never changes size while values change** (no flicker): wrap every changing reading in `StableText`, which reserves the width of its widest value (`LEVEL_SAMPLE`, `widestFormat()` in `utils/readout.ts`); text that only sometimes shows keeps its space (`visibility: hidden`). `KnobControl`, `VerticalFader`, `ControlSlider` and the meters already do this.
 - **Wires between cards stay straight**: a fixed 56 px header, the first port line at `PORT_TOP`, stacked ports `PORT_GAP` apart (a later line: `row` in the registry). A free-standing control's port line is at `PORT_TOP` too — one lower than that reaches above its box rather than taking a negative padding.
 - The header is icon · title · On/Off (none where the control itself is the state: `bypass: false`). Help and Remove are in the right-click menu; no status chip.
@@ -163,7 +163,7 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 
 ### Level system
 
-The level is `complexityLevel` in the store (persisted). **Levels are scales** (D20): Beginner the devices in a room, Intermediate a small analogue desk, Advanced the parts and the digital picture; none auto-populates the graph. Which types a level's palette shows is each type's `levels` in `NODE_REGISTRY` (some leave at harder levels; the plan: TODO.md, *Target palettes*), in sections per level (`PALETTE_SECTIONS`, `nodeLook.ts`: Beginner's are Inputs · Devices · Outputs). A level can also change a card's layout, name and starting params: the EQ is the three-knob **Equalizer** in Intermediate and the **Parametric Equalizer** in Advanced (`initialParams()`; names in the locales' `levelNames`). From Intermediate (`DETAIL_LEVEL`, D3) the meters show their peaks, noise, numbers and movement, and the sources their sound buttons. Switching level clears the canvas (with confirmation); no level pre-places anything.
+The level is `complexityLevel` in the store (persisted). **Levels are scales** (D20): Beginner the devices in a room, Intermediate a small analogue desk, Advanced the parts and the digital picture; none auto-populates the graph. Which types a level's palette shows is each type's `levels` in `NODE_REGISTRY` (some leave at harder levels; the plan: TODO.md, *Target palettes*), in sections per level (`PALETTE_SECTIONS`, `nodeLook.ts`: Beginner's are Inputs · Devices · Outputs). A level can also change a card's layout, name and starting params: the EQ is the three-knob **Equalizer** in Intermediate and the **Parametric Equalizer** in Advanced (`initialParams()`; names in the locales' `levelNames`); below Advanced the Compressor has one knob, as a small desk's (`oneKnobComp`: it writes Threshold, Ratio, Makeup, Attack and Release). From Intermediate (`DETAIL_LEVEL`, D3) the meters show their peaks, noise, numbers and movement, and the sources their sound buttons. Switching level clears the canvas (with confirmation); no level pre-places anything.
 
 ### Signal health zones
 
@@ -204,7 +204,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D18** — Noise as on a real analogue desk.
 - **D19** — No hover messages: explanations go in the help popover (`theory`).
 - **D20** — Levels are scales: Beginner devices and connections only (no engine, no render, no real meters — D3 / D5 hold from Intermediate), Intermediate the analogue desk, Advanced the digital picture; some elements leave at harder levels.
-- **D21** — The microphone is not the sound: Vocal, Drum Kit, Acoustic and Guitar Amp feed a mic's Sound input; the source has the SPL meter; a Condenser needs 48V.
+- **D21** — The microphone is not the sound: Vocal, Drum Kit, Acoustic and Guitar Amp feed a mic's Sound input; the source has the SPL meter; a Condenser needs a 48V switched on before its Preamp (`phantomPowered`), else it is silent (`noPhantom`).
 - **D22** — Interface and DAW at Intermediate record and play back only, never inside a chain; *Look inside* shows the digital strip; wire colours stay health only.
 - **D23** — Advanced adds the digital picture: Decoder, Recorder (VU / dBFS), Coder → Stream / Broadcast.
 
@@ -236,7 +236,7 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
    - And, unless it is a gain, what it does to real sound: its entry in `OTHERS` in `src/audio/chainAudio.ts` (Web Audio nodes — a new type does not compile without one; a dynamics card a processor in `audio/processors.ts` with its tests, and its row in `DYNAMICS` — `audio/dynamics.ts`: its knobs, how long it settles, its makeup). A condition it can be in goes in `StageCondition` and `SILENCES`, and what its card says in `CONDITIONS` (`components/nodes/conditions.tsx`)
 3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
    - A card → use `NodeWrapper` (`align="center"` centres a single control); its In / Out meters → `MeterSides` around its controls (they move by themselves). A card that is only a big icon (a source or a speaker) → `FaceCard`
-   - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad) → use `FreeControl`, and give it a `freeSize` in the registry
+   - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad / 48V) → use `FreeControl`, and give it a `freeSize` in the registry
    - A knob for a setting → `ParamKnob` (a Compressor-like card's Attack / Release: `AttackRelease` in `DynamicsLayout.tsx`)
 4. `NODE_COMPONENTS` in `src/components/nodes/index.ts` (its card) and `NODE_LOOK` in `src/components/nodes/nodeLook.ts` (icon, palette group — its place in that table is its place in the palette)
 5. Its palette name (`palette.items`) and educational text (`theory`: `what`, `why`, `tip`) in **both** `src/i18n/locales/en.json` and `bg.json` (the build fails without them). No English in the components: even ON / OFF and "0 dB in" come from the locales

@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import {
   Speech, Drum, Guitar, Mic, KeyboardMusic, Computer, Plug,
   Activity, ToggleLeft, Radio, Sliders,
-  AudioWaveform, Minus,
+  AudioWaveform, Minus, Zap,
   Merge, Volume2,
   SlidersHorizontal, MoveHorizontal, Headphones,
 } from 'lucide-react'
@@ -65,7 +65,9 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'di-box':          { icon: Plug,              group: 'source' },
   'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
   generator:         { icon: GeneratorIcon,     group: 'source', headerSize: 18 },
-  // Processing — into the digital world after the Preamp, back out at the end
+  // Processing — into the digital world after the Preamp, back out at the end; first the 48V a
+  // condenser microphone needs
+  phantom:           { icon: Zap,               group: 'processing' },
   gain:              { icon: KnobIcon,          group: 'processing' },
   adc:               { icon: AdcIcon,           group: 'processing', headerSize: 20 },
   // "HPF" in capitals looks much bigger than mixed-case names at the same size

@@ -532,6 +532,32 @@ describe('an aux send: a Relay Switch takes its copy before (A) or after (B) the
   })
 })
 
+describe('a condenser microphone needs 48V phantom power; a dynamic one does not (D21)', () => {
+  expectCards(signalOf([
+    card('conVoice', 'vocal'), card('con', 'mic', { micType: 'condenser' }), card('con48', 'phantom'), card('conPre', 'gain'),
+    card('offVoice', 'vocal'), card('off', 'mic', { micType: 'condenser' }), card('off48', 'phantom', { on: false }), card('offPre', 'gain'),
+    ...voiceInto('dyn'), card('dynPre', 'gain'),
+  ], [
+    wire('conVoice:sound', 'con'), wire('con', 'con48'), wire('con48', 'conPre'),
+    wire('offVoice:sound', 'off'), wire('off', 'off48'), wire('off48', 'offPre'),
+    heard('dyn'), wire('dyn', 'dynPre'),
+  ]), {
+    // 12 dB more than a dynamic microphone; the 48V passes it on as it is, and the Preamp is still its Preamp
+    conVoice: VOICE,
+    con:      { out: -48, health: 'too-quiet' },
+    con48:    { in: -48, out: -48, health: 'too-quiet' },
+    conPre:   { in: -48, out: -8, health: 'good', role: 'preamp' },
+    // Its 48V switched off: it hears the voice and sends nothing
+    offVoice: VOICE,
+    off:      { out: S, health: 'too-quiet', condition: 'noPhantom' },
+    off48:    { in: S, out: S, health: 'too-quiet' },
+    offPre:   { in: S, out: S, health: 'too-quiet', role: 'preamp' },
+    dynVoice: VOICE,
+    dyn:      { out: -60, health: 'too-quiet' },
+    dynPre:   { in: -60, out: -20, health: 'good', role: 'preamp' },
+  })
+})
+
 describe('speakers: a passive one needs an amplifier, an active one (or headphones) is blown by it', () => {
   expectCards(signalOf([
     line('line'),

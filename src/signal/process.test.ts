@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { EQBand, NodeParamValue, TypeKey } from '../data/nodeRegistry'
-import { initialParams } from '../data/nodeRegistry'
+import { initialParams, oneKnobAt, oneKnobComp } from '../data/nodeRegistry'
 import type { SideLevels } from './levels'
 import { SILENT } from './levels'
 import type { SideContext, SideResult } from './process'
@@ -259,6 +259,20 @@ describe('dynamics', () => {
     expect(run('comp', 0)).toEqual({ out: -10, domain: 'analog', gainReductionDb: 10 })
     expect(run('noise-gate', -60, {}, { domain: 'digital' })).toEqual({ out: -140, domain: 'digital', gainReductionDb: 80 })
     expect(run('limiter', 0, { thresholdDb: -6, makeupGainDb: 1 })).toEqual({ out: -5, domain: 'analog', gainReductionDb: 6 })
+  })
+
+  it("the Compressor's one knob below Advanced: a small desk's (Yamaha MG12XU spec sheet)", () => {
+    const fixed = { attackMs: 25, releaseMs: 300 }
+    expect(oneKnobComp(0)).toEqual({ thresholdDb: 22, ratio: 1, makeupGainDb: 0, ...fixed })
+    expect(oneKnobComp(5)).toEqual({ thresholdDb: 7, ratio: 2.5, makeupGainDb: 3.5, ...fixed })
+    expect(oneKnobComp(10)).toEqual({ thresholdDb: -8, ratio: 4, makeupGainDb: 7, ...fixed })
+    // The knob sits where its threshold says; a threshold it cannot reach puts it at an end
+    expect(oneKnobAt(7)).toBe(5)
+    expect(oneKnobAt(20.5)).toBe(0.5)
+    expect([oneKnobAt(-20), oneKnobAt(30)]).toEqual([10, 0])
+    // Dropped at Intermediate it starts at 7
+    const { thresholdDb, ratio, makeupGainDb, attackMs, releaseMs } = initialParams('comp', 'intermediate')
+    expect({ thresholdDb, ratio, makeupGainDb, attackMs, releaseMs }).toEqual(oneKnobComp(7))
   })
 
   it('de-esser: 8:1 above its threshold', () => {

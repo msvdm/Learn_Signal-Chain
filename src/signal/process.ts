@@ -26,6 +26,7 @@ export type StageCondition =
   | 'needsAmp'          // a passive speaker with no amplifier before it: silent
   | 'blown'             // an active speaker fed from an amplifier: far too strong, it breaks
   | 'needsDi'           // an instrument going into a desk input without a DI Box: levels fine, high notes lost
+  | 'noPhantom'         // a condenser microphone with no 48V phantom power: silent
 
 /** Whether a card in each condition sends nothing — every condition says (a new one does not compile without). */
 export const SILENCES: Record<StageCondition, boolean> = {
@@ -37,6 +38,7 @@ export const SILENCES: Record<StageCondition, boolean> = {
   needsAmp:          true,
   blown:             false,
   needsDi:           false,
+  noPhantom:         true,
 }
 
 /** One channel through a card. */
@@ -218,7 +220,7 @@ export const GUITAR_AMP_NOISE_DBU = -76
  */
 const PASSIVE = new Set<TypeKey>([
   'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator',
-  'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker',
+  'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker',
 ])
 
 /** Each powered card's output noise (the Gain and the converters are worked out below). */
@@ -394,6 +396,8 @@ const PROCESS: Record<TypeKey, Process> = {
   // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
   'di-box':     (node, input, ctx) => ({ out: shifted(input, gainDbOf(node, ctx)!), domain: 'analog' }),
   'guitar-amp': analogOnly('digitalToSpeaker', gained),
+  // Passes the signal on as it is: its 48V powers a condenser microphone before it (the engine checks)
+  phantom: (_, input, ctx) => pass(input, ctx),
   // A gain that stops at the clip level — after an ADC, at 0 dBFS
   gain: (node, input, ctx) => {
     const gainDb = gainDbOf(node, ctx)!

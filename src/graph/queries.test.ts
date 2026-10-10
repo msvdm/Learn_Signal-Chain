@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
-import { faderBusOf, unwiredSource } from './queries'
+import { faderBusOf, phantomPowered, unwiredSource } from './queries'
 
 // No connection, no signal (decision D11): a source with nothing plugged into its output, or a
 // Microphone hearing nothing (D21), shows no level and no readings, and its meters stand still,
 // until it is wired.
 
-const node = (id: string, typeKey: TypeKey): SignalNode => ({ id, typeKey, position: { x: 0, y: 0 }, params: {}, bypassed: false })
+const node = (id: string, typeKey: TypeKey, params: SignalNode['params'] = {}): SignalNode =>
+  ({ id, typeKey, position: { x: 0, y: 0 }, params, bypassed: false })
 const wire = (source: string, target: string, sourceHandle = 'out', targetHandle = 'in'): SignalEdge =>
   ({ id: `${source}-${target}`, source, sourceHandle, target, targetHandle })
 
@@ -64,5 +65,34 @@ describe('the bus a Fader sets the level of', () => {
     expect(faderBusOf('f', view)).toBe(null)
     expect(faderBusOf('f2', view)).toBe(null)
     expect(faderBusOf('af', view)?.id).toBe('aux')
+  })
+})
+
+// A condenser microphone gets its power from the desk input it plugs into (D21): a 48V switched on
+// after it and before its Preamp
+
+describe('48V phantom power reaching a microphone', () => {
+  const nodes = [
+    node('mic', 'mic', { micType: 'condenser' }), node('pad', 'pad'), node('p48', 'phantom'),
+    node('off', 'phantom', { on: false }), node('pre', 'gain'), node('pre2', 'gain'), node('later', 'phantom'),
+  ]
+  const powered = (...edges: SignalEdge[]) => phantomPowered('mic', { nodes, edges })
+
+  it('a 48V switched on before the Preamp, straight after the mic or through a Pad', () => {
+    expect(powered(wire('mic', 'p48'), wire('p48', 'pre'))).toBe(true)
+    expect(powered(wire('mic', 'pad'), wire('pad', 'p48'), wire('p48', 'pre'))).toBe(true)
+    // With no Preamp after it too: the 48V is what counts
+    expect(powered(wire('mic', 'p48'))).toBe(true)
+  })
+
+  it('none: no 48V, one switched off, or one after the Preamp', () => {
+    expect(powered()).toBe(false)
+    expect(powered(wire('mic', 'pre'))).toBe(false)
+    expect(powered(wire('mic', 'off'), wire('off', 'pre'))).toBe(false)
+    expect(powered(wire('mic', 'pre'), wire('pre', 'later'))).toBe(false)
+  })
+
+  it('a mic split to two desks: one 48V powers it', () => {
+    expect(powered(wire('mic', 'pre'), wire('mic', 'p48'), wire('p48', 'pre2'))).toBe(true)
   })
 })

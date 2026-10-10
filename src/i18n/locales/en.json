@@ -144,7 +144,8 @@
       "label": "Microphone",
       "type": "Microphone type",
       "dynamic": "Dynamic",
-      "condenser": "Condenser"
+      "condenser": "Condenser",
+      "noPhantom": "No phantom power (48V) — a condenser mic needs it to work"
     },
     "preamp": {
       "label": "Preamp"
@@ -178,6 +179,7 @@
     },
     "comp": {
       "label": "Compressor",
+      "amount": "Compression",
       "threshold": "Threshold",
       "ratio": "Ratio",
       "makeupGain": "Makeup gain",
@@ -254,6 +256,11 @@
     "pad": {
       "label": "Pad",
       "on": "−20 dB",
+      "off": "OFF"
+    },
+    "phantom": {
+      "label": "Phantom power",
+      "on": "48V",
       "off": "OFF"
     },
     "deesser": {
@@ -354,6 +361,7 @@
       "drum-kit": "Drum Kit",
       "acoustic": "Acoustic Guitar",
       "mic": "Microphone",
+      "phantom": "Phantom Power (48V)",
       "keyboard": "Keyboard",
       "pc": "Computer",
       "instrument": "Instrument",
@@ -403,7 +411,7 @@
     "mic": {
       "what": "The microphone turns sound in the air into an electrical signal — a very weak one: about −60 dBu for a voice into a dynamic microphone.",
       "why": "It hears only what is wired into its Sound input: a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar Amp (a dotted line). It also hears the room around it: the quiet hiss left when the music stops.",
-      "tip": "Its wire is blue (too quiet) — normal at this stage: the Preamp’s job is to fix that. From Intermediate on, choose its type. Dynamic: tough, needs no power. Condenser: about 12 dB more signal from the same sound, so the Preamp needs less gain — but it hears the room 12 dB louder too, and in real life it needs power (48V phantom power)."
+      "tip": "Its wire is blue (too quiet) — normal at this stage: the Preamp’s job is to fix that. From Intermediate on, choose its type. Dynamic: tough, needs no power. Condenser: about 12 dB more signal from the same sound, so the Preamp needs less gain — but it hears the room 12 dB louder too, and it needs power: put a Phantom Power (48V) between it and the Preamp, switched on — without it, it sends nothing."
     },
     "keyboard": {
       "what": "A keyboard (a synthesizer or a digital piano) sends a line-level signal — about −10 dBu, already strong enough for the desk. It is stereo: Left and Right travel on one wire.",
@@ -446,9 +454,9 @@
       "tip": "In live sound the graphic EQ on the master output is used mainly to prevent feedback and correct for the room, not to shape the mix. Keep moves gentle — small cuts (−3 to −6 dB) solve most problems. Large boosts cause feedback and distortion."
     },
     "comp": {
-      "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter.",
+      "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter. In Intermediate it has one knob, as on a small desk: turning it up lowers the Threshold, raises the Ratio and adds makeup gain, all at once. In Advanced you set each one yourself.",
       "why": "Live performances and recordings have wide dynamic ranges. Without compression, loud notes clip and quiet notes get lost. Compression makes the signal more consistent and controlled.",
-      "tip": "Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a slower Attack lets the start of each note or word through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). A quick Attack (1–5 ms) catches more of it; on a sound whose notes start softly, like singing, the peaks then come closer to the average. A compressor evens out how loud the music is — to stop its loudest moments, put a Limiter after it. Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
+      "tip": "With the one knob: on a voice at a good level (about 0 dBu) it starts turning down at about 6, takes 2–3 dB off at 7 and about 8 dB at 10. Its makeup gain lifts the voice back up, so up to about 9 it comes out a little louder than it went in (if the meter turns yellow, pull the Fader down a little). It reacts slowly (about 25 ms): the start of each spoken word gets through, so the Peaks go up as you turn it. Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a slower Attack lets the start of each note or word through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). A quick Attack (1–5 ms) catches more of it; on a sound whose notes start softly, like singing, the peaks then come closer to the average. A compressor evens out how loud the music is — to stop its loudest moments, put a Limiter after it. Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
     },
     "fader": {
       "what": "The channel fader controls the volume of this signal as it enters the mix. Unity gain (0 dB) means the signal passes through unchanged. Moving it down attenuates the signal. All the way down, at −∞, the signal is muted: nothing passes.",
@@ -534,6 +542,11 @@
       "what": "A pad is a fixed attenuator — a passive circuit that drops the signal level by a set amount, usually 20 dB. It sits inline in the signal path. When the pad is engaged (button shows −20 dB), the signal is reduced by 20 dB. When disengaged, the signal passes through unchanged.",
       "why": "Microphones in front of loud sources — kick drums, guitar amps, brass instruments — can produce a signal so strong that even the preamp at its lowest gain setting is too loud. The pad solves this by cutting the level before it even reaches the preamp's gain stage, preventing distortion at the input.",
       "tip": "Engage the pad before you record if your input meter is clipping even with the gain turned all the way down. The 20 dB drop is a lot — if the signal then becomes too quiet, raise the preamp gain to compensate and find the right balance."
+    },
+    "phantom": {
+      "what": "Phantom power (48V) is a small, steady voltage a desk sends up the microphone cable. It does nothing to the sound: it is the power a condenser microphone’s electronics need.",
+      "why": "A condenser microphone has electronics inside that need power to work: without 48V it sends nothing at all. A dynamic microphone needs no power and is not bothered by it.",
+      "tip": "Put it between the condenser microphone and its Preamp, and switch it on. On a real desk it is a button on the channel (the Yamaha MG has one switch for all its mic inputs). Switch it on after the cable is plugged in, and keep it off for old ribbon microphones: it can damage them."
     },
     "deesser": {
       "what": "A de-esser is a frequency-selective compressor. It listens for harsh sibilance — the sharp hissing sounds of letters like 'S', 'SH', and 'CH' in vocal recordings — and automatically reduces only those frequencies when they get too loud. You set the frequency and threshold; the de-esser does the rest automatically.",

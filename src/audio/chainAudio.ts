@@ -241,6 +241,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     instrument: (_, x) => x,
     generator: (_, x) => x,
     pan: (_, x) => x,
+    phantom: (_, x) => x,
     hpf: ({ node }, x) => filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }]),
     eq: ({ node }, x) => filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
       type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',

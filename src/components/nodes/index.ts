@@ -19,7 +19,7 @@ import { GraphicEQNode }      from './GraphicEQNode'
 import { DIBoxNode }          from './DIBoxNode'
 import { NoiseGateNode }      from './NoiseGateNode'
 import { LimiterNode }        from './LimiterNode'
-import { PadNode }            from './PadNode'
+import { PadNode, PhantomNode } from './PadNode'
 import { DeesserNode }        from './DeesserNode'
 import { RelayNode }          from './RelayNode'
 import { PanNode }            from './PanNode'
@@ -47,6 +47,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'noise-gate':      NoiseGateNode,
   limiter:           LimiterNode,
   pad:               PadNode,
+  phantom:           PhantomNode,
   deesser:           DeesserNode,
   'master-bus':      MasterBusNode,
   'aux-bus':         MasterBusNode,

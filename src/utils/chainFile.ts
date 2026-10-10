@@ -23,7 +23,7 @@ export interface ChainFile {
   app: typeof CHAIN_APP
   version: number
   name: string
-  /** The level it was made at: the Equalizer looks different below Advanced */
+  /** The level it was made at: the Equalizer and the Compressor look different below Advanced */
   level: ComplexityLevel
   nodes: SignalNode[]
   edges: SignalEdge[]

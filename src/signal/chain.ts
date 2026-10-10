@@ -2,7 +2,7 @@ import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import { graphOf, drivingWire, fedBy, flowOrder, outputKey } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
-import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, preampSourceOf } from '../graph/queries'
+import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, phantomPowered, preampSourceOf } from '../graph/queries'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideContext, SideResult, StageCondition } from './process'
@@ -108,6 +108,8 @@ export interface CardPlan {
   amped: boolean
   /** An instrument reaching a desk input without a DI's XLR Out */
   needsDi: boolean
+  /** A condenser microphone hearing a sound, with no 48V switched on before its Preamp: no power, no signal */
+  unpowered: boolean
   /** A DI Box in a ground loop: a hum starts on its XLR Out */
   groundLoop: boolean
   role?: StageRole
@@ -170,6 +172,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       plays:       def.category === 'source',
       amped:       (node.typeKey === 'active-speaker' || node.typeKey === 'headphones') && fedBy(node.id, 'amp', graph),
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
+      unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
       groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),
       role: preamp ? 'preamp'
         : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
@@ -338,6 +341,11 @@ export function runChain(plans: CardPlan[]): ChainLevels {
     }
     // A guitar straight into a desk input: the level is fine, the high notes are lost
     if (card.needsDi) condition = 'needsDi'
+    // A condenser microphone without its 48V: it hears the sound but sends nothing, not even hiss (D21)
+    if (card.unpowered) {
+      condition = 'noPhantom'
+      outSig    = SILENT_WIRE
+    }
 
     // A DI Box in a ground loop starts a hum on its XLR Out. It is part of the noise from there on:
     // every card treats it as it treats the noise (a fader turns it down with the music, a gate

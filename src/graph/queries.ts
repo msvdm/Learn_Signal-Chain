@@ -296,6 +296,17 @@ export function unwiredSource(nodeId: string, view: GraphView): boolean {
 }
 
 /**
+ * A condenser microphone's power (48V phantom power, D21): it comes from the desk input it plugs
+ * into — a 48V switched on after it and before its Preamp, through effects such as a Pad on the way.
+ * One of its wires finding one is enough (a split mic is powered by either desk).
+ */
+export function phantomPowered(micId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  return reaches(graph.from(micId), graph, (n) => n.typeKey === 'phantom' && param(n, 'on'), (n) =>
+    n.typeKey !== 'gain' && passesThrough(n.typeKey) ? graph.from(n.id) : null)
+}
+
+/**
  * True when this Instrument's signal goes into a desk or PA input still at instrument level —
  * straight, through effect pedals, or through a DI Box's Direct Out (a thru, still instrument
  * level): the high notes get lost on the way. Fine: into a Guitar Amp, or through a DI Box's XLR Out.
