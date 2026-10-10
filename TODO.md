@@ -181,7 +181,7 @@ detection), `graph/connectionRules.ts`, `signal/process.ts` (sources, `soundOf`,
     Input becomes a Keyboard (`OLD_TYPES`), old settings are dropped (`OLD_KEYS`). An old mono Line
     Input is a stereo Keyboard now: into a one-channel card (a speaker, a mono Aux) it reads 6 dB
     hotter than it did.
-  - Icons are lucide's (Speech, Drum, Guitar, KeyboardMusic, Computer — `icons.tsx` holds only what
+  - Icons are lucide's (Speech, Drum, Guitar, KeyboardMusic, Computer — since Stage 3 the Vocal's and the Computer's are ours; `icons.tsx` holds only what
     lucide lacks); `JackPlugIcon` went. Palette order (sources): Vocal, Drum Kit, Acoustic Guitar,
     Microphone, Keyboard, Computer, Instrument, DI Box, Guitar Amp, Generator; the empty-canvas hint
     starts at the Vocal. The PC is "Computer" / "Компютър", the Keyboard "Синтезатор" in Bulgarian.
@@ -286,6 +286,11 @@ Read: `SpeakerNode.tsx`, `ActiveSpeakerNode.tsx`, `AmpNode.tsx`, `connectionRule
     level); the amp / active speaker / headphones help says an Amplifier's output plugs only into a
     passive speaker. Palette order (outputs): the four as before, then Studio Monitor, Recorder,
     Stream / Broadcast. Bulgarian: Студиен монитор, Рекордер, Стрийм / Излъчване.
+  - After the stage (the user's calls): the **Computer is a face card** (`InstrumentNode` serves
+    it, `FACE_SIZE`; only the Keyboard is a full source card now), and the Vocal and the Computer
+    have **icons drawn after the user's pictures** (`VocalIcon` — a thin line, 1; 1.5 below 24 px —
+    and `LaptopIcon`, `icons.tsx`). Fixed on the way: a stereo meter hidden while not connected
+    showed its L / R letters (`SideLetter`).
 
 ## Stage 4 — Audio Interface and DAW: record & play back (Intermediate)  ☐
 

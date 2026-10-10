@@ -52,7 +52,12 @@ the descriptions). Each is what the user asked for; change one only when they as
   stays 56 px, the card its size.
 - **Microphone and Line Input are full cards of one size** (2026-10-08): 320 × 350, the icon and
   name in the header, their buttons on the left and their meter on the right. Since D21 the Keyboard
-  and the PC (the Line Input's heirs); the Microphone is a face card, its buttons beside its icon.
+  (the Line Input's heir); the Microphone is a face card, its buttons beside its icon, and so is the
+  Computer since 2026-10-10 ("does not need a zoomed-in form": its icon and its meter, as the
+  Instrument's).
+- **The Vocal's and the Computer's icons** (2026-10-10): drawn after the user's pictures — a head in
+  profile speaking, three waves from its mouth, in a thinner line than the other icons (heavier
+  when drawn small); a laptop, its base flaring out under the screen, with a touchpad.
 - **Zoomed out, the Microphone, Line Input and Instrument are bare** (`overviewBare`): their icon
   over a horizontal level bar and its scale, no numbers, no card around them (a selection still
   draws its ring) — like the Gain knob. Since D21 the Keyboard, the PC, the sounds in the air and

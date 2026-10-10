@@ -10,7 +10,7 @@ import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 
 /**
- * Keyboard and PC: line-level sources, always stereo (Left and Right on one wire). A card of one
+ * Keyboard: a line-level source, always stereo (Left and Right on one wire). A card of one
  * size — its level, and its meter on the right (hidden, its place kept, until something is wired
  * to its output — D11); zoomed out its icon over a horizontal level bar, no numbers, and no card
  * around it — like the Gain knob.

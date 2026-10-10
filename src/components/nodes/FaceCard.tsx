@@ -18,7 +18,7 @@ const FACE_METER_ROOM = STRIP_W + 16
 
 /**
  * A card that is only its face, at every zoom (the sounds in the air, the Microphone, the
- * Instrument, Guitar Amp, the speakers, Headphones, Recorder, Stream / Broadcast): no header, no body. Zoomed in its
+ * Instrument, Computer, Guitar Amp, the speakers, Headphones, Recorder, Stream / Broadcast): no header, no body. Zoomed in its
  * face (`art`) with its upright meter on the right — dB SPL where the card's sound is in the air
  * (SPL_DB, D13) —, zoomed out its face with the level under it. Not connected, its face says so
  * (and its meter keeps its place, unseen).

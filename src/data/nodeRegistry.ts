@@ -175,7 +175,7 @@ const SIDES: NodePort[] = [
 // enough that their long names stay big in overview.
 const BUS_SIZE: Size  = { w: 398, h: 361 }
 const FACE_SIZE: Size = { w: 320, h: 328 }
-// Keyboard and PC: one size
+// The Keyboard's
 const SOURCE_SIZE: Size = { w: 320, h: 350 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
@@ -217,7 +217,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   pc: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'always',
-    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: 0 },
   },
   instrument: {

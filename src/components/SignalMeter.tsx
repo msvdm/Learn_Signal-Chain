@@ -259,10 +259,13 @@ export function LiveLevel({ db, reading, source, domain, spl, noise, reserve = L
   )
 }
 
-/** An L / R letter under a bar (kept, unseen, where there is none: the same height mono or stereo). */
+/**
+ * An L / R letter under a bar (kept, unseen, where there is none: the same height mono or stereo).
+ * Shown, it inherits its meter's visibility (`visible` would show it on a meter hidden while not connected).
+ */
 function SideLetter({ letter }: { letter: string }) {
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, lineHeight: '11px', color: 'var(--lsc-fg-muted)', visibility: letter ? 'visible' : 'hidden' }}>
+    <span style={{ fontSize: 10, fontWeight: 700, lineHeight: '11px', color: 'var(--lsc-fg-muted)', visibility: letter ? undefined : 'hidden' }}>
       {letter || 'L'}
     </span>
   )

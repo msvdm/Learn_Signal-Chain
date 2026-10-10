@@ -185,3 +185,27 @@ export function RelayIcon({ size = 24 }: { size?: number }) {
     </svg>
   )
 }
+
+/**
+ * A voice (the Vocal): a head in profile, speaking — three waves leave its open mouth. Drawn after
+ * the user's picture, in a thinner line than the other icons (their call); drawn small (the palette,
+ * a header) a little heavier, or the line fades.
+ */
+export function VocalIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={size < 24 ? 1.5 : 1} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11.03 20.25L3.55 20.25C3.6 19.87 3.84 18.66 3.89 17.97C3.93 17.28 3.93 16.7 3.82 16.1C3.71 15.5 3.62 15.26 3.23 14.39C2.85 13.52 1.83 11.66 1.5 10.87C1.17 10.09 1.28 10.1 1.25 9.7C1.22 9.31 1.23 8.87 1.3 8.51C1.36 8.14 1.49 7.83 1.63 7.52C1.78 7.2 1.96 6.89 2.15 6.62C2.34 6.34 2.52 6.12 2.76 5.87C3 5.63 3.31 5.36 3.59 5.15C3.87 4.94 4.14 4.78 4.45 4.61C4.76 4.45 5.12 4.28 5.44 4.16C5.76 4.04 6.04 3.97 6.39 3.91C6.73 3.85 7 3.8 7.51 3.8C8.03 3.8 8.91 3.82 9.5 3.91C10.08 4 10.51 4.12 11.03 4.34C11.55 4.56 12.17 4.91 12.61 5.22C13.04 5.53 13.37 5.85 13.66 6.21C13.96 6.57 14.2 7.02 14.36 7.36C14.53 7.7 14.59 7.9 14.66 8.26C14.72 8.63 14.75 9.19 14.75 9.55C14.74 9.9 14.65 10.24 14.63 10.38L16.21 13.13L14.81 13.56C14.84 13.63 14.92 13.85 14.95 13.98C14.98 14.12 15.03 14.25 14.99 14.37C14.96 14.48 14.91 14.57 14.72 14.68C14.54 14.8 14.01 15 13.87 15.07C13.97 15.11 14.34 15.24 14.5 15.34C14.66 15.43 14.79 15.52 14.84 15.63C14.88 15.74 14.77 15.86 14.75 15.99C14.72 16.12 14.71 16.22 14.7 16.39C14.69 16.57 14.72 16.84 14.7 17.03C14.69 17.21 14.66 17.34 14.61 17.48C14.56 17.61 14.49 17.72 14.38 17.81C14.28 17.91 14.12 17.98 13.96 18.04C13.8 18.1 13.65 18.13 13.42 18.15C13.18 18.17 12.86 18.17 12.56 18.17C12.26 18.18 11.82 18.16 11.61 18.2C11.4 18.23 11.38 18.29 11.3 18.4C11.22 18.5 11.19 18.52 11.14 18.83C11.1 19.14 11.05 20.01 11.03 20.25Z" />
+      <path d="M17.88 14.36A1.7 1.7 0 0 1 17.88 16.36M19.58 12.96A3.9 3.9 0 0 1 19.58 17.76M21.44 11.77A6.1 6.1 0 0 1 21.44 18.94" />
+    </svg>
+  )
+}
+
+/** A laptop (the Computer): its screen, the base flaring out under it and the touchpad. After the user's picture. */
+export function LaptopIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="11" rx="0.75" />
+      <path d="M3 15L0.9 19.75H23.1L21 15M10 17.4H14" />
+    </svg>
+  )
+}

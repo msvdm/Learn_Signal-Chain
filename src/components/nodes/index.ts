@@ -37,7 +37,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   acoustic:          SoundSourceNode,
   mic:               MicNode,
   keyboard:          LineSourceNode,
-  pc:                LineSourceNode,
+  pc:                InstrumentNode,
   instrument:        InstrumentNode,
   generator:         GeneratorNode,
   'di-box':          DIBoxNode,
