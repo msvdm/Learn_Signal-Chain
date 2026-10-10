@@ -71,7 +71,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
 
       {wireTarget && <WireTargetBadge label={label} />}
 
-      <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
+      <PortStack nodeId={nodeId} ports={ports} />
       <EdgeTags nodeId={nodeId} overview={overview} />
 
       {lift < 0 ? <div style={{ marginTop: lift }}>{children}</div> : children}

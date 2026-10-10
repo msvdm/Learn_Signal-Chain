@@ -3,8 +3,8 @@ import { Search } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import type { TypeKey } from '../data/nodeRegistry'
 import { availableAt } from '../data/nodeRegistry'
-import { NODE_LOOK, PALETTE_GROUPS } from './nodes/nodeLook'
-import type { PaletteGroup } from './nodes/nodeLook'
+import { NODE_LOOK, PALETTE_SECTIONS } from './nodes/nodeLook'
+import type { PaletteSection } from './nodes/nodeLook'
 import { setActiveDragTypeKey } from '../utils/dragState'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainEmpty } from '../hooks/useChainEmpty'
@@ -12,7 +12,7 @@ import { useMediaQuery, TABLET_QUERY } from '../hooks/useMediaQuery'
 import { PALETTE_WIDTH, PALETTE_RAIL_WIDTH } from '../hooks/usePaletteWidth'
 import { cssVar, textWidth } from '../utils/fitText'
 
-type Tab = 'all' | PaletteGroup
+type Tab = 'all' | PaletteSection['id']
 
 const ICON = 18
 
@@ -72,6 +72,12 @@ export function ElementPalette() {
 
   const nameOf       = (typeKey: TypeKey) => t.palette.items[typeKey] ?? typeKey
   const visibleItems = ALL_ITEMS.filter((item) => availableAt(item.typeKey, complexityLevel))
+  // This level's sections with their tiles; a section with none at this level is left out
+  const sections = PALETTE_SECTIONS[complexityLevel]
+    .map((section) => ({ id: section.id, items: visibleItems.filter((item) => section.groups.includes(item.group)) }))
+    .filter((section) => section.items.length > 0)
+  // A tab chosen at another level that this one has not: everything
+  const shownTab: Tab = sections.some((section) => section.id === tab) ? tab : 'all'
 
   // ── Tablet: icon rail ──────────────────────────────────────────────────────
   if (isTablet) {
@@ -84,7 +90,7 @@ export function ElementPalette() {
           padding: '12px 0', overflowY: 'auto', userSelect: 'none',
         }}
       >
-        {visibleItems.map((item) => {
+        {sections.flatMap((section) => section.items).map((item) => {
           const start = chainEmpty && item.typeKey === START_ITEM
           return (
             <div
@@ -113,15 +119,15 @@ export function ElementPalette() {
 
   // ── Desktop: search, tabs, tile grid ───────────────────────────────────────
   const q = query.trim().toLowerCase()
-  const matching = visibleItems.filter((item) =>
-    (tab === 'all' || item.group === tab) &&
-    // The type key too, so "eq" finds the Equalizer in any language
-    (q === '' || nameOf(item.typeKey).toLowerCase().includes(q) || item.typeKey.includes(q)),
-  )
+  // The type key too, so "eq" finds the Equalizer in any language
+  const matches = (typeKey: TypeKey) => q === '' || nameOf(typeKey).toLowerCase().includes(q) || typeKey.includes(q)
+  const shown = sections
+    .filter((section) => shownTab === 'all' || section.id === shownTab)
+    .map((section) => ({ id: section.id, items: section.items.filter((item) => matches(item.typeKey)) }))
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'all', label: t.palette.all },
-    ...PALETTE_GROUPS.map((g) => ({ id: g, label: t.palette.categories[g] })),
+    ...sections.map((section) => ({ id: section.id, label: t.palette.categories[section.id] })),
   ]
 
   return (
@@ -161,7 +167,7 @@ export function ElementPalette() {
       {/* Category tabs */}
       <div role="tablist" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, flexShrink: 0 }}>
         {tabs.map(({ id, label }) => {
-          const active = tab === id
+          const active = shownTab === id
           return (
             <button
               key={id}
@@ -183,18 +189,17 @@ export function ElementPalette() {
       </div>
 
       {/* Groups */}
-      {PALETTE_GROUPS.map((cat) => {
-        const items = matching.filter((item) => item.group === cat)
+      {shown.map(({ id, items }) => {
         if (items.length === 0) return null
         return (
-          <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+          <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
             <div
               style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
                 color: 'var(--lsc-fg-muted)', padding: '2px 2px 0',
               }}
             >
-              {t.palette.categories[cat]}
+              {t.palette.categories[id]}
             </div>
             {/* Two equal columns, whatever the names (a long word never widens one) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: GRID_GAP }}>
@@ -244,7 +249,7 @@ export function ElementPalette() {
         )
       })}
 
-      {matching.length === 0 && (
+      {shown.every((section) => section.items.length === 0) && (
         <p style={{ fontSize: 13, color: 'var(--lsc-fg-muted)', margin: 0, padding: '0 2px' }}>
           {t.palette.noResults}
         </p>

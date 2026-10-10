@@ -39,7 +39,7 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false }: {
 
   return (
     <CardFrame
-      nodeId={nodeId} typeKey={typeKey} label={label} chrome={chrome}
+      nodeId={nodeId} label={label} chrome={chrome}
       size={{ w: cardMinSize(typeKey).w + FACE_METER_ROOM, h: height }}
       bare={overview && bare}
     >

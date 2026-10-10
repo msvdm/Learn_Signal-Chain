@@ -7,6 +7,7 @@ import {
   SlidersHorizontal, MoveHorizontal, Headphones,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
+import type { ComplexityLevel } from '../../data/levels'
 import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
@@ -15,9 +16,32 @@ import { HighPassIcon, JackPlugIcon, GateIcon, CompressorIcon, LimiterIcon, Knob
 /** An icon, `size` px wide. */
 export type NodeIcon = ComponentType<{ size?: number }>
 
-/** The palette's groups, in the order it shows them. Not the registry's categories: a DI Box is a source here. */
+/** What each element is in the palette. Not the registry's categories: a DI Box is a source here. */
 export const PALETTE_GROUPS = ['source', 'processing', 'routing', 'output'] as const
 export type PaletteGroup = typeof PALETTE_GROUPS[number]
+
+/** A palette section: its name (`palette.categories`) and the groups it gathers, in NODE_LOOK's order. */
+export interface PaletteSection {
+  id: PaletteGroup | 'inputs' | 'devices' | 'outputs'
+  groups: readonly PaletteGroup[]
+}
+
+// One section per group
+const EVERY_GROUP: readonly PaletteSection[] = PALETTE_GROUPS.map((group) => ({ id: group, groups: [group] }))
+
+/**
+ * The palette's sections at each level, in the order it shows them. Beginner sees whole devices
+ * (D20), so processing and routing are one section there; the harder levels show every group.
+ */
+export const PALETTE_SECTIONS: Record<ComplexityLevel, readonly PaletteSection[]> = {
+  beginner: [
+    { id: 'inputs',  groups: ['source'] },
+    { id: 'devices', groups: ['processing', 'routing'] },
+    { id: 'outputs', groups: ['output'] },
+  ],
+  intermediate: EVERY_GROUP,
+  advanced:     EVERY_GROUP,
+}
 
 export interface NodeLook {
   icon: NodeIcon

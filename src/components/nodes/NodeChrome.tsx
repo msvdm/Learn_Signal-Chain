@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react'
-import type { NodePort as Port, TypeKey } from '../../data/nodeRegistry'
-import { availableAt, portRows } from '../../data/nodeRegistry'
-import { useSignalStore } from '../../store/signalStore'
+import type { NodePort as Port } from '../../data/nodeRegistry'
+import { portRows } from '../../data/nodeRegistry'
 import { useStage } from '../../hooks/useGraphSignal'
 import { formatDb, humStrength } from '../../signal/levels'
 import type { SignalDomain } from '../../signal/levels'
@@ -10,25 +9,18 @@ import { NodePort } from './NodePort'
 
 // Pieces every element's shell draws around its controls (CardFrame, FreeControl; useNodeChrome)
 
-/**
- * The element's inputs down its left edge and outputs down its right, from the first port line.
- * A microphone's input (the sound of a Guitar Amp) is left out at a level without Guitar Amps,
- * unless a wire is on it.
- */
-export function PortStack({ nodeId, typeKey, ports }: {
+/** The element's inputs down its left edge and outputs down its right, from the first port line. */
+export function PortStack({ nodeId, ports }: {
   nodeId: string
-  typeKey: TypeKey
   ports: { inputs: Port[]; outputs: Port[] }
 }) {
-  const noInputs = useSignalStore((s) =>
-    typeKey === 'mic' && !availableAt('guitar-amp', s.complexityLevel) && !s.edges.some((e) => e.target === nodeId))
   const inRows   = portRows(ports.inputs)
   const outRows  = portRows(ports.outputs)
   // Ports on neighbouring lines share the room between them (NodePort's reach)
   const near = (rows: number[], row: number) => ({ above: rows.includes(row - 1), below: rows.includes(row + 1) })
   return (
     <>
-      {!noInputs && ports.inputs.map((port, i) => (
+      {ports.inputs.map((port, i) => (
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" row={inRows[i]} near={near(inRows, inRows[i])} />
       ))}
       {ports.outputs.map((port, i) => (

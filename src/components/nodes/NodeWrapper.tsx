@@ -87,7 +87,7 @@ export function NodeWrapper({
 
   return (
     <CardFrame
-      nodeId={nodeId} typeKey={typeKey} label={label} chrome={chrome}
+      nodeId={nodeId} label={label} chrome={chrome}
       size={{ w: minSize.w, h: cardHeight(typeKey, ports) }}
       bare={overview && overviewBare}
       // A source with nothing on its output says so instead of a level (D11)

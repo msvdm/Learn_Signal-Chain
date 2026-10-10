@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import type { TypeKey } from '../../data/nodeRegistry'
 import type { NodeChrome } from '../../hooks/useNodeChrome'
 import type { Size } from '../../utils/geometry'
 import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
@@ -11,9 +10,8 @@ import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
  * drawn the badge saying it can take it. Zoomed out a `bare` card has no box: only a selection
  * still draws its ring.
  */
-export function CardFrame({ nodeId, typeKey, label, chrome, size, bare = false, notConnectedTag = false, children }: {
+export function CardFrame({ nodeId, label, chrome, size, bare = false, notConnectedTag = false, children }: {
   nodeId: string
-  typeKey: TypeKey
   label: string
   chrome: NodeChrome
   size: Size
@@ -67,7 +65,7 @@ export function CardFrame({ nodeId, typeKey, label, chrome, size, bare = false, 
         </div>
       )}
 
-      <PortStack nodeId={nodeId} typeKey={typeKey} ports={ports} />
+      <PortStack nodeId={nodeId} ports={ports} />
       <EdgeTags nodeId={nodeId} overview={overview} notConnected={notConnectedTag} />
 
       {children}

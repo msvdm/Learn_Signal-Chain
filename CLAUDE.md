@@ -34,7 +34,7 @@ bun run preview  # Preview the production build locally
 **How the work goes** (the user's way of working):
 - Work happens on `master`: the user is the only developer, so no branch for a piece of work (2026-10-06, the user's call) — only when they ask for one. Start with `git fetch` and check `master` is the remote's latest (a reused cloud container once started a session on a stale local branch); a session that finds itself on another branch (a cloud session's own) says so at the start, so its work doesn't end up off `master`. A piece of work: build it, `bun run lint` + `bun run build` + `bun test`, check it in the browser, update this file where it changed, commit — and tell the user what was done, the numbers measured, the choices made (to review) and what only they can check. One commit per step.
 - **Push only when the user says so.** "Push" = push `master`: GitHub runs `.github/workflows/build-check.yml` (lint, test, build) and deploys nothing. "Push and release" = push, then the next version tag (`git tag v0.2.0 && git push origin v0.2.0` — see `git tag`, propose the number: v0.x.0 for features, v0.x.y for fixes; the first was v0.1.0): only a `v*` tag, or *Run workflow* in the Actions tab, runs `deploy.yml` to GitHub Pages (its `github-pages` environment allows `master`, `gh-pages` and `v*` tags). `package.json`'s version stays 0.0.0. Then the GitHub Release: `gh release create vX.Y.Z --title "Learn Signal Chain X.Y" --notes-file <notes>` — the notes are README's *What's New* since the last release, shown to the user first. Never tag on your own.
-- **The user decides what the app teaches and how it looks.** When a decision is theirs — or real behaviour breaks the premise of one they made — ask, with a recommendation, before building around it (D8, D9 and D10 were asked that way, D11 with mock-ups). Their decisions are in `docs/decisions.md`: D1 … D19 in full (one line each below — the code cites them by number; a new one goes there in full, with its date) and *The user's smaller calls* (choices of look and feel: change one only when they ask).
+- **The user decides what the app teaches and how it looks.** When a decision is theirs — or real behaviour breaks the premise of one they made — ask, with a recommendation, before building around it (D8, D9 and D10 were asked that way, D11 with mock-ups). Their decisions are in `docs/decisions.md`: D1 … D23 in full (one line each below — the code cites them by number; a new one goes there in full, with its date) and *The user's smaller calls* (choices of look and feel: change one only when they ask).
 - **Prefer what the browser already does** (Web Audio and the like) over homemade simulations, and say so up front; flag it early when a step's code grows far beyond its plan (decision D7 came from a 1,600-line homemade time engine).
 - **Real sound can change a lesson**: measure, then rewrite the help text (en + bg) — never tune a processor to fit an old sentence. Every number a text quotes is checked against the number engine or a render (see below).
 - **No new packages so far** (the Vite plugins are written here). CI installs with `bun install --frozen-lockfile`, so a package needs `bun.lock` updated in the same commit — ask the user first.
@@ -163,15 +163,7 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 
 ### Level system
 
-The level is `complexityLevel` in the store (persisted). Levels control **palette visibility only** — they do not auto-populate the graph:
-
-| Level | Visible palette items |
-|---|---|
-| Beginner | mic, line-in, instrument, di-box, active-speaker, headphones, gain, fader |
-| Intermediate | + guitar-amp, generator, hpf, eq, comp, pad, noise-gate, limiter, deesser, switch, relay (Relay Switch), pan (Pan / Balance), master-bus, aux-bus |
-| Advanced | + speaker, amp, graphic-eq, adc, dac, matrix-bus |
-
-Each type's `minLevel` in `NODE_REGISTRY` is the source of truth for this table. A level can also change a card's layout, name and starting params: the EQ is the three-knob **Equalizer** in Intermediate and the **Parametric Equalizer** in Advanced (`initialParams()`; names in the locales' `levelNames`). From Intermediate (`DETAIL_LEVEL`, D3) the meters show their peaks, noise, numbers and movement, and the sources their sound buttons. Switching level clears the canvas (with confirmation); no level pre-places anything.
+The level is `complexityLevel` in the store (persisted). **Levels are scales** (D20): Beginner the devices in a room, Intermediate a small analogue desk, Advanced the parts and the digital picture; none auto-populates the graph. Which types a level's palette shows is each type's `levels` in `NODE_REGISTRY` (some leave at harder levels; the plan: TODO.md, *Target palettes*), in sections per level (`PALETTE_SECTIONS`, `nodeLook.ts`: Beginner's are Inputs · Devices · Outputs). A level can also change a card's layout, name and starting params: the EQ is the three-knob **Equalizer** in Intermediate and the **Parametric Equalizer** in Advanced (`initialParams()`; names in the locales' `levelNames`). From Intermediate (`DETAIL_LEVEL`, D3) the meters show their peaks, noise, numbers and movement, and the sources their sound buttons. Switching level clears the canvas (with confirmation); no level pre-places anything.
 
 ### Signal health zones
 
@@ -211,6 +203,10 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D17** — The meter measures the noise (the blue part, a Noise number); one size per card.
 - **D18** — Noise as on a real analogue desk.
 - **D19** — No hover messages: explanations go in the help popover (`theory`).
+- **D20** — Levels are scales: Beginner devices and connections only (no engine, no render, no real meters — D3 / D5 hold from Intermediate), Intermediate the analogue desk, Advanced the digital picture; some elements leave at harder levels.
+- **D21** — The microphone is not the sound: Vocal, Drum Kit, Acoustic and Guitar Amp feed a mic's Sound input; the source has the SPL meter; a Condenser needs 48V.
+- **D22** — Interface and DAW at Intermediate record and play back only, never inside a chain; *Look inside* shows the digital strip; wire colours stay health only.
+- **D23** — Advanced adds the digital picture: Decoder, Recorder (VU / dBFS), Coder → Stream / Broadcast.
 
 (D2 and D6 were replaced by D8 and D9.)
 
@@ -235,7 +231,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 
 Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed by it then fails to compile until the type is in it.
 
-1. `NODE_REGISTRY` (`src/data/nodeRegistry.ts`): ports, category, `stereo` (a processor gets `'follow'`: it passes on stereo by itself, and reads its meters through `useStereoLevels`), `defaultParams`, `minLevel` (the easiest level whose palette shows it), `bypass` (false where the control itself is the state). Flags when they apply: `bus`, `splits`, `dynamics` (a level curve, linked in stereo), `freeSize` (a bare control), `minSize`
+1. `NODE_REGISTRY` (`src/data/nodeRegistry.ts`): ports, category, `stereo` (a processor gets `'follow'`: it passes on stereo by itself, and reads its meters through `useStereoLevels`), `defaultParams`, `levels` (the levels whose palette shows it), `bypass` (false where the control itself is the state). Flags when they apply: `bus`, `splits`, `dynamics` (a level curve, linked in stereo), `freeSize` (a bare control), `minSize`
 2. What it does to the signal. A card whose job is a gain: its gain in `GAINS` (`src/signal/gains.ts`; dB, −∞ off) — the number engine and the render both read it; in `PROCESS` (`src/signal/process.ts`) it is then `gained`. Any other card: its function in `PROCESS` — to every reading (`dynamics` for a curve; read settings with `param(node, key)`; add new keys to `ParamTypes`). A card with no power of its own goes in `PASSIVE` (no hiss); a source gets its noise in `NOISE_BELOW` and its peaks in `soundOf` / `PEAKS_ABOVE` (and a loop or a sound in `audio/`); a setting that takes one of a few words goes in `PARAM_CHOICES` (or `paramChoices` when types differ)
    - And, unless it is a gain, what it does to real sound: its entry in `OTHERS` in `src/audio/chainAudio.ts` (Web Audio nodes — a new type does not compile without one; a dynamics card a processor in `audio/processors.ts` with its tests, and its row in `DYNAMICS` — `audio/dynamics.ts`: its knobs, how long it settles, its makeup). A condition it can be in goes in `StageCondition` and `SILENCES`, and what its card says in `CONDITIONS` (`components/nodes/conditions.tsx`)
 3. Create `src/components/nodes/YourNode.tsx` (props: `CardProps`):
@@ -247,4 +243,4 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
 
 ### Adding a new level
 
-Add it to `ComplexityLevel` and `LEVELS` in `src/data/levels.ts`, set the `minLevel` of the types it brings in `NODE_REGISTRY`, and add its `levels.<id>` text to every locale.
+Add it to `ComplexityLevel` and `LEVELS` in `src/data/levels.ts`, add it to the `levels` of the types it shows in `NODE_REGISTRY` and give it its sections in `PALETTE_SECTIONS`, and add its `levels.<id>` text to every locale.

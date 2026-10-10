@@ -2,7 +2,7 @@
 // No imports from the rest of the app (only the levels); safe to import from anywhere.
 
 import type { ComplexityLevel } from './levels'
-import { atLeast } from './levels'
+import { LEVELS } from './levels'
 
 /** A connection point. */
 export type NodePort = {
@@ -64,8 +64,11 @@ export type NodeTypeDef = {
   /** Outputs when the Mono | Stereo switch is on (the Aux Bus splits into L / R). */
   stereoOutputs?: NodePort[]
   defaultParams: Record<string, NodeParamValue>
-  /** The easiest level whose palette has it; every harder level has it too. */
-  minLevel: ComplexityLevel
+  /**
+   * The levels whose palette has it (D20: each level is a scale, so some elements leave at harder
+   * levels). Its ports and what it does never depend on the level.
+   */
+  levels: readonly ComplexityLevel[]
   /**
    * Has an On / Off (bypass) button. Not for sources and end points, nor where the control itself
    * is the state (a fader, a switch, a pad …).
@@ -166,44 +169,49 @@ const FACE_SIZE: Size = { w: 320, h: 328 }
 const SOURCE_SIZE: Size = { w: 320, h: 350 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
+// The levels whose palette shows a type (`levels`)
+const EVERY_LEVEL: readonly ComplexityLevel[]       = LEVELS
+const FROM_INTERMEDIATE: readonly ComplexityLevel[] = ['intermediate', 'advanced']
+const ADVANCED_ONLY: readonly ComplexityLevel[]     = ['advanced']
+
 export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   mic: {
     // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
     category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
-    minLevel: 'beginner', bypass: false, minSize: SOURCE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
     defaultParams: { sensitivityDb: -60, character: 'speech' },
   },
   'line-in': {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
-    minLevel: 'beginner', bypass: false, minSize: SOURCE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
     defaultParams: { levelDb: -10, stereo: false, character: 'music' },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
-    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -30 },
   },
   generator: {
     // A test sound of its own, at the level its knob sets (0 dBu: unity); Stereo: the same on both sides
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
-    minLevel: 'intermediate', bypass: false, minSize: { w: 320, h: 285 },
+    levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 285 },
     defaultParams: { sound: 'sine', levelDb: 0, stereo: false },
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, freeSize: { w: 217, h: 285 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 217, h: 285 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
   },
   hpf: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 320, h: 268 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 },
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 410, h: 361 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -215,37 +223,37 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'graphic-eq': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'advanced', bypass: true, splits: true,
+    levels: ADVANCED_ONLY, bypass: true, splits: true,
     // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
     defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
   'noise-gate': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
+    levels: ADVANCED_ONLY, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
     // Range sets how far it turns down when closed; Hold / Attack / Release: how long it stays open,
     // how fast it opens and closes (audio/processors.ts)
     defaultParams: { thresholdDb: -40, rangeDb: -80, holdMs: 50, attackMs: 1, releaseMs: 100 },
   },
   limiter: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 618, h: 361 }, dynamics: true, splits: 'mix',
+    levels: ADVANCED_ONLY, bypass: true, minSize: { w: 618, h: 361 }, dynamics: true, splits: 'mix',
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   deesser: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 412, h: 361 }, dynamics: true,
+    levels: ADVANCED_ONLY, bypass: true, minSize: { w: 412, h: 361 }, dynamics: true,
     defaultParams: { thresholdDb: -20, frequencyHz: 6000 },
   },
   pad: {
     // A bare button like the On Off Switch (D11), with its name under it
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 162, h: 188 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 188 },
     defaultParams: { engaged: true },
   },
   'di-box': {
@@ -256,29 +264,29 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
       { id: 'out' },
       { id: DI_DIRECT_PORT },
     ],
-    minLevel: 'beginner', bypass: true,
+    levels: FROM_INTERMEDIATE, bypass: true,
     defaultParams: { groundLift: false },
   },
   'guitar-amp': {
     // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
     category: 'processor', inputs: IN, outputs: [{ id: SOUND_PORT }], stereo: 'never',
-    minLevel: 'intermediate', bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     // Its Volume knob goes to 11 (signal/process.ts guitarAmpGainDb)
     defaultParams: { volume: 5 },
   },
   amp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'advanced', bypass: false, minSize: { w: 412, h: 361 }, splits: true,
+    levels: EVERY_LEVEL, bypass: false, minSize: { w: 412, h: 361 }, splits: true,
     defaultParams: { gainDb: 0 },
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'beginner', bypass: false, splits: 'mix', freeSize: { w: 198, h: 582 },
+    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 198, h: 582 },
     defaultParams: { faderDb: 0 },
   },
   switch: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 162, h: 167 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 167 },
     defaultParams: { on: true },
   },
   relay: {
@@ -291,20 +299,20 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     ],
     // Centred between them, straight out of the switch's pivot
     outputs: [{ id: 'out', row: 1 }],
-    minLevel: 'intermediate', bypass: false, minSize: { w: 240, h: 196 },
+    levels: FROM_INTERMEDIATE, bypass: false, minSize: { w: 240, h: 196 },
     defaultParams: { selectedInput: 'a' },
   },
   pan: {
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    minLevel: 'intermediate', bypass: false, freeSize: { w: 232, h: 308 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 232, h: 308 },
     defaultParams: { panPosition: 50 },
   },
   adc: {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in' }],
     outputs: [{ id: 'out' }],
-    minLevel: 'advanced', bypass: false, minSize: { w: 320, h: 218 },
+    levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 218 },
     // alignmentDb: how far below the digital ceiling unity sits (EBU R68: 0 dBu = −18 dBFS,
     // so 0 dBFS = +18 dBu). dBFS = dBu − alignmentDb.
     defaultParams: { alignmentDb: 18 },
@@ -313,21 +321,21 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in' }],
     outputs: [{ id: 'out' }],
-    minLevel: 'advanced', bypass: false, minSize: { w: 320, h: 259 },
+    levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 259 },
     defaultParams: { alignmentDb: 18 },
   },
   'master-bus': {
     // Always stereo. The input accepts any number of wires; they are added together.
     // The mix leaves on two wires: Left and Right.
     category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'mix',
-    minLevel: 'intermediate', bypass: false, minSize: BUS_SIZE,
+    levels: FROM_INTERMEDIATE, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
   'aux-bus': {
     // The input accepts any number of wires; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
     category: 'merge', inputs: IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
-    minLevel: 'intermediate', bypass: true, minSize: { w: 398, h: 397 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
     defaultParams: { faderDb: 0, stereo: false },
   },
   'matrix-bus': {
@@ -336,25 +344,25 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
     // A mono bus lands on both sides at full level.
     category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
-    minLevel: 'advanced', bypass: false, minSize: BUS_SIZE,
+    levels: ADVANCED_ONLY, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
   speaker: {
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'advanced', bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { outputTrimDb: 0 },
   },
   'active-speaker': {
     // Active/powered speaker — has built-in amplification, works directly from line level
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
   },
   headphones: {
     // Works as an Active Speaker does (amplifier built in): there to show where a listener plugs in
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    minLevel: 'beginner', bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
   },
 }
@@ -366,7 +374,7 @@ export function isTypeKey(key: string): key is TypeKey {
 
 /** Is this element in the palette at this level? */
 export function availableAt(typeKey: TypeKey, level: ComplexityLevel): boolean {
-  return atLeast(level, NODE_REGISTRY[typeKey].minLevel)
+  return NODE_REGISTRY[typeKey].levels.includes(level)
 }
 
 /**

@@ -126,7 +126,7 @@ export function RelayNode({ id }: CardProps) {
 
   // No header, no level: its own face over the whole card, at every zoom
   return (
-    <CardFrame nodeId={id} typeKey="relay" label={label} chrome={chrome} size={{ w: SIZE.w, h: cardHeight('relay', chrome.ports) }}>
+    <CardFrame nodeId={id} label={label} chrome={chrome} size={{ w: SIZE.w, h: cardHeight('relay', chrome.ports) }}>
       {face}
     </CardFrame>
   )

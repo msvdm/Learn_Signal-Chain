@@ -343,7 +343,10 @@
       "source": "Sources",
       "processing": "Processing",
       "routing": "Routing",
-      "output": "Output"
+      "output": "Output",
+      "inputs": "Inputs",
+      "devices": "Devices",
+      "outputs": "Outputs"
     },
     "items": {
       "mic": "Microphone",
