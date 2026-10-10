@@ -8,10 +8,10 @@ tests are what is true today.
 ## D1 – D23
 
 - **D1 — A hum follows the signal**, like all noise: a fader turns the hum down with the music and the gap stays. Only fixing the cause (Ground Lift) removes it.
-- **D3 — Beginner shows nothing new**: the meters' peaks and noise (the blue part), their Peak / RMS / Noise numbers, the sources' sound buttons and the moving meters start at Intermediate (`DETAIL_LEVEL`, `CHARACTER_LEVEL`); at Beginner a Microphone plays Speech, a Line Input Music. Replaced at Beginner by D20.
+- **D3 — Beginner shows nothing new**: the meters' peaks and noise (the blue part), their Peak / RMS / Noise numbers, the sources' sound buttons and the moving meters start at Intermediate (`DETAIL_LEVEL`, `CHOICE_LEVEL`); at Beginner a Microphone plays Speech, a Line Input Music (since D21 a Vocal speaks). Replaced at Beginner by D20.
 - **D4 — Clipping is judged on the peaks**: a card is red as soon as its peaks reach the clip level, whatever its average (since D16 the bar's colours belong to its scale; the red clip line says it). **D5** — at every level, Beginner too; the engine takes no level. Since D20 Beginner judges no levels at all.
 - **D7 — Real audio** (Web Audio) instead of homemade simulations: the chain is played on short loops made for the app (no recordings of real people, no copyrighted music); the dynamics are our own processors in an AudioWorklet.
-- **D8 — The loops on the sources**: Microphone Speech · Singing · Drums, Line Input Music · Drums, Instrument and Guitar Amp a guitar. Older files' `melodic` opens as Speech / Music, `percussive` as Drums.
+- **D8 — The loops on the sources**: Microphone Speech · Singing · Drums, Line Input Music · Drums, Instrument and Guitar Amp a guitar. Older files' `melodic` opens as Speech / Music, `percussive` as Drums. Since D21 (2026-10-10): Vocal Speech · Singing, Drum Kit drums, Acoustic Guitar a guitar, Keyboard and PC music (the Line Input became the Keyboard; its Drums went).
 - **D9 — Every card's readings come from the render** on real sound; the number engine is the instant picture, moving the last render's readings by its step until the next one.
 - **D10 — The meters replay the render**, not a live AudioContext: every sound is one loop long, so the render records the loop slice by slice and the meters play it back on the clock. No Play / Pause; DAW meter maths (RMS 300 ms, peak and hold, the noise floor as the fog — since D17 the blue part); meters upright at the cards' sides (In left, Out right), the 4:3 rule gone; nothing moves at Beginner (D3). Nothing more on the wires than the flow animation that shows the direction (steps 12 and 13 of the plan were dropped).
 - **D11 — Meters only where a meter belongs**: face-only cards show their icon, buttons or knob and notes, no level (since D13 they have one); Pan a dot on an L–R track; the Pad a bare button; zoomed out the other cards keep their meter; a source with nothing wired shows "Not connected" — no connection, no signal. The numbers, health words and colours stay the whole loop's while the meters move.
@@ -51,10 +51,12 @@ the descriptions). Each is what the user asked for; change one only when they as
   the width two rows need — Bulgarian's Допълнителна смесителна шина (Aux) on two rows: the header
   stays 56 px, the card its size.
 - **Microphone and Line Input are full cards of one size** (2026-10-08): 320 × 350, the icon and
-  name in the header, their buttons on the left and their meter on the right.
+  name in the header, their buttons on the left and their meter on the right. Since D21 the Keyboard
+  and the PC (the Line Input's heirs); the Microphone is a face card, its buttons beside its icon.
 - **Zoomed out, the Microphone, Line Input and Instrument are bare** (`overviewBare`): their icon
   over a horizontal level bar and its scale, no numbers, no card around them (a selection still
-  draws its ring) — like the Gain knob.
+  draws its ring) — like the Gain knob. Since D21 the Keyboard, the PC, the sounds in the air and
+  the Microphone too (no meter: its icon alone).
 - **The overview's level bar is one thickness on every card** (2026-10-08): `BAR_H` 24 px, stereo
   17 each.
 - **The meters' bars are twice as thick** (2026-10-06): 32 px, L and R 22 px each, each with its

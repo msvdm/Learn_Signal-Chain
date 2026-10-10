@@ -141,7 +141,10 @@
   },
   "nodes": {
     "mic": {
-      "label": "Microphone"
+      "label": "Microphone",
+      "type": "Microphone type",
+      "dynamic": "Dynamic",
+      "condenser": "Condenser"
     },
     "preamp": {
       "label": "Preamp"
@@ -318,11 +321,9 @@
     "stereo": "Stereo"
   },
   "character": {
-    "label": "What it picks up",
+    "label": "What it does",
     "speech": "Speech",
-    "singing": "Singing",
-    "music": "Music",
-    "drums": "Drums"
+    "singing": "Singing"
   },
   "unplugMenu": {
     "title": "Wires on this input",
@@ -349,8 +350,12 @@
       "outputs": "Outputs"
     },
     "items": {
+      "vocal": "Vocal",
+      "drum-kit": "Drum Kit",
+      "acoustic": "Acoustic Guitar",
       "mic": "Microphone",
-      "line-in": "Line Input",
+      "keyboard": "Keyboard",
+      "pc": "Computer",
       "instrument": "Instrument",
       "di-box": "DI Box",
       "guitar-amp": "Guitar Amp",
@@ -380,15 +385,35 @@
     }
   },
   "theory": {
-    "mic": {
-      "what": "The microphone converts sound (acoustic energy) into an electrical signal. It outputs a very weak voltage — typically around -60 dBu for a dynamic microphone.",
-      "why": "Everything starts here. The quality and placement of the microphone determines the raw material for the entire signal chain. A good source signal makes everything downstream easier.",
-      "tip": "Its wire is blue (too quiet) — that is completely normal and expected at this stage. The preamp's job is to fix that. Put it in front of a Guitar Amp (wire the amp's Sound into it) and it picks up the amp: the louder the amp plays, the louder the microphone. From Intermediate on, choose what it picks up: Speech, Singing or Drums. They do not reach it equally loud: close up, speech is about 86 dB SPL, singing about 96, a drum about 110 — and the microphone's signal follows, so a drum needs about 24 dB less Preamp gain than a voice. Drum hits also jump much further above the average, so they reach the clip level sooner."
+    "vocal": {
+      "what": "A person speaking or singing. The voice is sound in the air, not a signal yet — a Microphone turns it into one.",
+      "why": "A microphone hears only what is in front of it. Wire the Vocal’s Sound (a dotted line: sound through the air, not a cable) into a Microphone.",
+      "tip": "From Intermediate on, choose Speech or Singing. Close to the microphone, speech is about 86 dB SPL and singing about 96 — 10 dB louder, so the microphone’s signal is 10 dB stronger too."
     },
-    "line-in": {
-      "what": "A line input accepts signals that are already at \"line level\" — roughly -10 dBu for consumer gear, +4 dBu for professional gear. This is the standard level used between devices: from a keyboard, audio interface, or effects unit into a mixer.",
-      "why": "Line-level signals are strong enough to drive mixing and processing gear directly without a preamp. They sit well above the noise floor and well below the clipping point.",
-      "tip": "If your line-level signal reads Good (−40 to 0 dBu) you are good to go. If it is too quiet, the source device may have its own output level control — adjust that first before adding gain in the chain. Set it to Stereo for a source that has a left and a right side, like a keyboard or a phone — both travel on one wire. From Intermediate on, choose what it plays: Music (a song) or Drums (a drum machine). Drum hits jump much further above the average, so they reach the clip level sooner."
+    "drum-kit": {
+      "what": "A drum kit: loud, sharp hits. It is sound in the air — a Microphone turns it into a signal.",
+      "why": "Wire its Sound into a Microphone (a dotted line). One kit can feed several microphones, as on a real stage: one on the kick drum, one on the snare, one above the kit.",
+      "tip": "Close up a drum reaches about 110 dB SPL — 24 dB louder than speech, so its Preamp needs about 24 dB less gain. Its hits also jump far above the average, so they reach the clip level sooner."
+    },
+    "acoustic": {
+      "what": "An acoustic guitar: no pickup, no cable — its sound comes out of its wooden body, into the air.",
+      "why": "To get it into the desk, put a Microphone in front of it: wire its Sound into the Microphone (a dotted line).",
+      "tip": "Strummed close to the microphone it is about 90 dB SPL — a little louder than speech."
+    },
+    "mic": {
+      "what": "The microphone turns sound in the air into an electrical signal — a very weak one: about −60 dBu for a voice into a dynamic microphone.",
+      "why": "It hears only what is wired into its Sound input: a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar Amp (a dotted line). It also hears the room around it: the quiet hiss left when the music stops.",
+      "tip": "Its wire is blue (too quiet) — normal at this stage: the Preamp’s job is to fix that. From Intermediate on, choose its type. Dynamic: tough, needs no power. Condenser: about 12 dB more signal from the same sound, so the Preamp needs less gain — but it hears the room 12 dB louder too, and in real life it needs power (48V phantom power)."
+    },
+    "keyboard": {
+      "what": "A keyboard (a synthesizer or a digital piano) sends a line-level signal — about −10 dBu, already strong enough for the desk. It is stereo: Left and Right travel on one wire.",
+      "why": "A line-level signal needs no Preamp: it goes straight into a channel, a Fader or a mixing bus.",
+      "tip": "Its level reads Good (−40 to 0 dBu) as it is. Wired into a card with one channel (a mono Aux Bus, one speaker), its Left and Right are added together into one."
+    },
+    "pc": {
+      "what": "A computer playing music: its headphone or line output sends a stereo signal of about 0 dBu — line level.",
+      "why": "Like the Keyboard, it needs no Preamp: wire it into a Fader or a mixing bus. Left and Right travel on one wire.",
+      "tip": "Music from a computer is often louder than other line sources: watch the meters after it."
     },
     "instrument": {
       "what": "An electric guitar, bass or keyboard. Its signal is stronger than a microphone's (about −30 dBu) but still well below line level.",
@@ -448,7 +473,7 @@
     "aux-bus": {
       "what": "An aux bus collects several signals and adds them together. Its one input takes as many wires as you like. In Mono everything leaves on one wire. Switch it to Stereo to keep left and right apart: the mix then leaves on two wires, L and R. In Stereo, a Fader wired to L or R becomes its Main Fader, just like on the Master Bus.",
       "why": "Use it to group sources that belong together — all backing vocals, all drums — so one control sets their combined level, or to send a separate mix to a monitor or an effect.",
-      "tip": "Try this: set a Line Input to Stereo and wire it into a Mono aux bus. Left and right are added together and the level jumps by about 6 dB. That is why a stereo mix can suddenly get louder (or clip) when it is folded down to mono."
+      "tip": "Try this: wire a Keyboard (always stereo) into a Mono aux bus. Left and right are added together and the level jumps by about 6 dB. That is why a stereo mix can suddenly get louder (or clip) when it is folded down to mono."
     },
     "matrix-bus": {
       "what": "A matrix bus is a mix of your mixes. Only finished mixes go in, after their fader — the Master Bus or an Aux Bus — never a single microphone or instrument. Wire a bus's L or R output into the matrix and the wire becomes its Matrix send: one stereo wire that carries left and right together, drawn as a twin line in its own colour and marked L+R. A mono Aux Bus goes in from its output, or from the Fader after it, and lands on both sides at the same level. Each bus gets one knob on the card that sets how much of it goes in. A matrix bus is always stereo: its mix leaves on two wires, L and R.",

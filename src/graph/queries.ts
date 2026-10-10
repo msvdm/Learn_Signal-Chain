@@ -284,12 +284,14 @@ function reaches(
 }
 
 /**
- * A source with nothing plugged into its output (decision D11: no connection, no signal): it shows no
- * level and no readings, and its meters stand still, until it is wired to something.
+ * A source with nothing plugged into its output, or a microphone hearing nothing (no sound wired
+ * into it — D21) — decision D11: no connection, no signal. It shows no level and no readings, and
+ * its meters stand still, until it is wired.
  */
 export function unwiredSource(nodeId: string, view: GraphView): boolean {
   const graph = graphOf(view)
   const node  = graph.node(nodeId)
+  if (node?.typeKey === 'mic') return graph.into(nodeId).length === 0
   return node !== undefined && NODE_REGISTRY[node.typeKey].category === 'source' && graph.from(nodeId).length === 0
 }
 

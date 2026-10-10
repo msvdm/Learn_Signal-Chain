@@ -28,6 +28,28 @@ export function wire(from: string, to: string): SignalEdge {
   return { id: `${from} → ${to}`, source, sourceHandle, target, targetHandle }
 }
 
+/**
+ * Someone speaking into a dynamic Microphone (D21): the Vocal `<id>Voice` and the Microphone `id` —
+ * a Microphone hears only a sound wired into it (`heard`). It sends what the Microphone did when it
+ * was the sound too: −60 dBu, peaks at −48, the room at −126.
+ */
+export const voiceInto = (id: string, params: Record<string, NodeParamValue> = {}): SignalNode[] =>
+  [card(`${id}Voice`, 'vocal', params), card(id, 'mic')]
+
+/** The Vocal's sound into its Microphone (voiceInto). */
+export const heard = (id: string): SignalEdge => wire(`${id}Voice:sound`, id)
+
+/** What a Vocal speaking sends (−30 on its Sound wire: 86 dB SPL) — the first row of a voiceInto in a table. */
+export const VOICE: Expected = { out: -30, health: 'good' }
+
+/**
+ * A mono line-level source at −10 dBu (unless `params` say): the Generator's Noise, its peaks 12 dB
+ * above its average, as music's. The Line Input was one until it became the Keyboard, always stereo
+ * (D21); the Generator's own noise is 10 dB further down (90 dB under its level, the Line Input's 80).
+ */
+export const line = (id: string, params: Record<string, NodeParamValue> = {}): SignalNode =>
+  card(id, 'generator', { sound: 'noise', levelDb: -10, ...params })
+
 export const signalOf = (nodes: SignalNode[], edges: SignalEdge[]) => graphSignal(nodes, edges)
 
 // ── What a card should show ─────────────────────────────────────────────────────

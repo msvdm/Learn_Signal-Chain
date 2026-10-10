@@ -75,7 +75,7 @@ export type StageRole =
 type CardMode =
   | 'needs-amp' // a passive speaker with no amplifier before it: silent
   | 'pan'       // Pan (a mono wire in) or Balance (a stereo wire in): sets L against R
-  | 'source'    // makes a signal (a Microphone may hear a Guitar Amp)
+  | 'source'    // makes a signal (or a sound in the air, for a microphone)
   | 'linked'    // stereo dynamics: the louder side drives one change for both sides
   | 'stereo'    // runs once per side
   | 'mono'      // one channel: a stereo wire arriving is folded into it
@@ -102,7 +102,7 @@ export interface CardPlan {
   followKind: WireKind
   fed: boolean
   preamp: boolean
-  /** A source playing its own sound (not a Microphone hearing a Guitar Amp) */
+  /** A source, playing its sound */
   plays: boolean
   /** An active speaker after an amplifier: fed speaker level, it blows */
   amped: boolean
@@ -137,7 +137,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
     // The first Gain after a microphone (or a DI Box's XLR Out) works as its Preamp
     const preamp = node.typeKey === 'gain' && preampSourceOf(node.id, graph) !== null
     const fed    = incoming.length > 0
-    // Stereo: a bus (or Line In) set to Stereo, or a follow node fed a stereo wire.
+    // Stereo: a stereo source or bus (always, or set to Stereo), or a follow node fed a stereo wire.
     // Mono: everything else — one channel; a stereo wire arriving here is folded into one.
     const isStereo = node.typeKey !== 'pan' && (isNodeStereo(node) || (def.stereo === 'follow' && followKind === 'stereo'))
 
@@ -167,7 +167,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       node, mode, followKind, fed, preamp, outputs,
       used:        used.map((e) => ({ key: keyOf(e), nodeId: e.source, sendDb: sendDb(e) })),
       domainFrom:  relay ? (driving ? [driving.source] : []) : incoming.map((e) => e.source),
-      plays:       def.category === 'source' && !(node.typeKey === 'mic' && fed),
+      plays:       def.category === 'source',
       amped:       (node.typeKey === 'active-speaker' || node.typeKey === 'headphones') && fedBy(node.id, 'amp', graph),
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),
@@ -264,7 +264,7 @@ const MODES: Record<CardMode, (at: CardAt) => CardRun> = {
     return { side: { domain }, in: mono(v), out: stereo(shifted(v, gain.l), shifted(v, gain.r)) }
   },
 
-  // Line In or Generator set to Stereo sends the same level on both sides. A microphone may hear a Guitar Amp.
+  // A stereo source (a Keyboard, a PC, the Generator set to Stereo) sends the same level on both sides
   source: ({ card, runSide }) => {
     const only = runSide(null)
     return { side: only, in: SILENT_WIRE, out: isNodeStereo(card.node) ? stereo(only.out, only.out) : mono(only.out) }

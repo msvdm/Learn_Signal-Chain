@@ -22,7 +22,7 @@ function settle(nodes: SignalNode[], edges: SignalEdge[]) {
 }
 
 describe('a Limiter after a stereo bus', () => {
-  const line = node('line', 'line-in')
+  const line = node('line', 'keyboard')
   const bus  = node('bus', 'master-bus')
   const lim  = node('lim', 'limiter')
 
@@ -57,7 +57,7 @@ describe('a Limiter after a stereo bus', () => {
   })
 
   it('on a stereo channel it stays one wire: only a mix is split', () => {
-    const g = settle([node('keys', 'line-in', { stereo: true }), lim, bus], [wire('keys', 'lim'), wire('lim', 'bus')])
+    const g = settle([node('keys', 'keyboard'), lim, bus], [wire('keys', 'lim'), wire('lim', 'bus')])
     expect(g.wires).toEqual(['keys.out → lim', 'lim.out → bus'])
     expect(g.outputs('lim')).toEqual(['out'])
   })

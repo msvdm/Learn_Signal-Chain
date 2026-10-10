@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { EQBand } from '../data/nodeRegistry'
 import type { Expected } from '../../test/chains'
-import { S, average, card, expectCards, expectDb, expectWire, signalOf, wire } from '../../test/chains'
+import { S, VOICE, average, card, expectCards, expectDb, expectWire, heard, line, signalOf, voiceInto, wire } from '../../test/chains'
 
 
 // Reference chains: the level, health, domain and condition at every card. Every wire carries a
@@ -32,7 +32,7 @@ const EQ_BANDS: EQBand[] = [
 
 /** Mic → Preamp → EQ → Compressor → Fader → Master Bus → two Active Speakers. */
 const channelStrip = (bypassed: boolean) => signalOf([
-  card('mic', 'mic'),
+  ...voiceInto('mic'),
   card('pre', 'gain', { preampDb: 50 }),
   card('eq', 'eq', { bands: EQ_BANDS }, bypassed),
   card('comp', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 3 }, bypassed),
@@ -41,12 +41,13 @@ const channelStrip = (bypassed: boolean) => signalOf([
   card('spkL', 'active-speaker'),
   card('spkR', 'active-speaker'),
 ], [
-  wire('mic', 'pre'), wire('pre', 'eq'), wire('eq', 'comp'), wire('comp', 'fader'), wire('fader', 'bus'),
+  heard('mic'), wire('mic', 'pre'), wire('pre', 'eq'), wire('eq', 'comp'), wire('comp', 'fader'), wire('fader', 'bus'),
   wire('bus:out-l', 'spkL'), wire('bus:out-r', 'spkR'),
 ])
 
 describe('a channel strip: mic → preamp → EQ → compressor → fader → Master Bus → speakers', () => {
   expectCards(channelStrip(false), {
+    micVoice: VOICE,
     mic:   { out: -60, health: 'too-quiet' },
     pre:   { in: -60, out: -10, health: 'good', role: 'preamp' },
     eq:    { in: -10, out: -8.76, health: 'good' },
@@ -62,6 +63,7 @@ describe('a channel strip: mic → preamp → EQ → compressor → fader → Ma
 
 describe('the same strip with the EQ and the compressor bypassed', () => {
   expectCards(channelStrip(true), {
+    micVoice: VOICE,
     mic:   { out: -60, health: 'too-quiet' },
     pre:   { in: -60, out: -10, health: 'good', role: 'preamp' },
     eq:    { in: -10, out: -10, health: 'good' },
@@ -75,25 +77,26 @@ describe('the same strip with the EQ and the compressor bypassed', () => {
 
 describe('a stereo Master Bus: Pan, Balance and the Main Fader', () => {
   const result = signalOf([
-    card('vox', 'mic'),
+    ...voiceInto('vox'),
     card('pre', 'gain'),
     card('voxPan', 'pan'),
-    card('gtr', 'line-in'),
+    line('gtr'),
     card('gtrPan', 'pan', { panPosition: 0 }),
-    card('keys', 'line-in', { stereo: true }),
+    card('keys', 'keyboard'),
     card('keysBal', 'pan', { panPosition: 75 }),
     card('bus', 'master-bus'),
     card('main', 'fader', { faderDb: -3 }),
     card('spkL', 'active-speaker'),
     card('spkR', 'active-speaker'),
   ], [
-    wire('vox', 'pre'), wire('pre', 'voxPan'), wire('voxPan', 'bus'),
+    heard('vox'), wire('vox', 'pre'), wire('pre', 'voxPan'), wire('voxPan', 'bus'),
     wire('gtr', 'gtrPan'), wire('gtrPan', 'bus'),
     wire('keys', 'keysBal'), wire('keysBal', 'bus'),
     wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
   ])
 
   expectCards(result, {
+    voxVoice: VOICE,
     vox:     { out: -60, health: 'too-quiet' },
     pre:     { in: -60, out: -20, health: 'good', role: 'preamp' },
     // Pan in the centre: −3 dB on each side (equal power)
@@ -120,10 +123,10 @@ describe('a stereo Master Bus: Pan, Balance and the Main Fader', () => {
 
 describe('on a stereo bus a mono wire lands on both sides, a side wire keeps its side', () => {
   const result = signalOf([
-    card('line', 'line-in', { levelDb: -20 }),
+    line('line', { levelDb: -20 }),
     card('aux', 'aux-bus', { stereo: true }),
     card('comp', 'comp'),
-    card('line2', 'line-in'),
+    line('line2'),
     card('bus', 'master-bus'),
     card('spkL', 'active-speaker'),
     card('spkR', 'active-speaker'),
@@ -281,15 +284,16 @@ describe('a guitar into a desk input without a DI Box', () => {
 
 describe('ADC / DAC: dBu to dBFS and back (0 dBu = −18 dBFS)', () => {
   expectCards(signalOf([
-    card('mic', 'mic'),
+    ...voiceInto('mic'),
     card('pre', 'gain'),
     card('adc', 'adc'),
     card('fader', 'fader', { faderDb: 6 }),
     card('dac', 'dac'),
     card('spk', 'active-speaker'),
   ], [
-    wire('mic', 'pre'), wire('pre', 'adc'), wire('adc', 'fader'), wire('fader', 'dac'), wire('dac', 'spk'),
+    heard('mic'), wire('mic', 'pre'), wire('pre', 'adc'), wire('adc', 'fader'), wire('fader', 'dac'), wire('dac', 'spk'),
   ]), {
+    micVoice: VOICE,
     mic:   { out: -60, health: 'too-quiet' },
     pre:   { in: -60, out: -20, health: 'good', role: 'preamp' },
     adc:   { in: -20, out: -38, health: 'good', domain: 'digital' },
@@ -301,10 +305,10 @@ describe('ADC / DAC: dBu to dBFS and back (0 dBu = −18 dBFS)', () => {
 
 describe('digital levels near the ceiling (0 dBFS)', () => {
   expectCards(signalOf([
-    card('a', 'line-in', { levelDb: 0 }),
+    line('a', { levelDb: 0 }),
     card('gainA', 'gain', { gainDb: 15 }),
     card('adcA', 'adc'),
-    card('b', 'line-in', { levelDb: 0 }),
+    line('b', { levelDb: 0 }),
     card('gainB', 'gain', { gainDb: 20 }),
     card('adcB', 'adc'),
   ], [
@@ -325,7 +329,7 @@ describe('digital levels near the ceiling (0 dBFS)', () => {
 
 describe('analog and digital in the wrong place', () => {
   expectCards(signalOf([
-    card('line', 'line-in'),
+    line('line'),
     card('adc', 'adc'),
     card('adc2', 'adc'),
     card('dac', 'dac'),
@@ -350,34 +354,38 @@ describe('analog and digital in the wrong place', () => {
 
 describe('a noise gate: closed below its threshold (−40), open from it up', () => {
   expectCards(signalOf([
-    card('mic', 'mic'),
+    ...voiceInto('mic'),
     card('gate', 'noise-gate'),
-    card('mic2', 'mic'),
+    ...voiceInto('mic2'),
     card('pre2', 'gain', { preampDb: 5 }),
     card('gate2', 'noise-gate', { rangeDb: -20 }),
-    card('mic3', 'mic'),
+    ...voiceInto('mic3'),
     card('pre3', 'gain', { preampDb: 20 }),
     card('gate3', 'noise-gate'),
-    card('mic4', 'mic'),
+    ...voiceInto('mic4'),
     card('pre4', 'gain'),
     card('gate4', 'noise-gate'),
   ], [
-    wire('mic', 'gate'),
-    wire('mic2', 'pre2'), wire('pre2', 'gate2'),
-    wire('mic3', 'pre3'), wire('pre3', 'gate3'),
-    wire('mic4', 'pre4'), wire('pre4', 'gate4'),
+    heard('mic'), wire('mic', 'gate'),
+    heard('mic2'), wire('mic2', 'pre2'), wire('pre2', 'gate2'),
+    heard('mic3'), wire('mic3', 'pre3'), wire('pre3', 'gate3'),
+    heard('mic4'), wire('mic4', 'pre4'), wire('pre4', 'gate4'),
   ]), {
+    micVoice: VOICE,
     mic:   { out: -60, health: 'too-quiet' },
     // Closed: turned down by its Range (−80 dB, about silence)
     gate:  { in: -60, out: -140, health: 'too-quiet', reduction: 80 },
+    mic2Voice: VOICE,
     mic2:  { out: -60, health: 'too-quiet' },
     pre2:  { in: -60, out: -55, health: 'too-quiet', role: 'preamp' },
     // Closed, with a Range of −20 dB
     gate2: { in: -55, out: -75, health: 'too-quiet', reduction: 20 },
+    mic3Voice: VOICE,
     mic3:  { out: -60, health: 'too-quiet' },
     pre3:  { in: -60, out: -40, health: 'good', role: 'preamp' },
     // D9: right at the threshold: open
     gate3: { in: -40, out: -40, health: 'good', reduction: 0 },
+    mic4Voice: VOICE,
     mic4:  { out: -60, health: 'too-quiet' },
     pre4:  { in: -60, out: -20, health: 'good', role: 'preamp' },
     gate4: { in: -20, out: -20, health: 'good', reduction: 0 },
@@ -386,10 +394,10 @@ describe('a noise gate: closed below its threshold (−40), open from it up', ()
 
 describe('a limiter: nothing above its ceiling (−3), then the makeup gain', () => {
   expectCards(signalOf([
-    card('line', 'line-in', { levelDb: 0 }),
+    line('line', { levelDb: 0 }),
     card('gain', 'gain', { gainDb: 10 }),
     card('lim', 'limiter'),
-    card('line2', 'line-in'),
+    line('line2'),
     card('lim2', 'limiter', { makeupGainDb: 2 }),
   ], [
     wire('line', 'gain'), wire('gain', 'lim'),
@@ -408,7 +416,7 @@ describe('a limiter: nothing above its ceiling (−3), then the makeup gain', ()
 
 describe('dynamics in stereo are linked: the louder side sets the change for both', () => {
   expectCards(signalOf([
-    card('keys', 'line-in', { stereo: true, levelDb: 0 }),
+    card('keys', 'keyboard', { levelDb: 0 }),
     card('bal', 'pan', { panPosition: 25 }),
     card('comp', 'comp'),
   ], [
@@ -423,11 +431,11 @@ describe('dynamics in stereo are linked: the louder side sets the change for bot
 
 describe('wires added up on a bus: two equal signals give +6 dB', () => {
   expectCards(signalOf([
-    card('a', 'line-in'),
-    card('b', 'line-in'),
+    line('a'),
+    line('b'),
     card('aux', 'aux-bus'),
-    card('c', 'line-in'),
-    card('d', 'line-in'),
+    line('c'),
+    line('d'),
     card('off', 'switch', { on: false }),
     card('bus', 'master-bus'),
   ], [
@@ -447,12 +455,12 @@ describe('wires added up on a bus: two equal signals give +6 dB', () => {
 
 describe('the Matrix Bus: finished mixes, each through its send knob', () => {
   const result = signalOf([
-    card('line', 'line-in'),
+    line('line'),
     card('bus', 'master-bus'),
     card('main', 'fader', { faderDb: -5 }),
     card('spkL', 'active-speaker'),
     card('spkR', 'active-speaker'),
-    card('line2', 'line-in', { levelDb: -20 }),
+    line('line2', { levelDb: -20 }),
     card('aux', 'aux-bus'),
     // The Master's send is left at unity; the Aux's is at half way (−10.57 dB)
     card('mtx', 'matrix-bus', { 'send-aux': 50 }),
@@ -486,18 +494,19 @@ describe('the Matrix Bus: finished mixes, each through its send knob', () => {
 
 describe('an aux send: a Relay Switch takes its copy before (A) or after (B) the fader', () => {
   const send = (selectedInput: 'a' | 'b') => signalOf([
-    card('mic', 'mic'),
+    ...voiceInto('mic'),
     card('pre', 'gain'),
     card('fader', 'fader', { faderDb: -10 }),
     card('prePost', 'relay', { selectedInput }),
     card('sendLevel', 'gain', { gainDb: -6 }),
     card('aux', 'aux-bus'),
   ], [
-    wire('mic', 'pre'), wire('pre', 'fader'),
+    heard('mic'), wire('mic', 'pre'), wire('pre', 'fader'),
     wire('pre', 'prePost:in-a'), wire('fader', 'prePost:in-b'),
     wire('prePost', 'sendLevel'), wire('sendLevel', 'aux'),
   ])
   const channel = {
+    micVoice: VOICE,
     mic:   { out: -60, health: 'too-quiet' },
     pre:   { in: -60, out: -20, health: 'good', role: 'preamp' },
     fader: { in: -20, out: -30, health: 'good' },
@@ -525,7 +534,7 @@ describe('an aux send: a Relay Switch takes its copy before (A) or after (B) the
 
 describe('speakers: a passive one needs an amplifier, an active one (or headphones) is blown by it', () => {
   expectCards(signalOf([
-    card('line', 'line-in'),
+    line('line'),
     card('passive', 'speaker'),
     card('amp', 'amp', { gainDb: -6 }),
     card('passive2', 'speaker'),
@@ -551,12 +560,12 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
 describe('a clip before a speaker is heard there, however green its meter (distorted)', () => {
   // A Gain 20 dB too hot clips the music's peaks; the Fader after it brings the level back down
   const chain = (on: boolean) => signalOf([
-    card('line', 'line-in'),
+    line('line'),
     card('hot', 'gain', { gainDb: 20 }),
     card('fader', 'fader', { faderDb: -20 }),
     card('sw', 'switch', { on }),
     card('spk', 'active-speaker'),
-    card('clean', 'line-in'),
+    line('clean'),
     card('bus', 'master-bus'),
     card('phones', 'headphones'),
   ], [
@@ -592,7 +601,7 @@ describe('a clip before a speaker is heard there, however green its meter (disto
 describe('the engine', () => {
   it('gives cards in a loop, and after one, no reading', () => {
     const result = signalOf([
-      card('line', 'line-in'),
+      line('line'),
       card('a', 'fader'),
       card('b', 'fader'),
       card('after', 'fader'),
@@ -603,7 +612,7 @@ describe('the engine', () => {
   })
 
   it('works a chain out once, and hands back what came out the same', () => {
-    const nodes = [card('line', 'line-in'), card('fader', 'fader'), card('spk', 'active-speaker')]
+    const nodes = [line('line'), card('fader', 'fader'), card('spk', 'active-speaker')]
     const edges = [wire('line', 'fader'), wire('fader', 'spk')]
     const first = signalOf(nodes, edges)
     expect(signalOf(nodes, edges)).toBe(first)

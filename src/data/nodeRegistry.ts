@@ -41,7 +41,7 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 
 /** Every kind of element on the canvas. */
 export type TypeKey =
-  | 'mic' | 'line-in' | 'instrument' | 'guitar-amp' | 'generator'
+  | 'vocal' | 'drum-kit' | 'acoustic' | 'mic' | 'keyboard' | 'pc' | 'instrument' | 'guitar-amp' | 'generator'
   | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
@@ -127,23 +127,25 @@ export type SignalEdge = {
 /** A DI Box's Direct Out: the instrument passed on unchanged, for a guitar amp (its XLR Out is 'out'). */
 export const DI_DIRECT_PORT = 'direct'
 
-/** A Guitar Amp's sound in the room: a dotted wire that only a microphone can take. */
+/**
+ * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Guitar's, a Guitar Amp's: a dotted wire
+ * that only a microphone can take (D21).
+ */
 export const SOUND_PORT = 'sound'
 
 /**
- * What a Microphone picks up (param `character`): someone speaking, someone singing, or drums; what
- * a Line Input plays: music or drums. Drums' hits reach far above their average. Chosen from
- * Intermediate up; at Beginner a Microphone hears speech and a Line Input plays music (the first of each).
+ * What a Vocal does (param `character`): speak or sing. Chosen from Intermediate up; at Beginner it
+ * speaks (the first).
  */
-export const MIC_CHARACTERS = ['speech', 'singing', 'drums'] as const
-export const LINE_CHARACTERS = ['music', 'drums'] as const
-export type Character = typeof MIC_CHARACTERS[number] | typeof LINE_CHARACTERS[number]
+export const CHARACTERS = ['speech', 'singing'] as const
+export type Character = typeof CHARACTERS[number]
 
-/** The choices of a Microphone or Line Input. */
-export const CHARACTERS_OF = { mic: MIC_CHARACTERS, 'line-in': LINE_CHARACTERS } as const satisfies Partial<Record<TypeKey, readonly Character[]>>
+/** A Microphone (param `micType`): dynamic (no power needed) or condenser (more sensitive, needs 48V — D21). */
+export const MIC_TYPES = ['dynamic', 'condenser'] as const
+export type MicType = typeof MIC_TYPES[number]
 
-/** The easiest level whose Microphones and Line Inputs show what they pick up. */
-export const CHARACTER_LEVEL: ComplexityLevel = 'intermediate'
+/** The easiest level whose Vocals and Microphones show their choices (Speech | Singing, Dynamic | Condenser). */
+export const CHOICE_LEVEL: ComplexityLevel = 'intermediate'
 
 /** What the Generator plays (param `sound`): a steady tone, hiss, short pulses. */
 export const GENERATOR_SOUNDS = ['sine', 'noise', 'click'] as const
@@ -165,7 +167,7 @@ const SIDES: NodePort[] = [
 // enough that their long names stay big in overview.
 const BUS_SIZE: Size  = { w: 398, h: 361 }
 const FACE_SIZE: Size = { w: 320, h: 328 }
-// Microphone and Line Input: one size
+// Keyboard and PC: one size
 const SOURCE_SIZE: Size = { w: 320, h: 350 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
@@ -175,16 +177,40 @@ const FROM_INTERMEDIATE: readonly ComplexityLevel[] = ['intermediate', 'advanced
 const ADVANCED_ONLY: readonly ComplexityLevel[]     = ['advanced']
 
 export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
-  mic: {
-    // Its input is the sound it hears: a Guitar Amp's Sound (SOUND_PORT), nothing else
-    category: 'source', inputs: IN, outputs: OUT, stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
-    defaultParams: { sensitivityDb: -60, character: 'speech' },
+  // Sound in the air (D21): each sends it on its Sound output, which only a microphone takes — one
+  // may feed several. How loud each is: signal/process.ts SOUND_SPL
+  vocal: {
+    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: { character: 'speech' },
   },
-  'line-in': {
-    category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
+  'drum-kit': {
+    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
+  },
+  acoustic: {
+    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    levels: FROM_INTERMEDIATE, bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
+  },
+  mic: {
+    // Turns the sound it hears (its input: a Sound output, nothing else) into a weak signal (D21):
+    // not a source — the chain's colour comes from the sound before it
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'never',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: { micType: 'dynamic' },
+  },
+  // Line-level sources, always stereo (Left and Right on one wire): their level is their own
+  keyboard: {
+    category: 'source', inputs: [], outputs: OUT, stereo: 'always',
     levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
-    defaultParams: { levelDb: -10, stereo: false, character: 'music' },
+    defaultParams: { levelDb: -10 },
+  },
+  pc: {
+    category: 'source', inputs: [], outputs: OUT, stereo: 'always',
+    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
+    defaultParams: { levelDb: 0 },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
@@ -401,13 +427,14 @@ export function initialParams(
  * they are written the first time they are changed.
  */
 export interface ParamTypes {
-  sensitivityDb: number
   levelDb: number
-  /** Microphone, Line Input: what it picks up (CHARACTERS_OF) */
+  /** Vocal: speaking or singing (CHARACTERS) */
   character: Character
+  /** Microphone: dynamic or condenser (MIC_TYPES) */
+  micType: MicType
   /** Generator: what it plays (GENERATOR_SOUNDS) */
   sound: GeneratorSound
-  /** The Mono | Stereo switch (Line In, Generator, Aux Bus) */
+  /** The Mono | Stereo switch (Generator, Aux Bus) */
   stereo: boolean
   preampDb: number
   gainDb: number
@@ -446,13 +473,14 @@ export type ParamKey = keyof ParamTypes
 
 /** Settings that take one of a few words: any other word (from a file) falls back to the default. */
 const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
+  character:     CHARACTERS,
+  micType:       MIC_TYPES,
   sound:         GENERATOR_SOUNDS,
   selectedInput: ['a', 'b'],
 }
 
-/** The words a type's setting can take (undefined: it is not a word). */
-export function paramChoices(typeKey: TypeKey, key: string): readonly string[] | undefined {
-  if (key === 'character') return (CHARACTERS_OF as Partial<Record<TypeKey, readonly string[]>>)[typeKey] ?? []
+/** The words a setting can take (undefined: it is not a word). */
+export function paramChoices(key: string): readonly string[] | undefined {
   return PARAM_CHOICES[key]
 }
 

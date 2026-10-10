@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge, NodeParamValue, TypeKey } from '../data/nodeRegistry'
-import { initialParams, isTypeKey, paramChoices } from '../data/nodeRegistry'
+import { SOUND_PORT, initialParams, isTypeKey, paramChoices } from '../data/nodeRegistry'
 import { ONLINE_URL } from '../data/site'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
@@ -12,7 +12,8 @@ import { isPng, readPngText } from './pngText'
 // link (#chain=…) and in a saved picture's PNG text chunk.
 
 export const CHAIN_APP     = 'learn-signal-chain'
-export const CHAIN_VERSION = 1
+/** 2: the Microphone hears a sound before it (D21) — in a version 1 file it was the sound too */
+export const CHAIN_VERSION = 2
 /** Keyword of the PNG text chunk that carries the chain */
 export const PNG_KEYWORD   = 'lsc-chain'
 /** A share link is the app's address + this + the encoded chain */
@@ -69,10 +70,19 @@ const isPoint = (v: unknown): v is { x: number; y: number } => isObj(v) && isNum
 
 /**
  * Words older versions saved, as this one says them (undefined: the type's default). Melodic was a
- * voice or keys: now a Microphone's Speech, a Line Input's Music; Percussive was drums.
+ * voice or keys: now a Vocal's Speech; Percussive was drums.
  */
 const OLD_WORDS: Partial<Record<string, Record<string, string | undefined>>> = {
   character: { melodic: undefined, percussive: 'drums' },
+}
+
+/** Types older versions saved, as this one names them: the Line Input is the Keyboard. */
+const OLD_TYPES: Partial<Record<string, TypeKey>> = { 'line-in': 'keyboard' }
+
+/** Settings older versions saved that mean nothing now: left out. */
+const OLD_KEYS: Partial<Record<TypeKey, readonly string[]>> = {
+  mic:      ['sensitivityDb', 'character'],
+  keyboard: ['stereo', 'character'],
 }
 
 /** Saved params over the type's defaults: a file from an older version gets the newer knobs. */
@@ -80,11 +90,12 @@ function readParams(typeKey: TypeKey, level: ComplexityLevel, saved: unknown): R
   const params = initialParams(typeKey, level)
   if (!isObj(saved)) return params
   for (const [key, raw] of Object.entries(saved)) {
+    if (OLD_KEYS[typeKey]?.includes(key)) continue
     const known = params[key]
     const old   = OLD_WORDS[key]
     const value = isStr(raw) && old && Object.hasOwn(old, raw) ? (old[raw] ?? known) : raw
     // A value of the wrong kind (or a word the setting does not know) would break the card — keep the default
-    const choices = paramChoices(typeKey, key)
+    const choices = paramChoices(key)
     const ok = choices ? isStr(value) && choices.includes(value)
       : known === undefined ? isNum(value) || isStr(value) || typeof value === 'boolean'
       : Array.isArray(known) ? Array.isArray(value) : typeof value === typeof known
@@ -93,24 +104,30 @@ function readParams(typeKey: TypeKey, level: ComplexityLevel, saved: unknown): R
   return params
 }
 
+/** A saved type as this version names it (undefined: one it does not know). */
+const typeOf = (key: string): TypeKey | undefined => (isTypeKey(key) ? key : OLD_TYPES[key])
+
 /** A chain from parsed JSON, or null if it is not one. Elements of unknown types are left out. */
 export function parseChainFile(data: unknown): ParsedChain | null {
   if (!isObj(data) || data.app !== CHAIN_APP || !Array.isArray(data.nodes)) return null
   const level = LEVELS.find((l) => l === data.level) ?? 'advanced'
 
   const nodes: SignalNode[] = []
+  /** What each Microphone of a version 1 file picked up (its saved `character`) */
+  const heard = new Map<string, unknown>()
   let skipped = 0
   for (const n of data.nodes) {
-    if (!isObj(n) || !isStr(n.id) || !isStr(n.typeKey) || !isPoint(n.position) ||
-        !isTypeKey(n.typeKey) || nodes.some((m) => m.id === n.id)) {
+    const typeKey = isObj(n) && isStr(n.typeKey) ? typeOf(n.typeKey) : undefined
+    if (!isObj(n) || !isStr(n.id) || !typeKey || !isPoint(n.position) || nodes.some((m) => m.id === n.id)) {
       skipped++
       continue
     }
+    if (typeKey === 'mic' && !(isNum(data.version) && data.version >= 2)) heard.set(n.id, isObj(n.params) ? n.params.character : undefined)
     nodes.push({
       id: n.id,
-      typeKey: n.typeKey,
+      typeKey,
       position: { x: n.position.x, y: n.position.y },
-      params: readParams(n.typeKey, level, n.params),
+      params: readParams(typeKey, level, n.params),
       bypassed: n.bypassed === true,
       ...(isStr(n.label) ? { label: n.label } : {}),
       ...(isStr(n.color) ? { color: n.color } : {}),
@@ -138,8 +155,38 @@ export function parseChainFile(data: unknown): ParsedChain | null {
     }
   }
 
+  soundsForMics(heard, nodes, edges, level)
+
   const name = isStr(data.name) ? data.name.slice(0, 100) : ''
   return { chain: { app: CHAIN_APP, version: CHAIN_VERSION, name, level, nodes, edges, sizes }, skipped }
+}
+
+/** Room between a sound added for an old Microphone and the Microphone (px). */
+const SOUND_GAP = 80
+
+/**
+ * Before version 2 a Microphone was the sound too (D21). Each that heard nothing (not a Guitar Amp
+ * in front of it) gets what it picked up — a Vocal speaking or singing, a Drum Kit — to its left,
+ * wired into it, with its chain's colour. Its readings stay what they were (a dynamic microphone).
+ */
+function soundsForMics(heard: Map<string, unknown>, nodes: SignalNode[], edges: SignalEdge[], level: ComplexityLevel) {
+  for (const [micId, character] of heard) {
+    if (edges.some((e) => e.target === micId)) continue
+    const mic   = nodes.find((n) => n.id === micId)!
+    const drums = character === 'drums' || character === 'percussive'
+    const type: TypeKey = drums ? 'drum-kit' : 'vocal'
+    let id = `${micId}-sound`
+    for (let i = 2; nodes.some((n) => n.id === id); i++) id = `${micId}-sound-${i}`
+    nodes.push({
+      id, typeKey: type,
+      position: { x: mic.position.x - nodeDims(type).w - SOUND_GAP, y: mic.position.y },
+      params: { ...initialParams(type, level), ...(character === 'singing' ? { character } : {}) },
+      bypassed: false,
+      ...(mic.color ? { color: mic.color } : {}),
+    })
+    delete mic.color
+    edges.push({ id: `${id}-${micId}`, source: id, sourceHandle: SOUND_PORT, target: micId, targetHandle: 'in' })
+  }
 }
 
 // ── Compressed text (share link, PNG chunk) ───────────────────────────────────────────────────

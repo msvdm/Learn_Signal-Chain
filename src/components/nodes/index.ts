@@ -1,7 +1,8 @@
 import type { NodeTypes } from '@xyflow/react'
 import type { TypeKey } from '../../data/nodeRegistry'
+import { SoundSourceNode }    from './SoundSourceNode'
 import { MicNode }            from './MicNode'
-import { LineInNode }         from './LineInNode'
+import { LineSourceNode }     from './LineSourceNode'
 import { InstrumentNode }     from './InstrumentNode'
 import { GainNode }           from './GainNode'
 import { FaderNode }          from './FaderNode'
@@ -30,8 +31,12 @@ import { GeneratorNode }      from './GeneratorNode'
  * component, so React Flow never re-registers them.
  */
 export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
+  vocal:             SoundSourceNode,
+  'drum-kit':        SoundSourceNode,
+  acoustic:          SoundSourceNode,
   mic:               MicNode,
-  'line-in':         LineInNode,
+  keyboard:          LineSourceNode,
+  pc:                LineSourceNode,
   instrument:        InstrumentNode,
   generator:         GeneratorNode,
   'di-box':          DIBoxNode,

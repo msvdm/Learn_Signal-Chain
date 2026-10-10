@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { CLIP_DBU } from './levels'
 import { LINE_NOISE_DBU, compressor, limiter, noiseGate } from './process'
-import { card, curveIn, curveOut, expectDb, expectMarksLeave, expectSide, leaving, signalOf, wire } from '../../test/chains'
+import { card, curveIn, curveOut, expectDb, expectMarksLeave, expectSide, heard, leaving, line, signalOf, voiceInto, wire } from '../../test/chains'
 
 // ── The marks on a dynamics card's curve ────────────────────────────────────────
 // A Compressor, Noise Gate or Limiter draws the peaks, the average and the noise of what goes into
@@ -13,7 +13,7 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
   // Mic → Preamp +50: a voice at −10 dBu, peaks at +2, noise at −73.86. D9: the number engine sends
   // each through the curve; D18: each card adds its own noise (−95) after it.
   const result = signalOf([
-    card('mic', 'mic'),
+    ...voiceInto('mic'),
     card('pre', 'gain', { preampDb: 50 }),
     card('comp', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
     card('gate', 'noise-gate'),
@@ -23,7 +23,7 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
     card('off', 'comp', {}, true),
     card('fader', 'fader'),
   ], [
-    wire('mic', 'pre'),
+    heard('mic'), wire('mic', 'pre'),
     ...['comp', 'gate', 'high', 'lim', 'hot', 'off', 'fader'].map((id) => wire('pre', id)),
   ])
 
@@ -68,16 +68,16 @@ describe("the marks on a dynamics card's curve: what goes in, and where the card
   })
 
   it("a gate does not hear its own noise (D18): set over a line's (−90), it closes on it — its own floor stays", () => {
-    const line = signalOf([card('line', 'line-in'), card('gate', 'noise-gate', { thresholdDb: -85 })], [wire('line', 'gate')])
-    expectDb(curveIn(line.stages.gate).noise, -90)
-    expectDb(leaving(line, 'gate').noise, LINE_NOISE_DBU)
-    expectMarksLeave(line, 'gate', noiseGate(-85, -80))
+    const gated = signalOf([card('line', 'keyboard'), card('gate', 'noise-gate', { thresholdDb: -85 })], [wire('line', 'gate')])
+    expectDb(curveIn(gated.stages.gate).noise, -90)
+    expectDb(leaving(gated, 'gate').noise, LINE_NOISE_DBU)
+    expectMarksLeave(gated, 'gate', noiseGate(-85, -80))
   })
 
   it('in stereo (linked): the louder side goes in, and its marks are what leaves on that side', () => {
     // Pan a quarter left: the left side 7.66 dB louder than the right
     const panned = signalOf([
-      card('line', 'line-in'),
+      line('line'),
       card('pan', 'pan', { panPosition: 25 }),
       card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
     ], [wire('line', 'pan'), wire('pan', 'comp')])

@@ -3,7 +3,7 @@ import type { SignalNode } from '../data/nodeRegistry'
 import type { GraphSignalResult } from './engine'
 import { headroomOf, hissOf, louder, snrOf, sumNoiseToDb } from './levels'
 import { LINE_NOISE_DBU } from './process'
-import { card, expectCards, expectDb, expectReadings, leaving, signalOf, wire } from '../../test/chains'
+import { card, expectCards, expectDb, expectReadings, heard, leaving, line, signalOf, voiceInto, wire } from '../../test/chains'
 
 // ── Peaks, noise and the hum ────────────────────────────────────────────────────
 // The reference chains' readings beyond their average (engine.chains.test.ts says which design
@@ -15,7 +15,7 @@ import { card, expectCards, expectDb, expectReadings, leaving, signalOf, wire } 
  * fader. A voice: peaks 12 dB above its average, the room's noise 66 dB under it.
  */
 const gainStaging = (preampDb: number, gainDb: number, faderDb: number) => signalOf([
-  card('mic', 'mic'),
+  ...voiceInto('mic'),
   card('pre', 'gain', { preampDb }),
   card('eq', 'eq'),
   card('gain', 'gain', { gainDb }),
@@ -23,7 +23,7 @@ const gainStaging = (preampDb: number, gainDb: number, faderDb: number) => signa
   card('bus', 'master-bus'),
   card('spk', 'active-speaker'),
 ], [
-  wire('mic', 'pre'), wire('pre', 'eq'), wire('eq', 'gain'), wire('gain', 'fader'), wire('fader', 'bus'),
+  heard('mic'), wire('mic', 'pre'), wire('pre', 'eq'), wire('eq', 'gain'), wire('gain', 'fader'), wire('fader', 'bus'),
   wire('bus:out-l', 'spk'),
 ])
 
@@ -79,15 +79,15 @@ describe('gain staging, the classic mistake: Preamp +20, made up later (Gain +20
 })
 
 describe('where the gain is made, on a real desk (D18)', () => {
-  // One after another (a Master Bus through its L)
-  const chain = (...cards: SignalNode[]) =>
-    signalOf(cards, cards.slice(1).map((c, i) => wire(cards[i].typeKey === 'master-bus' ? `${cards[i].id}:out-l` : cards[i].id, c.id)))
+  // One after another (a Master Bus through its L, a Vocal through its Sound)
+  const outOf = (c: SignalNode) => (c.typeKey === 'master-bus' ? `${c.id}:out-l` : c.typeKey === 'vocal' ? `${c.id}:sound` : c.id)
+  const chain = (...cards: SignalNode[]) => signalOf(cards, cards.slice(1).map((c, i) => wire(outOf(cards[i]), c.id)))
   const speakerSnr = (result: GraphSignalResult, id = 'spk') => snrOf(leaving(result, id))
 
   it('before the converter: a Preamp 30 dB low costs more made up digitally (the ADC\'s own noise lifted) than before it', () => {
-    const wellSet  = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
-    const upBefore = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 20 }), card('trim', 'gain', { gainDb: 30 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
-    const upAfter  = chain(card('mic', 'mic'), card('pre', 'gain', { preampDb: 20 }), card('adc', 'adc'), card('trim', 'gain', { gainDb: 30 }), card('dac', 'dac'), card('spk', 'active-speaker'))
+    const wellSet  = chain(...voiceInto('mic'), card('pre', 'gain', { preampDb: 50 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
+    const upBefore = chain(...voiceInto('mic'), card('pre', 'gain', { preampDb: 20 }), card('trim', 'gain', { gainDb: 30 }), card('adc', 'adc'), card('dac', 'dac'), card('spk', 'active-speaker'))
+    const upAfter  = chain(...voiceInto('mic'), card('pre', 'gain', { preampDb: 20 }), card('adc', 'adc'), card('trim', 'gain', { gainDb: 30 }), card('dac', 'dac'), card('spk', 'active-speaker'))
     expectDb(speakerSnr(wellSet), 63.465)
     expectDb(speakerSnr(upBefore), 57.935)
     expectDb(speakerSnr(upAfter), 52.655)
@@ -95,8 +95,8 @@ describe('where the gain is made, on a real desk (D18)', () => {
 
   it('at the amplifier: the desk turned down into an amp wide open is noisier than the desk well set into an amp turned down', () => {
     // The amp's own noise comes after its Volume: it decides most of it (−85 dBu, 25 dB SPL)
-    const ampOpen = chain(card('line', 'line-in'), card('bus', 'master-bus', { faderDb: -20 }), card('amp', 'amp', { gainDb: 0 }), card('spk', 'speaker'))
-    const ampDown = chain(card('line', 'line-in'), card('bus', 'master-bus', { faderDb: 0 }), card('amp', 'amp', { gainDb: -20 }), card('spk', 'speaker'))
+    const ampOpen = chain(card('line', 'keyboard'), card('bus', 'master-bus', { faderDb: -20 }), card('amp', 'amp', { gainDb: 0 }), card('spk', 'speaker'))
+    const ampDown = chain(card('line', 'keyboard'), card('bus', 'master-bus', { faderDb: 0 }), card('amp', 'amp', { gainDb: -20 }), card('spk', 'speaker'))
     expectDb(leaving(ampOpen, 'spk').rms, leaving(ampDown, 'spk').rms)
     expectDb(speakerSnr(ampOpen), 53.796)
     expectDb(speakerSnr(ampDown), 54.973)
@@ -105,10 +105,10 @@ describe('where the gain is made, on a real desk (D18)', () => {
 
 describe('peaks: the loudest moments, above the average', () => {
   expectReadings(signalOf([
-    card('line', 'line-in'),
+    card('line', 'keyboard'),
     card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
     card('lim', 'limiter'),
-    card('loud', 'line-in', { levelDb: 0 }),
+    card('loud', 'keyboard', { levelDb: 0 }),
     card('gain', 'gain', { gainDb: 15 }),
     card('fader', 'fader', { faderDb: -20 }),
   ], [
@@ -135,9 +135,9 @@ describe('the same average, another sound: the peaks decide when it clips (D4)',
     card('sineFader', 'fader'),
     card('click', 'generator', { sound: 'click', levelDb: 10 }),
     card('clickFader', 'fader', { faderDb: -20 }),
-    // Professional line level (+4 dBu): keys, and a drum machine
-    card('keys', 'line-in', { levelDb: 4 }),
-    card('drums', 'line-in', { levelDb: 4, character: 'drums' }),
+    // Professional line level (+4 dBu): keys, and a drum machine (the Generator's clicks: drums' peaks)
+    card('keys', 'keyboard', { levelDb: 4 }),
+    line('drums', { levelDb: 4, sound: 'click' }),
   ], [
     wire('sine', 'sineFader'), wire('click', 'clickFader'),
   ])
@@ -150,7 +150,7 @@ describe('the same average, another sound: the peaks decide when it clips (D4)',
     click:      { out: 10, health: 'clipping' },
     // Turned down after the clip it is healthy again — but the flattened peaks stay flattened
     clickFader: { in: 10, out: -10, health: 'good' },
-    keys:       { out: 4, health: 'hot' },
+    keys:       { out: [4, 4], health: 'hot' },
     drums:      { out: 4, health: 'clipping' },
   })
 
@@ -161,14 +161,16 @@ describe('the same average, another sound: the peaks decide when it clips (D4)',
     // 10 dB between the peaks and the average, where the clicks had 18
     clickFader: [0, -10, -93.81],
     keys:       [16, 4, -76],
-    drums:      [20, 4, -76],
+    // Changed on purpose (D21): the Line Input that played drums became the Keyboard (music only);
+    // the Generator's clicks stand in for the drum machine, 10 dB cleaner (90 dB under its level)
+    drums:      [20, 4, -86],
   })
 })
 
 describe('noise: what is left when the music stops', () => {
   describe('a noise gate with its threshold between the noise and the signal', () => {
     const result = signalOf([
-      card('mic', 'mic'),
+      ...voiceInto('mic'),
       card('pre', 'gain', { preampDb: 50 }),
       // Threshold −40 (its default): under the voice (−10), over the noise (−74)
       card('gate', 'noise-gate'),
@@ -176,7 +178,7 @@ describe('noise: what is left when the music stops', () => {
       // Threshold under the noise: open all the time
       card('open', 'noise-gate', { thresholdDb: -100 }),
     ], [
-      wire('mic', 'pre'), wire('pre', 'gate'), wire('pre', 'gate20'), wire('pre', 'open'),
+      heard('mic'), wire('mic', 'pre'), wire('pre', 'gate'), wire('pre', 'gate20'), wire('pre', 'open'),
     ])
 
     expectReadings(result, {
@@ -197,7 +199,7 @@ describe('noise: what is left when the music stops', () => {
 
   it('a compressor costs as much as it turns the average down: the noise stays under its threshold', () => {
     const result = signalOf([
-      card('line', 'line-in'),
+      card('line', 'keyboard'),
       card('comp', 'comp', { thresholdDb: -20, ratio: 4 }),
       card('comp6', 'comp', { thresholdDb: -20, ratio: 4, makeupGainDb: 6 }),
     ], [wire('line', 'comp'), wire('line', 'comp6')])
@@ -212,11 +214,11 @@ describe('noise: what is left when the music stops', () => {
   it('a bus adds the music as voltages (+6 dB per doubling) and the noise as noise (+3 dB)', () => {
     // Digital, so the buses add no noise of their own and the sums show alone
     const result = signalOf([
-      card('a', 'line-in'), card('adcA', 'adc'),
-      card('b', 'line-in'), card('adcB', 'adc'),
-      card('c', 'line-in'), card('adcC', 'adc'),
-      card('d', 'line-in'), card('adcD', 'adc'),
-      card('one', 'aux-bus'), card('two', 'aux-bus'), card('four', 'aux-bus'),
+      card('a', 'keyboard'), card('adcA', 'adc'),
+      card('b', 'keyboard'), card('adcB', 'adc'),
+      card('c', 'keyboard'), card('adcC', 'adc'),
+      card('d', 'keyboard'), card('adcD', 'adc'),
+      card('one', 'aux-bus', { stereo: true }), card('two', 'aux-bus', { stereo: true }), card('four', 'aux-bus', { stereo: true }),
     ], [
       wire('a', 'adcA'), wire('b', 'adcB'), wire('c', 'adcC'), wire('d', 'adcD'),
       wire('adcA', 'one'),
@@ -236,7 +238,7 @@ describe('noise: what is left when the music stops', () => {
 
   it('an analog bus adds its own noise on top of what it sums', () => {
     const result = signalOf([
-      card('a', 'line-in'), card('b', 'line-in'), card('aux', 'aux-bus'),
+      card('a', 'keyboard'), card('b', 'keyboard'), card('aux', 'aux-bus', { stereo: true }),
     ], [wire('a', 'aux'), wire('b', 'aux')])
     // Two line noises at −90 (−86.99 together) and the bus's own −90 (D18)
     expectDb(leaving(result, 'aux').noise, -85.23)
@@ -244,7 +246,7 @@ describe('noise: what is left when the music stops', () => {
 
   describe('digital stages add none; converters add their own, 112 dB under full scale (D18)', () => {
     expectReadings(signalOf([
-      card('line', 'line-in'),
+      card('line', 'keyboard'),
       card('adc', 'adc'),
       card('fader', 'fader', { faderDb: -6 }),
       card('dac', 'dac'),

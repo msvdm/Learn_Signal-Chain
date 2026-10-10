@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_TAIL, SILENCE_DB, SILENT, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
+  ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_TAIL, SILENCE_DB, SILENT, SOUND_SPL_DB, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
   ceilingOf, crestOf, dbToPercent, fitScaleMarks, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, meterZones,
   scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb, zoneAt,
 } from './levels'
-import { AT_THE_MIC_DB, GUITAR_REF_DB } from './process'
-import { GUITAR_AMP_MAX, guitarAmpGainDb } from './gains'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
+import { GUITAR_AMP_NOISE_DBU, sourceLevelOf } from './process'
+import { GUITAR_AMP_MAX, MIC_GAIN_DB, guitarAmpGainDb } from './gains'
 
 // The dB scale: its fixed points, the health zones, how a reading is written, how signals add up,
 // and the readings one side of a signal carries (peak, average, noise, hum).
@@ -219,10 +218,12 @@ describe('meters', () => {
   })
 
   it('meterZones on a dB SPL meter: the colours still judge the signal in the cable', () => {
-    // A Microphone (+36 on its bar): blue up to its room's noise (−126 dBu, 20 dB SPL), green above, nothing else on the bar
-    expect(meterZones('analog', SPL_DB.mic! - SPL_SCALE_DB, -126)).toEqual([
-      { kind: 'noise', from: 0, to: dbToPercent(-90) },
-      { kind: 'good', from: dbToPercent(-90), to: 100 },
+    // A Guitar Amp (+6 on its bar): blue up to its hiss (40 dB SPL), green to 116 dB SPL (unity on its
+    // Sound wire), yellow above; red would start past the top of the bar
+    expect(meterZones('analog', SPL_DB['guitar-amp']! - SPL_SCALE_DB, GUITAR_AMP_NOISE_DBU)).toEqual([
+      { kind: 'noise', from: 0, to: dbToPercent(-70) },
+      { kind: 'good', from: dbToPercent(-70), to: dbToPercent(6) },
+      { kind: 'hot', from: dbToPercent(6), to: 100 },
     ])
     // Headphones (−15): red from a +18 dBu signal (113 dB SPL) to the top of the bar
     const phones = meterZones('analog', SPL_DB.headphones! - SPL_SCALE_DB, -85)
@@ -287,11 +288,20 @@ describe('meters', () => {
   })
 })
 
-describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a speaker', () => {
-  it('a Microphone hears speech at 86 dB SPL (its usual −60 dBu), singing at 96, drums at 110', () => {
-    expect(formatSpl(-60, SPL_DB.mic!)).toBe('86 dB SPL')
-    expect(formatSpl(-60 + AT_THE_MIC_DB.singing, SPL_DB.mic!)).toBe('96 dB SPL')
-    expect(formatSpl(-60 + AT_THE_MIC_DB.drums, SPL_DB.mic!)).toBe('110 dB SPL')
+describe('dB SPL — the sound in the air, from a Vocal, a Drum Kit, a Guitar Amp, a speaker', () => {
+  const at = (typeKey: 'vocal' | 'drum-kit' | 'acoustic', params = {}) => formatSpl(sourceLevelOf({ typeKey, params }), SPL_DB[typeKey]!)
+
+  it('at the microphone: speech 86 dB SPL, singing 96, a drum 110, an acoustic guitar 90 (D21)', () => {
+    expect(at('vocal')).toBe('86 dB SPL')
+    expect(at('vocal', { character: 'singing' })).toBe('96 dB SPL')
+    expect(at('drum-kit')).toBe('110 dB SPL')
+    expect(at('acoustic')).toBe('90 dB SPL')
+  })
+
+  it('a dynamic microphone sends −52 dBu for 94 dB SPL (a voice at 86: −60 dBu), a condenser −40', () => {
+    expect(94 - SOUND_SPL_DB + MIC_GAIN_DB.dynamic).toBe(-52)
+    expect(86 - SOUND_SPL_DB + MIC_GAIN_DB.dynamic).toBe(-60)
+    expect(94 - SOUND_SPL_DB + MIC_GAIN_DB.condenser).toBe(-40)
   })
 
   it('a speaker fed −10 dBu plays 100 dB SPL, at the clip level 130 — a powerful PA speaker; passive the same', () => {
@@ -305,10 +315,8 @@ describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a spea
     expect(formatSpl(20, SPL_DB.headphones!)).toBe('115 dB SPL')
   })
 
-  it('a Guitar Amp reads as loud as the Microphone in front of it hears it', () => {
-    const amp = -30
-    const mic = (NODE_REGISTRY.mic.defaultParams.sensitivityDb as number) + amp - GUITAR_REF_DB
-    expect(amp + SPL_DB['guitar-amp']!).toBe(mic + SPL_DB.mic!)
+  it('a Guitar Amp reads on the same scale as every sound a microphone hears: its Sound wire', () => {
+    for (const typeKey of ['vocal', 'drum-kit', 'acoustic', 'guitar-amp'] as const) expect(SPL_DB[typeKey]).toBe(SOUND_SPL_DB)
   })
 
   it('a Guitar Amp plays 100 dB SPL at 1, 106 at 5, 115 at 11 (it goes to 11)', () => {
@@ -318,6 +326,6 @@ describe('dB SPL — the sound in the air, on a Microphone, a Guitar Amp, a spea
   })
 
   it('silence reads −∞', () => {
-    expect(formatSpl(-Infinity, SPL_DB.mic!)).toBe('-∞ dB SPL')
+    expect(formatSpl(-Infinity, SPL_DB.vocal!)).toBe('-∞ dB SPL')
   })
 })

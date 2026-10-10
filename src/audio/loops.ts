@@ -8,8 +8,8 @@ import drums from './loops/drums.mp3'
 import guitar from './loops/guitar.mp3'
 
 // The loops of real sound the sources play (made by scripts/make-loops.py): fetched and decoded the
-// first time a chain needs one, then kept. A file may be mono or stereo: a Line In set to Stereo
-// plays a stereo file's left and right; everything else plays one channel (its two sides mixed).
+// first time a chain needs one, then kept. A file may be mono or stereo: a Keyboard or a PC (always
+// stereo) plays a stereo file's left and right; everything else plays one channel (its two sides mixed).
 
 /** A sound played from a loop of real sound (the Generator's are made in code: audio/sounds.ts). */
 export type LoopKind = Exclude<SoundKind, GeneratorSound>

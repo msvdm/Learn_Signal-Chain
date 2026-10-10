@@ -3,8 +3,9 @@ import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
 import { faderBusOf, unwiredSource } from './queries'
 
-// No connection, no signal (decision D11): a source with nothing plugged into its output shows no
-// level and no readings, and its meters stand still, until it is wired to something.
+// No connection, no signal (decision D11): a source with nothing plugged into its output, or a
+// Microphone hearing nothing (D21), shows no level and no readings, and its meters stand still,
+// until it is wired.
 
 const node = (id: string, typeKey: TypeKey): SignalNode => ({ id, typeKey, position: { x: 0, y: 0 }, params: {}, bypassed: false })
 const wire = (source: string, target: string, sourceHandle = 'out', targetHandle = 'in'): SignalEdge =>
@@ -12,22 +13,23 @@ const wire = (source: string, target: string, sourceHandle = 'out', targetHandle
 
 describe('a source not connected yet', () => {
   it('every kind of source, alone on the canvas', () => {
-    for (const type of ['mic', 'line-in', 'instrument', 'generator'] as const) {
+    for (const type of ['vocal', 'drum-kit', 'acoustic', 'mic', 'keyboard', 'pc', 'instrument', 'generator'] as const) {
       expect(unwiredSource('s', { nodes: [node('s', type)], edges: [] })).toBe(true)
     }
   })
 
   it('wired to something: connected, whatever is at the other end', () => {
-    const nodes = [node('mic', 'mic'), node('gain', 'gain'), node('line', 'line-in'), node('comp', 'comp')]
-    const view  = { nodes, edges: [wire('mic', 'gain'), wire('line', 'comp')] }
-    expect(unwiredSource('mic', view)).toBe(false)
+    const nodes = [node('voice', 'vocal'), node('gain', 'gain'), node('line', 'keyboard'), node('comp', 'comp')]
+    const view  = { nodes, edges: [wire('voice', 'gain', SOUND_PORT), wire('line', 'comp')] }
+    expect(unwiredSource('voice', view)).toBe(false)
     expect(unwiredSource('line', view)).toBe(false)
   })
 
-  it('a Microphone hearing a Guitar Amp, with nothing on its own output: not connected', () => {
-    const nodes = [node('gtr', 'instrument'), node('amp', 'guitar-amp'), node('mic', 'mic')]
-    const view  = { nodes, edges: [wire('gtr', 'amp'), wire('amp', 'mic', SOUND_PORT)] }
-    expect(unwiredSource('mic', view)).toBe(true)
+  it('a Microphone: not connected while it hears nothing, whatever its output', () => {
+    const nodes = [node('gtr', 'instrument'), node('amp', 'guitar-amp'), node('mic', 'mic'), node('mic2', 'mic'), node('pre', 'gain')]
+    const view  = { nodes, edges: [wire('gtr', 'amp'), wire('amp', 'mic', SOUND_PORT), wire('mic2', 'pre')] }
+    expect(unwiredSource('mic', view)).toBe(false)
+    expect(unwiredSource('mic2', view)).toBe(true)
     expect(unwiredSource('gtr', view)).toBe(false)
   })
 

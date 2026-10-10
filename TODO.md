@@ -131,33 +131,61 @@ Read: `src/data/levels.ts`, `src/data/nodeRegistry.ts`, `src/components/nodes/no
   - D3, D5 and D13 in `docs/decisions.md` point to D20 / D21. README's *Learning Levels* table is
     out of date: Stage 8.
 
-## Stage 1 — Separate the microphone from the source (engine core)  ☐
+## Stage 1 — Separate the microphone from the source (engine core)  ☑
 
 The biggest engine change. Read: `graph/queries.ts` (grep `SOUND_PORT`, `instrumentAt`, source
 detection), `graph/connectionRules.ts`, `signal/process.ts` (sources, `soundOf`, `PEAKS_ABOVE`,
 `NOISE_BELOW`), `audio/loops.ts`, `audio/chainAudio.ts` (sources only), `utils/chainFile.ts`
 (`OLD_WORDS`), `test/chains.ts` helpers.
 
-- [ ] New SPL sources `vocal` (param `character`: speech | singing), `drum-kit` (drums loop) and
+- [x] New SPL sources `vocal` (param `character`: speech | singing), `drum-kit` (drums loop) and
   `acoustic` (guitar loop): output on `SOUND_PORT` (the dotted wire, as the Guitar Amp's), so a mic
   is the only thing that takes them (that rule exists). One source may feed several mics (a kit with
   three mics). Each has a dB SPL meter (D13 moves from the mic to the source).
-- [ ] `mic` becomes a transducer: SPL in → dBu out, param `micType: 'dynamic' | 'condenser'`.
+- [x] `mic` becomes a transducer: SPL in → dBu out, param `micType: 'dynamic' | 'condenser'`.
   **Calibrate so a Dynamic mic on a Vocal (speech / singing) or Drum Kit gives exactly today's
   Microphone readings**, so the locked tests keep their numbers; only their chain-building changes.
   Condenser: start at +12 dB more output and its own self-noise; measure, then write the help text.
   The mic is not a chain's source any more: the chain colour comes from the sound source. A mic with
   nothing on its Sound input says "Not connected" (D11).
-- [ ] Mic card: a `FaceCard`, Dynamic | Condenser buttons, **no meter**.
-- [ ] `line-in` → `keyboard` (TypeKey rename; `OLD_WORDS`): always stereo, no Mono/Stereo switch, no
+- [x] Mic card: a `FaceCard`, Dynamic | Condenser buttons, **no meter**.
+- [x] `line-in` → `keyboard` (TypeKey rename; `OLD_WORDS`): always stereo, no Mono/Stereo switch, no
   character buttons, keyboard icon, music loop, −10 dBu.
-- [ ] New `pc`: stereo line source, 0 dBu, music loop, PC icon.
-- [ ] `chainFile`: old files open sensibly. A `mic` with `character` becomes mic (dynamic) + a new
+- [x] New `pc`: stereo line source, 0 dBu, music loop, PC icon.
+- [x] `chainFile`: old files open sensibly. A `mic` with `character` becomes mic (dynamic) + a new
   `vocal` / `drum-kit` placed to its left and wired in. A mic already fed by a Guitar Amp gets no new
   source. Old `line-in` becomes `keyboard`. Extend `chainFile.test.ts` for both.
-- [ ] Icons for the new sources in `icons.tsx` (simple line icons in the existing style).
-- [ ] Locales: names + `theory` for vocal, drum-kit, acoustic, keyboard, pc, mic types.
-- [ ] Checks + commit. *Hand-off:* …
+- [x] Icons for the new sources in `icons.tsx` (simple line icons in the existing style).
+- [x] Locales: names + `theory` for vocal, drum-kit, acoustic, keyboard, pc, mic types.
+- [x] Checks + commit. *Hand-off:*
+  - **The Sound wire's scale**: its level + `SOUND_SPL_DB` (116, `signal/levels.ts`) = dB SPL at the
+    mic; how loud each sound is: `SOUND_SPL` (`process.ts`: speech 86, singing 96, drums 110, acoustic
+    guitar 90); `sourceLevelOf(node)` gives any source's level. The Guitar Amp was already on it.
+  - **The mic** is a `processor` whose job is a gain (`MIC_GAIN_DB` in `gains.ts`: dynamic −30,
+    condenser −18) — not `passesThrough` (stereo `never`), so walks stop at it. Its noise is its own
+    output noise (`ownNoiseOf` → `micNoiseDbu`): the room it hears (`ROOM_SPL` 20 dB SPL: −126 dBu
+    on a dynamic, −114 on a condenser) and a condenser's self-noise (`SELF_NOISE_SPL` 13 dB SPL).
+    Measured (engine and render agree to 0.03 dB): a dynamic on speech −60 dBu, noise −126; a
+    condenser −48, noise −113.2 — 12 dB more signal, the room 12 dB louder. Unfed it is silent and
+    `unwiredSource` (D11) is true for it (no input, whatever its output).
+  - Stage 2's 48V: walk down from the mic (its output) — `preampSourceOf` already finds the mic
+    behind a Gain. `FaceWithChoices` (`SourceParts.tsx`) puts buttons beside a face's icon from
+    `CHOICE_LEVEL` (was `CHARACTER_LEVEL`); `FaceCard` takes `meter={false}` (the mic).
+  - Tests: `line(id)` in `test/chains.ts` is a mono line source (the Generator's Noise — 10 dB
+    cleaner than the Line Input was; only the averages of the `expectCards` tables use it);
+    `voiceInto(id)` + `heard(id)` + the `VOICE` row put a Vocal before a mic. Readings that lock a
+    line's noise use the Keyboard (stereo: each side reads as the old mono line; the aux buses in
+    those tests set to Stereo so nothing folds). One reading moved on purpose (the drum machine at
+    +4 dBu: noise −86, the Generator's clicks).
+  - Files: `CHAIN_VERSION` 2; a version 1 mic gets its Vocal / Drum Kit (`soundsForMics`), a Line
+    Input becomes a Keyboard (`OLD_TYPES`), old settings are dropped (`OLD_KEYS`). An old mono Line
+    Input is a stereo Keyboard now: into a one-channel card (a speaker, a mono Aux) it reads 6 dB
+    hotter than it did.
+  - Icons are lucide's (Speech, Drum, Guitar, KeyboardMusic, Computer — `icons.tsx` holds only what
+    lucide lacks); `JackPlugIcon` went. Palette order (sources): Vocal, Drum Kit, Acoustic Guitar,
+    Microphone, Keyboard, Computer, Instrument, DI Box, Guitar Amp, Generator; the empty-canvas hint
+    starts at the Vocal. The PC is "Computer" / "Компютър", the Keyboard "Синтезатор" in Bulgarian.
+  - `paramChoices(key)` lost its type argument (every word list is one per key now).
 
 ## Stage 2 — The MG12-style channel strip (Intermediate)  ☐
 

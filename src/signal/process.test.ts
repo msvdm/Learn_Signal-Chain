@@ -49,21 +49,29 @@ const out = (...args: Parameters<typeof run>) => run(...args).out
 
 describe('sources', () => {
   it('send their level', () => {
-    expect(out('line-in', S)).toBe(-10)
-    expect(out('line-in', S, { levelDb: 4 })).toBe(4)
+    expect(out('keyboard', S)).toBe(-10)
+    expect(out('keyboard', S, { levelDb: 4 })).toBe(4)
+    expect(out('pc', S)).toBe(0)
     expect(out('instrument', S)).toBe(-30)
     expect(run('instrument', S).domain).toBe('analog')
   })
 
-  it('a microphone on its own picks up a voice at its usual level', () => {
-    expect(out('mic', S, {}, { fed: false })).toBe(-60)
-    expect(out('mic', S, { sensitivityDb: -50 }, { fed: false })).toBe(-50)
+  it('a sound in the air, as loud as it reaches a microphone (D21): 86 dB SPL is −30 on its Sound wire', () => {
+    expect(out('vocal', S)).toBe(-30)
+    expect(out('vocal', S, { character: 'singing' })).toBe(-20)
+    expect(out('drum-kit', S)).toBe(-6)
+    expect(out('acoustic', S)).toBe(-26)
   })
 
-  it('a microphone in front of a Guitar Amp follows how loud the amp plays', () => {
+  it('a microphone follows how loud the sound is: a dynamic one 30 dB under its Sound wire, a condenser 12 dB more', () => {
     expect(out('mic', -30)).toBe(-60)
     expect(out('mic', -24)).toBe(-54)
+    expect(out('mic', -30, { micType: 'condenser' })).toBe(-48)
     expect(out('mic', S)).toBe(S)
+  })
+
+  it('a microphone hearing nothing sends nothing, not even the room (D11)', () => {
+    expect(levels('mic', SILENT, {}, { fed: false })).toEqual(SILENT)
   })
 })
 
@@ -293,37 +301,39 @@ describe('Pan and Balance', () => {
 })
 
 describe('sources: their peaks above the average, their noise below it', () => {
-  it('a microphone: a voice (peaks 12 dB up), the room and its own hiss 66 dB down', () => {
-    expect(levels('mic', SILENT, {}, { fed: false })).toEqual(sig(-48, -60, -126))
-    expect(levels('mic', SILENT, { sensitivityDb: -50 }, { fed: false })).toEqual(sig(-38, -50, -116))
+  it('a Vocal: a voice (peaks 12 dB up), no noise of its own — the microphone hears the room', () => {
+    expect(levels('vocal', SILENT)).toEqual(sig(-18, -30, S))
   })
 
-  it('a Line Input: keys (peaks 12 dB up), its noise 80 dB down', () => {
-    expect(levels('line-in', SILENT)).toEqual(sig(2, -10, -90))
+  it('a dynamic microphone on a Vocal: what the Microphone sent when it was the sound too — the room 66 dB down', () => {
+    expect(levels('mic', levels('vocal', SILENT))).toEqual(sig(-48, -60, -126))
+  })
+
+  it('a condenser: 12 dB more signal, the room 12 dB louder too, and its own hiss (13 dB SPL)', () => {
+    const condenser = levels('mic', levels('vocal', SILENT), { micType: 'condenser' })
+    expect([condenser.peak, condenser.rms]).toEqual([-36, -48])
+    // The room at −114 dBu and its hiss at −121
+    expect(condenser.noise).toBeCloseTo(-113.21, 2)
+  })
+
+  it('a Keyboard: music (peaks 12 dB up), its noise 80 dB down; a PC the same, at 0 dBu', () => {
+    expect(levels('keyboard', SILENT)).toEqual(sig(2, -10, -90))
+    expect(levels('pc', SILENT)).toEqual(sig(12, 0, -80))
   })
 
   it('an Instrument: a guitar (plucks, peaks 15 dB up), the noise of its pickups 70 dB down', () => {
     expect(levels('instrument', SILENT)).toEqual(sig(-15, -30, -100))
   })
 
-  it('set to Drums, a Line Input plays drums: peaks 18 dB up, the same average and noise', () => {
-    expect(levels('line-in', SILENT, { character: 'drums' })).toEqual(sig(8, -10, -90))
-    expect(levels('line-in', SILENT, { character: 'music' })).toEqual(sig(2, -10, -90))
-  })
-
-  // Changed on purpose (2026-10-06): a Microphone's level follows how loud what it picks up is —
-  // singing 10 dB above speech, drums 24 (AT_THE_MIC_DB); the room and its own hiss stay at −126
-  it('a microphone hears drums 24 dB louder than speech, peaks 18 dB up; the room and its hiss stay', () => {
-    expect(levels('mic', SILENT, { character: 'drums' }, { fed: false })).toEqual(sig(-18, -36, -126))
+  // Changed on purpose (2026-10-06): a Microphone's level follows how loud what it hears is —
+  // singing 10 dB above speech, drums 24 (since D21 a Drum Kit's and a Vocal's: SOUND_SPL); the
+  // room stays at −126
+  it('a microphone hears a Drum Kit 24 dB louder than speech, peaks 18 dB up; the room stays', () => {
+    expect(levels('mic', levels('drum-kit', SILENT))).toEqual(sig(-18, -36, -126))
   })
 
   it('a voice peaks 12 dB above its average; singing reaches the microphone 10 dB louder than speech', () => {
-    expect(levels('mic', SILENT, { character: 'speech' }, { fed: false })).toEqual(sig(-48, -60, -126))
-    expect(levels('mic', SILENT, { character: 'singing' }, { fed: false })).toEqual(sig(-38, -50, -126))
-  })
-
-  it('a microphone set to Drums in front of a Guitar Amp hears the guitar: the amp decides the peaks', () => {
-    expect(levels('mic', sig(-15, -30, -80), { character: 'drums' }).peak).toBe(-45)
+    expect(levels('mic', levels('vocal', SILENT, { character: 'singing' }))).toEqual(sig(-38, -50, -126))
   })
 
   it('a Generator: its sound at its level (0 dBu), its noise 90 dB down', () => {

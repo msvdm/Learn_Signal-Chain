@@ -16,18 +16,21 @@ const FACE_METER_PAD  = '14px 20px 12px'
 const FACE_METER_ROOM = STRIP_W + 16
 
 /**
- * A card that is only its face, at every zoom (Instrument, Guitar Amp, Speaker, Active Speaker,
- * Headphones): no header, no body. Zoomed in its face (`art`) with its upright meter on the right —
- * dB SPL where the card meets the air (SPL_DB, D13) —, zoomed out its face with the level under it.
- * Not connected, its face says so (and its meter keeps its place, unseen).
+ * A card that is only its face, at every zoom (the sounds in the air, the Microphone, the
+ * Instrument, Guitar Amp, Speaker, Active Speaker, Headphones): no header, no body. Zoomed in its
+ * face (`art`) with its upright meter on the right — dB SPL where the card's sound is in the air
+ * (SPL_DB, D13) —, zoomed out its face with the level under it. Not connected, its face says so
+ * (and its meter keeps its place, unseen).
  */
-export function FaceCard({ nodeId, typeKey, label, art, bare = false }: {
+export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = true }: {
   nodeId: string
   typeKey: TypeKey
   label: string
   art: OverviewArt
   /** Zoomed out no card around it, the art over the meter bar alone (the Instrument) */
   bare?: boolean
+  /** false: no meter at any zoom, its face alone (the Microphone: the sound before it has one — D21) */
+  meter?: boolean
 }) {
   const chrome = useNodeChrome(nodeId, typeKey)
   const { node, ports, overview, notConnected } = chrome
@@ -40,14 +43,16 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false }: {
   return (
     <CardFrame
       nodeId={nodeId} label={label} chrome={chrome}
-      size={{ w: cardMinSize(typeKey).w + FACE_METER_ROOM, h: height }}
+      size={{ w: cardMinSize(typeKey).w + (meter ? FACE_METER_ROOM : 0), h: height }}
       bare={overview && bare}
     >
       {/* The face's place; zoomed in, its meter on the right (hidden, its space kept, when not connected) */}
       <div style={{ height: height - 2, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', padding: FACE_METER_PAD, boxSizing: 'border-box' }}>
-        <div className="lsc-fade" style={{ display: 'flex', ...(notConnected ? { visibility: 'hidden' } : {}), ...hideInOverview }}>
-          <FaceMeter nodeId={nodeId} typeKey={typeKey} />
-        </div>
+        {meter && (
+          <div className="lsc-fade" style={{ display: 'flex', ...(notConnected ? { visibility: 'hidden' } : {}), ...hideInOverview }}>
+            <FaceMeter nodeId={nodeId} typeKey={typeKey} />
+          </div>
+        )}
       </div>
 
       {/* Its face: zoomed in beside its meter, zoomed out with its level under it */}
@@ -56,12 +61,12 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false }: {
         typeKey={typeKey}
         label={label}
         art={art}
-        showLevel={overview}
+        showLevel={overview && meter}
         barOnly={bare}
         status={notConnected ? t.status.notConnected : undefined}
         shown
         bypassed={node?.bypassed ?? false}
-        reserveRight={overview ? 0 : FACE_METER_ROOM}
+        reserveRight={overview || !meter ? 0 : FACE_METER_ROOM}
         spl={SPL_DB[typeKey]}
       />
     </CardFrame>

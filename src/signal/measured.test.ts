@@ -25,10 +25,10 @@ function wire(from: string, to: string): SignalEdge {
 const side = (peak: number, rms: number, noise: number): SideLevels => ({ peak, rms, noise, hum: -Infinity })
 const mono = (s: SideLevels): WireSignal => ({ kind: 'mono', l: s, r: s })
 
-/** Mic → Preamp → Switch → Fader → Compressor. */
+/** Vocal → Mic → Preamp → Switch → Fader → Compressor. */
 const chain = ({ on = true, faderDb = 0 } = {}): [SignalNode[], SignalEdge[]] => [
-  [card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('sw', 'switch', { on }), card('fader', 'fader', { faderDb }), card('comp', 'comp')],
-  [wire('mic', 'pre'), wire('pre', 'sw'), wire('sw', 'fader'), wire('fader', 'comp')],
+  [card('voice', 'vocal'), card('mic', 'mic'), card('pre', 'gain', { preampDb: 50 }), card('sw', 'switch', { on }), card('fader', 'fader', { faderDb }), card('comp', 'comp')],
+  [wire('voice:sound', 'mic'), wire('mic', 'pre'), wire('pre', 'sw'), wire('sw', 'fader'), wire('fader', 'comp')],
 ]
 
 /**

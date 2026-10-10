@@ -5,7 +5,7 @@ import type { CardPlan, ChainLevels } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
-import { GUITAR_REF_DB, NOISE_BELOW, SILENCES, balanceSides, loudnessOf, ownNoiseOf, panSides, soundKindOf } from '../signal/process'
+import { NOISE_BELOW, SILENCES, balanceSides, ownNoiseOf, panSides, soundKindOf, sourceLevelOf } from '../signal/process'
 import type { GainType } from '../signal/gains'
 import { gainDbOf, geqBandDb } from '../signal/gains'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
@@ -101,7 +101,7 @@ function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
   return ids
 }
 
-/** What a Line In set to Stereo plays: a stereo file's left and right (none: a mono file, or anything else). */
+/** What a stereo source plays (a Keyboard, a PC): a stereo file's left and right (none: a mono file, or anything else). */
 function stereoFileOf(card: CardPlan, sounds: ChainSounds): AudioBuffer | undefined {
   if (card.mode !== 'source' || !card.plays || !isNodeStereo(card.node)) return undefined
   const kind = soundKindOf(card.node)
@@ -233,8 +233,11 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
    */
   const OTHERS: Record<Exclude<TypeKey, GainType>, (card: CardPlan, x: Sig) => Sig> = {
     // A source's sound is source(), Pan's the 'pan' mode above: nothing reaches here for them
-    mic: (_, x) => x,
-    'line-in': (_, x) => x,
+    vocal: (_, x) => x,
+    'drum-kit': (_, x) => x,
+    acoustic: (_, x) => x,
+    keyboard: (_, x) => x,
+    pc: (_, x) => x,
     instrument: (_, x) => x,
     generator: (_, x) => x,
     pan: (_, x) => x,
@@ -280,7 +283,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         : twoSides(gain(sides.l, inSig), gain(sides.r, inSig))
     } else if (card.mode === 'source') {
       outSig = clippedIfNear(source(card), card, 'analog')
-      // Line In or Generator set to Stereo: one channel the same on both sides (a stereo file is already both)
+      // A stereo source: one channel the same on both sides (a stereo file is already both)
       if (isNodeStereo(node)) outSig = gain(0, outSig, 2)
     } else {
       // One channel, or both sides: a stereo signal through a follow card, a stereo bus (linked
@@ -327,14 +330,13 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   return taps
 
   /**
-   * What a source sends: its sound at its level, and its own noise. A Microphone fed a Guitar Amp
-   * hears the amp. A Line In set to Stereo plays a stereo file's left and right, its noise on both.
+   * What a source sends: its sound at its level, and its own noise (a sound in the air none: the
+   * microphone hears the room). A Keyboard or a PC plays a stereo file's left and right, its noise on both.
    */
   function source(card: CardPlan): Sig {
     const { node } = card
-    const level = node.typeKey === 'mic' ? param(node, 'sensitivityDb') : param(node, 'levelDb')
+    const level = sourceLevelOf(node)
     const noise = hiss(level - NOISE_BELOW[node.typeKey as keyof typeof NOISE_BELOW], 1)
-    if (!card.plays) return plus(gain(level - GUITAR_REF_DB, arriving(card, 1)), noise)
     if (!music) return noise
     const kind = soundKindOf(node)
     let sound: Sig
@@ -346,8 +348,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       if (both) return plus(atLevel(level, playing(both, loop.start, loop.end)), gain(0, noise, 2))
       sound = playing(loop.mono, loop.start, loop.end)
     }
-    // A Microphone hears singing and drums louder than speech; its noise stays where it is
-    return plus(atLevel(level + loudnessOf(node), sound), noise)
+    return plus(atLevel(level, sound), noise)
   }
 
   /**

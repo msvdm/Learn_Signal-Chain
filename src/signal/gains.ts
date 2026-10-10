@@ -1,4 +1,4 @@
-import type { SignalNode, TypeKey } from '../data/nodeRegistry'
+import type { MicType, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { param } from '../data/nodeRegistry'
 import type { Side } from './sided'
 
@@ -26,9 +26,16 @@ export const PAD_DB = 20
 export const DI_DROP_DB = 20
 
 /**
+ * How much signal a microphone makes of a sound (dB, from a Sound wire's level — signal/process.ts
+ * SOUND_SPL_DB — to dBu): a dynamic microphone sends −52 dBu for a sound of 94 dB SPL (1 pascal), so
+ * a voice at 86 gives −60 dBu; a condenser 12 dB more.
+ */
+export const MIC_GAIN_DB: Record<MicType, number> = { dynamic: -30, condenser: -18 }
+
+/**
  * A Guitar Amp's Volume knob goes to 11 — one louder. At 1 it plays a guitar at its usual level
- * 14 dB up (−16 dBu: 100 dB SPL, levels.ts SPL_DB), every step 1.5 dB more, 115 dB SPL at 11; 0 is
- * silent. At 5 (its default) the microphone in front of it gets −40 dBu.
+ * 14 dB up (−16 on its Sound wire: 100 dB SPL, levels.ts SPL_DB), every step 1.5 dB more, 115 dB SPL
+ * at 11; 0 is silent. At 5 (its default) a dynamic microphone in front of it gets −40 dBu.
  */
 export const GUITAR_AMP_MAX = 11
 export function guitarAmpGainDb(volume: number): number {
@@ -66,6 +73,8 @@ export function geqBandDb(node: Pick<SignalNode, 'typeKey' | 'params'>, side: Si
 
 /** Every type whose job is a gain, and its gain (dB, −∞: off). */
 const GAINS = {
+  // The sound it hears, as a signal
+  mic:              (node) => MIC_GAIN_DB[param(node, 'micType')],
   // Preamp: lifts a microphone up to line level. Gain: turns any signal up or down, off at the bottom
   gain:             (node, at) => (at.preamp ? param(node, 'preampDb') : offBelow(param(node, 'gainDb'))),
   amp:              (node, at) => offBelow(ampVolumeDb(node, at.side)),

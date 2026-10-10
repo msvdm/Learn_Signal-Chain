@@ -50,7 +50,7 @@ function tileName(text: string): { lines: string[]; size: number } {
 const ALL_ITEMS = (Object.keys(NODE_LOOK) as TypeKey[]).map((typeKey) => ({ typeKey, ...NODE_LOOK[typeKey] }))
 
 // The first thing to drag onto an empty canvas
-const START_ITEM = 'mic'
+const START_ITEM = 'vocal'
 
 function onDragStart(e: React.DragEvent, typeKey: TypeKey) {
   setActiveDragTypeKey(typeKey)

@@ -47,7 +47,7 @@ interface NodeWrapperProps {
   overviewArt?: OverviewArt
   /**
    * Overview: no card — no frame, no background — like a free-standing control: the art over the
-   * meter bar alone, no numbers (Microphone, Line Input)
+   * meter bar alone, no numbers (Keyboard, PC)
    */
   overviewBare?: boolean
 }

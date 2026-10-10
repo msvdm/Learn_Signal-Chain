@@ -1,10 +1,10 @@
-import type { Character, GeneratorSound, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { MIC_CHARACTERS, param } from '../data/nodeRegistry'
+import type { Character, GeneratorSound, MicType, SignalNode, TypeKey } from '../data/nodeRegistry'
+import { param } from '../data/nodeRegistry'
 import type { SideLevels, SignalDomain } from './levels'
-import { SILENT, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
+import { SILENT, SOUND_SPL_DB, ceilingOf, eachReading, shifted, sumNoiseToDb } from './levels'
 import { GEQ_CENTERS, eqLevelChange, graphicEqLevelChange, hpfLevelChange } from './eqMath'
 import type { Side } from './sided'
-import { gainDbOf, geqBandDb } from './gains'
+import { MIC_GAIN_DB, gainDbOf, geqBandDb } from './gains'
 
 // What each card does to one channel, as the number engine reads it (signal/chain.ts runChain runs
 // it once per side in stereo): to its peaks, its average and its noise (SideLevels). It answers at
@@ -58,7 +58,7 @@ export interface SideContext {
   side: Side
   /** This Gain is a Preamp (after a microphone or a DI Box's XLR Out) */
   preamp: boolean
-  /** Something is plugged in (a microphone hearing a Guitar Amp; a card hisses only then) */
+  /** Something is plugged in (a card hisses only then; a microphone hears only then) */
   fed: boolean
 }
 
@@ -67,12 +67,6 @@ export interface SideContext {
  * speaker expects. Fed from an amplifier, an active speaker shows at least the clip level.
  */
 export const SPEAKER_LEVEL_DB = 40
-
-/**
- * A Guitar Amp playing at this level (a guitar at its usual level, Volume at 0 dB) gives a
- * microphone in front of it its usual level (its sensitivityDb); louder or quieter, the mic follows.
- */
-export const GUITAR_REF_DB = -30
 
 // ── Sources and noise ─────────────────────────────────────────────────────────
 
@@ -83,18 +77,21 @@ export interface SourceSound {
 }
 
 /**
- * What a source plays: a Microphone hears speech, singing or drums, a Line Input plays music or
- * drums (their `character`), an Instrument a guitar, the Generator its Sound. Each but the
- * Generator's is a loop of real sound (src/audio/loops).
+ * What a source plays: a Vocal speaks or sings (its `character`), a Drum Kit drums, an Acoustic
+ * Guitar, an Instrument and a Guitar Amp a guitar, a Keyboard and a PC music, the Generator its
+ * Sound. Each but the Generator's is a loop of real sound (src/audio/loops).
  */
-export type SoundKind = Character | GeneratorSound | 'guitar'
+export type SoundKind = Character | GeneratorSound | 'music' | 'drums' | 'guitar'
 
-/** What a source plays (a Guitar Amp plays what reaches it; a Microphone in front of one hears that). */
+/** What a source plays (a Guitar Amp plays what reaches it; a Microphone hears what is before it). */
 export function soundKindOf(node: Pick<SignalNode, 'typeKey' | 'params'>): SoundKind {
   switch (node.typeKey) {
-    case 'instrument': return 'guitar'
+    case 'vocal':      return param(node, 'character')
+    case 'drum-kit':   return 'drums'
     case 'generator':  return param(node, 'sound')
-    default:           return param(node, 'character')
+    case 'keyboard':
+    case 'pc':         return 'music'
+    default:           return 'guitar'
   }
 }
 
@@ -110,7 +107,7 @@ export const PEAKS_ABOVE = {
   music:   12,
   /** Drums: sharp hits far above the average */
   drums:   18,
-  /** A guitar (the Instrument): plucks, sharper than a voice, softer than drums */
+  /** A guitar: plucks, sharper than a voice, softer than drums */
   guitar:  15,
   // The Generator's sounds
   /** A steady tone: a sine wave's peaks are 3 dB above its average */
@@ -120,12 +117,17 @@ export const PEAKS_ABOVE = {
   click:   18,
 } as const satisfies Record<SoundKind, number>
 
-/** How far each source's own noise sits below its average (dB). */
+/**
+ * How far each source's own noise sits below its average (dB). A sound in the air brings none: the
+ * room around it is what the microphone hears of it (ROOM_SPL).
+ */
 export const NOISE_BELOW = {
-  /** The room and the mic's own hiss */
-  mic:          66,
-  /** Keys, a phone, a player */
-  'line-in':    80,
+  vocal:        Infinity,
+  'drum-kit':   Infinity,
+  acoustic:     Infinity,
+  /** Keys, a computer, a player */
+  keyboard:     80,
+  pc:           80,
   /** The pickups' hiss and buzz */
   instrument:   70,
   /** A test generator is cleaner than any player */
@@ -144,17 +146,41 @@ export function sourceLevels(level: number, sound: SourceSound): SideLevels {
   return { peak: level + sound.peakDb, rms: level, noise: level - sound.noiseDb, hum: -Infinity }
 }
 
-/**
- * How much louder than speech each sound reaches a Microphone, close up (dB): someone speaking gives
- * its usual level (sensitivityDb, −60 dBu: 86 dB SPL), someone singing 10 dB more (96), a drum 24
- * (110). The signal it sends follows, as a real microphone's does.
- */
-export const AT_THE_MIC_DB = { speech: 0, singing: 10, drums: 24 } as const satisfies Record<typeof MIC_CHARACTERS[number], number>
+// ── Sound in the air, and the microphone (D21) ────────────────────────────────
 
-/** How far a source's sound is above its usual level: a Microphone's by what it picks up, anything else 0. */
-export function loudnessOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
-  if (node.typeKey !== 'mic') return 0
-  return AT_THE_MIC_DB[param(node, 'character') as keyof typeof AT_THE_MIC_DB] ?? 0
+/**
+ * How loud each sound reaches a microphone close up (dB SPL): someone speaking 86, singing 96, a
+ * drum 110, an acoustic guitar strummed 90.
+ */
+export const SOUND_SPL = { speech: 86, singing: 96, drums: 110, guitar: 90 } as const
+
+/**
+ * A source's average level: how loud a Vocal, a Drum Kit or an Acoustic Guitar reaches a microphone
+ * (on a Sound wire's scale), the level of a line, a guitar or the Generator (dBu: its `levelDb`).
+ */
+export function sourceLevelOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
+  switch (node.typeKey) {
+    case 'vocal':
+    case 'drum-kit':
+    case 'acoustic': return SOUND_SPL[soundKindOf(node) as keyof typeof SOUND_SPL] - SOUND_SPL_DB
+    default:         return param(node, 'levelDb')
+  }
+}
+
+/** The room around a microphone, which it hears with everything else (dB SPL): a quiet room's hush. */
+export const ROOM_SPL = 20
+
+/**
+ * A microphone's own hiss, as loud as a sound in the air would be to give it (dB SPL, its
+ * "self-noise"): a condenser's electronics; a dynamic microphone has none.
+ */
+export const SELF_NOISE_SPL: Record<MicType, number> = { dynamic: -Infinity, condenser: 13 }
+
+/** What a microphone adds to what it hears (dBu at its output): the room, and its own hiss. */
+export function micNoiseDbu(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
+  const type = param(node, 'micType')
+  const at   = MIC_GAIN_DB[type] - SOUND_SPL_DB
+  return sumNoiseToDb([ROOM_SPL + at, SELF_NOISE_SPL[type] + at])
 }
 
 // ── A card's own noise, as on a real analogue desk (D18) ───────────────────────────
@@ -190,7 +216,10 @@ export const GUITAR_AMP_NOISE_DBU = -76
  * Cards with no power of their own add no noise: a transformer, a resistor, a switch, a pan pot, a
  * passive speaker. Sources bring their own noise (NOISE_BELOW).
  */
-const PASSIVE = new Set<TypeKey>(['mic', 'line-in', 'instrument', 'generator', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker'])
+const PASSIVE = new Set<TypeKey>([
+  'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator',
+  'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker',
+])
 
 /** Each powered card's output noise (the Gain and the converters are worked out below). */
 const OUTPUT_NOISE: Partial<Record<TypeKey, number>> = {
@@ -214,9 +243,11 @@ const QUIET: OwnNoise = { in: -Infinity, out: -Infinity }
  * The noise this card adds (D18). None with nothing plugged in, none from a passive card, none
  * working digitally (32-bit float processing adds none) — but the converters: an ADC adds its own
  * on its digital side (dBFS), a DAC on its analog side (dBu: the same 112 dB under its full scale).
+ * A microphone adds the room it hears and its own hiss (micNoiseDbu).
  */
 export function ownNoiseOf(node: SignalNode, ctx: Pick<SideContext, 'domain' | 'preamp' | 'fed'>): OwnNoise {
   if (!ctx.fed || PASSIVE.has(node.typeKey)) return QUIET
+  if (node.typeKey === 'mic') return { in: -Infinity, out: micNoiseDbu(node) }
   if (node.typeKey === 'dac') return ctx.domain === 'digital' ? { in: -Infinity, out: CONVERTER_NOISE_DBFS + param(node, 'alignmentDb') } : QUIET
   if (ctx.domain === 'digital') return QUIET
   if (node.typeKey === 'adc') return { in: -Infinity, out: CONVERTER_NOISE_DBFS }
@@ -341,27 +372,23 @@ const gained: Process = (node, input, ctx) => pass(shifted(input, gainDbOf(node,
 
 const busFader: Process = summing(gained)
 
-/** A source with a level of its own (Line Input, Instrument, Generator): its sound at that level. */
-const source = (node: SignalNode, typeKey: Exclude<Source, 'mic'>): SideResult =>
-  ({ out: sourceLevels(param(node, 'levelDb'), soundOf(typeKey, node.params)), domain: 'analog' })
+/** A source: its sound at its level (sourceLevelOf). */
+const source = (node: SignalNode, typeKey: Source): SideResult =>
+  ({ out: sourceLevels(sourceLevelOf(node), soundOf(typeKey, node.params)), domain: 'analog' })
 
 /** An Active Speaker, or Headphones (the same, amplifier built in): its Volume. */
 const poweredSpeaker: Process = analogOnly('digitalToSpeaker', gained)
 
 /** What each type does to one channel (every type has one: a new type without it does not compile). */
 const PROCESS: Record<TypeKey, Process> = {
-  // On its own it picks up a voice or drums, as loud as they reach it (AT_THE_MIC_DB) — the room and
-  // its own hiss stay at its usual level's; in front of a Guitar Amp, it hears what the amp plays
-  // (silent when the amp is), and the room on top
-  mic: (node, input, ctx) => {
-    const usual = param(node, 'sensitivityDb')
-    const sound = soundOf('mic', node.params)
-    const own   = { ...sourceLevels(usual + loudnessOf(node), sound), noise: usual - sound.noiseDb }
-    if (!ctx.fed) return { out: own, domain: 'analog' }
-    const heard = shifted(input, usual - GUITAR_REF_DB)
-    return { out: { ...heard, noise: sumNoiseToDb([heard.noise, own.noise]) }, domain: 'analog' }
-  },
-  'line-in':    (node) => source(node, 'line-in'),
+  // Sound in the air, as loud as it reaches a microphone (SOUND_SPL)
+  vocal:        (node) => source(node, 'vocal'),
+  'drum-kit':   (node) => source(node, 'drum-kit'),
+  acoustic:     (node) => source(node, 'acoustic'),
+  // Turns the sound it hears into a signal (MIC_GAIN_DB); then the room and its own hiss (ownNoiseOf)
+  mic:          gained,
+  keyboard:     (node) => source(node, 'keyboard'),
+  pc:           (node) => source(node, 'pc'),
   instrument:   (node) => source(node, 'instrument'),
   generator:    (node) => source(node, 'generator'),
   // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
