@@ -247,20 +247,45 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
   - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob),
     the HPF's `what` (the button) and `tip`.
 
-## Stage 3 — New outputs, passive speaker and amp  ☐
+## Stage 3 — New outputs, passive speaker and amp  ☑
 
 Read: `SpeakerNode.tsx`, `ActiveSpeakerNode.tsx`, `AmpNode.tsx`, `connectionRules.ts`.
 
-- [ ] `studio-monitor`: works like `active-speaker` (built-in amp, SPL meter), its own icon.
-- [ ] `broadcast` (Stream / Broadcast): a sink, stereo, dBu meter at I. At Advanced it accepts only
+- [x] `studio-monitor`: works like `active-speaker` (built-in amp, SPL meter), its own icon.
+- [x] `broadcast` (Stream / Broadcast): a sink, stereo, dBu meter at I. At Advanced it accepts only
   a `coder` (rule added in Stage 7).
-- [ ] `recorder` (simple form, B/I): a sink with a level meter (dBu at I).
-- [ ] `speaker` (passive) and `amp` now also at B and I. Rule: the `amp` output feeds **only**
+- [x] `recorder` (simple form, B/I): a sink with a level meter (dBu at I).
+- [x] `speaker` (passive) and `amp` now also at B and I. Rule: the `amp` output feeds **only**
   `speaker`, at every level (`nodeAcceptsWire`). The existing "passive speaker needs an amp" logic
   stays, and its note at B/I reads "No sound — a passive speaker needs an amplifier before it".
   Grep the tests for amp → non-speaker wires and fix them.
-- [ ] Locales + icons.
-- [ ] Checks + commit. *Hand-off:* …
+- [x] Locales + icons.
+- [x] Checks + commit. *Hand-off:*
+  - **Studio Monitor** (`studio-monitor`, levels B + I): everywhere the Active Speaker is (`GAINS`
+    `volumeDb`, `poweredSpeaker`, `AMP_NOISE_DBU`, `SPL_DB` 110, `DESK_INPUTS`, `VolumeFace`),
+    `ActiveSpeakerNode` draws it; lucide's `Speaker` icon. `POWERED_SPEAKERS` (`signal/chain.ts`) is
+    the set an Amplifier blows.
+  - **Recorder** (`stereo: 'follow'`: records a stereo wire in two channels, a mono one in one) and
+    **Stream / Broadcast** (`broadcast`, `stereo: 'always'`: a mono wire goes out on both sides):
+    sinks, `PASSIVE`, `PROCESS` `pass` (analog or digital as it arrives — Stage 7 adds the Coder
+    rule), `OTHERS` identity. One card for both, `RecorderNode.tsx` (`FaceCard`, the big icon, its
+    meter in dBu labelled Input — `FaceMeter` labels any sink without SPL so; notes: Bad sound, hum).
+    Icons: lucide's `CassetteTape`, `RadioTower`. Stage 7's Advanced Recorder (Mono | Stereo switch,
+    Monitor out) changes `stereo` to `'optional'` and adds the output for every level (ports never
+    depend on the level).
+  - `passesThrough` now needs an output too (the Recorder is `follow` with one input): no change
+    for any existing type.
+  - **The rule**: `nodeAcceptsWire` refuses any wire from an `amp` into anything but a `speaker`
+    (so `wireTakesCard` refuses an Amplifier dropped onto a wire into anything else). The `blown`
+    condition stays: an Amplifier taking a bus's L / R over moves the other side's wire onto itself
+    (checked in the browser: Master L → Active Speaker, then Master R → Amplifier → blown), and older
+    files can hold the wire. The `speakers` test keeps its amp → active / headphones wires, with a
+    comment saying so; a new `the ends` test locks the three new types.
+  - Texts: `nodes.speaker.label` ("Speaker / Monitor") went — the card is named "Passive Speaker"
+    as in the palette, since the Studio Monitor is its own card now; `needsAmp` reworded (every
+    level); the amp / active speaker / headphones help says an Amplifier's output plugs only into a
+    passive speaker. Palette order (outputs): the four as before, then Studio Monitor, Recorder,
+    Stream / Broadcast. Bulgarian: Студиен монитор, Рекордер, Стрийм / Излъчване.
 
 ## Stage 4 — Audio Interface and DAW: record & play back (Intermediate)  ☐
 

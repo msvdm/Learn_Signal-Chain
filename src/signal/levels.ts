@@ -289,7 +289,7 @@ export const SOUND_SPL_DB = 116
  */
 export const SPL_DB: Partial<Record<TypeKey, number>> = {
   vocal: SOUND_SPL_DB, 'drum-kit': SOUND_SPL_DB, acoustic: SOUND_SPL_DB, 'guitar-amp': SOUND_SPL_DB,
-  speaker: 110, 'active-speaker': 110, headphones: 95,
+  speaker: 110, 'active-speaker': 110, 'studio-monitor': 110, headphones: 95,
 }
 
 /** A dB SPL meter's bar runs 50 … 130 dB SPL: the dBu scale (−60 … +20) moved up by this. */

@@ -220,7 +220,7 @@ export const GUITAR_AMP_NOISE_DBU = -76
  */
 const PASSIVE = new Set<TypeKey>([
   'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator',
-  'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker',
+  'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker', 'recorder', 'broadcast',
 ])
 
 /** Each powered card's output noise (the Gain and the converters are worked out below). */
@@ -229,7 +229,7 @@ const OUTPUT_NOISE: Partial<Record<TypeKey, number>> = {
   comp: LINE_NOISE_DBU, 'noise-gate': LINE_NOISE_DBU, limiter: LINE_NOISE_DBU, deesser: LINE_NOISE_DBU,
   fader: LINE_NOISE_DBU,
   'master-bus': BUS_NOISE_DBU, 'aux-bus': BUS_NOISE_DBU, 'matrix-bus': BUS_NOISE_DBU,
-  amp: AMP_NOISE_DBU, 'active-speaker': AMP_NOISE_DBU, headphones: AMP_NOISE_DBU,
+  amp: AMP_NOISE_DBU, 'active-speaker': AMP_NOISE_DBU, 'studio-monitor': AMP_NOISE_DBU, headphones: AMP_NOISE_DBU,
   'guitar-amp': GUITAR_AMP_NOISE_DBU,
 }
 
@@ -440,7 +440,11 @@ const PROCESS: Record<TypeKey, Process> = {
   // Only runs with an amplifier before it (the engine checks); otherwise it is silent
   speaker: analogOnly('digitalToSpeaker', gained),
   'active-speaker': poweredSpeaker,
+  'studio-monitor': poweredSpeaker,
   headphones:       poweredSpeaker,
+  // They take the sound in as it arrives, analog or digital: their meter reads what they record or send
+  recorder:         (_, input, ctx) => pass(input, ctx),
+  broadcast:        (_, input, ctx) => pass(input, ctx),
 }
 
 /**

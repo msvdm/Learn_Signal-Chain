@@ -29,6 +29,7 @@ export function portAcceptsWire(
  * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a Matrix send feeds only Matrix Buses.
  * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
  * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
+ * An Amplifier's output is speaker level: only a passive speaker takes it.
  */
 export function nodeAcceptsWire(
   targetNode: TargetNode,
@@ -39,6 +40,7 @@ export function nodeAcceptsWire(
   if (targetNode.id === source.nodeId) return false
   if ((targetNode.typeKey === 'mic') !== (source.handleId === SOUND_PORT)) return false
   if (targetNode.typeKey === 'guitar-amp' && instrumentAt(source.nodeId, source.handleId, { nodes, edges }) === null) return false
+  if (targetNode.typeKey !== 'speaker' && nodes.some((n) => n.id === source.nodeId && n.typeKey === 'amp')) return false
   const toMatrix = targetNode.typeKey === 'matrix-bus'
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
   if (!toMatrix && source.handleId === MATRIX_PORT) return false

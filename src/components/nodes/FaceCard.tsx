@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { TypeKey } from '../../data/nodeRegistry'
+import { NODE_REGISTRY } from '../../data/nodeRegistry'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -17,7 +18,7 @@ const FACE_METER_ROOM = STRIP_W + 16
 
 /**
  * A card that is only its face, at every zoom (the sounds in the air, the Microphone, the
- * Instrument, Guitar Amp, Speaker, Active Speaker, Headphones): no header, no body. Zoomed in its
+ * Instrument, Guitar Amp, the speakers, Headphones, Recorder, Stream / Broadcast): no header, no body. Zoomed in its
  * face (`art`) with its upright meter on the right — dB SPL where the card's sound is in the air
  * (SPL_DB, D13) —, zoomed out its face with the level under it. Not connected, its face says so
  * (and its meter keeps its place, unseen).
@@ -73,7 +74,10 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = tr
   )
 }
 
-/** Its upright meter: what it plays or picks up — dB SPL where that is sound in the air. */
+/**
+ * Its upright meter: what it plays or picks up — dB SPL where that is sound in the air; what reaches
+ * an end point that takes the signal in (the Recorder, Stream / Broadcast).
+ */
 function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
   const { t }  = useTranslation()
   const levels = useStereoLevels(nodeId)
@@ -81,7 +85,7 @@ function FaceMeter({ nodeId, typeKey }: { nodeId: string; typeKey: TypeKey }) {
   return (
     <MeterStrip
       {...levels.output}
-      label={spl === undefined ? t.meters.output : t.meters.sound}
+      label={spl !== undefined ? t.meters.sound : NODE_REGISTRY[typeKey].category === 'sink' ? t.meters.input : t.meters.output}
       nodeId={nodeId} at="out" spl={spl}
     />
   )

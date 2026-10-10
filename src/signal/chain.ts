@@ -1,4 +1,4 @@
-import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import { graphOf, drivingWire, fedBy, flowOrder, outputKey } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
@@ -119,6 +119,13 @@ export interface CardPlan {
 
 const keyOf = (e: SignalEdge) => outputKey(e.source, e.sourceHandle)
 
+/**
+ * Speakers with an amplifier of their own: an Amplifier before one blows it. The app draws an
+ * Amplifier only into a passive speaker; this wire comes from one taking a bus's L / R over (the
+ * other side's wire moves onto it), or from an older file.
+ */
+const POWERED_SPEAKERS: ReadonlySet<TypeKey> = new Set<TypeKey>(['active-speaker', 'studio-monitor', 'headphones'])
+
 /** Every card the signal reaches, in signal order (cards in a loop, and after one, are left out). */
 export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] {
   const graph = graphOf({ nodes, edges })
@@ -170,7 +177,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       used:        used.map((e) => ({ key: keyOf(e), nodeId: e.source, sendDb: sendDb(e) })),
       domainFrom:  relay ? (driving ? [driving.source] : []) : incoming.map((e) => e.source),
       plays:       def.category === 'source',
-      amped:       (node.typeKey === 'active-speaker' || node.typeKey === 'headphones') && fedBy(node.id, 'amp', graph),
+      amped:       POWERED_SPEAKERS.has(node.typeKey) && fedBy(node.id, 'amp', graph),
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
       groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),

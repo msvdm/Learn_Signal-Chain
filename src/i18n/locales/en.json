@@ -198,8 +198,7 @@
       "label": "Master Bus"
     },
     "speaker": {
-      "label": "Speaker / Monitor",
-      "needsAmp": "Silent — needs an Amplifier before it",
+      "needsAmp": "No sound — a passive speaker needs an amplifier before it",
       "hum": "You hear a hum",
       "distorted": "Bad sound — something before it distorts"
     },
@@ -207,6 +206,9 @@
       "label": "Active Speaker",
       "volume": "Volume",
       "blown": "Blown! An amplifier's output is far too strong for it."
+    },
+    "studio-monitor": {
+      "volume": "Volume"
     },
     "headphones": {
       "label": "Headphones",
@@ -389,6 +391,9 @@
       "matrix-bus": "Matrix Bus",
       "active-speaker": "Active Speaker",
       "headphones": "Headphones",
+      "studio-monitor": "Studio Monitor",
+      "recorder": "Recorder",
+      "broadcast": "Stream / Broadcast",
       "speaker": "Passive Speaker"
     }
   },
@@ -469,7 +474,7 @@
       "tip": "Take a second wire from the bus's Mix output: it does not change when you move this fader, because it leaves before the fader. That is where a pre-fade listen (PFL) path starts. Effects such as a limiter may sit between the bus and this fader — it stays the Main Fader."
     },
     "amp": {
-      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, channel A takes the left side and channel B the right, each with its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",
+      "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound, and that is the only thing its output plugs into: the signal is far too strong for anything else. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, channel A takes the left side and channel B the right, each with its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",
       "why": "Line-level signals are powerful enough for mixing and processing, but not powerful enough to physically move a speaker cone. The power amp provides the current needed to do the work.",
       "tip": "Power amps are rated in watts. For studio monitors you typically need 50–100 W. For live PA systems, 500–2000 W per side is common. More wattage = more headroom before clipping, not necessarily more loudness. Its own hiss comes after its Volume, so turning the amp down never makes it quieter: run the desk at a healthy level and turn the amp down to taste, rather than the desk low and the amp wide open."
     },
@@ -501,17 +506,32 @@
     "speaker": {
       "what": "A passive speaker converts electrical signal back into sound, but it has no built-in amplifier. It needs a separate power amplifier (Amp node) to drive it — connecting one directly to line level will produce no sound.",
       "why": "Passive speakers are the standard in live sound PA systems and hi-fi setups. The amplifier is a separate unit chosen for its power output and impedance matching to the speaker.",
-      "tip": "Connect an Amp node before this speaker. The amplifier provides the current needed to physically move the speaker cone. Without it, the signal is there but nothing moves. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
+      "tip": "Connect an Amplifier before this speaker. The amplifier provides the current needed to physically move the speaker cone. Without it, the signal is there but nothing moves. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
     },
     "active-speaker": {
       "what": "An active (powered) speaker has a built-in amplifier. It accepts line-level signals directly from a mixer, audio interface, or any line-level output — no separate power amp needed.",
       "why": "Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.",
-      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. Never plug it into an Amplifier's output: that signal is already strong enough to drive a passive speaker, far too much for the line input of a speaker with its own amp inside — it blows. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
+      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. An Amplifier's output plugs only into a passive speaker: that signal is far too strong for the line input of a speaker with its own amp inside — it would blow. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
     },
     "headphones": {
       "what": "Headphones let one person listen to the chain: the engineer checking a channel, or a musician hearing their monitor mix. Here they work like an Active Speaker — a line-level signal in, a Volume knob for how loud.",
       "why": "In a studio or on stage not everyone can listen on the speakers. Headphones put the sound right at one person's ears, without the room around it.",
-      "tip": "Like an Active Speaker, never plug them into an Amplifier's output: a power amp's signal is meant for a passive speaker and is far too strong for them — they blow. If a card before them clips, they say “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
+      "tip": "Like an Active Speaker, they never go after an Amplifier: a power amp's signal is only for a passive speaker and far too strong for them — they would blow. If a card before them clips, they say “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
+    },
+    "studio-monitor": {
+      "what": "A studio monitor is the speaker a studio mixes on: an amplifier built in, a line-level signal in, a Volume knob for how loud. It works just like an Active Speaker.",
+      "why": "Studio monitors are made to sound honest — no nicer than the mix really is — so what you hear while mixing is what everyone else will hear later.",
+      "tip": "First bring the mix to a healthy green level, then use the Volume knob for how loud you listen. Like an Active Speaker it needs no Amplifier: an Amplifier's output is only for a passive speaker. If a card before it clips, it says “Bad sound” — find the red card and turn down before it."
+    },
+    "recorder": {
+      "what": "A recorder saves the sound that reaches it, so you can play it back later. Its meter shows the level going into the recording.",
+      "why": "Recording a rehearsal, a concert or a podcast is often the whole point of the chain. What is recorded stays as it was: a level too low keeps its hiss, a clip keeps its distortion.",
+      "tip": "Aim for a healthy green level on its meter. If a card before it clips, it says “Bad sound”: the recording keeps that distortion — find the red card and turn down before it."
+    },
+    "broadcast": {
+      "what": "Stream / Broadcast sends the mix to listeners far away — an internet stream, a radio or TV broadcast. It is always stereo: a mono signal goes out on both sides.",
+      "why": "Many events are heard by more people online or on the radio than in the room. The listeners at home hear only what reaches this point.",
+      "tip": "Send it a healthy green level: too quiet and listeners turn their volume up into the hiss, too loud and it distorts. If a card before it clips, it says “Bad sound” — find the red card and turn down before it."
     },
     "di-box": {
       "what": "A DI box (Direct Injection) takes a guitar, bass or keyboard and turns it into a mic-level signal for the desk: its XLR Out is about 20 dB quieter than what goes in, so a Gain after it works as a Preamp, just like after a microphone. Its Direct Out passes the instrument on unchanged, for a guitar amp on stage.",

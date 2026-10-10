@@ -4,7 +4,7 @@ import {
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus, Zap,
   Merge, Volume2,
-  SlidersHorizontal, MoveHorizontal, Headphones,
+  SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
@@ -93,4 +93,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   speaker:           { icon: Volume2,           group: 'output' },
   amp:               { icon: Radio,             group: 'output' },
   headphones:        { icon: Headphones,        group: 'output' },
+  'studio-monitor':  { icon: Speaker,           group: 'output' },
+  recorder:          { icon: CassetteTape,      group: 'output' },
+  broadcast:         { icon: RadioTower,        group: 'output' },
 }

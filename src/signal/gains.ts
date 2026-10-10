@@ -91,6 +91,7 @@ const GAINS = {
   'matrix-bus':     (node) => param(node, 'faderDb'),
   speaker:          (node) => param(node, 'outputTrimDb'),
   'active-speaker': (node) => param(node, 'volumeDb'),
+  'studio-monitor': (node) => param(node, 'volumeDb'),
   headphones:       (node) => param(node, 'volumeDb'),
   // What it plays: the guitar turned up by its Volume (0 … 11)
   'guitar-amp':     (node) => guitarAmpGainDb(param(node, 'volume')),

@@ -45,7 +45,7 @@ export type TypeKey =
   | 'phantom' | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
-  | 'speaker' | 'active-speaker' | 'headphones'
+  | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
 
 export type Size = { w: number; h: number }
 
@@ -402,11 +402,31 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
   },
+  'studio-monitor': {
+    // Works as an Active Speaker does (amplifier built in): the speakers a studio mixes on. Advanced
+    // has the Active Speaker for both
+    category: 'sink', inputs: IN, outputs: [], stereo: 'never',
+    levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
+    defaultParams: { volumeDb: 0 },
+  },
   headphones: {
     // Works as an Active Speaker does (amplifier built in): there to show where a listener plugs in
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { volumeDb: 0 },
+  },
+  recorder: {
+    // Records what reaches it, as it is: a stereo wire in two channels, a mono one in one
+    category: 'sink', inputs: IN, outputs: [], stereo: 'follow',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
+  },
+  broadcast: {
+    // Stream / Broadcast: the mix sent out to listeners far away, always in stereo (a mono wire goes
+    // out on both sides)
+    category: 'sink', inputs: IN, outputs: [], stereo: 'always',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
   },
 }
 
@@ -572,12 +592,12 @@ export function splitsOnlyMix(typeKey: TypeKey): boolean {
 }
 
 /**
- * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …): walks up a
- * chain (graph/queries.ts) go through these and stop at anything else — a source, a bus, a Relay.
+ * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …; not the
+ * Recorder, an end point): walks up a chain (graph/queries.ts) go through these and stop at anything else — a source, a bus, a Relay.
  */
 export function passesThrough(typeKey: TypeKey): boolean {
   const def = NODE_REGISTRY[typeKey]
-  return def.stereo === 'follow' && def.inputs.length === 1
+  return def.stereo === 'follow' && def.inputs.length === 1 && def.outputs.length > 0
 }
 
 /** True when this node's own setting is stereo (Mono | Stereo switch on, or always stereo). */

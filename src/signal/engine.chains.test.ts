@@ -569,6 +569,8 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
     card('phones2', 'headphones'),
   ], [
     wire('line', 'passive'), wire('line', 'phones'),
+    // The app draws an Amplifier only into a passive speaker (connectionRules); the other two wires
+    // come from one taking a bus's L / R over, or from an older file
     wire('line', 'amp'), wire('amp', 'passive2'), wire('amp', 'active'), wire('amp', 'phones2'),
   ]), {
     line:     { out: -10, health: 'good' },
@@ -580,6 +582,28 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
     // Headphones work as an Active Speaker: their Volume, and blown by an amplifier
     phones:   { in: -10, out: -16, health: 'good' },
     phones2:  { in: -16, out: 24, health: 'clipping', condition: 'blown' },
+  })
+})
+
+describe('the ends: a Studio Monitor works as an Active Speaker, a Recorder keeps what arrives, Stream / Broadcast sends stereo', () => {
+  expectCards(signalOf([
+    line('line'),
+    card('keys', 'keyboard'),
+    card('monitor', 'studio-monitor', { volumeDb: -6 }),
+    card('rec', 'recorder'),
+    card('rec2', 'recorder'),
+    card('air', 'broadcast'),
+  ], [
+    wire('line', 'monitor'), wire('line', 'rec'), wire('keys', 'rec2'), wire('line', 'air'),
+  ]), {
+    line:    { out: -10, health: 'good' },
+    keys:    { out: [-10, -10], health: 'good' },
+    monitor: { in: -10, out: -16, health: 'good' },
+    // One channel in, one recorded; a stereo wire, both sides
+    rec:     { in: -10, out: -10, health: 'good' },
+    rec2:    { in: [-10, -10], out: [-10, -10], health: 'good' },
+    // A mono wire goes out on both sides
+    air:     { in: [-10, -10], out: [-10, -10], health: 'good' },
   })
 })
 

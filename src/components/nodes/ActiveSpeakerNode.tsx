@@ -22,14 +22,14 @@ function BlownSpeakerIcon() {
 }
 
 /**
- * Active speaker (amplifier built in), and Headphones, which work the same: a card with a big icon
+ * Active speaker (amplifier built in), and the Studio Monitor and Headphones, which work the same: a card with a big icon
  * and its Volume knob, at every zoom (its meter in dB SPL — D13). Fed from an Amplifier it blows (condition
  * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why; fed a digital
  * signal, a note says so (conditions.tsx). A signal clipped on its way here says "Bad sound"
  * (`distorted`: its meter may be green); a hum from a DI Box ground loop shows under it.
  */
 export function ActiveSpeakerNode({ id, type }: CardProps) {
-  const typeKey = type as 'active-speaker' | 'headphones'
+  const typeKey = type as 'active-speaker' | 'studio-monitor' | 'headphones'
   const Icon    = NODE_LOOK[typeKey].icon
   const stage   = useStage(id)
   const { t }   = useTranslation()
