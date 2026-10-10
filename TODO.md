@@ -234,7 +234,7 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
     all in the help text.
   - **Equalizer and HPF below Advanced** (the user's call, after the plan said "no change" for the
     EQ): bare too, so the Intermediate input chain is 48V · Preamp · HPF · EQ · Compressor · Fader,
-    all bare controls. The EQ: three 120px knobs side by side (Low · Mid · High, band colours), its
+    all bare controls. The EQ: three 165px knobs (the Gain's size) side by side (Low · Mid · High, band colours), its
     name under them; the Parametric card (Advanced) keeps its meters. The HPF: `NamedButton` "HPF",
     its On / Off is the card's bypass, 80 Hz under its name (`levelNames.intermediate.hpf`: "High-Pass
     Filter" / "Срязване на ниските"); the Advanced card lost its zoomed-out level (`NodeWrapper`

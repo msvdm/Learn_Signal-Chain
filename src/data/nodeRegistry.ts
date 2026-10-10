@@ -252,7 +252,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     // Below Advanced three bare knobs, Low · Mid · High (see initialParams)
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 452, h: 269 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 603, h: 304 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },

@@ -213,9 +213,9 @@ function useBands(id: string) {
   return { bands, updateBand }
 }
 
-// The three knobs below Advanced: big enough to read zoomed out
-const DESK_KNOB = 120
-const DESK_GAP  = 20
+// The three knobs below Advanced: the Gain's, Pan's and Compressor's size, read zoomed out
+const DESK_KNOB = 165
+const DESK_GAP  = 28
 
 /** Low · Mid · High: each turns its range up or down at its fixed frequency (Low and High are shelves). */
 function DeskEQ({ id }: { id: string }) {
@@ -236,10 +236,10 @@ function DeskEQ({ id }: { id: string }) {
               color={BAND_COLORS[s.index]} size={DESK_KNOB} showReadout={false}
             />
             {/* Its band and its setting, like the print under a desk's knob */}
-            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lsc-fg-muted)' }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lsc-fg-muted)' }}>
               {s.name}
             </span>
-            <StableText reserve={[gainReserve]} align="center" style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 22, fontWeight: 700, lineHeight: 1.1 }}>
+            <StableText reserve={[gainReserve]} align="center" style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
               {formatGain(bands[s.index].gainDb)}
             </StableText>
           </div>
