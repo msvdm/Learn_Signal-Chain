@@ -236,7 +236,7 @@ function DeskEQ({ id }: { id: string }) {
               color={BAND_COLORS[s.index]} size={DESK_KNOB} showReadout={false}
             />
             {/* Its band and its setting, like the print under a desk's knob */}
-            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lsc-fg-muted)' }}>
+            <span style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lsc-fg-muted)' }}>
               {s.name}
             </span>
             <StableText reserve={[gainReserve]} align="center" style={{ fontFamily: 'var(--lsc-font-mono)', fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>

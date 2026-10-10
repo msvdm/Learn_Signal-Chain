@@ -80,10 +80,13 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **The Graphic EQ draws no line through its sliders** (2026-10-08): their caps show the curve.
 - **48V says 48V, on or off** (2026-10-10): lit while on, the same word greyed out when off (no
   "OFF"); it starts On.
+- **The push buttons' colours** (2026-10-10): the On Off Switch green, 48V red, the HPF violet (the
+  accent, as the Pan's knob), the Pad yellow (the hot colour).
 - **The Compressor below Advanced is one bare knob** (2026-10-10): no card, no curve — a big knob
   like the Gain's and Pan's, yellow (the hot colour), readable zoomed out.
 - **The Equalizer below Advanced is three bare knobs** (2026-10-10): Low · Mid · High side by side,
-  no card, no meters — an analogue desk's EQ and compressor have none; the next card shows the level.
+  the Gain's size, their names big, no card, no meters — an analogue desk's EQ and compressor have
+  none; the next card shows the level.
 - **The HPF shows no level** (2026-10-10): no meter or level at any zoom, at every level (the next
   card shows it). Below Advanced it is one button, "HPF", lit or greyed out (its bypass), at a
   fixed 80 Hz; Advanced keeps the cutoff to choose.

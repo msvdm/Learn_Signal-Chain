@@ -122,7 +122,7 @@ function HpfButton({ id }: { id: string }) {
   const word = t.nodes.hpf.button
   return (
     <NamedButton
-      id={id} typeKey="hpf" on={!bypassed} words={{ on: word, off: word }}
+      id={id} typeKey="hpf" on={!bypassed} tone="accent" words={{ on: word, off: word }}
       onToggle={() => toggleBypassNode(id)} value={formatHz(p('cutoffHz'))}
     />
   )

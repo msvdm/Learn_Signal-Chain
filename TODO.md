@@ -210,8 +210,9 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
 - [x] Browser check: Vocal → Condenser mic → 48V → Gain → HPF → EQ → Comp → Fader → Master → Active
   speaker, with 48V on and off.
 - [x] Checks + commit. *Hand-off:*
-  - **48V** (`phantom`): a bare button (`NamedButton` in `PadNode.tsx`, shared with the Pad): "48V"
-    lit in the hot colour while on, the same word greyed out when off (the user's call, 2026-10-10);
+  - **48V** (`phantom`): a bare button (`NamedButton`, shared with the Pad and the HPF): "48V" lit
+    red while on, the same word greyed out when off (the user's calls, 2026-10-10 — the buttons'
+    colours: `SquareButton` `tone`, Switch green, 48V red, HPF violet, Pad yellow);
     param `on`, **starts On** when dropped; `PASSIVE`, passes the signal on (`PROCESS` `pass`,
     `OTHERS` identity). Palette: first in Processing.
   - `phantomPowered(micId, view)` (`graph/queries.ts`): from the mic's outputs through `passesThrough`

@@ -4,6 +4,7 @@ import type { TypeKey } from '../../data/nodeRegistry'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { SquareButton, SQUARE_BORDER, SQUARE_LETTER_SPACING } from '../controls/SquareButton'
+import type { ButtonTone } from '../controls/SquareButton'
 import { fitText, cssVar } from '../../utils/fitText'
 
 // A free-standing button, big enough to read zoomed out — the On Off Switch's size
@@ -16,10 +17,12 @@ const WORD_MAX   = 32     // the On Off Switch's word size
  * under it (D11), the same at every zoom — its word lit while it is on, greyed out (or another word)
  * when not. One size for both words, so pressing it never changes the word's size.
  */
-export function NamedButton({ id, typeKey, on, words, onToggle, value }: {
+export function NamedButton({ id, typeKey, on, tone, words, onToggle, value }: {
   id: string
   typeKey: TypeKey
   on: boolean
+  /** The colour it is lit in: the Pad's hot, 48V red, the HPF violet */
+  tone: ButtonTone
   words: { on: string; off: string }
   onToggle: () => void
   /** Under its name (the HPF's fixed cutoff) */
@@ -34,7 +37,7 @@ export function NamedButton({ id, typeKey, on, words, onToggle, value }: {
 
   return (
     <FreeControl nodeId={id} typeKey={typeKey} label={useNodeName(id, typeKey)} value={value} portLine={BUTTON / 2}>
-      <SquareButton on={on} tone="hot" size={BUTTON} fontSize={fontSize} onClick={onToggle}>
+      <SquareButton on={on} tone={tone} size={BUTTON} fontSize={fontSize} onClick={onToggle}>
         {on ? words.on : words.off}
       </SquareButton>
     </FreeControl>

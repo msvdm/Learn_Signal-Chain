@@ -13,11 +13,11 @@ export function PadNode({ id }: CardProps) {
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
   const engaged = p('engaged')
-  return <NamedButton id={id} typeKey="pad" on={engaged} words={t.nodes.pad} onToggle={() => updateNodeParams(id, { engaged: !engaged })} />
+  return <NamedButton id={id} typeKey="pad" on={engaged} tone="hot" words={t.nodes.pad} onToggle={() => updateNodeParams(id, { engaged: !engaged })} />
 }
 
 /**
- * Phantom power: "48V", lit while on, greyed out when off. It passes the signal on unchanged; a
+ * Phantom power: "48V", lit red while on (a desk's 48V light), greyed out when off. It passes the signal on unchanged; a
  * condenser microphone before it (ahead of the Preamp) gets its power from it — without, it sends
  * nothing (D21).
  */
@@ -27,5 +27,5 @@ export function PhantomNode({ id }: CardProps) {
   const { t }            = useTranslation()
   const on   = p('on')
   const word = t.nodes.phantom.button
-  return <NamedButton id={id} typeKey="phantom" on={on} words={{ on: word, off: word }} onToggle={() => updateNodeParams(id, { on: !on })} />
+  return <NamedButton id={id} typeKey="phantom" on={on} tone="clipping" words={{ on: word, off: word }} onToggle={() => updateNodeParams(id, { on: !on })} />
 }
