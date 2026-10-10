@@ -16,7 +16,8 @@ const WORD_MAX   = 32     // the On Off Switch's word size
 
 /**
  * A bare square button with its name under it (D11), the same at every zoom: its word lit while
- * it is on, "OFF" when not — one size for both words, so pressing it never changes the word's size.
+ * it is on, greyed out (or another word) when not — one size for both words, so pressing it never
+ * changes the word's size.
  */
 function NamedButton({ id, typeKey, on, words, onToggle }: {
   id: string
@@ -54,13 +55,15 @@ export function PadNode({ id }: CardProps) {
 }
 
 /**
- * Phantom power: "48V" lit while on. It passes the signal on unchanged; a condenser microphone
- * before it (ahead of the Preamp) gets its power from it — without, it sends nothing (D21).
+ * Phantom power: "48V", lit while on, greyed out when off. It passes the signal on unchanged; a
+ * condenser microphone before it (ahead of the Preamp) gets its power from it — without, it sends
+ * nothing (D21).
  */
 export function PhantomNode({ id }: CardProps) {
   const p                = useParams(id, 'phantom')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
-  const on = p('on')
-  return <NamedButton id={id} typeKey="phantom" on={on} words={t.nodes.phantom} onToggle={() => updateNodeParams(id, { on: !on })} />
+  const on   = p('on')
+  const word = t.nodes.phantom.button
+  return <NamedButton id={id} typeKey="phantom" on={on} words={{ on: word, off: word }} onToggle={() => updateNodeParams(id, { on: !on })} />
 }

@@ -30,7 +30,7 @@ interface FreeControlProps {
 }
 
 /**
- * A free-standing control: Gain, Pan, Fader, Switch, Pad and 48V are drawn as the bare control with its
+ * A free-standing control: Gain, Pan, Fader, Switch, Pad, 48V (and the Compressor below Advanced) are drawn as the bare control with its
  * connection points, not as a card. The same size at every zoom (no overview face), large
  * enough to read zoomed out. Help and Remove are in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.

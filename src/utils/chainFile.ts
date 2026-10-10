@@ -5,7 +5,7 @@ import type { ComplexityLevel } from '../data/levels'
 import { LEVELS } from '../data/levels'
 import type { NodeGroup } from './nodeGroup'
 import type { Size } from './geometry'
-import { nodeDims } from './layoutHelpers'
+import { nodeDims, usualSize } from './layoutHelpers'
 import { isPng, readPngText } from './pngText'
 
 // A saved chain: the same JSON in a .json file, in the autosave, and — compressed — in a share
@@ -56,7 +56,7 @@ export function chainToGroup(chain: ChainFile): NodeGroup {
     nodes:    chain.nodes,
     edges:    chain.edges,
     outEdges: [],
-    sizes:    Object.fromEntries(chain.nodes.map((n) => [n.id, chain.sizes[n.id] ?? nodeDims(n.typeKey)])),
+    sizes:    Object.fromEntries(chain.nodes.map((n) => [n.id, chain.sizes[n.id] ?? usualSize(n.typeKey, chain.level)])),
   }
 }
 

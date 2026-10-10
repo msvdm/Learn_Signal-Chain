@@ -210,9 +210,10 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
 - [x] Browser check: Vocal → Condenser mic → 48V → Gain → HPF → EQ → Comp → Fader → Master → Active
   speaker, with 48V on and off.
 - [x] Checks + commit. *Hand-off:*
-  - **48V** (`phantom`): a bare button (`NamedButton` in `PadNode.tsx`, shared with the Pad — "48V" lit
-    in the hot colour, "OFF"), param `on`, **starts On** when dropped; `PASSIVE`, passes the signal on
-    (`PROCESS` `pass`, `OTHERS` identity). Palette: first in Processing.
+  - **48V** (`phantom`): a bare button (`NamedButton` in `PadNode.tsx`, shared with the Pad): "48V"
+    lit in the hot colour while on, the same word greyed out when off (the user's call, 2026-10-10);
+    param `on`, **starts On** when dropped; `PASSIVE`, passes the signal on (`PROCESS` `pass`,
+    `OTHERS` identity). Palette: first in Processing.
   - `phantomPowered(micId, view)` (`graph/queries.ts`): from the mic's outputs through `passesThrough`
     cards, stopping at a Gain; one branch with a 48V On is enough (a split mic), none after the
     Preamp counts. `CardPlan.unpowered` → `runChain` sets `noPhantom` and a silent wire (no hiss; the
@@ -220,11 +221,17 @@ Read: `components/nodes/PadNode.tsx` / `SwitchNode.tsx` (pattern for a bare cont
     under its icon and buttons (`FaceWithChoices` takes the condition).
   - **One-knob Compressor**: `oneKnobComp(k)` / `oneKnobAt(threshold)` in `nodeRegistry.ts`, the
     MG12XU sheet's figures (confirmed on Yamaha's spec page). No new param: the knob is read back from
-    `thresholdDb` and writes all five settings. Dropped below Advanced it starts at **7**. The card
-    keeps its size: the knob, the three settings it turned, the same curve and Turning down; no
-    Attack / Release knobs. Measured on a voice at 0 dBu: it starts turning down at ~6, 2.2–2.4 dB at
-    7, 7.5–8.5 at 10; the makeup leaves it ~2.5 dB louder at 7 (the meter reads Hot); speech's peaks
-    rise up to 4.4 dB at 10 (the 25 ms attack lets each word's start through) — all in the help text.
+    `thresholdDb` and writes all five settings. Dropped below Advanced it starts at **7**. Below
+    Advanced it is **no card** (the user's call): a bare 165px knob in the hot colour like the Gain's
+    and Pan's (`FreeControl`, `textScale` 2), its position (0 … 10) under its name and the Turning
+    down bar as its footer; no curve, no meters, no On/Off (Bypass stays in the right-click menu).
+    `isOneKnob(type, level)` picks the face; the registry's `oneKnobSize` and the size memory keyed by
+    shape (`usualSize(type, level)` in `layoutHelpers.ts`) keep drop previews right at each level.
+    Pasting from an Advanced file at Intermediate (`raiseLevel`) turns a knob into the full card in
+    place: it can overlap its neighbours. Measured on a voice at 0 dBu: it starts turning down at ~6,
+    2.2–2.4 dB at 7, 7.5–8.5 at 10; the makeup leaves it ~2.5 dB louder at 7 (the meters after it read
+    Hot); speech's peaks rise up to 4.4 dB at 10 (the 25 ms attack lets each word's start through) —
+    all in the help text.
   - Help texts: `theory.phantom` (new), the mic's tip (48V), the compressor's `what` + `tip` (one knob).
 
 ## Stage 3 — New outputs, passive speaker and amp  ☐

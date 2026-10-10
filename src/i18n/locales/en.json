@@ -179,7 +179,6 @@
     },
     "comp": {
       "label": "Compressor",
-      "amount": "Compression",
       "threshold": "Threshold",
       "ratio": "Ratio",
       "makeupGain": "Makeup gain",
@@ -260,8 +259,7 @@
     },
     "phantom": {
       "label": "Phantom power",
-      "on": "48V",
-      "off": "OFF"
+      "button": "48V"
     },
     "deesser": {
       "label": "De-esser",
@@ -456,7 +454,7 @@
     "comp": {
       "what": "The compressor reduces the dynamic range of the signal — it automatically turns down loud peaks and can be used with makeup gain to raise the overall level. It makes quiet parts relatively louder and loud parts relatively quieter. In Intermediate it has one knob, as on a small desk: turning it up lowers the Threshold, raises the Ratio and adds makeup gain, all at once. In Advanced you set each one yourself.",
       "why": "Live performances and recordings have wide dynamic ranges. Without compression, loud notes clip and quiet notes get lost. Compression makes the signal more consistent and controlled.",
-      "tip": "With the one knob: on a voice at a good level (about 0 dBu) it starts turning down at about 6, takes 2–3 dB off at 7 and about 8 dB at 10. Its makeup gain lifts the voice back up, so up to about 9 it comes out a little louder than it went in (if the meter turns yellow, pull the Fader down a little). It reacts slowly (about 25 ms): the start of each spoken word gets through, so the Peaks go up as you turn it. Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a slower Attack lets the start of each note or word through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). A quick Attack (1–5 ms) catches more of it; on a sound whose notes start softly, like singing, the peaks then come closer to the average. A compressor evens out how loud the music is — to stop its loudest moments, put a Limiter after it. Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
+      "tip": "With the one knob: on a voice at a good level (about 0 dBu) it starts turning down at about 6 (the bar under the knob), takes 2–3 dB off at 7 and about 8 dB at 10. Its makeup gain lifts the voice back up, so up to about 9 it comes out a little louder than it went in (if the meters after it turn yellow, pull the Fader down a little). It reacts slowly (about 25 ms): the start of each spoken word gets through, so the Peaks after it go up as you turn it. Watch the curve: its marks show what comes out over a few seconds of the sound. The compressor turns the loud moments down, so the Average comes down by about its gain reduction. Attack decides what happens to the Peaks: a slower Attack lets the start of each note or word through before it reacts — the Peaks mark sits above the curve and the peaks end up further from the average (engineers keep that \"punch\" on drums). A quick Attack (1–5 ms) catches more of it; on a sound whose notes start softly, like singing, the peaks then come closer to the average. A compressor evens out how loud the music is — to stop its loudest moments, put a Limiter after it. Release is how quickly it lets go after a loud moment. The Noise stays under the Threshold and is not turned down, so the hiss comes closer to the music by as much as the compressor turns the average down; makeup gain then lifts all three together. 2–6 dB of gain reduction is transparent and musical. More than 10 dB starts to sound pumped and squashed — which can be an effect in itself. When a stereo wire comes in, both sides are turned down together (linked) — the louder side decides — so the sound does not drift left or right."
     },
     "fader": {
       "what": "The channel fader controls the volume of this signal as it enters the mix. Unity gain (0 dB) means the signal passes through unchanged. Moving it down attenuates the signal. All the way down, at −∞, the signal is muted: nothing passes.",

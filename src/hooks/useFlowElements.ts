@@ -52,13 +52,13 @@ export function useFlowElements() {
 
   /** Size bookkeeping (positions stay owned by the store: a drag commits on release). */
   function keepSizes(changes: NodeChange[]) {
-    const { nodes, edges } = useSignalStore.getState()
+    const { nodes, edges, complexityLevel } = useSignalStore.getState()
     const sizes: Record<string, MeasuredSize> = {}
     for (const c of changes) {
       if (c.type !== 'dimensions' || !c.dimensions) continue
       const node = nodes.find((n) => n.id === c.id)
       if (!node) continue
-      recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height)
+      recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height, complexityLevel)
       sizes[c.id] = { ...c.dimensions, outputs: outputsOf(node, nodes, edges) }
     }
     if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))

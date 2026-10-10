@@ -78,5 +78,9 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **A fader at the bottom of its travel mutes** (2026-10-08): −∞, like the bottom of a meter; the
   top stays +10.
 - **The Graphic EQ draws no line through its sliders** (2026-10-08): their caps show the curve.
+- **48V says 48V, on or off** (2026-10-10): lit while on, the same word greyed out when off (no
+  "OFF"); it starts On.
+- **The Compressor below Advanced is one bare knob** (2026-10-10): no card, no curve — a big knob
+  like the Gain's and Pan's, yellow (the hot colour), readable zoomed out.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

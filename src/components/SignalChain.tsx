@@ -33,7 +33,7 @@ import { useCanvasShortcuts }   from '../hooks/useCanvasShortcuts'
 import { usePaletteDrop }       from '../hooks/usePaletteDrop'
 import { useFlowElements }      from '../hooks/useFlowElements'
 import { useStableHandlers }    from '../hooks/useStableHandlers'
-import { GRID, nodeDims }       from '../utils/layoutHelpers'
+import { GRID, usualSize }      from '../utils/layoutHelpers'
 import type { Pt }              from '../utils/geometry'
 
 const edgeTypes = { chain: ChainEdge }
@@ -58,6 +58,7 @@ export function SignalChain() {
   const leftTool        = useSignalStore((s) => s.leftTool)
   const snapToGrid      = useSignalStore((s) => s.snapToGrid)
   const overview        = useSignalStore((s) => s.overview)
+  const level           = useSignalStore((s) => s.complexityLevel)
   const capturing       = useSignalStore((s) => s.capturing)
   const hasNodes        = useSignalStore((s) => s.nodes.length > 0)
   const canPaste        = useSignalStore((s) => (s.clipboard?.nodes.length ?? 0) > 0)
@@ -149,7 +150,7 @@ export function SignalChain() {
   }), [t])
 
   const ghosts = drop.preview
-    ? [{ pos: drop.preview.pos, ...nodeDims(drop.preview.typeKey) }]
+    ? [{ pos: drop.preview.pos, ...usualSize(drop.preview.typeKey, level) }]
     : drag.ghosts
 
   const wrapperClass = [

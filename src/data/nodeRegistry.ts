@@ -94,6 +94,11 @@ export type NodeTypeDef = {
   /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
   freeSize?: Size
   /**
+   * Below Advanced drawn as one bare knob, not a card (the Compressor, as a small desk's —
+   * oneKnobComp): its usual size there, for drop previews.
+   */
+  oneKnobSize?: Size
+  /**
    * A card's size, the same at every level (its content grows to fill it); none: the usual minimum
    * (CARD_MIN_W × CARD_MIN_H in utils/layoutHelpers.ts). A face-only card's upright meter adds its
    * room to the width (FaceCard).
@@ -262,7 +267,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true,
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, oneKnobSize: { w: 273, h: 325 },
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
@@ -417,6 +422,11 @@ export const ONE_KNOB_MAX = 10
 const ONE_KNOB = { thresholdDb: [22, -8], ratio: [1, 4], makeupGainDb: [0, 7], attackMs: 25, releaseMs: 300 } as const
 /** Where the one knob starts: a little compression — 2 to 3 dB off a voice at unity, measured. */
 const ONE_KNOB_START = 7
+
+/** Drawn at this level as one bare knob, not as its card (NodeTypeDef `oneKnobSize`). */
+export function isOneKnob(typeKey: TypeKey, level: ComplexityLevel): boolean {
+  return NODE_REGISTRY[typeKey].oneKnobSize !== undefined && level !== 'advanced'
+}
 
 /** What the Compressor's one knob at `amount` (0 … 10) sets. */
 export function oneKnobComp(amount: number) {

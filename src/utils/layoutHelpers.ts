@@ -1,5 +1,6 @@
 import type { NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isTypeKey, portRows } from '../data/nodeRegistry'
+import { NODE_REGISTRY, isOneKnob, isTypeKey, portRows } from '../data/nodeRegistry'
+import type { ComplexityLevel } from '../data/levels'
 import { upstreamOf } from '../graph/graph'
 import { orthogonalRoute } from './wirePath'
 import type { Box, Pt, Size } from './geometry'
@@ -64,31 +65,42 @@ export function cardHeight(typeKey: TypeKey, ports: { inputs: NodePort[]; output
 /**
  * Size of a node that React Flow has not measured yet (a node about to be dropped): its minimum
  * size. Nodes size themselves to their content, so once any node of a type has been measured its
- * real size is remembered and used instead.
+ * real size is remembered and used instead — per shape: the Compressor is a knob below Advanced,
+ * a card above (isOneKnob).
  */
 const measuredSizeByType = new Map<string, Size>()
 
-export function recordMeasuredSize(typeKey: string, w: number, h: number) {
-  if (w > 0 && h > 0) measuredSizeByType.set(typeKey, { w, h })
+const shapeKey = (typeKey: string, level?: ComplexityLevel) =>
+  (level && isTypeKey(typeKey) && isOneKnob(typeKey, level) ? `${typeKey}:knob` : typeKey)
+
+export function recordMeasuredSize(typeKey: string, w: number, h: number, level?: ComplexityLevel) {
+  if (w > 0 && h > 0) measuredSizeByType.set(shapeKey(typeKey, level), { w, h })
 }
 
 export const HIT_THRESHOLD = 48
 
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
-/** A type never measured: a free-standing control's usual size, else a card's minimum. */
-function unmeasuredSize(typeKey: string): Size {
+/** A type never measured: a free-standing control's usual size (a one-knob card's), else a card's minimum. */
+function unmeasuredSize(typeKey: string, level?: ComplexityLevel): Size {
   if (!isTypeKey(typeKey)) return { w: CARD_MIN_W, h: CARD_MIN_H }
-  return NODE_REGISTRY[typeKey].freeSize ?? cardMinSize(typeKey)
+  const def  = NODE_REGISTRY[typeKey]
+  const knob = level && isOneKnob(typeKey, level) ? def.oneKnobSize : undefined
+  return knob ?? def.freeSize ?? cardMinSize(typeKey)
 }
 
 /**
- * An element's size: React Flow's measurement, else the last measured size of its type, else its
- * type's usual size (a free-standing control's `freeSize`, a card's minimum). The one fallback for
- * an element not drawn yet. `typeKey` may be React Flow's node type (a string).
+ * The size of an element not drawn yet (a drop preview, a card about to be placed) at this level:
+ * the last measured size of its type, else its type's usual size. `typeKey` may be React Flow's
+ * node type (a string).
  */
-export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number): Size {
-  const known = measuredSizeByType.get(typeKey) ?? unmeasuredSize(typeKey)
+export function usualSize(typeKey: string, level?: ComplexityLevel): Size {
+  return measuredSizeByType.get(shapeKey(typeKey, level)) ?? unmeasuredSize(typeKey, level)
+}
+
+/** An element's size: React Flow's measurement, else its usual size (usualSize). */
+export function nodeDims(typeKey: string, measuredW?: number, measuredH?: number, level?: ComplexityLevel): Size {
+  const known = usualSize(typeKey, level)
   return {
     w: measuredW ?? known.w,
     h: measuredH ?? known.h,

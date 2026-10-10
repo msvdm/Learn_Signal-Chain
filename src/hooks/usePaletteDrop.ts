@@ -5,7 +5,7 @@ import type { SignalEdge } from '../store/signalStore'
 import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import type { TypeKey } from '../data/nodeRegistry'
 import { activeDragTypeKey } from '../utils/dragState'
-import { GRID, MIN_NODE_GAP, nodeDims, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
+import { GRID, MIN_NODE_GAP, usualSize, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/geometry'
 import { wireTakesCard } from '../graph/connectionRules'
 import type { ParsedChain } from '../utils/chainFile'
@@ -88,7 +88,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
       return
     }
 
-    const finalPos = resolveOverlap(layout.dropOrigin(raw), nodeDims(typeKey), layout.layoutSnapshot())
+    const finalPos = resolveOverlap(layout.dropOrigin(raw), usualSize(typeKey, store.complexityLevel), layout.layoutSnapshot())
     store.addNode({ id: newId, typeKey, position: finalPos, params, bypassed: false })
   }
 
