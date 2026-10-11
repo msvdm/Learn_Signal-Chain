@@ -3,7 +3,6 @@ import type { MutableRefObject, RefObject } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import { newEdge } from '../graph/edits'
-import { enforceGap } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
@@ -171,8 +170,6 @@ export function useWireDrawing(
           targetHandle: targetHandleId,
           waypoints:    wire.waypoints.length > 0 ? wire.waypoints : undefined,
         }))
-        // (The wires before this one)
-        store.setPositions(enforceGap(source.nodeId, targetNodeId, layout.layoutSnapshot(), edges))
         store.cancelWire()
         return
       }

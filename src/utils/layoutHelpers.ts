@@ -18,8 +18,8 @@ export function snapPoint(p: Pt, toGrid: boolean): Pt {
     : { x: Math.round(p.x), y: Math.round(p.y) }
 }
 
-// Room left between cards: a wire into a card starts at least this far right of the card feeding
-// it, and a copy sits this far beside its original.
+// Room left between cards: a card dropped onto a wire pushes the chain after it this far right of
+// itself, and a copy sits this far beside its original.
 export const MIN_NODE_GAP = 100
 
 /** Cards closer than this to each other (in any direction) count as overlapping. */
@@ -172,14 +172,6 @@ function gapMoves(srcId: string, tgtIds: string[], nodes: Box[], edges: SignalEd
     moves.set(id, { x: n.position.x + shift, y: n.position.y })
   }
   return moves
-}
-
-/**
- * New positions that give a new src→tgt wire room: tgt starts at least MIN_NODE_GAP right of src
- * (see gapMoves). `edges` are the wires before this one.
- */
-export function enforceGap(srcId: string, tgtId: string, nodes: Box[], edges: SignalEdge[]): Map<string, Pt> {
-  return gapMoves(srcId, [tgtId], nodes, edges)
 }
 
 /**
