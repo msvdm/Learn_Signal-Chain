@@ -310,6 +310,37 @@
       "playsBack": "Plays back"
     }
   },
+  "inside": {
+    "button": "Look inside",
+    "close": "Close",
+    "digital": "Digital",
+    "interface": {
+      "title": "Inside the Audio Interface",
+      "says": "Your sound is turned into numbers for the computer, and the computer's numbers back into sound. You can build it yourself in Advanced."
+    },
+    "daw": {
+      "title": "Inside the DAW",
+      "says": "The same channel strip as your desk — but as numbers, inside the computer. You can build it yourself in Advanced."
+    },
+    "steps": {
+      "preamp": "Preamp",
+      "adc": "A/D converter",
+      "usb": "USB ⇄ computer",
+      "dac": "D/A converter",
+      "lineOut": "Line out",
+      "trim": "Input trim",
+      "hpf": "High-pass filter",
+      "eq": "Equalizer",
+      "comp": "Compressor",
+      "fader": "Fader",
+      "mixBus": "Mix bus",
+      "master": "Master fader"
+    },
+    "does": {
+      "adc": "sound → numbers",
+      "dac": "numbers → sound"
+    }
+  },
   "nodeControls": {
     "turnOff": "On — click to bypass it (the signal then passes through unchanged)",
     "turnOn": "Bypassed — the signal passes through unchanged. Click to turn it back on",

@@ -292,7 +292,7 @@ Read: `SpeakerNode.tsx`, `ActiveSpeakerNode.tsx`, `AmpNode.tsx`, `connectionRule
     and `LaptopIcon`, `icons.tsx`). Fixed on the way: a stereo meter hidden while not connected
     showed its L / R letters (`SideLetter`).
 
-## Stage 4 — Audio Interface and DAW: record & play back (Intermediate)  ☐
+## Stage 4 — Audio Interface and DAW: record & play back (Intermediate)  ☑
 
 The core teaching idea of Intermediate (D22, rule 5 + hook 1). Read: `signal/chain.ts` (how outputs
 map to inputs, `outputKey`), `graph/graph.ts` walks, the `adc` / `dac` entries in `process.ts` and
@@ -320,8 +320,8 @@ map to inputs, `outputKey`), `graph/graph.ts` walks, the `adc` / `dac` entries i
 - [x] Cards, icons, locales.
 - [x] Browser check: Master L/R → Interface → DAW, and DAW → Interface → Studio Monitors.
 - [x] Checks + commit.
-- [ ] ⛔ **ASK** — send the user the two screenshots and one line on how it behaves; wait for an OK
-  before Stage 5. *Hand-off:*
+- [x] ⛔ **ASK** — send the user the two screenshots and one line on how it behaves; wait for an OK
+  before Stage 5 (OK: "continue with stage 5", 2026-10-11). *Hand-off:*
   - **Routes** (`NodeTypeDef.routes`, `Route` in `nodeRegistry.ts`): a card's paths that never meet,
     each `{ from, to: [...], as }` — the input it reads (null: makes its own sound), the outputs it
     sends on (empty: only takes in), the type whose job it does (`as`). Interface: `in → to-pc` as
@@ -356,19 +356,38 @@ map to inputs, `outputKey`), `graph/graph.ts` walks, the `adc` / `dac` entries i
   - Measured (engine and render agree): Keyboard −10 dBu through the desk → Interface −9.8 dBu → DAW
     −27.8 dBFS; the DAW's song −18 dBFS → Line out 0 dBu → a Studio Monitor 110 dB SPL.
 
-## Stage 5 — "Look inside" (Intermediate)  ☐
+## Stage 5 — "Look inside" (Intermediate)  ☑
 
 D22, explanation 2. Read: `ConfirmDialog.tsx` (portal pattern), `icons.tsx`.
 
-- [ ] A small **Look inside** button (click, not hover — D19) on the Interface and DAW cards at
+- [x] A small **Look inside** button (click, not hover — D19) on the Interface and DAW cards at
   Intermediate. It opens a read-only overlay (portal, Esc closes, `lsc-overlay`):
   - Interface: `Preamp → A/D converter → USB ⇄ computer → D/A converter → Line out`
   - DAW: `Input trim → HPF → EQ → Compressor → Fader → Mix bus → Master`, drawn with the
     **same icons** as the desk's cards, greyed, with a "digital" tag
   - One sentence: *"The same channel strip as your desk — but as numbers, inside the computer. You
     can build it yourself in Advanced."* (en + bg)
-- [ ] Pure data for the two diagrams (an array of icon + locale key), one small component.
-- [ ] Checks + commit. *Hand-off:* …
+- [x] Pure data for the two diagrams (an array of icon + locale key), one small component.
+- [x] Checks + commit. *Hand-off:*
+  - `LookInside.tsx`: `INSIDE` (per box, its steps in sound order: an icon taken from `NODE_LOOK` —
+    so they stay the desk's —, an `inside.steps` key, `digital`), the button and the view. The
+    button only at Intermediate (`useLookInside`, `InterfaceNode.tsx`), under the icon (`Face`'s
+    `footer`); zoomed out the face is its icon alone, so no button. The view: a portal to `body`,
+    `lsc-overlay`, `role="dialog"`, Esc (capture, so the canvas keeps its selection), the backdrop or
+    Close shut it; React events are stopped at its root (in React's tree it sits in the card: a click
+    would select it, a right-click open its menu). Checked in the pane: no selection change, Esc /
+    backdrop / Close, Bulgarian and dark, unplugged (the note under it), no button at B / A / zoomed out.
+  - The digital steps are greyed (muted icon, sunken box) in one dashed frame tagged "Digital"
+    (`DigitalFrame`): the Interface's is only *USB ⇄ computer* between the converters; the DAW's
+    holds all seven. Interface: Preamp (the Gain's icon) → A/D converter → USB ⇄ computer (the
+    Interface's icon) → D/A converter → Line out (lucide `Cable`); the converters carry a caption
+    (`inside.does`: "sound → numbers", "numbers → sound"). DAW: Input trim → High-pass filter →
+    Equalizer → Compressor → Fader → Mix bus (the Master Bus's icon) → Master fader (the Fader's
+    icon, as the desk's Main Fader is a Fader). The dialog is 820 px: Bulgarian's seven steps just
+    fit one row (it wraps on a narrow window).
+  - Texts (`inside.*`, en + bg): the DAW's sentence is the plan's; the Interface's ("Your sound is
+    turned into numbers for the computer, and the computer's numbers back into sound. You can build
+    it yourself in Advanced.") is new. Step names spell the jargon out (not "HPF", "EQ").
 
 ## Stage 6 — Beginner: the macro scale  ☐
 

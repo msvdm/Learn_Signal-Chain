@@ -9,6 +9,7 @@ import { outputKey } from '../../graph/graph'
 import { levelOf } from '../../signal/engine'
 import { PORT_GAP, PORT_TOP } from '../../utils/layoutHelpers'
 import { FaceCard } from './FaceCard'
+import { LookInside } from './LookInside'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
 import { PAD } from './overviewLayout'
@@ -16,10 +17,14 @@ import { PAD } from './overviewLayout'
 // Record and play back (D22): the Audio Interface and the DAW, two face cards — a big icon and an
 // upright meter reading what they record (the Interface in dBu, the DAW in dBFS). Zoomed in, a line
 // across the face on each port line names what goes in and out there, each name lit while sound
-// passes; an arrow joins them where one is the other's way on (the Interface's two paths).
+// passes; an arrow joins them where one is the other's way on (the Interface's two paths). At
+// Intermediate a Look inside button under the icon shows what is inside the box (D22).
 
 /** A path line's height (px): centred on its port line */
 const LINE_H = 20
+/** The Look inside button's height (px), and its gap under the icon */
+const LOOK_H   = 30
+const LOOK_GAP = 10
 
 /** Where port line `row` is in a face's art box (it starts PAD below the card's top) */
 const lineTop = (row: number) => PORT_TOP + row * PORT_GAP - PAD - LINE_H / 2
@@ -54,8 +59,16 @@ function PortLine({ row, from, to, lit, arrow }: {
   )
 }
 
-/** The face: the port lines on top (zoomed in), the icon under them. */
-function Face({ box, lines, icon }: { box: { w: number; h: number }; lines: ReactNode; icon: ReactNode }) {
+/** Shows the Look inside button: at Intermediate only (Advanced shows the parts on the card) */
+const useLookInside = () => useSignalStore((s) => s.complexityLevel === 'intermediate')
+
+/** The face: the port lines on top (zoomed in), the icon under them, and under it `footer` if any. */
+function Face({ box, lines, icon, footer }: {
+  box: { w: number; h: number }
+  lines: ReactNode
+  icon: ReactNode
+  footer?: ReactNode
+}) {
   const overview = useSignalStore((s) => s.overview)
   // Zoomed out the icon alone, as big as it fits
   if (overview) return <OverviewIcon icon={icon} box={box} />
@@ -63,8 +76,9 @@ function Face({ box, lines, icon }: { box: { w: number; h: number }; lines: Reac
   return (
     <div style={{ position: 'relative', width: box.w, height: box.h }}>
       {lines}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: below, bottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <OverviewIcon icon={icon} box={{ w: box.w, h: box.h - below }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: below, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: LOOK_GAP }}>
+        <OverviewIcon icon={icon} box={{ w: box.w, h: box.h - below - (footer ? LOOK_H + LOOK_GAP : 0) }} />
+        {footer && <div style={{ height: LOOK_H }}>{footer}</div>}
       </div>
     </div>
   )
@@ -81,12 +95,13 @@ export function InterfaceNode({ id }: CardProps) {
   const recording = isFinite(levelOf(useStage(id)?.in))
   // The DAW plays into From computer: both line outputs carry it
   const playing   = isFinite(levelOf(useWire(outputKey(id, 'out-l'))))
+  const look      = useLookInside()
   return (
     <FaceCard
       nodeId={id} typeKey="interface" label={useNodeName(id, 'interface')} meterAt="in"
       art={(box) => (
         <Face
-          box={box} icon={<Icon />}
+          box={box} icon={<Icon />} footer={look && <LookInside type="interface" />}
           lines={<>
             <PortLine row={0} from={text.lineIn} to={text.toComputer} lit={[recording, recording]} arrow />
             <PortLine row={1} from={text.fromComputer} to={text.lineOut} lit={[playing, playing]} arrow />
@@ -104,12 +119,13 @@ export function DawNode({ id }: CardProps) {
   const Icon      = NODE_LOOK.daw.icon
   const recording = isFinite(levelOf(useStage(id)?.in))
   const playing   = useSignalStore((s) => s.edges.some((e) => e.source === id && e.sourceHandle === PLAYBACK_PORT))
+  const look      = useLookInside()
   return (
     <FaceCard
       nodeId={id} typeKey="daw" label={useNodeName(id, 'daw')} meterAt="in"
       art={(box) => (
         <Face
-          box={box} icon={<Icon />}
+          box={box} icon={<Icon />} footer={look && <LookInside type="daw" />}
           lines={<PortLine row={0} from={text.records} to={text.playsBack} lit={[recording, playing]} arrow={false} />}
         />
       )}
