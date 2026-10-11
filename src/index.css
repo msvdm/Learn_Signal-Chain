@@ -440,6 +440,9 @@ kbd {
 .lsc-meter-up .lsc-meter-hold::after    { left: 0; right: 0; bottom: 0; height: var(--mark); }
 .lsc-meter-right .lsc-meter-hold::after { top: 0; bottom: 0; left: 0; width: var(--mark); }
 
+/* A VU meter's needle (components/VuMeter.tsx): turned to the loop's average; the live loop turns it */
+.lsc-vu-needle { transform: rotate(var(--vu-angle)); }
+
 /* A dynamics card's turning-down bar (components/nodes/DynamicsLayout.tsx): it grows from the right */
 .lsc-reduction-fill { background: var(--signal-hot); border-radius: 3px; transform: translateX(calc((1 - var(--gr)) * 100%)); }
 
@@ -456,10 +459,10 @@ kbd {
 .lsc-curve-off { opacity: calc((1 - var(--live-active, var(--active))) * var(--word)); }
 
 /* A still reading glides to a new one; a moving meter follows the sound at once */
-.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
+.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line, .lsc-vu-needle {
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
-.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
+.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line, .lsc-vu-needle) { transition: none; }
 
 /* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
    and at the start when showing, so nothing hidden stays clickable. */
@@ -483,7 +486,7 @@ kbd {
   .react-flow__panel.lsc-left-tools { transition: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
-  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
+  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line, .lsc-vu-needle { transition: none; }
 }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */

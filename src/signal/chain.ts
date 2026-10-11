@@ -1,6 +1,6 @@
 import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
-import type { CardPath } from '../graph/graph'
+import type { CardPath, Graph } from '../graph/graph'
 import { graphOf, drivingWire, fedBy, flowPaths, outputKey, pathSends, wiresInto } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
 import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, phantomPowered, preampSourceOf } from '../graph/queries'
@@ -100,7 +100,7 @@ export interface CardPlan {
   node: SignalNode
   /**
    * What its levels are keyed by (ChainLevels `cards`, the render's taps): the card's id — on a card
-   * of several paths (NodeTypeDef `routes`) its first path's; the others' their own (pathKey)
+   * of several paths (NodeTypeDef `routes`) the path it shows (shownRoute); the others' their own (pathKey)
    */
   key: string
   /** One of a card's paths (NodeTypeDef `routes`): which; none for a card that is one path */
@@ -151,9 +151,23 @@ export function pathKey(nodeId: string, route: Route): string {
   return `${nodeId}>${route.to[0] ?? route.from}`
 }
 
-/** A path's key: its card's id for the card's first (or only) path. */
-function keyOfPath({ node, route }: CardPath): string {
-  return route && route !== NODE_REGISTRY[node.typeKey].routes?.[0] ? pathKey(node.id, route) : node.id
+/**
+ * The path a card of several paths shows (its id keys it): the first in use — a wire on its input,
+ * or, making its own sound, on one of its outputs —, else its first. A DAW at Advanced records
+ * nothing and plays its song into a Recorder Track (D23): it shows what it plays.
+ */
+export function shownRoute(node: SignalNode, graph: Graph): Route | undefined {
+  const routes = NODE_REGISTRY[node.typeKey].routes
+  if (!routes) return undefined
+  const inUse = (r: Route) => r.from !== null
+    ? graph.into(node.id).some((e) => e.targetHandle === r.from)
+    : graph.from(node.id).some((e) => r.to.includes(e.sourceHandle))
+  return routes.find(inUse) ?? routes[0]
+}
+
+/** A path's key: its card's id for the path the card shows (or its only one). */
+function keyOfPath({ node, route }: CardPath, graph: Graph): string {
+  return route && route !== shownRoute(node, graph) ? pathKey(node.id, route) : node.id
 }
 
 /**
@@ -169,7 +183,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
 
   for (const path of flowPaths(graph)) {
     const { node, route } = path
-    const key      = keyOfPath(path)
+    const key      = keyOfPath(path, graph)
     const incoming = wiresInto(path, graph)
     const def      = NODE_REGISTRY[node.typeKey]
     const relay    = node.typeKey === 'relay'
@@ -252,7 +266,7 @@ export interface CardLevels {
 }
 
 export interface ChainLevels {
-  /** Keyed by the plans' keys: a card's id (a card of several paths: its first path's — CardPlan `key`) */
+  /** Keyed by the plans' keys: a card's id (a card of several paths: the path it shows — CardPlan `key`) */
   cards: Map<string, CardLevels>
   /** What each output sends, keyed by outputKey */
   wires: Map<string, WireSignal>

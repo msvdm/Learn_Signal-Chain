@@ -3,6 +3,7 @@ import {
   ALIGNMENT_DB, CLIP_DBU, CLIP_ZONE_DB, HUM_DBU, METER_TAIL, SILENCE_DB, SILENT, SOUND_SPL_DB, SPL_DB, SPL_SCALE_DB, TAPER_UNITY, UNITY_DBU,
   ceilingOf, crestOf, dbToPercent, fitScaleMarks, formatDb, formatSpl, getHealth, headroomOf, healthColor, hissOf, humStrength, louder, meterZones,
   scaleMarks, shifted, snrOf, sumNoiseToDb, sumSides, sumSignalsToDb, taperToDb, zoneAt,
+  VU_ZERO_DBU, formatVu, toVu, vuSwing,
 } from './levels'
 import { GUITAR_AMP_NOISE_DBU, sourceLevelOf } from './process'
 import { GUITAR_AMP_MAX, MIC_GAIN_DB, guitarAmpGainDb } from './gains'
@@ -327,5 +328,28 @@ describe('dB SPL — the sound in the air, from a Vocal, a Drum Kit, a Guitar Am
 
   it('silence reads −∞', () => {
     expect(formatSpl(-Infinity, SPL_DB.vocal!)).toBe('-∞ dB SPL')
+  })
+})
+
+describe('a VU meter (D23: a Recorder Track on an analog signal)', () => {
+  it('reads 0 VU at +4 dBu: the desk\'s unity is −4 VU', () => {
+    expect(VU_ZERO_DBU).toBe(4)
+    expect(toVu(4)).toBe(0)
+    expect(toVu(UNITY_DBU)).toBe(-4)
+    expect(formatVu(0)).toBe('-4.0')
+    expect(formatVu(5.5)).toBe('+1.5')
+    expect(formatVu(-Infinity)).toBe('-∞')
+  })
+
+  it('swings as the voltage: −20 VU near the left end, 0 VU at 71 %, +3 VU the full swing', () => {
+    expect(vuSwing(VU_ZERO_DBU - 20)).toBeCloseTo(0.0708, 3)
+    expect(vuSwing(VU_ZERO_DBU)).toBeCloseTo(0.708, 3)
+    expect(vuSwing(VU_ZERO_DBU + 3)).toBeCloseTo(1, 6)
+  })
+
+  it('stops on its pin when louder, and rests at the left with nothing', () => {
+    expect(vuSwing(CLIP_DBU)).toBe(1.05)
+    expect(vuSwing(-Infinity)).toBe(0)
+    expect(vuSwing(SILENCE_DB)).toBe(0)
   })
 })

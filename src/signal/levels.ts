@@ -301,6 +301,43 @@ export function formatSpl(db: number, spl: number): string {
   return `${Math.round(db + spl)} dB SPL`
 }
 
+// ── A VU meter (D23: a Recorder Track's on an analog signal) ────────────────────
+
+/**
+ * 0 on a VU meter: +4 dBu, the level studio gear is lined up to — so the desk's unity (0 dBu) reads
+ * −4 VU. Its needle shows the average over about 300 ms: the meters' RMS (D10).
+ */
+export const VU_ZERO_DBU = 4
+
+/** A VU meter's scale, −20 … +3 VU, left to right (0 to +3 red); the marks that carry a number. */
+export const VU_MARKS  = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3] as const
+export const VU_LABELS: readonly number[] = [-20, -10, -5, 0, 3]
+
+/** The top of a VU meter's scale (VU): its needle's end, full swing. */
+const VU_TOP = 3
+
+/** Past the top, the needle stops against its pin: this much further (of a full swing). */
+const VU_PIN = 1.05
+
+/** A level in dBu, in VU. */
+export const toVu = (dbu: number): number => dbu - VU_ZERO_DBU
+
+/**
+ * How far a VU needle swings at `dbu` (0 … 1, +3 VU the full swing): as the voltage — its scale is
+ * a voltmeter's, so −20 VU sits near the left end (7 %) and 0 VU at 71 %. Louder, it stops on its pin.
+ */
+export function vuSwing(dbu: number): number {
+  if (!isFinite(dbu) || dbu <= SILENCE_DB) return 0
+  return Math.min(Math.pow(10, (toVu(dbu) - VU_TOP) / 20), VU_PIN)
+}
+
+/** A level as VU, to a tenth: "-4.0", "+1.5"; −∞ below silence (the unit is written apart). */
+export function formatVu(dbu: number): string {
+  if (!isFinite(dbu) || dbu <= SILENCE_DB) return '-∞'
+  const shown = Math.round(toVu(dbu) * 10) / 10 || 0
+  return `${shown >= 0 ? '+' : ''}${shown.toFixed(1)}`
+}
+
 /** `dbs` added as amplitudes (`per` 20) or powers (10). Silent ones add nothing; one alone comes out exactly as it went in. */
 function sumDb(dbs: number[], per: number): number {
   // Plain loops: every bus on every change adds up a list of these

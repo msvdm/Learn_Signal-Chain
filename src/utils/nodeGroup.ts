@@ -1,4 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { ComplexityLevel } from '../data/levels'
 import { NODE_REGISTRY, matrixSendParam } from '../data/nodeRegistry'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { newEdge } from '../graph/edits'
@@ -118,6 +119,7 @@ export function cloneGroup(
   group: NodeGroup,
   offset: Pt,
   graph: { nodes: SignalNode[]; edges: SignalEdge[] },
+  level: ComplexityLevel,
 ): { nodes: SignalNode[]; edges: SignalEdge[] } {
   const stamp = Date.now()
   const ids   = new Map(group.nodes.map((n, i) => [n.id, `${n.typeKey}-${stamp}-${i}`]))
@@ -148,7 +150,7 @@ export function cloneGroup(
     const target = graph.nodes.find((n) => n.id === e.target)
     const source = { nodeId: ids.get(e.source)!, handleId: e.sourceHandle }
     const all    = [...graph.edges, ...edges]
-    if (!target || !nodeAcceptsWire(target, source, all, allNodes) ||
+    if (!target || !nodeAcceptsWire(target, source, all, allNodes, level) ||
         !portAcceptsWire(target, e.targetHandle, all, source)) continue
     edges.push(newEdge({
       source: source.nodeId, sourceHandle: e.sourceHandle,

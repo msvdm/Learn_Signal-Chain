@@ -1,4 +1,5 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
+import type { ComplexityLevel } from '../data/levels'
 import {
   NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT,
   canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
@@ -110,28 +111,35 @@ export function getPorts(
   return { inputs: def.inputs, outputs }
 }
 
-const DRAWN = new WeakMap<NodePort[], NodePort[]>()
+const DRAWN: Record<ComplexityLevel, WeakMap<NodePort[], NodePort[]>> =
+  { beginner: new WeakMap(), intermediate: new WeakMap(), advanced: new WeakMap() }
 
-/** A stack of ports without its hidden ones (the same array for the same stack). */
-function drawn(ports: NodePort[]): NodePort[] {
-  let shown = DRAWN.get(ports)
+/** A port not drawn at `level`: a hidden one, or one of another level's (NodePort `levels`). */
+const unseenAt = (level: ComplexityLevel) => (p: NodePort) => p.hidden === true || (p.levels !== undefined && !p.levels.includes(level))
+
+/** A stack of ports without those not drawn at `level` (the same array for the same stack). */
+function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
+  let shown = DRAWN[level].get(ports)
   if (!shown) {
-    shown = ports.some((p) => p.hidden) ? ports.filter((p) => !p.hidden) : ports
-    DRAWN.set(ports, shown)
+    const unseen = unseenAt(level)
+    shown = ports.some(unseen) ? ports.filter((p) => !unseen(p)) : ports
+    DRAWN[level].set(ports, shown)
   }
   return shown
 }
 
 /**
- * The ports a card draws: getPorts without the hidden ones (the USB link's way back — usbLink.ts).
- * The same arrays for the same layout, as getPorts.
+ * The ports a card draws at `level`: getPorts without the hidden ones (the USB link's way back —
+ * usbLink.ts) and those of other levels (the DAW's, the Recorder's — D23). The same arrays for the
+ * same layout, as getPorts.
  */
 export function drawnPorts(
   node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
+  level: ComplexityLevel,
   view?: GraphView,
 ): { inputs: NodePort[]; outputs: NodePort[] } {
   const { inputs, outputs } = getPorts(node, view)
-  return { inputs: drawn(inputs), outputs: drawn(outputs) }
+  return { inputs: drawn(inputs, level), outputs: drawn(outputs, level) }
 }
 
 /**

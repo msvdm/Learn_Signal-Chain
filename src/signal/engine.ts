@@ -178,7 +178,7 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
       for (const port of card.route.to) domains[port] = at.domain
       outDomains.set(node.id, domains)
     }
-    // The card shows its first path
+    // The card shows one of its paths (chain.ts shownRoute): the one its id keys
     if (card.key !== node.id) continue
     const hum = humOf(at.out)
 

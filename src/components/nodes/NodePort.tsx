@@ -76,7 +76,7 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   const isValidTarget = useSignalStore((s) => {
     const node = graphOf(s).node(nodeId)
     return type === 'target' && s.wire !== null && node !== undefined &&
-      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes) && portAcceptsWire(node, portId, s.edges, s.wire.source)
+      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) && portAcceptsWire(node, portId, s.edges, s.wire.source)
   })
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0

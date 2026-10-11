@@ -28,6 +28,7 @@ export type StageCondition =
   | 'blown'             // an active speaker fed from an amplifier: far too strong, it breaks
   | 'needsDi'           // an instrument going into a desk input without a DI Box: levels fine, high notes lost
   | 'noPhantom'         // a condenser microphone with no 48V phantom power: silent
+  | 'coderNeedsDigital' // a Coder fed an analog signal: it packs numbers only, so it sends nothing
 
 /** Whether a card in each condition sends nothing — every condition says (a new one does not compile without). */
 export const SILENCES: Record<StageCondition, boolean> = {
@@ -41,6 +42,7 @@ export const SILENCES: Record<StageCondition, boolean> = {
   blown:             false,
   needsDi:           false,
   noPhantom:         true,
+  coderNeedsDigital: true,
 }
 
 /** One channel through a card. */
@@ -82,8 +84,8 @@ export interface SourceSound {
 
 /**
  * What a source plays: a Vocal speaks or sings (its `character`), a Drum Kit drums, an Acoustic
- * Guitar, an Instrument and a Guitar Amp a guitar, a Keyboard, a PC and a DAW music, the Generator
- * its Sound. Each but the Generator's is a loop of real sound (src/audio/loops).
+ * Guitar, an Instrument and a Guitar Amp a guitar, a Keyboard, a PC, a DAW and a Decoder music, the
+ * Generator its Sound. Each but the Generator's is a loop of real sound (src/audio/loops).
  */
 export type SoundKind = Character | GeneratorSound | 'music' | 'drums' | 'guitar'
 
@@ -95,7 +97,8 @@ export function soundKindOf(node: Pick<SignalNode, 'typeKey' | 'params'>): Sound
     case 'generator':  return param(node, 'sound')
     case 'keyboard':
     case 'pc':
-    case 'daw':        return 'music'
+    case 'daw':
+    case 'decoder':    return 'music'
     default:           return 'guitar'
   }
 }
@@ -130,10 +133,11 @@ export const NOISE_BELOW = {
   vocal:        Infinity,
   'drum-kit':   Infinity,
   acoustic:     Infinity,
-  /** Keys, a computer, a player; a song a DAW plays back */
+  /** Keys, a computer, a player; a song a DAW plays back, or a Decoder unpacks */
   keyboard:     80,
   pc:           80,
   daw:          80,
+  decoder:      80,
   /** The pickups' hiss and buzz */
   instrument:   70,
   /** A test generator is cleaner than any player */
@@ -163,7 +167,7 @@ export const SOUND_SPL = { speech: 86, singing: 96, drums: 110, guitar: 90 } as 
 /**
  * A source's average level: how loud a Vocal, a Drum Kit or an Acoustic Guitar reaches a microphone
  * (on a Sound wire's scale), the level of a line, a guitar or the Generator (dBu: its `levelDb`), of
- * what a DAW plays back (dBFS: it is digital — DIGITAL_SOURCES).
+ * what a DAW plays back or a Decoder unpacks (dBFS: it is digital — DIGITAL_SOURCES).
  */
 export function sourceLevelOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
   switch (node.typeKey) {
@@ -224,7 +228,7 @@ export const GUITAR_AMP_NOISE_DBU = -76
  * passive speaker. Sources bring their own noise (NOISE_BELOW).
  */
 const PASSIVE = new Set<TypeKey>([
-  'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator', 'daw',
+  'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator', 'daw', 'decoder',
   'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker', 'recorder', 'broadcast',
   // Beginner's devices: no engine runs there (D20) — they only add up what arrives
   'mixer', 'stage-box',
@@ -381,8 +385,8 @@ const gained: Process = (node, input, ctx) => pass(shifted(input, gainDbOf(node,
 
 const busFader: Process = summing(gained)
 
-/** Sources whose sound is numbers from the start (dBFS): a DAW playing back. */
-const DIGITAL_SOURCES: ReadonlySet<TypeKey> = new Set<TypeKey>(['daw'])
+/** Sources whose sound is numbers from the start (dBFS): a DAW playing back, a Decoder (D23). */
+const DIGITAL_SOURCES: ReadonlySet<TypeKey> = new Set<TypeKey>(['daw', 'decoder'])
 
 /** A source: its sound at its level (sourceLevelOf), analog or digital. */
 const source = (node: SignalNode, typeKey: Source): SideResult =>
@@ -439,6 +443,9 @@ const PROCESS: Record<TypeKey, Process> = {
     if (ctx.domain === 'digital') return blocked('adcExpectsAnalog', 'digital')
     return { out: shifted(input, gainDbOf(node, ctx)!), domain: 'digital' }
   },
+  // Packs numbers into a stream's format, the level kept (D23): an analog signal it cannot take —
+  // converting is a converter's job, packing is its own
+  coder: (_, input, ctx) => (ctx.fed && ctx.domain === 'analog' ? blocked('coderNeedsDigital', 'analog') : pass(input, ctx)),
   dac: (node, input, ctx) => {
     if (ctx.domain === 'analog') return blocked('dacExpectsDigital', 'analog')
     // Its own noise is added on its analog side (ownNoiseOf)
@@ -460,6 +467,8 @@ const PROCESS: Record<TypeKey, Process> = {
   interface:        (_, input, ctx) => pass(input, ctx),
   // What it plays back, a song (−18 dBFS); what it records is a Recorder's job (its route)
   daw:              (node) => source(node, 'daw'),
+  // A stream or a file unpacked: music, as numbers from the start (DIGITAL_SOURCES)
+  decoder:          (node) => source(node, 'decoder'),
   // Beginner's devices (D20: no engine runs there): every wire in added up, passed on as it is
   mixer:            summing((_, input, ctx) => pass(input, ctx)),
   'stage-box':      summing((_, input, ctx) => pass(input, ctx)),

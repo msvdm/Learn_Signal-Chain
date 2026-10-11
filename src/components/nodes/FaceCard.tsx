@@ -24,7 +24,7 @@ export const FACE_METER_ROOM = STRIP_W + 16
  * (SPL_DB, D13) —, zoomed out its face with the level under it. Not connected, its face says so
  * (and its meter keeps its place, unseen).
  */
-export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = true, meterAt = 'out' }: {
+export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = true, meterInFace = false, meterAt = 'out' }: {
   nodeId: string
   typeKey: TypeKey
   label: string
@@ -33,6 +33,11 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = tr
   bare?: boolean
   /** false: no meter at any zoom, its face alone (the Microphone: the sound before it has one — D21) */
   meter?: boolean
+  /**
+   * Its face draws its meter (a Recorder Track's VU dials — D23): the meter's room is the face's,
+   * the card keeps its size
+   */
+  meterInFace?: boolean
   /** What its meter reads: what leaves it (default), or what arrives (an Audio Interface, a DAW: what it records) */
   meterAt?: 'in' | 'out'
 }) {
@@ -52,7 +57,7 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = tr
     >
       {/* The face's place; zoomed in, its meter on the right (hidden, its space kept, when not connected) */}
       <div style={{ height: height - 2, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', padding: FACE_METER_PAD, boxSizing: 'border-box' }}>
-        {meter && (
+        {meter && !meterInFace && (
           <div className="lsc-fade" style={{ display: 'flex', ...(notConnected ? { visibility: 'hidden' } : {}), ...hideInOverview }}>
             <FaceMeter nodeId={nodeId} typeKey={typeKey} at={meterAt} />
           </div>
@@ -70,7 +75,7 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = tr
         status={notConnected ? t.status.notConnected : undefined}
         shown
         bypassed={node?.bypassed ?? false}
-        reserveRight={overview || !meter ? 0 : FACE_METER_ROOM}
+        reserveRight={overview || !meter || meterInFace ? 0 : FACE_METER_ROOM}
         spl={SPL_DB[typeKey]}
         at={meterAt}
       />

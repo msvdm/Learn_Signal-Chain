@@ -5,6 +5,7 @@ import {
   AudioWaveform, Minus, Zap,
   Merge, Volume2, Ear,
   SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower, Usb,
+  FileMusic, FileArchive,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
@@ -65,6 +66,8 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'di-box':          { icon: Plug,              group: 'source' },
   'guitar-amp':      { icon: GuitarAmpIcon,     group: 'source' },
   generator:         { icon: GeneratorIcon,     group: 'source', headerSize: 18 },
+  // A stream or a file unpacked into numbers: digital from the start (D23)
+  decoder:           { icon: FileMusic,         group: 'source' },
   // Processing — into the digital world after the Preamp, back out at the end; first the 48V a
   // condenser microphone needs
   phantom:           { icon: Zap,               group: 'processing' },
@@ -80,6 +83,8 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   deesser:           { icon: AudioWaveform,     group: 'processing' },
   'graphic-eq':      { icon: Sliders,           group: 'processing' },
   dac:               { icon: DacIcon,           group: 'processing', headerSize: 20 },
+  // The digital mix packed for a stream (D23), last before Stream / Broadcast
+  coder:             { icon: FileArchive,       group: 'processing' },
   // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },

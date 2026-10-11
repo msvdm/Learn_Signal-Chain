@@ -42,6 +42,7 @@ const CONDITIONS: Record<StageCondition, ConditionText> = {
   blown:             { look: 'note',  tone: 'clipping', text: (t, typeKey) => t.nodes[typeKey === 'headphones' ? 'headphones' : 'active-speaker'].blown },
   needsDi:           { look: 'note',  tone: 'hot',      text: (t) => t.nodes.instrument.needsDi, icon: (size) => <DullToneIcon size={size} /> },
   noPhantom:         { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },
+  coderNeedsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.coderNeedsDigital },
 }
 
 /**

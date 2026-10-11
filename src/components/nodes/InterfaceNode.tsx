@@ -107,21 +107,26 @@ export function InterfaceNode({ id }: CardProps) {
   )
 }
 
-/** DAW: it records what arrives (its meter in dBFS) and, apart from that, plays back a song of its own. */
+/**
+ * DAW: it records what arrives (its meter in dBFS) and, apart from that, plays back a song of its
+ * own. At Advanced there is no Interface (D23): it records nothing, and plays its song out of an
+ * output of its own, into a Recorder Track — its meter reads what it plays.
+ */
 export function DawNode({ id }: CardProps) {
   const { t }     = useTranslation()
   const text      = t.nodes.daw
   const Icon      = NODE_LOOK.daw.icon
+  const advanced  = useSignalStore((s) => s.complexityLevel === 'advanced')
   const recording = isFinite(levelOf(useStage(id)?.in))
-  const playing   = useSignalStore((s) => s.edges.some((e) => e.source === id && e.sourceHandle === PLAYBACK_PORT))
+  const playing   = useSignalStore((s) => s.edges.some((e) => e.source === id && (e.sourceHandle === PLAYBACK_PORT || e.sourceHandle === 'out')))
   const look      = useLookInside()
   return (
     <FaceCard
-      nodeId={id} typeKey="daw" label={useNodeName(id, 'daw')} meterAt="in"
+      nodeId={id} typeKey="daw" label={useNodeName(id, 'daw')} meterAt={advanced ? 'out' : 'in'}
       art={(box) => (
         <Face
           box={box} icon={<Icon />} footer={look && <LookInside type="daw" />}
-          lines={<PortLine row={0} from={text.records} to={text.playsBack} lit={[recording, playing]} arrow={false} />}
+          lines={<PortLine row={0} from={advanced ? '' : text.records} to={text.playsBack} lit={[recording, playing]} arrow={false} />}
         />
       )}
     />

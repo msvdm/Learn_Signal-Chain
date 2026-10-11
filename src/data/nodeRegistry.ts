@@ -16,6 +16,11 @@ export type NodePort = {
   row?: number
   /** Never drawn, and no hand-drawn wire ends on it: the USB link's way back (graph/usbLink.ts) */
   hidden?: true
+  /**
+   * Drawn only at these levels (graph/queries.ts drawnPorts): the DAW records at Beginner and
+   * Intermediate and plays its song out at Advanced, the Recorder Track's Monitor out is Advanced's
+   */
+  levels?: readonly ComplexityLevel[]
 }
 
 /** The port line of each port of a stack (its `row`, else its place). */
@@ -50,7 +55,7 @@ export type TypeKey =
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'pfl-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
-  | 'interface' | 'daw' | 'mixer' | 'stage-box'
+  | 'interface' | 'daw' | 'mixer' | 'stage-box' | 'decoder' | 'coder'
 
 export type Size = { w: number; h: number }
 
@@ -78,7 +83,8 @@ export type NodeTypeDef = {
   defaultParams: Record<string, NodeParamValue>
   /**
    * The levels whose palette has it (D20: each level is a scale, so some elements leave at harder
-   * levels). Its ports and what it does never depend on the level.
+   * levels). What it does never depends on the level, nor its ports — but which of them are drawn
+   * (NodePort `levels`: the DAW's and the Recorder's, D23).
    */
   levels: readonly ComplexityLevel[]
   /**
@@ -115,8 +121,9 @@ export type NodeTypeDef = {
   /**
    * Paths that never meet, each from one input to one output (an Audio Interface records its line
    * input to the computer and, apart from that, plays the computer's sound out; a DAW records what
-   * it gets and plays back a sound of its own). The card shows the first. None: one path, every
-   * input into every output. Every input and output is on one route.
+   * it gets and plays back a sound of its own). The card shows the first in use (signal/chain.ts
+   * shownRoute). None: one path, every input into every output. Every input and output is on one
+   * route.
    */
   routes?: readonly Route[]
   /** Zoomed out drawn bare at Advanced too (the HPF's button, its click its On / Off) */
@@ -186,6 +193,13 @@ export type Character = typeof CHARACTERS[number]
 /** A Microphone (param `micType`): dynamic (no power needed) or condenser (more sensitive, needs 48V — D21). */
 export const MIC_TYPES = ['dynamic', 'condenser'] as const
 export type MicType = typeof MIC_TYPES[number]
+
+/**
+ * What a Coder packs the sound into for a stream (param `format`, D23): three of the formats
+ * streams use. Each keeps the level; what they change is how much detail the listener gets.
+ */
+export const CODER_FORMATS = ['mp3', 'aac', 'opus'] as const
+export type CoderFormat = typeof CODER_FORMATS[number]
 
 /** The easiest level whose Vocals and Microphones show their choices (Speech | Singing, Dynamic | Condenser). */
 export const CHOICE_LEVEL: ComplexityLevel = 'intermediate'
@@ -265,6 +279,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'source', inputs: [], outputs: OUT, stereo: 'optional',
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 285 },
     defaultParams: { sound: 'sine', levelDb: 0, stereo: false },
+  },
+  decoder: {
+    // A stream or a file (MP3, AAC …) unpacked into numbers: a source that is digital from the
+    // start (dBFS — DIGITAL_SOURCES in signal/process.ts), playing music, −18 dBFS on average
+    category: 'source', inputs: [], outputs: OUT, stereo: 'always',
+    levels: ADVANCED_ONLY, bypass: false, minSize: FACE_SIZE,
+    defaultParams: { levelDb: -18 },
   },
   phantom: {
     // 48V phantom power: a bare button like the Pad (D21). It passes the signal on unchanged; a
@@ -402,6 +423,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 259 },
     defaultParams: { alignmentDb: 18 },
   },
+  coder: {
+    // Packs the digital mix into a stream's format (MP3, AAC, Opus — CODER_FORMATS), its level
+    // kept. It works on numbers only: fed an analog signal it sends nothing (D23 — encoding is more
+    // than converting). Its output goes only into Stream / Broadcast (graph/connectionRules.ts)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 259 },
+    defaultParams: { format: 'mp3' },
+  },
   'master-bus': {
     // Always stereo. The input accepts any number of wires; they are added together.
     // The mix leaves on two wires: Left and Right.
@@ -461,14 +490,16 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: {},
   },
   recorder: {
-    // Records what reaches it, as it is: a stereo wire in two channels, a mono one in one
-    category: 'sink', inputs: IN, outputs: [], stereo: 'follow',
+    // Records what reaches it, as it is: a stereo wire in two channels, a mono one in one. At
+    // Advanced, the Recorder Track (D23), its Monitor out passes on what it records — back into a
+    // channel, or on to be heard (graph/connectionRules.ts: into a processing or routing card)
+    category: 'sink', inputs: IN, outputs: [{ id: 'out', levels: ADVANCED_ONLY }], stereo: 'follow',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
   broadcast: {
     // Stream / Broadcast: the mix sent out to listeners far away, always in stereo (a mono wire goes
-    // out on both sides)
+    // out on both sides). At Advanced it takes only a Coder's output (graph/connectionRules.ts)
     category: 'sink', inputs: IN, outputs: [], stereo: 'always',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
@@ -491,11 +522,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   daw: {
     // The computer's recording program: it records what the Interface sends it, and plays back a
     // song of its own (−18 dBFS on average: unity on the desk after the Interface) — what it plays
-    // never depends on what it records. One port: the USB wire from the Interface, both ways (its
-    // playback leaves on a hidden port, back along that wire)
+    // never depends on what it records. Below Advanced one port: the USB wire from the Interface,
+    // both ways (its playback leaves on a hidden port, back along that wire). At Advanced there is
+    // no Interface (D23): nothing plugs into it, and its song leaves on an output of its own, into
+    // a Recorder Track only
     category: 'source', stereo: 'always',
-    inputs: IN, outputs: [{ id: PLAYBACK_PORT, hidden: true }],
-    routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT], as: 'daw' }],
+    inputs: [{ id: 'in', levels: ['beginner', 'intermediate'] }],
+    outputs: [{ id: PLAYBACK_PORT, hidden: true }, { id: 'out', levels: ADVANCED_ONLY }],
+    routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT, 'out'], as: 'daw' }],
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -18 },
   },
@@ -595,6 +629,8 @@ export interface ParamTypes {
   character: Character
   /** Microphone: dynamic or condenser (MIC_TYPES) */
   micType: MicType
+  /** Coder: the stream's format (CODER_FORMATS) */
+  format: CoderFormat
   /** Generator: what it plays (GENERATOR_SOUNDS) */
   sound: GeneratorSound
   /** The Mono | Stereo switch (Generator, Aux Bus) */
@@ -638,6 +674,7 @@ export type ParamKey = keyof ParamTypes
 const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
   character:     CHARACTERS,
   micType:       MIC_TYPES,
+  format:        CODER_FORMATS,
   sound:         GENERATOR_SOUNDS,
   selectedInput: ['a', 'b'],
 }
@@ -683,8 +720,9 @@ export function splitsOnlyMix(typeKey: TypeKey): boolean {
 }
 
 /**
- * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …; not the
- * Recorder, an end point): walks up a chain (graph/queries.ts) go through these and stop at anything else — a source, a bus, a Relay.
+ * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …; a Recorder
+ * Track through its Monitor out): walks up a chain (graph/queries.ts) go through these and stop at
+ * anything else — a source, a bus, a Relay.
  */
 export function passesThrough(typeKey: TypeKey): boolean {
   const def = NODE_REGISTRY[typeKey]

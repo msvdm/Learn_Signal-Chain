@@ -38,7 +38,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
     const cards = layout.layoutSnapshot(view.nodes)
     const edge  = findEdgeAtPoint(raw, view.edges, cards)
     const src   = edge && cards.find((n) => n.id === edge.source)
-    if (!edge || !src || !wireTakesCard(typeKey, edge, view)) return null
+    if (!edge || !src || !wireTakesCard(typeKey, edge, view, view.complexityLevel)) return null
     const srcRight = src.position.x + src.size.w
     const minX     = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
     return { edge, pos: { x: Math.max(minX, layout.dropOrigin(raw).x), y: src.position.y } }

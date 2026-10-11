@@ -18,7 +18,7 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   const node     = useSignalStore((s) => graphOf(s).node(nodeId))
   // The outputs follow the wiring (a bus's L / R taken over by its Main Fader …); a layout is always
   // the same arrays (drawnPorts: the hidden ones left out), so this changes only when the ports do
-  const ports    = useSignalStore(useShallow((s) => drawnPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s)))
+  const ports    = useSignalStore(useShallow((s) => drawnPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s.complexityLevel, s)))
   /** Colours of the chains (sources) passing through, in a stable order */
   const chains   = useSignalStore(useShallow((s) => chainColorsOf(nodeId, s.nodes, s.edges)))
   const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.help?.nodeId === nodeId)
@@ -27,7 +27,7 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   const wireTarget = useSignalStore((s) => {
     if (s.wire === null) return false
     const n = graphOf(s).node(nodeId)
-    return n !== undefined && nodeAcceptsWire(n, s.wire.source, s.edges, s.nodes)
+    return n !== undefined && nodeAcceptsWire(n, s.wire.source, s.edges, s.nodes, s.complexityLevel)
   })
   /** A source with nothing on its output: no level, no readings (D11) */
   const notConnected = useSignalStore((s) => unwiredSource(nodeId, s))

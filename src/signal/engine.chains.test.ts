@@ -741,6 +741,101 @@ describe('a clip before a speaker is heard there, however green its meter (disto
   })
 })
 
+describe('the digital picture (D23): a Decoder, a Coder, a Recorder Track, the DAW at Advanced', () => {
+  // A stream played (a Decoder: numbers from the start, −18 dBFS), through a digital Gain, packed by
+  // a Coder for Stream / Broadcast: digital all the way, the level kept
+  describe('a Decoder through a Coder to Stream / Broadcast', () => {
+    expectCards(signalOf([
+      card('dec', 'decoder'),
+      card('gain', 'gain'),
+      card('cod', 'coder'),
+      card('air', 'broadcast'),
+    ], [
+      wire('dec', 'gain'), wire('gain', 'cod'), wire('cod', 'air'),
+    ]), {
+      dec:  { out: [-18, -18], health: 'good', domain: 'digital' },
+      gain: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+      cod:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+      air:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+    })
+  })
+
+  // Encoding is more than converting: an analog signal into a Coder gives nothing to send. Nothing
+  // plugged in, it says nothing. A Decoder meets the analog desk only after a DAC
+  describe('a Coder fed an analog signal is silent; a Decoder cannot be mixed with analog channels', () => {
+    expectCards(signalOf([
+      card('keys', 'keyboard'),
+      card('cod', 'coder'),
+      card('air', 'broadcast'),
+      card('idle', 'coder'),
+      card('keys2', 'keyboard'),
+      card('dec', 'decoder'),
+      card('bus', 'master-bus'),
+    ], [
+      wire('keys', 'cod'), wire('cod', 'air'), wire('keys2', 'bus'), wire('dec', 'bus'),
+    ]), {
+      keys:  { out: [-10, -10], health: 'good' },
+      cod:   { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'coderNeedsDigital' },
+      air:   { in: [S, S], out: [S, S], health: 'too-quiet' },
+      idle:  { out: S, health: 'too-quiet' },
+      keys2: { out: [-10, -10], health: 'good' },
+      dec:   { out: [-18, -18], health: 'good', domain: 'digital' },
+      bus:   { out: [S, S], health: 'too-quiet', condition: 'domainMixedBus' },
+    })
+  })
+
+  // What it records decides its meter: dBFS after an ADC, a VU meter on an analog signal (the
+  // card's) — and its Monitor out passes on what it records, back into a channel
+  describe('a Recorder Track records in the domain that reaches it, and passes it on', () => {
+    const result = signalOf([
+      card('keys', 'keyboard'),
+      card('adc', 'adc'),
+      card('rec', 'recorder'),
+      card('fad', 'fader'),
+      card('keys2', 'keyboard'),
+      card('rec2', 'recorder'),
+      card('gain', 'gain'),
+    ], [
+      wire('keys', 'adc'), wire('adc', 'rec'), wire('rec', 'fad'), wire('keys2', 'rec2'), wire('rec2', 'gain'),
+    ])
+    expectCards(result, {
+      keys:  { out: [-10, -10], health: 'good' },
+      adc:   { in: [-10, -10], out: [-28, -28], health: 'good', domain: 'digital' },
+      rec:   { in: [-28, -28], out: [-28, -28], health: 'good', domain: 'digital', inDomain: 'digital' },
+      fad:   { in: [-28, -28], out: [-28, -28], health: 'good', domain: 'digital', inDomain: 'digital' },
+      keys2: { out: [-10, -10], health: 'good' },
+      rec2:  { in: [-10, -10], out: [-10, -10], health: 'good' },
+      gain:  { in: [-10, -10], out: [-10, -10], health: 'good' },
+    })
+
+    it('sends what it records out of its Monitor out', () => {
+      expectWire(result, 'rec:out', 'stereo', -28, -28)
+    })
+  })
+
+  // No Interface at Advanced: the DAW records nothing and plays its song into a Recorder Track. Its
+  // card shows the path in use — what it plays (chain.ts shownRoute)
+  describe('the DAW at Advanced plays its song into a Recorder Track', () => {
+    const result = signalOf([
+      card('daw', 'daw'),
+      card('rec', 'recorder'),
+      card('fad', 'fader'),
+    ], [
+      wire('daw', 'rec'), wire('rec', 'fad'),
+    ])
+    expectCards(result, {
+      daw: { out: [-18, -18], health: 'good', domain: 'digital' },
+      rec: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+      fad: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+    })
+
+    it('plays the same song out of both its outputs: the Advanced one, and the USB link\'s way back', () => {
+      expectWire(result, 'daw:out', 'stereo', -18, -18)
+      expectWire(result, 'daw:playback', 'stereo', -18, -18)
+    })
+  })
+})
+
 describe('the engine', () => {
   it('gives cards in a loop, and after one, no reading', () => {
     const result = signalOf([

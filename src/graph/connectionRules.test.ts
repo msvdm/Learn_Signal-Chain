@@ -64,9 +64,9 @@ describe('what an Audio Interface records: line-level signals, as many as you li
 
   it('never dropped into the middle of a wire', () => {
     const view = { nodes, edges: [wire('keys', 'mon')] }
-    expect(wireTakesCard('interface', view.edges[0], view)).toBe(false)
-    expect(wireTakesCard('daw', view.edges[0], view)).toBe(false)
-    expect(wireTakesCard('eq', view.edges[0], view)).toBe(true)
+    expect(wireTakesCard('interface', view.edges[0], view, 'intermediate')).toBe(false)
+    expect(wireTakesCard('daw', view.edges[0], view, 'intermediate')).toBe(false)
+    expect(wireTakesCard('eq', view.edges[0], view, 'intermediate')).toBe(true)
   })
 })
 
@@ -99,5 +99,57 @@ describe('Beginner\'s devices (D20)', () => {
     }
     expect(into('amp', 'spk')).toBe(true)
     expect(into('amp', 'mix')).toBe(false)
+  })
+})
+
+describe('the digital picture (D23): Coder, Stream / Broadcast, DAW, Recorder Track', () => {
+  const studio = [
+    ...nodes, node('dec', 'decoder'), node('cod', 'coder'), node('air', 'broadcast'), node('adc', 'adc'),
+    node('phones', 'headphones'), node('spk', 'active-speaker'),
+  ]
+  const at = (id: string) => studio.find((n) => n.id === id)!
+  const into = (from: string, to: string, level: 'intermediate' | 'advanced' = 'advanced') => {
+    const [nodeId, handleId = 'out'] = from.split(':')
+    const source = { nodeId, handleId }
+    return nodeAcceptsWire(at(to), source, [], studio, level) && portAcceptsWire(at(to), 'in', [], source)
+  }
+
+  it('a Coder\'s output goes only into Stream / Broadcast', () => {
+    expect(into('cod', 'air')).toBe(true)
+    for (const to of ['eq', 'fad', 'bus', 'rec', 'spk']) expect(into('cod', to)).toBe(false)
+  })
+
+  it('at Advanced Stream / Broadcast takes only a Coder; below, any mix', () => {
+    for (const from of ['bus:out-l', 'keys', 'dec', 'adc', 'eq']) {
+      expect(into(from, 'air')).toBe(false)
+      expect(into(from, 'air', 'intermediate')).toBe(true)
+    }
+  })
+
+  it('a Coder takes analog and digital wires alike (fed analog, it says so: the engine)', () => {
+    for (const from of ['keys', 'adc', 'dec', 'bus:out-l']) expect(into(from, 'cod')).toBe(true)
+  })
+
+  it('the DAW plays its song only into a Recorder Track', () => {
+    expect(into('daw', 'rec')).toBe(true)
+    for (const to of ['eq', 'fad', 'bus', 'spk', 'cod']) expect(into('daw', to)).toBe(false)
+  })
+
+  it('a Recorder Track\'s Monitor out goes into a processing or routing card, not straight into an end point', () => {
+    for (const to of ['pre', 'eq', 'fad', 'bus', 'pfl', 'cod']) expect(into('rec', to)).toBe(true)
+    for (const to of ['spk', 'phones', 'mon', 'air']) expect(into('rec', to)).toBe(false)
+  })
+
+  it('a Recorder dropped onto a wire goes into it at Advanced only: below, it has no Monitor out', () => {
+    const view = { nodes: studio, edges: [wire('keys', 'fad')] }
+    expect(wireTakesCard('recorder', view.edges[0], view, 'advanced')).toBe(true)
+    expect(wireTakesCard('recorder', view.edges[0], view, 'intermediate')).toBe(false)
+  })
+
+  it('a Coder dropped onto a wire into Stream / Broadcast goes in; nothing else does at Advanced', () => {
+    const view = { nodes: studio, edges: [wire('cod', 'air')] }
+    const mix  = { nodes: studio, edges: [wire('bus', 'air', 'out-l')] }
+    expect(wireTakesCard('coder', mix.edges[0], mix, 'advanced')).toBe(true)
+    expect(wireTakesCard('eq', view.edges[0], view, 'advanced')).toBe(false)
   })
 })

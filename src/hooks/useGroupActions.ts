@@ -34,8 +34,8 @@ export function useGroupActions() {
    * whole canvas, for a chain added beside everything).
    */
   function placeCopy(group: NodeGroup, offset: Pt, showAll = false) {
-    const { nodes, edges, addGroup } = useSignalStore.getState()
-    const copy = cloneGroup(group, offset, { nodes, edges })
+    const { nodes, edges, addGroup, complexityLevel } = useSignalStore.getState()
+    const copy = cloneGroup(group, offset, { nodes, edges }, complexityLevel)
     addGroup(copy.nodes, copy.edges)
     // Never zoom in
     const maxZoom = Math.min(1, getZoom())

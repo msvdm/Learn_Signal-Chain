@@ -240,11 +240,15 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     pc: (_, x) => x,
     instrument: (_, x) => x,
     generator: (_, x) => x,
+    decoder: (_, x) => x,
     pan: (_, x) => x,
     phantom: (_, x) => x,
-    // The ends that only take the sound in: what reaches them is what they record or send
+    // The ends that take the sound in: what reaches them is what they record or send (a Recorder
+    // Track's Monitor out passes it on)
     recorder: (_, x) => x,
     broadcast: (_, x) => x,
+    // Packs the numbers for a stream, its level kept (fed an analog signal it is silent: SILENCES)
+    coder: (_, x) => x,
     // Their paths do an ADC's and a DAC's job, a Recorder's, a source's (NodeTypeDef `routes`): nothing reaches here
     interface: (_, x) => x,
     daw: (_, x) => x,

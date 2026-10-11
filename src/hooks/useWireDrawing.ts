@@ -152,7 +152,7 @@ export function useWireDrawing(
         const { source }       = wire
 
         const allowed = targetNode !== undefined &&
-          nodeAcceptsWire(targetNode, source, edges, nodes) &&
+          nodeAcceptsWire(targetNode, source, edges, nodes, store.complexityLevel) &&
           portAcceptsWire(targetNode, targetHandleId, edges, source)
 
         if (!allowed) {

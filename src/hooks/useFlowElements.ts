@@ -11,6 +11,7 @@ import { reachIn } from '../graph/reach'
 import { humStrength } from '../signal/levels'
 import { SOUND_PORT, portRows } from '../data/nodeRegistry'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
+import type { ComplexityLevel } from '../data/levels'
 import type { NodePort } from '../data/nodeRegistry'
 import { healthOf, levelOf, outDomainOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
@@ -46,8 +47,8 @@ const lastFlowEdges = new Map<string, Edge>()
  * change): the same array while they stay the same (getPorts). When they change, React Flow must
  * re-read the ports.
  */
-function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): NodePort[] {
-  return drawnPorts(node, { nodes, edges }).outputs
+function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[], level: ComplexityLevel): NodePort[] {
+  return drawnPorts(node, level, { nodes, edges }).outputs
 }
 
 /**
@@ -62,7 +63,8 @@ export function useFlowElements() {
   const highlightEdgeIds = useSignalStore((s) => s.highlightEdgeIds)
   const overview         = useSignalStore((s) => s.overview)
   // Beginner works no signal out (D20): where the sound goes is all it shows
-  const beginner         = useSignalStore((s) => !atLeast(s.complexityLevel, SIGNAL_LEVEL))
+  const level            = useSignalStore((s) => s.complexityLevel)
+  const beginner         = !atLeast(level, SIGNAL_LEVEL)
   const { stages, wires, hums } = useGraphSignal()
   // React Flow's measured card sizes, handed back with the nodes
   const [measuredSizes, setMeasuredSizes] = useState<Record<string, MeasuredSize>>({})
@@ -76,7 +78,7 @@ export function useFlowElements() {
       const node = nodes.find((n) => n.id === c.id)
       if (!node) continue
       recordMeasuredSize(node.typeKey, c.dimensions.width, c.dimensions.height, complexityLevel, overview)
-      sizes[c.id] = { ...c.dimensions, outputs: outputsOf(node, nodes, edges) }
+      sizes[c.id] = { ...c.dimensions, outputs: outputsOf(node, nodes, edges, complexityLevel) }
     }
     if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))
   }
@@ -105,7 +107,7 @@ export function useFlowElements() {
           id:        node.id,
           type:      node.typeKey,
           position:  node.position,
-          measured:  size && size.outputs === outputsOf(node, graphNodes, graphEdges)
+          measured:  size && size.outputs === outputsOf(node, graphNodes, graphEdges, level)
             ? { width: size.width, height: size.height }
             : undefined,
           selected:  selectedNodeIds.includes(node.id),
@@ -113,7 +115,7 @@ export function useFlowElements() {
           data:      {},
         }
       })),
-    [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes]
+    [graphNodes, graphEdges, selectedNodeIds, highlight, measuredSizes, level]
   )
 
   const edges: Edge[] = useMemo(() => {
@@ -130,8 +132,8 @@ export function useFlowElements() {
       const srcNode = graphNodes.find((n) => n.id === edge.source)
       const tgtNode = graphNodes.find((n) => n.id === edge.target)
       if (!src || !tgt || !srcNode || !tgtNode) return false
-      const outs = drawnPorts(srcNode, graph).outputs
-      const ins  = drawnPorts(tgtNode, graph).inputs
+      const outs = drawnPorts(srcNode, level, graph).outputs
+      const ins  = drawnPorts(tgtNode, level, graph).inputs
       // Each port on its own line (a port's row, else its place)
       const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
       const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
@@ -185,7 +187,7 @@ export function useFlowElements() {
         data,
       }
     }))
-  }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes, beginner])
+  }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes, beginner, level])
 
   return { nodes, edges, keepSizes }
 }
