@@ -7,12 +7,11 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { PLAYBACK_PORT } from '../../data/nodeRegistry'
 import { outputKey } from '../../graph/graph'
 import { levelOf } from '../../signal/engine'
-import { PORT_GAP, PORT_TOP } from '../../utils/layoutHelpers'
 import { FaceCard } from './FaceCard'
 import { LookInside } from './LookInside'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewIcon } from './OverviewFace'
-import { PAD } from './overviewLayout'
+import { LINE_H, lineTop } from './portLines'
 
 // Record and play back (D22): the Audio Interface and the DAW, two face cards — a big icon and an
 // upright meter reading what they record (the Interface in dBu, the DAW in dBFS). Zoomed in, a line
@@ -20,14 +19,9 @@ import { PAD } from './overviewLayout'
 // passes; an arrow joins them where one is the other's way on (the Interface's two paths). At
 // Intermediate a Look inside button under the icon shows what is inside the box (D22).
 
-/** A path line's height (px): centred on its port line */
-const LINE_H = 20
 /** The Look inside button's height (px), and its gap under the icon */
 const LOOK_H   = 30
 const LOOK_GAP = 10
-
-/** Where port line `row` is in a face's art box (it starts PAD below the card's top) */
-const lineTop = (row: number) => PORT_TOP + row * PORT_GAP - PAD - LINE_H / 2
 
 const shade = (lit: boolean) => (lit ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)')
 
@@ -35,7 +29,7 @@ const shade = (lit: boolean) => (lit ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted
  * One port line across the face: the input's name on the left, the output's on the right, each lit
  * while sound passes there; `arrow`: the sound goes from one to the other.
  */
-function PortLine({ row, from, to, lit, arrow }: {
+export function PortLine({ row, from, to, lit, arrow }: {
   row: number
   from: string
   to: string

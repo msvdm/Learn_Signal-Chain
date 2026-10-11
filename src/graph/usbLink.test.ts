@@ -36,3 +36,11 @@ describe('the USB wire\'s way back', () => {
     expect(withUsbReturns({ nodes, edges: [wire('old', 'daw', PLAYBACK_PORT, 'box', FROM_PC_PORT)] })).toEqual([])
   })
 })
+
+describe('a Mixer wired into a DAW (Beginner: a desk with USB)', () => {
+  it('its way back comes into the Mixer\'s input', () => {
+    const desk = [node('mix', 'mixer'), node('daw', 'daw')]
+    const edges = withUsbReturns({ nodes: desk, edges: [wire('m', 'mix', 'main', 'daw')] })
+    expect(back(edges)).toEqual([{ id: 'm:back', source: 'daw', sourceHandle: PLAYBACK_PORT, target: 'mix', targetHandle: 'in' }])
+  })
+})

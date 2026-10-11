@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react'
 import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
-import { outputKey } from '../graph/graph'
-import { drawnPorts } from '../graph/queries'
-import { isUsbReturn } from '../graph/usbLink'
+import { graphOf, outputKey } from '../graph/graph'
+import { drawnPorts, outputKind } from '../graph/queries'
+import { isUsbReturn, isUsbWire } from '../graph/usbLink'
 import { wireFlows } from '../graph/wireFlow'
 import type { WireFlow } from '../graph/wireFlow'
+import { reachIn } from '../graph/reach'
 import { humStrength } from '../signal/levels'
-import { SOUND_PORT, TO_PC_PORT, portRows } from '../data/nodeRegistry'
+import { SOUND_PORT, portRows } from '../data/nodeRegistry'
+import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { NodePort } from '../data/nodeRegistry'
 import { healthOf, levelOf, outDomainOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
@@ -50,7 +52,8 @@ function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): 
 
 /**
  * The store's graph as React Flow draws it: nodes (selected, dimmed, with their measured size)
- * and wires (coloured by where their sound goes, red where it clips). `keepSizes` takes the sizes React Flow measures.
+ * and wires (coloured by where their sound goes, red where it clips; at Beginner one colour,
+ * flowing where their sound reaches an end point — D20). `keepSizes` takes the sizes React Flow measures.
  */
 export function useFlowElements() {
   const graphNodes       = useSignalStore((s) => s.nodes)
@@ -58,6 +61,8 @@ export function useFlowElements() {
   const selectedNodeIds  = useSignalStore((s) => s.selectedNodeIds)
   const highlightEdgeIds = useSignalStore((s) => s.highlightEdgeIds)
   const overview         = useSignalStore((s) => s.overview)
+  // Beginner works no signal out (D20): where the sound goes is all it shows
+  const beginner         = useSignalStore((s) => !atLeast(s.complexityLevel, SIGNAL_LEVEL))
   const { stages, wires, hums } = useGraphSignal()
   // React Flow's measured card sizes, handed back with the nodes
   const [measuredSizes, setMeasuredSizes] = useState<Record<string, MeasuredSize>>({})
@@ -134,18 +139,21 @@ export function useFlowElements() {
       return wirePassesThroughNode(points, cards, [edge.source, edge.target])
     }
 
-    const flows = wireFlows(graph)
+    const flows = beginner ? null : wireFlows(graph)
+    const reach = beginner ? reachIn(graph) : null
+    const wiring = graphOf(graph)
     // A USB wire's way back is not drawn: the USB wire carries both ways (graph/usbLink.ts)
     return keepSame(lastFlowEdges, graphEdges.filter((edge) => !isUsbReturn(edge)).map((edge): Edge => {
       const sourceStage = stages[edge.source]
       const key         = outputKey(edge.source, edge.sourceHandle)
       const signal      = sourceStage && (wires.get(key) ?? sourceStage.out)
       // Its colour is where its sound goes (D24); red where it clips (from the peaks, as the card it
-      // leaves — red is kept for problems); grey while it carries nothing
+      // leaves — red is kept for problems); grey while it carries nothing. At Beginner one colour.
       const health      = signal ? healthOf(signal, outDomainOf(sourceStage, edge.sourceHandle)) : null
-      const color       = health === 'clipping' ? 'var(--signal-clipping)'
+      const color       = reach ? 'var(--lsc-wire-neutral)'
+        : health === 'clipping' ? 'var(--signal-clipping)'
         : !signal || !isFinite(levelOf(signal)) ? 'var(--lsc-border)'
-        : FLOW_COLOR[flows.get(edge.id) ?? 'main']
+        : FLOW_COLOR[flows?.get(edge.id) ?? 'main']
 
       // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine
       const sound          = edge.sourceHandle === SOUND_PORT
@@ -153,9 +161,12 @@ export function useFlowElements() {
       const routingWarning = !sound && crossesCard(edge)
 
       const data: ChainEdgeData = {
-        waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview, sound,
+        waypoints: edge.waypoints, routingWarning, overview, sound,
+        // Beginner: what the wiring makes of the output (no signal is worked out there)
+        stereo: (reach ? outputKind(edge.source, edge.sourceHandle, graph) : wires.get(key)?.kind) === 'stereo',
         hum: humDb === undefined ? undefined : humStrength(humDb),
-        twoWay: edge.sourceHandle === TO_PC_PORT,
+        twoWay: isUsbWire(edge, wiring),
+        still: reach !== null && !reach.flowing.has(edge.id),
       }
       return {
         id:           edge.id,
@@ -166,7 +177,7 @@ export function useFlowElements() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: sound ? 'var(--lsc-fg-muted)' : color,
+          stroke: sound && !reach ? 'var(--lsc-fg-muted)' : color,
           strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',
@@ -174,7 +185,7 @@ export function useFlowElements() {
         data,
       }
     }))
-  }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes])
+  }, [graphEdges, stages, wires, hums, graphNodes, highlight, overview, measuredSizes, beginner])
 
   return { nodes, edges, keepSizes }
 }

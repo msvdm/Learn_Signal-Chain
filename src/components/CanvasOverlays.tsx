@@ -1,14 +1,13 @@
 import type { ReactNode } from 'react'
 import { useReactFlow, useViewport } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
-import { useGraphSignal } from '../hooks/useGraphSignal'
 import { useEdgeReshape } from '../hooks/useEdgeReshape'
 import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
 import { buildWirePath } from '../utils/wirePath'
 import { SOUND_PORT } from '../data/nodeRegistry'
-import { outputKey } from '../graph/graph'
+import { outputKind } from '../graph/queries'
 
 /**
  * What is drawn over the canvas, in flow coordinates: the drag handles on wires' corners, the
@@ -115,14 +114,14 @@ function ReshapeHandles() {
 /** The wire being drawn: dashed, to the cursor or the input it snaps to (orange when it would cross a card). */
 function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   const wire      = useSignalStore((s) => s.wire)
-  const { wires } = useGraphSignal()
+  // A wire drawn from a stereo output previews as a twin line, like the wire it will become (what
+  // the wiring makes of the output: at Beginner too, where no signal is worked out)
+  const stereo    = useSignalStore((s) => s.wire !== null && outputKind(s.wire.source.nodeId, s.wire.source.handleId, s) === 'stereo')
   if (!wire || !cursor) return null
 
   const path  = buildWirePath([wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos])
   const color = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
-  // A wire drawn from a stereo output previews as a twin line, like the wire it will become;
-  // a Guitar Amp's sound as dots
-  const stereo = wires.get(outputKey(wire.source.nodeId, wire.source.handleId))?.kind === 'stereo'
+  // A Guitar Amp's sound as dots
   const sound  = wire.source.handleId === SOUND_PORT
 
   return (

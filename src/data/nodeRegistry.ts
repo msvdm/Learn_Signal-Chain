@@ -50,7 +50,7 @@ export type TypeKey =
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'pfl-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
-  | 'interface' | 'daw'
+  | 'interface' | 'daw' | 'mixer' | 'stage-box'
 
 export type Size = { w: number; h: number }
 
@@ -162,6 +162,10 @@ export type SignalEdge = {
 export const TO_PC_PORT    = 'to-pc'
 export const FROM_PC_PORT  = 'from-pc'
 export const PLAYBACK_PORT = 'playback'
+
+/** The Mixer's outputs (Beginner): its mix for the room's speakers, and for the wedges on stage. */
+export const MIXER_MAIN_PORT    = 'main'
+export const MIXER_MONITOR_PORT = 'monitor'
 
 /** A DI Box's Direct Out: the instrument passed on unchanged, for a guitar amp (its XLR Out is 'out'). */
 export const DI_DIRECT_PORT = 'direct'
@@ -494,6 +498,24 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT], as: 'daw' }],
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -18 },
+  },
+  // Beginner's devices (D20): what stands in the room, not its parts
+  mixer: {
+    // The whole desk in one box: any number of wires in (the channels), its mix out of Main (the
+    // room's speakers) and Monitor (the wedges on stage) — or into a Recorder, an Audio Interface
+    // or a DAW (a wire into a DAW brings the computer's sound back: graph/usbLink.ts)
+    category: 'merge', stereo: 'always',
+    inputs: [{ id: 'in', many: true }], outputs: [{ id: MIXER_MAIN_PORT }, { id: MIXER_MONITOR_PORT }],
+    levels: ['beginner'], bypass: false, minSize: { w: 410, h: 361 },
+    defaultParams: {},
+  },
+  'stage-box': {
+    // On the stage: every microphone and instrument plugs in here, and one thick cable (the snake)
+    // takes them all to the Mixer — nothing else takes it
+    category: 'merge', stereo: 'always',
+    inputs: [{ id: 'in', many: true }], outputs: OUT,
+    levels: ['beginner'], bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
   },
 }
 

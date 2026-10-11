@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
-import { healthColor, getHealth, louder, shifted, SPL_SCALE_DB, ZONE_HEALTH, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
+import { ALIGNMENT_DB, healthColor, getHealth, louder, shifted, SPL_SCALE_DB, ZONE_HEALTH, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useDetailShown } from '../hooks/useDetailShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
@@ -383,6 +383,46 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
 
       {/* The health word: as tall as the tallest of them (a long one wraps), so a new one never resizes the card */}
       <Reserved words={words} style={{ fontSize: 11, lineHeight: '14px', fontWeight: 700, color }}>{t.health[health]}</Reserved>
+    </div>
+  )
+}
+
+/** Where a still meter sits while a sound reaches its card: 6 dB under unity, in the green */
+const STILL_DB = -6
+
+/**
+ * A meter that only shows a fixed picture (Beginner's Mixer, Audio Interface and DAW — D20: no
+ * signal is worked out there): both bars lit a little under unity while a sound reaches its card
+ * (`lit`), dark otherwise. No numbers, no health word, nothing moves; the unit under it says
+ * which scale it is (dBu, dBFS).
+ */
+export function StillMeter({ lit, domain, label }: { lit: boolean; domain: SignalDomain; label: string }) {
+  const db   = lit ? STILL_DB - (domain === 'digital' ? ALIGNMENT_DB : 0) : -Infinity
+  const side: SideLevels = { peak: db, rms: db, noise: -Infinity, hum: -Infinity }
+  const bar  = (letter: string) => (
+    <div key={letter} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <MeterTrack
+        side={side} domain={domain} detailed={false} direction="up" thickness={STEREO_BAR_W} clipping={false}
+        style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
+      />
+      <SideLetter letter={letter} />
+    </div>
+  )
+  return (
+    <div
+      className="lsc-meter-strip"
+      style={{ width: STRIP_W, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}
+    >
+      <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ flex: 1, minHeight: 110, display: 'flex', gap: BAR_GAP }}>
+        {bar('L')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <MeterScale domain={domain} ticks="both" />
+          <SideLetter letter="" />
+        </div>
+        {bar('R')}
+      </div>
+      <span style={{ fontSize: 11, color: 'var(--lsc-fg-muted)' }}>{levelParts(0, domain)[1]}</span>
     </div>
   )
 }

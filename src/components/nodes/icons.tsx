@@ -220,3 +220,29 @@ export function DawIcon({ size = 24 }: { size?: number }) {
     </svg>
   )
 }
+
+/** A mixing desk from above: three channel strips, each a knob and a fader. */
+export function MixerIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <path d="M7 7.5h.01M12 7.5h.01M17 7.5h.01" strokeWidth="2.6" />
+      <path d="M7 11v7M12 11v7M17 11v7" strokeWidth="1" />
+      <path d="M5.5 15.5h3M10.5 12.5h3M15.5 14h3" strokeWidth="2.2" />
+    </svg>
+  )
+}
+
+/** A stage box: a panel of sockets, the thick cable (the snake) leaving it. */
+export function StageBoxIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="15" height="13" rx="2" />
+      <g strokeWidth="1.5">
+        <circle cx="5.75" cy="8.25" r="1.25" /><circle cx="9.5" cy="8.25" r="1.25" /><circle cx="13.25" cy="8.25" r="1.25" />
+        <circle cx="5.75" cy="12.75" r="1.25" /><circle cx="9.5" cy="12.75" r="1.25" /><circle cx="13.25" cy="12.75" r="1.25" />
+      </g>
+      <path d="M17 10.5h2a2.5 2.5 0 0 1 2.5 2.5v8" strokeWidth="2.5" />
+    </svg>
+  )
+}

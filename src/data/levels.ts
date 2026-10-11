@@ -16,3 +16,9 @@ export function atLeast(level: ComplexityLevel, min: ComplexityLevel): boolean {
  * Peak / RMS / Noise numbers. Beginner shows only the average (decision D3, docs/decisions.md).
  */
 export const DETAIL_LEVEL: ComplexityLevel = 'intermediate'
+
+/**
+ * The easiest level whose chain is worked out: the number engine and the render on real sound.
+ * Beginner shows only where the sound goes (D20, graph/reach.ts).
+ */
+export const SIGNAL_LEVEL: ComplexityLevel = 'intermediate'

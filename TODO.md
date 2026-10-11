@@ -395,37 +395,75 @@ D22, explanation 2. Read: `ConfirmDialog.tsx` (portal pattern), `icons.tsx`.
     turned into numbers for the computer, and the computer's numbers back into sound. You can build
     it yourself in Advanced.") is new. Step names spell the jargon out (not "HPF", "EQ").
 
-## Stage 6 — Beginner: the macro scale  ☐
+## Stage 6 — Beginner: the macro scale  ☐ (built; waiting for the user's look-and-feel OK)
 
 D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElements.ts` (edge colour),
 `FaceCard.tsx`, `OverviewFace.tsx` (grep `overviewBare`), `NodeWrapper.tsx` (header only).
 
-- [ ] **No engine at Beginner:** the store does not render or run the number engine below
+- [x] **No engine at Beginner:** the store does not render or run the number engine below
   `DETAIL_LEVEL`. A new pure `graph/reach.ts`: which nodes a source reaches, and each output's verdict
   (*sound* / *no sound — not connected* / *no sound — needs an amplifier*). Wires at Beginner: one
   neutral colour with the flow animation when they lead to an output (no health colours). Tests for
   `reach.ts`. **Neutral** (the user's call, 2026-10-11): D24's colours by destination
   (`graph/wireFlow.ts`) start at Intermediate; at Beginner every wire is the one neutral colour.
-- [ ] **Inputs are bare at every zoom** at Beginner: icon + name, no card, no meter (like
+- [x] **Inputs are bare at every zoom** at Beginner: icon + name, no card, no meter (like
   `overviewBare` today). The mic shows no type buttons; the Vocal is a **human head**.
-- [ ] `mixer`: Parametric-EQ size (410 × 361). Its input takes any number of wires. Outputs: Main and
+- [x] `mixer`: Parametric-EQ size (410 × 361). Its input takes any number of wires. Outputs: Main and
   Monitor (also feeds Recorder, DAW, Interface). Zoomed out: only the word **MIXER**. Zoomed in: a
   drawing of a small desk (an SVG, original, in the app's line style — a few channel strips with
   knobs and faders) under the title, and a **decorative dBu meter** (a fixed "good" level when a
   source reaches it, empty otherwise — not measured).
-- [ ] `stage-box`: icon; input takes any number of wires; one output (the snake) → `mixer` only.
-- [ ] Beginner faces for `amp` (icon, no knob), `interface` (like the Mixer, different drawing),
+- [x] `stage-box`: icon; input takes any number of wires; one output (the snake) → `mixer` only.
+- [x] Beginner faces for `amp` (icon, no knob), `interface` (like the Mixer, different drawing),
   `daw` (PC icon, decorative dBFS meter). Same ports as at Intermediate. At Beginner, `daw` may also
   connect from/to `mixer`.
-- [ ] Outputs at Beginner: icon + verdict note (`FaceNote`), no meters.
-- [ ] Locales: Beginner names and `theory` for the new devices (macro wording: "what this box does in
+- [x] Outputs at Beginner: icon + verdict note (`FaceNote`), no meters.
+- [x] Locales: Beginner names and `theory` for the new devices (macro wording: "what this box does in
   the room").
-- [ ] Browser check: build the user's stage-plan picture — mics on drum kit and head, Keyboard →
+- [x] Browser check: build the user's stage-plan picture — mics on drum kit and head, Keyboard →
   Stage Box → Mixer → Amp → Passive speakers, Mixer → Active wedges, PC → Mixer, Mixer → Interface ⇄
   DAW. Screenshot zoomed in and zoomed out.
-- [ ] Checks + commit.
+- [x] Checks + commit.
 - [ ] ⛔ **ASK** — show the Mixer drawing and the whole stage plan; wait for the user's look-and-feel
-  OK. *Hand-off:* …
+  OK. *Hand-off:*
+  - **No engine at Beginner**: `SIGNAL_LEVEL` (`levels.ts`); `signalIn(s)` (`hooks/useGraphSignal.ts`)
+    is the engine's picture from Intermediate and an empty one at Beginner — `useStage`, `useWire`,
+    `useGraphSignal`, `useNodeName` and `NodePort` read it. `store/measuring.ts` renders nothing at
+    Beginner (and starts when the level rises). Every type still has its engine entries (a Beginner
+    card pasted at Intermediate works: the Mixer and Stage Box add their wires up, `PASSIVE`).
+  - **`graph/reach.ts`** (pure, tested): `reachOf(view)` → `arriving` (`<id>:<port>` a sound reaches),
+    `carrying` / `flowing` wires, `verdicts` per end point (`sink`): `sound`, `not-connected`
+    (nothing plugged in), `no-source` (wires, nothing that makes sound before it — added to the
+    plan's three: "not connected" read wrong on a wired speaker), `needs-amp`. Routes are followed
+    (an Interface's line in never reaches its line out); a wire flows when its sound ends at an end
+    point that plays it or a DAW that records. `reachIn` caches one answer per change.
+  - **Wires at Beginner** (`useFlowElements`): `--lsc-wire-neutral` (`index.css`, both themes), the
+    dotted sound wire too; flowing only when `reach.flowing` has them, otherwise a still solid line
+    (`ChainEdgeData.still`); stereo twin lines and the ports' L / R letters from `outputKind` (the
+    wiring); plugged port rings neutral. The wire preview reads `outputKind` at every level.
+  - **New types** `mixer` (410 × 361, `in` many, outputs `main` / `monitor` — `MIXER_MAIN_PORT`,
+    `MIXER_MONITOR_PORT`; `category: 'merge'`, stereo always) and `stage-box` (FACE_SIZE, `in` many,
+    `out`), both `levels: ['beginner']`, palette Devices before the Interface. Rules: a Stage Box's
+    output only into a Mixer (`nodeAcceptsWire`); a DAW takes a Mixer's output too (`portAcceptsWire`).
+  - **Mixer ⇄ DAW** (my call, to review): a wire from a Mixer's output into a DAW is a USB wire like
+    the Interface's (`isUsbWire`, `graph/usbLink.ts`: its way back is the DAW's playback into the
+    Mixer's input; drawn ⇄, no flow) — so the DAW connects "from/to" the Mixer with no new port.
+  - **Faces** (`BeginnerFaces.tsx`, `atBeginner` in `nodes/index.ts`): inputs (Vocal — its
+    `VocalIcon` is already a head —, Drum Kit, Mic, Keyboard, Computer, Instrument, Guitar Amp) bare,
+    icon + name (name fitted, up to 72 px zoomed out); outputs icon + verdict (zoomed in why, zoomed
+    out only "Sound" / "No sound", up to 44 px; a passive speaker without an amp crossed out, hot);
+    Amplifier, Stage Box (`StageBoxIcon`), DAW (+ a dBFS `StillMeter`) an icon; Mixer (`MixerIcon`,
+    `MixerDrawing`: six strips, master section) and Interface (`InterfaceDrawing`: two combo inputs,
+    gains, 48V, monitor knob, USB sign, phones) a header, port lines (`PortLine`, geometry in
+    `portLines.ts`) and a drawing with a dBu `StillMeter` (`SignalMeter.tsx`: both bars at −6 dB
+    under unity while lit, no numbers); zoomed out the name in capitals (MIXER, AUDIO INTERFACE).
+    Beginner faces have no meter room, so sizes are remembered apart (`shapeKey` `:beginner`).
+  - Texts: `palette.items` / `theory` for `mixer`, `stage-box`; `beginner.*` (verdicts, Inputs, Main,
+    Monitor). Bulgarian: Миксер, Стейдж бокс (мултикор), Основен / Монитор, „Има звук“.
+  - Checked in the pane and headless (Brave over CDP): the stage plan light / dark, en / bg, zoomed
+    in and out; every type on a Beginner canvas (no errors, nothing rendered); the same at
+    Intermediate (the render runs). Not done: a mic straight into a speaker reads "Sound" at
+    Beginner (no preamp check) — asked.
 
 ## Stage 7 — Advanced: Decoder, Recorder, Coder → Broadcast  ☐
 

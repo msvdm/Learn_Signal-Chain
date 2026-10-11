@@ -14,7 +14,7 @@ import type { OverviewArt } from './OverviewFace'
 // Its upright meter, zoomed in: on the right of its face, which keeps this much room free for it
 // (the card is its registry minSize plus this room, as tall as the minSize)
 const FACE_METER_PAD  = '14px 20px 12px'
-const FACE_METER_ROOM = STRIP_W + 16
+export const FACE_METER_ROOM = STRIP_W + 16
 
 /**
  * A card that is only its face, at every zoom (the sounds in the air, the Microphone, the

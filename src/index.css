@@ -237,6 +237,8 @@
   --lsc-wire-matrix: #f050d8;
   --lsc-wire-pfl:    #facc15;
   --lsc-wire-record: #f4f4f5;
+  /* Beginner's wires: one colour, whatever they carry (D20, D24) */
+  --lsc-wire-neutral: #8d95a6;
 
   /* Pro tip */
   --lsc-tip:    #facc15;
@@ -321,6 +323,7 @@
   --lsc-wire-matrix: #d63bbd;
   --lsc-wire-pfl:    #d4a106;
   --lsc-wire-record: #25262a;
+  --lsc-wire-neutral: #8a817a;
 
   /* Pro tip */
   --lsc-tip:    #d89548;

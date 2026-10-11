@@ -26,7 +26,7 @@ bun run preview  # Preview the production build locally
 - `src/audio/processors.test.ts` — the AudioWorklet's processors on plain blocks of samples
 - `src/audio/meters.test.ts`, `sounds.test.ts` — the meters' movement (D10); the Generator's sounds and the hiss
 - `src/utils/chainFile.test.ts` — what a Vocal does; version 1 files (a Line Input is a Keyboard, a Microphone gets the sound it picked up — D21)
-- `src/graph/mainFader.test.ts`, `queries.test.ts`, `connectionRules.test.ts`, `usbLink.test.ts`, `wireFlow.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`; the USB link (its way back) and what an Audio Interface records (D22); each wire's colour (D24)
+- `src/graph/mainFader.test.ts`, `queries.test.ts`, `connectionRules.test.ts`, `usbLink.test.ts`, `wireFlow.test.ts`, `reach.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`; the USB link (its way back) and what an Audio Interface records (D22); each wire's colour (D24); where the sound goes at Beginner (D20)
 - `src/components/nodes/overviewLayout.test.ts` — the zoomed-out face's layout (`overviewLayout`: the level block at most half the face, the name in the rest)
 
 ## Working on this project
@@ -82,6 +82,8 @@ signalStore (Zustand)
 
 Every slider change → updates `signalStore` → the number engine recomputes at once and the readings move by its step from the last render → 100 ms after the last change a render starts; when its readings arrive (~30–500 ms on desktop) they replace the step → the cards and wires whose own reading changed redraw; the rest are left alone. There is no local component state for signal values.
 
+**At Beginner none of this runs** (D20): `signalIn` (`hooks/useGraphSignal.ts` — every selector reading the engine goes through it) hands the cards an empty picture there, the store renders nothing, and the cards, port rings and wires read `graph/reach.ts` instead (where the sound goes).
+
 **Redraw only what changed** (the canvas must stay smooth at 100+ cards, and later at 60 updates a second):
 - The engine hands back last time's stage / wire object when a result came out the same (`keepUnchanged`, `utils/sameShape.ts`), so "did my reading change?" is one comparison.
 - Cards never read the whole graph: `useStage(id)`, `useWire(key)`, `useParams` / `useSettings`, `useNodeName`, `useNodeChrome` and `NodePort` each select only their own piece from the store (zustand selectors; `useShallow` for small arrays). A new hook for cards must do the same — a selector over `s.nodes` / `s.edges` as a whole redraws every card on every change.
@@ -97,7 +99,8 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `graph/edits.ts` — pure graph edits (`newEdge`: the one way to make a wire)
 - `graph/mainFader.ts` — the L / R takeovers and the Matrix send
 - `graph/wireFlow.ts` — each wire's flow (D24): the bus or recording its sound ends up in, shared wires main, a wire ending at a speaker the bus it comes from
-- `graph/usbLink.ts` — the USB link (D22): one wire from an Interface's To computer into a DAW carries both ways; `commitGraph` keeps its way back (the DAW's hidden playback port into the Interface's hidden From computer — `hidden` ports: `drawnPorts` leaves them out, the canvas never draws that wire)
+- `graph/reach.ts` — Beginner (D20): where the sound goes with no engine — each end point's verdict (sound, not connected, nothing before it, needs an amplifier), the wires that flow (`reachIn`: once per change)
+- `graph/usbLink.ts` — the USB link (D22): one wire from an Interface's To computer (at Beginner a Mixer's output) into a DAW carries both ways; `commitGraph` keeps its way back (the DAW's hidden playback port into the Interface's hidden From computer — `hidden` ports: `drawnPorts` leaves them out, the canvas never draws that wire)
 - `graph/connectionRules.ts` — which inputs may take a wire (an Amplifier's output only a passive speaker); `wireTakesCard` (a card dropped onto a wire)
 - `signal/chain.ts` — `planChain` (what the wiring makes of each card, in signal order: the render works from it too — one plan per path, keyed by its `key`, doing its route's `job`: the Interface's ADC and DAC) and `runChain` (their levels; each output's domain: `outDomainOf`)
 - `signal/engine.ts` — `stillPicture` (plan + levels) and `graphSignal` (with the last render's readings in); `StageResult`
@@ -111,7 +114,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `audio/processors.ts` — the AudioWorklet's dynamics and meter as plain functions (it imports nothing: its text goes to the worklet); `audio/dynamics.ts` — what the render knows of each dynamics type
 - `store/signalStore.ts` — all mutable state. **Every graph change goes through `commitGraph`**: it settles the L / R takeovers and drops what points at what is gone; undo / redo restore a snapshot as it was
 - `store/measuring.ts` — when the chain is rendered (once nothing has changed for 100 ms; one render at a time)
-- `hooks/useGraphSignal.ts` — `useStage(id)` / `useWire(key)` for cards; `useGraphSignal()` (the whole result) only for one-off components; every caller passes `measured`
+- `hooks/useGraphSignal.ts` — `useStage(id)` / `useWire(key)` for cards; `useGraphSignal()` (the whole result) only for one-off components; `signalIn(s)` in a store selector (none at Beginner)
 - `hooks/useLiveMeter.ts` — the one animation loop playing the meters' movement
 - `hooks/useFlowElements.ts` — the graph as React Flow's nodes and edges
 - `hooks/useWireDrawing.ts`, `useCanvasClicks.ts` — wiring and the mouse-follow Select ↔ Connect switch; what a left-click does
@@ -153,6 +156,7 @@ Every level starts from a **blank canvas** at 100% zoom (also after New, a level
 - **Wires between cards stay straight**: a fixed 56 px header, the first port line at `PORT_TOP`, stacked ports `PORT_GAP` apart (a later line: `row` in the registry). A free-standing control's port line is at `PORT_TOP` too — one lower than that reaches above its box rather than taking a negative padding.
 - The header is icon · title · On/Off (none where the control itself is the state: `bypass: false`). Help and Remove are in the right-click menu; no status chip.
 - **Face-only cards** (`FaceCard`: the sounds in the air — Vocal, Drum Kit, Acoustic —, the Microphone (no meter: `meter={false}`), Instrument, Computer, Guitar Amp, Speakers, Studio Monitor, Headphones, Recorder, Stream / Broadcast — the last two a dBu meter (`RecorderNode`) —, Audio Interface and DAW (their meter reads what they record: `meterAt="in"`; a line across the face names each port line, `InterfaceNode.tsx`; at Intermediate a *Look inside* button opens what is inside the box — `LookInside.tsx`, D22); the Relay Switch draws its own face on a bare `CardFrame`): a big icon with its buttons or knob and its meter (D13); what is wrong is said under the icon (`FaceNote`). A condition's words come from `conditions.tsx`: under a face's icon, in a red label in a full card's body, a converter's line in capitals.
+- **Beginner's faces** (D20, `BeginnerFaces.tsx`; `atBeginner` in `components/nodes/index.ts` picks them by level): the inputs their icon and name, no box, no meter; the outputs their icon and verdict (`reach.ts`); the Amplifier, Stage Box and DAW their icon; the Mixer (at every level) and the Interface a drawing (`BeginnerArt.tsx`), named in capitals zoomed out. The Mixer, Interface and DAW have a `StillMeter`: lit while a sound reaches them, never measured. Their sizes are remembered apart (`shapeKey`, `:beginner`).
 - Only types with `stereo: 'optional'` get a **Mono | Stereo** switch.
 - **Overview** (`overview` in the store — cards read this flag, never the zoom): the header and body stay mounted with `visibility: hidden`, so the card keeps exactly its size and its ports stay put; `OverviewFace` is drawn over them.
 - Only the left button moves a knob or fader (a right-click opens the menu and changes nothing).

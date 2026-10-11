@@ -2,13 +2,14 @@ import type { SignalEdge, SignalNode } from '../data/nodeRegistry'
 import type { CardPlan } from '../signal/chain'
 import { stillPicture } from '../signal/engine'
 import { measureChain } from '../audio/measure'
+import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import { useSignalStore } from './signalStore'
 
 // The chain on real sound (decision D9): once a change to what it sounds like has settled, it is
 // played and measured (audio/measure.ts) — one render at a time: a change while one runs waits for
 // it, and only the newest of those is rendered next. While a knob is being turned nothing renders;
 // the cards show the number engine's picture moved on from the last render (signal/measured.ts).
-// A card dragged across the canvas renders nothing.
+// A card dragged across the canvas renders nothing. Beginner renders nothing at all (D20).
 
 /** A render starts once the chain has not changed for this long (ms). */
 const QUIET_MS = 100
@@ -45,6 +46,8 @@ async function renderWanted() {
     while (wanted && performance.now() - lastChange >= QUIET_MS - 1) {
       const { nodes, edges } = wanted
       wanted = null
+      // A change of level since (to Beginner) leaves nothing to render
+      if (!atLeast(useSignalStore.getState().complexityLevel, SIGNAL_LEVEL)) continue
       const still = stillPicture(nodes, edges)
       const sound = soundFingerprint(still.plans)
       if (sound === measuredSound) continue
@@ -72,8 +75,9 @@ useSignalStore.subscribe((s, prev) => {
     canvas++
     measuredSound = ''
   }
-  if (s.nodes !== prev.nodes || s.edges !== prev.edges) measureSoon(s.nodes, s.edges)
+  const changed = s.nodes !== prev.nodes || s.edges !== prev.edges || s.complexityLevel !== prev.complexityLevel
+  if (changed && atLeast(s.complexityLevel, SIGNAL_LEVEL)) measureSoon(s.nodes, s.edges)
 })
 
-const { nodes, edges } = useSignalStore.getState()
-measureSoon(nodes, edges)
+const { nodes, edges, complexityLevel } = useSignalStore.getState()
+if (atLeast(complexityLevel, SIGNAL_LEVEL)) measureSoon(nodes, edges)

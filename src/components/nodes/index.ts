@@ -1,5 +1,9 @@
+import { createElement } from 'react'
 import type { NodeTypes } from '@xyflow/react'
 import type { TypeKey } from '../../data/nodeRegistry'
+import { SIGNAL_LEVEL, atLeast } from '../../data/levels'
+import { useSignalStore } from '../../store/signalStore'
+import type { CardProps } from './cardProps'
 import { SoundSourceNode }    from './SoundSourceNode'
 import { MicNode }            from './MicNode'
 import { LineSourceNode }     from './LineSourceNode'
@@ -27,24 +31,38 @@ import { AdcDacNode }         from './AdcDacNode'
 import { GeneratorNode }      from './GeneratorNode'
 import { RecorderNode }       from './RecorderNode'
 import { DawNode, InterfaceNode } from './InterfaceNode'
+import { BeginnerDevice, BeginnerInput, BeginnerInterface, BeginnerOutput, MixerNode } from './BeginnerFaces'
+
+type Card = NodeTypes[string]
 
 /**
- * What each type is drawn as on the canvas (React Flow's `nodeTypes`). Defined once, outside any
- * component, so React Flow never re-registers them.
+ * Drawn as `beginner` at Beginner — its face there, where no signal is worked out (D20) —, as
+ * `card` at the harder levels.
+ */
+function atBeginner(beginner: Card, card: Card): Card {
+  return function ByLevel(props: CardProps) {
+    const simple = useSignalStore((s) => !atLeast(s.complexityLevel, SIGNAL_LEVEL))
+    return createElement(simple ? beginner : card, props)
+  }
+}
+
+/**
+ * What each type is drawn as on the canvas (React Flow's `nodeTypes`) — at Beginner its face there
+ * (BeginnerFaces.tsx). Defined once, outside any component, so React Flow never re-registers them.
  */
 export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
-  vocal:             SoundSourceNode,
-  'drum-kit':        SoundSourceNode,
-  acoustic:          SoundSourceNode,
-  mic:               MicNode,
-  keyboard:          LineSourceNode,
-  pc:                InstrumentNode,
-  instrument:        InstrumentNode,
+  vocal:             atBeginner(BeginnerInput, SoundSourceNode),
+  'drum-kit':        atBeginner(BeginnerInput, SoundSourceNode),
+  acoustic:          atBeginner(BeginnerInput, SoundSourceNode),
+  mic:               atBeginner(BeginnerInput, MicNode),
+  keyboard:          atBeginner(BeginnerInput, LineSourceNode),
+  pc:                atBeginner(BeginnerInput, InstrumentNode),
+  instrument:        atBeginner(BeginnerInput, InstrumentNode),
   generator:         GeneratorNode,
   'di-box':          DIBoxNode,
-  'guitar-amp':      GuitarAmpNode,
+  'guitar-amp':      atBeginner(BeginnerInput, GuitarAmpNode),
   gain:              GainNode,
-  amp:               AmpNode,
+  amp:               atBeginner(BeginnerDevice, AmpNode),
   fader:             FaderNode,
   'noise-gate':      NoiseGateNode,
   limiter:           LimiterNode,
@@ -62,14 +80,17 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   relay:             RelayNode,
   pan:               PanNode,
   'graphic-eq':      GraphicEQNode,
-  speaker:           SpeakerNode,
-  'active-speaker':  ActiveSpeakerNode,
-  'studio-monitor':  ActiveSpeakerNode,
-  headphones:        ActiveSpeakerNode,
-  recorder:          RecorderNode,
-  broadcast:         RecorderNode,
-  interface:         InterfaceNode,
-  daw:               DawNode,
+  speaker:           atBeginner(BeginnerOutput, SpeakerNode),
+  'active-speaker':  atBeginner(BeginnerOutput, ActiveSpeakerNode),
+  'studio-monitor':  atBeginner(BeginnerOutput, ActiveSpeakerNode),
+  headphones:        atBeginner(BeginnerOutput, ActiveSpeakerNode),
+  recorder:          atBeginner(BeginnerOutput, RecorderNode),
+  broadcast:         atBeginner(BeginnerOutput, RecorderNode),
+  interface:         atBeginner(BeginnerInterface, InterfaceNode),
+  daw:               atBeginner(BeginnerDevice, DawNode),
   adc:               AdcDacNode,
   dac:               AdcDacNode,
+  // Beginner's devices: the same at any level
+  mixer:             MixerNode,
+  'stage-box':       BeginnerDevice,
 }

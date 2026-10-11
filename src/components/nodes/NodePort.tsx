@@ -5,10 +5,13 @@ import { X } from 'lucide-react'
 import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
-import { graphSignal, levelOf, outDomainOf, peakOf } from '../../signal/engine'
+import { levelOf, outDomainOf, peakOf } from '../../signal/engine'
+import { signalIn } from '../../hooks/useGraphSignal'
+import { SIGNAL_LEVEL, atLeast } from '../../data/levels'
 import { graphOf, outputKey } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../graph/connectionRules'
+import { outputKind } from '../../graph/queries'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
@@ -34,7 +37,8 @@ interface NodePortProps {
 
 /**
  * One input or output port on a node card.
- * - The ring colour is the health of the signal on this port (grey when unconnected).
+ * - The ring colour is the health of the signal on this port (grey when unconnected; at Beginner
+ *   the wires' one colour when plugged — D20).
  * - While a wire is being drawn, free inputs that can take it pulse in the accent colour.
  * - Hovering a connected input turns it into a × — click it to unplug the wire (not while drawing one).
  *   A bus input holding several wires opens a list instead, so you pick which wire to unplug.
@@ -54,7 +58,9 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   const ringColor = useSignalStore((s) => {
     const plugged = wiresOn(s, nodeId, portId, type)
     if (plugged.length === 0) return 'var(--lsc-border)'
-    const { wires, stages } = graphSignal(s.nodes, s.edges, s.measured)
+    // Beginner judges no signal (D20): a plugged port is the wires' one colour
+    if (!atLeast(s.complexityLevel, SIGNAL_LEVEL)) return 'var(--lsc-wire-neutral)'
+    const { wires, stages } = signalIn(s)
     // An input holding several wires shows the health of their sum (clipping from the peaks)
     const signals = type === 'source'
       ? [wires.get(outputKey(nodeId, portId))]
@@ -77,7 +83,10 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   const showUnplug = canUnplug && (hovered || menuAt !== null)
   // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
   const isSend     = type === 'source' && portId === MATRIX_PORT
-  const sideKind   = useSignalStore((s) => type === 'source' ? graphSignal(s.nodes, s.edges, s.measured).wires.get(outputKey(nodeId, portId))?.kind : undefined)
+  // (At Beginner, where no signal is worked out, what the wiring makes of the output)
+  const sideKind   = useSignalStore((s) => type !== 'source' ? undefined
+    : atLeast(s.complexityLevel, SIGNAL_LEVEL) ? signalIn(s).wires.get(outputKey(nodeId, portId))?.kind
+    : outputKind(nodeId, portId, s))
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + row * PORT_GAP
   // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the

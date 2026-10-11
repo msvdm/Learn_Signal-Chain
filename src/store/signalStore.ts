@@ -100,7 +100,7 @@ function getInitialCanvas() {
   return { nodes: [], edges: [], chainName: '', complexityLevel: getInitialComplexityLevel() }
 }
 
-interface SignalChainStore {
+export interface SignalChainStore {
   language: Lang
   theme: Theme
   snapToGrid: boolean

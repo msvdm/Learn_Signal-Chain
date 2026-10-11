@@ -16,6 +16,8 @@ export interface ChainEdgeData extends Record<string, unknown> {
   hum?: number
   /** The USB wire between an Audio Interface and a DAW: the sound goes both ways — no flow, a ⇄ halfway */
   twoWay?: boolean
+  /** No flow: at Beginner its sound reaches no end point that plays it (D20) — a plain line */
+  still?: boolean
 }
 
 /** The point halfway along a route of straight runs. */
@@ -50,12 +52,11 @@ export function ChainEdge({
   // The dash period stays a divisor of the 24px flow animation, so it loops smoothly.
   const width = Number(style?.strokeWidth ?? 3)
   const thick = d.overview ?? false
-  const dash  = thick ? { strokeDasharray: '16 8' } : {}
+  // The flow shows which way the sound goes: none on a two-way wire, nor on a still one (solid)
+  const flow  = routingWarn || d.twoWay || d.still ? undefined : 'signal-line-animated'
+  const dash  = thick && !d.still ? { strokeDasharray: '16 8' } : {}
   // Round dots, 8px apart (12px zoomed out): periods that divide the 24px flow animation
   const dots  = { strokeDasharray: thick ? '0 12' : '0 8', strokeLinecap: 'round' as const, strokeWidth: width * 1.6 }
-
-  // The flow shows which way the sound goes: none on a two-way wire
-  const flow = routingWarn || d.twoWay ? undefined : 'signal-line-animated'
   const mid  = d.twoWay ? halfway(orthogonalRoute(points)) : null
 
   const edgeStyle = routingWarn

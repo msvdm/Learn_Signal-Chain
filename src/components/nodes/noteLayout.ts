@@ -23,10 +23,10 @@ export function noteHeight(box: { w: number }, lines: number): number {
 
 /**
  * How many lines a note's text takes under a face this wide (broken at spaces, as the page breaks
- * it); `iconEm`: a picture at its start. Its words and the font decide it, in every language.
+ * it); `iconEm`: a picture at its start; `size`: its font size, when not the usual (noteSize). Its
+ * words and the font decide it, in every language.
  */
-export function noteLines(text: string, box: { w: number }, iconEm = 0): number {
-  const size   = noteSize(box)
+export function noteLines(text: string, box: { w: number }, iconEm = 0, size = noteSize(box)): number {
   const family = cssVar('--lsc-font-sans')
   const width  = (s: string) => textWidth(s, family, 700) * size
   const room   = box.w * SAFETY

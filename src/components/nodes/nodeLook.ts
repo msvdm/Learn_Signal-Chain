@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
-import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, LaptopIcon, DawIcon } from './icons'
+import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -90,6 +90,9 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'matrix-bus':      { icon: Merge,             group: 'routing' },
   'pfl-bus':         { icon: Ear,               group: 'routing' },
   // Record and play back: the box between the desk and the computer, and the computer's recording program
+  // Beginner's devices (D20): on the stage, the desk, then the computer's way in
+  'stage-box':       { icon: StageBoxIcon,      group: 'routing' },
+  mixer:             { icon: MixerIcon,         group: 'routing' },
   interface:         { icon: Usb,               group: 'routing' },
   daw:               { icon: DawIcon,           group: 'routing' },
   // Output

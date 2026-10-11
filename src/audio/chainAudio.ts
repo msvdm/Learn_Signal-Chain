@@ -248,6 +248,9 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     // Their paths do an ADC's and a DAC's job, a Recorder's, a source's (NodeTypeDef `routes`): nothing reaches here
     interface: (_, x) => x,
     daw: (_, x) => x,
+    // Beginner's devices (no render runs there, D20): what arrives, added up, as it is
+    mixer: (_, x) => x,
+    'stage-box': (_, x) => x,
     hpf: ({ node }, x) => filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }]),
     eq: ({ node }, x) => filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
       type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',

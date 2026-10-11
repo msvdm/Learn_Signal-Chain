@@ -77,3 +77,27 @@ describe('the PFL Bus: for listening only', () => {
     expect(takes('pfl', 'fad')).toBe(true)
   })
 })
+
+describe('Beginner\'s devices (D20)', () => {
+  const desk = [...nodes, node('mix', 'mixer'), node('stage', 'stage-box'), node('amp', 'amp'), node('spk', 'speaker')]
+  const at = (id: string) => desk.find((n) => n.id === id)!
+  const into = (from: string, to: string) => {
+    const [nodeId, handleId = 'out'] = from.split(':')
+    const source = { nodeId, handleId }
+    return nodeAcceptsWire(at(to), source, [], desk) && portAcceptsWire(at(to), 'in', [], source)
+  }
+
+  it('a Stage Box\'s snake goes only into a Mixer; it takes microphones and lines', () => {
+    expect(into('stage', 'mix')).toBe(true)
+    for (const to of ['mon', 'rec', 'amp', 'box', 'bus']) expect(into('stage', to)).toBe(false)
+    for (const from of ['mic', 'keys', 'gtr']) expect(into(from, 'stage')).toBe(true)
+  })
+
+  it('a Mixer\'s Main or Monitor goes anywhere — into a DAW too (a USB wire); an Amplifier only into a passive speaker', () => {
+    for (const port of ['main', 'monitor']) {
+      for (const to of ['daw', 'box', 'rec', 'mon', 'amp']) expect(into(`mix:${port}`, to)).toBe(true)
+    }
+    expect(into('amp', 'spk')).toBe(true)
+    expect(into('amp', 'mix')).toBe(false)
+  })
+})

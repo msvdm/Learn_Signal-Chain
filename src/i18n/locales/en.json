@@ -344,6 +344,17 @@
       "dac": "numbers → sound"
     }
   },
+  "beginner": {
+    "sound": "Sound",
+    "recording": "Recording",
+    "onAir": "On air",
+    "noSound": "No sound",
+    "notConnected": "No sound — not connected",
+    "noSource": "No sound — nothing that makes sound is connected before it",
+    "inputs": "Inputs",
+    "main": "Main",
+    "monitor": "Monitor"
+  },
   "nodeControls": {
     "turnOff": "On — click to bypass it (the signal then passes through unchanged)",
     "turnOn": "Bypassed — the signal passes through unchanged. Click to turn it back on",
@@ -441,7 +452,9 @@
       "broadcast": "Stream / Broadcast",
       "speaker": "Passive Speaker",
       "interface": "Audio Interface",
-      "daw": "DAW (Recording App)"
+      "daw": "DAW (Recording App)",
+      "mixer": "Mixer",
+      "stage-box": "Stage Box"
     }
   },
   "theory": {
@@ -659,10 +672,22 @@
       "what": "A DAW (Digital Audio Workstation) is the recording program on a computer. One USB wire links it to the audio interface: it records what the interface sends, and plays a song of its own back along the same wire.",
       "why": "Recording lets you listen back, fix and mix later. The DAW never sits inside your desk's chain: the sound goes in through the interface to be recorded, and comes back out through the interface to be heard.",
       "tip": "Its meter reads in dBFS, the computer's scale: 0 dBFS is the very top, where the sound clips. About −18 dBFS is healthy — the desk's normal level (0 dBu), with room left for the loud moments."
+    },
+    "mixer": {
+      "what": "The mixing desk — the heart of the sound system. Every microphone, instrument and player plugs into it, and it blends them into one sound: the mix.",
+      "why": "Each sound gets a channel of its own, with its own knobs and fader, so it can be made louder or quieter than the rest. The mix leaves on Main — for the speakers facing the audience — and on Monitor — for the speakers facing the band, so the players can hear themselves.",
+      "tip": "Main goes to active speakers, or through an Amplifier to passive ones. Wire it into a DAW and the computer records the mix — and what the computer plays comes back into the Mixer."
+    },
+    "stage-box": {
+      "what": "A box of sockets on the stage. The microphones and instruments plug into it, close to where they stand.",
+      "why": "Instead of a dozen long cables running from the stage to the Mixer at the back of the room, one thick cable — the snake — carries them all.",
+      "tip": "Its snake goes only into a Mixer. Everything plugged into the Stage Box reaches the Mixer as if it were plugged in there."
     }
   },
   "levelNames": {
     "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" },
-    "advanced": { "recorder": "Recorder Track" }
+    "advanced": {
+      "recorder": "Recorder Track"
+    }
   }
 }

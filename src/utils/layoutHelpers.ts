@@ -66,12 +66,14 @@ export function cardHeight(typeKey: TypeKey, ports: { inputs: NodePort[]; output
  * Size of a node that React Flow has not measured yet (a node about to be dropped): its minimum
  * size. Nodes size themselves to their content, so once any node of a type has been measured its
  * real size is remembered and used instead — per shape: the Compressor, the Equalizer and the HPF
- * are bare controls below Advanced, cards above (isBareAt).
+ * are bare controls below Advanced, cards above (isBareAt); Beginner has faces of its own (D20).
  */
 const measuredSizeByType = new Map<string, Size>()
 
 const shapeKey = (typeKey: string, level?: ComplexityLevel, overview?: boolean) =>
-  (level && isTypeKey(typeKey) && isBareAt(typeKey, level, overview) ? `${typeKey}:bare` : typeKey)
+  // Beginner draws its own faces (D20): sizes of their own
+  (level === 'beginner' ? `${typeKey}:beginner`
+    : level && isTypeKey(typeKey) && isBareAt(typeKey, level, overview) ? `${typeKey}:bare` : typeKey)
 
 export function recordMeasuredSize(typeKey: string, w: number, h: number, level?: ComplexityLevel, overview?: boolean) {
   if (w > 0 && h > 0) measuredSizeByType.set(shapeKey(typeKey, level, overview), { w, h })

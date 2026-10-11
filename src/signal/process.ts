@@ -226,6 +226,8 @@ export const GUITAR_AMP_NOISE_DBU = -76
 const PASSIVE = new Set<TypeKey>([
   'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator', 'daw',
   'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker', 'recorder', 'broadcast',
+  // Beginner's devices: no engine runs there (D20) — they only add up what arrives
+  'mixer', 'stage-box',
 ])
 
 /** Each powered card's output noise (the Gain and the converters are worked out below). */
@@ -458,6 +460,9 @@ const PROCESS: Record<TypeKey, Process> = {
   interface:        (_, input, ctx) => pass(input, ctx),
   // What it plays back, a song (−18 dBFS); what it records is a Recorder's job (its route)
   daw:              (node) => source(node, 'daw'),
+  // Beginner's devices (D20: no engine runs there): every wire in added up, passed on as it is
+  mixer:            summing((_, input, ctx) => pass(input, ctx)),
+  'stage-box':      summing((_, input, ctx) => pass(input, ctx)),
 }
 
 /**
