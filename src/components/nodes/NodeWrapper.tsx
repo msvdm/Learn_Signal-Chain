@@ -50,7 +50,7 @@ interface NodeWrapperProps {
    * meter bar alone, no numbers (Keyboard, PC)
    */
   overviewBare?: boolean
-  /** Overview: false = its name alone, no level (the HPF: the level after it shows on the next card) */
+  /** Overview: false = its name alone, no level (the HPF, the converters: the level after it shows on the next card) */
   showLevel?: boolean
 }
 

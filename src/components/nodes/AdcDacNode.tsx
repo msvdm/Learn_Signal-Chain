@@ -13,6 +13,7 @@ import { LEVEL_SAMPLE, levelParts } from '../../utils/readout'
 /** A level's number as the meters print it ("+0.0", "-18.0", "-∞"); the unit is written beside it. */
 const levelText = (db: number) => levelParts(db, 'analog')[0]
 
+/** A converter: what goes in and what comes out, in their units. Zoomed out its name alone (no level). */
 export function AdcDacNode({ id, type }: CardProps) {
   const levels              = useStereoLevels(id)
   const { input, output }   = levels
@@ -37,6 +38,7 @@ export function AdcDacNode({ id, type }: CardProps) {
       typeKey={typeKey}
       label={label}
       align="center"
+      showLevel={false}
     >
       {/* Conversion label — the text as big as the card leaves room for */}
       <div
