@@ -436,10 +436,11 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { volumeDb: 0 },
   },
   headphones: {
-    // Works as an Active Speaker does (amplifier built in): there to show where a listener plugs in
+    // There to show where a listener plugs in: no knob of their own — a Gain right before them sets
+    // how loud (the desk's Phones knob); fed by anything else they are silent
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
-    defaultParams: { volumeDb: 0 },
+    defaultParams: {},
   },
   recorder: {
     // Records what reaches it, as it is: a stereo wire in two channels, a mono one in one

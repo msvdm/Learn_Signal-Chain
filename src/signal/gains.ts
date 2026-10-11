@@ -92,7 +92,8 @@ const GAINS = {
   speaker:          (node) => param(node, 'outputTrimDb'),
   'active-speaker': (node) => param(node, 'volumeDb'),
   'studio-monitor': (node) => param(node, 'volumeDb'),
-  headphones:       (node) => param(node, 'volumeDb'),
+  // No knob: the Gain right before them sets their level (signal/chain.ts: needs-gain)
+  headphones:       () => 0,
   // What it plays: the guitar turned up by its Volume (0 … 11)
   'guitar-amp':     (node) => guitarAmpGainDb(param(node, 'volume')),
   // Its XLR Out: down to mic level (its Direct Out passes on what arrives)

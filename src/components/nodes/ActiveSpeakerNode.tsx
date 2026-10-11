@@ -1,3 +1,4 @@
+import { HeadphoneOff } from 'lucide-react'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FaceCard } from './FaceCard'
@@ -23,7 +24,9 @@ function BlownSpeakerIcon() {
 
 /**
  * Active speaker (amplifier built in), and the Studio Monitor and Headphones, which work the same: a card with a big icon
- * and its Volume knob, at every zoom (its meter in dB SPL — D13). Fed from an Amplifier it blows (condition
+ * and its Volume knob, at every zoom (its meter in dB SPL — D13) — the Headphones have no knob: a Gain
+ * right before them sets their level, and with none they are silent (crossed out, a note says why:
+ * 'needsGain'). Fed from an Amplifier it blows (condition
  * 'blown'): the icon cracks and smokes (Headphones: turn red), and a note says why; fed a digital
  * signal, a note says so (conditions.tsx). A signal clipped on its way here says "Bad sound"
  * (`distorted`: its meter may be green); a hum from a DI Box ground loop shows under it.
@@ -52,8 +55,18 @@ export function ActiveSpeakerNode({ id, type }: CardProps) {
             />
           )
         }
-        // The icon and the Volume knob, side by side, in the height they are given
-        const face = (h: number) => <VolumeFace nodeId={id} typeKey={typeKey} icon={<Icon />} box={{ w: box.w, h }} />
+        if (condition === 'needsGain') {
+          return (
+            <ConditionNote
+              condition={condition} typeKey={typeKey} box={box}
+              face={(h) => <OverviewIcon icon={<HeadphoneOff />} box={{ w: box.w, h }} color="var(--signal-hot-text)" />}
+            />
+          )
+        }
+        // The icon and the Volume knob, side by side, in the height they are given (the Headphones: the icon alone)
+        const face = (h: number) => typeKey === 'headphones'
+          ? <OverviewIcon icon={<Icon />} box={{ w: box.w, h }} />
+          : <VolumeFace nodeId={id} typeKey={typeKey} icon={<Icon />} box={{ w: box.w, h }} />
         if (condition) return <ConditionNote condition={condition} typeKey={typeKey} box={box} face={face} />
         // Something before it clips: its meter may be green, but you hear it
         if (distorted) {

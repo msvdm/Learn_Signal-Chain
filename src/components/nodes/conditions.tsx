@@ -38,6 +38,7 @@ const CONDITIONS: Record<StageCondition, ConditionText> = {
   adcExpectsAnalog:  { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.adcExpectsAnalog },
   dacExpectsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.dacExpectsDigital },
   needsAmp:          { look: 'note',  tone: 'hot',      text: (t) => t.nodes.speaker.needsAmp },
+  needsGain:         { look: 'note',  tone: 'hot',      text: (t) => t.nodes.headphones.needsGain },
   blown:             { look: 'note',  tone: 'clipping', text: (t, typeKey) => t.nodes[typeKey === 'headphones' ? 'headphones' : 'active-speaker'].blown },
   needsDi:           { look: 'note',  tone: 'hot',      text: (t) => t.nodes.instrument.needsDi, icon: (size) => <DullToneIcon size={size} /> },
   noPhantom:         { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },

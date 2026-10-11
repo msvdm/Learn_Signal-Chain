@@ -24,6 +24,7 @@ export type StageCondition =
   | 'adcExpectsAnalog'  // an ADC fed a digital signal
   | 'dacExpectsDigital' // a DAC fed an analog signal
   | 'needsAmp'          // a passive speaker with no amplifier before it: silent
+  | 'needsGain'         // headphones with no Gain right before them: silent
   | 'blown'             // an active speaker fed from an amplifier: far too strong, it breaks
   | 'needsDi'           // an instrument going into a desk input without a DI Box: levels fine, high notes lost
   | 'noPhantom'         // a condenser microphone with no 48V phantom power: silent
@@ -36,6 +37,7 @@ export const SILENCES: Record<StageCondition, boolean> = {
   adcExpectsAnalog:  true,
   dacExpectsDigital: true,
   needsAmp:          true,
+  needsGain:         true,
   blown:             false,
   needsDi:           false,
   noPhantom:         true,

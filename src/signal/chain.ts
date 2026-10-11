@@ -83,6 +83,7 @@ export type StageRole =
 /** How a card handles its signal — from the wiring, not the levels. */
 type CardMode =
   | 'needs-amp' // a passive speaker with no amplifier before it: silent
+  | 'needs-gain' // headphones with no Gain right before them: silent
   | 'pan'       // Pan (a mono wire in) or Balance (a stereo wire in): sets L against R
   | 'source'    // makes a signal (or a sound in the air, for a microphone)
   | 'linked'    // stereo dynamics: the louder side drives one change for both sides
@@ -193,9 +194,12 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
     // A route making its own sound is a source (a DAW playing back); one that takes its signal in is not (the DAW recording)
     const source = route ? route.from === null : def.category === 'source'
     const job    = route ? { ...node, typeKey: route.as } : node
+    const amped  = POWERED_SPEAKERS.has(node.typeKey) && fedBy(node.id, 'amp', graph)
     const mode: CardMode =
       // A passive speaker needs a power amplifier somewhere before it
       node.typeKey === 'speaker' && fed && !fedBy(node.id, 'amp', graph) ? 'needs-amp'
+      // Headphones need a Gain right before them: their level knob (after an Amplifier they blow instead)
+      : node.typeKey === 'headphones' && fed && !amped && !incoming.some((e) => graph.node(e.source)?.typeKey === 'gain') ? 'needs-gain'
       : node.typeKey === 'pan' ? 'pan'
       : source ? 'source'
       : isStereo && isDynamics(job.typeKey) && !node.bypassed ? 'linked'
@@ -218,7 +222,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       used:        used.map((e) => ({ key: keyOf(e), from: sentBy.get(keyOf(e)) ?? e.source, sendDb: sendDb(e) })),
       domainFrom:  relay ? (driving ? [keyOf(driving)] : []) : incoming.map(keyOf),
       plays:       source,
-      amped:       POWERED_SPEAKERS.has(node.typeKey) && fedBy(node.id, 'amp', graph),
+      amped,
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
       groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),
@@ -297,7 +301,8 @@ interface CardRun {
 
 /** How each mode works a card's levels out. */
 const MODES: Record<CardMode, (at: CardAt) => CardRun> = {
-  'needs-amp': ({ domain, arriving }) => ({ side: { domain, condition: 'needsAmp' }, in: mono(arriving(null)), out: SILENT_WIRE }),
+  'needs-amp':  ({ domain, arriving }) => ({ side: { domain, condition: 'needsAmp' }, in: mono(arriving(null)), out: SILENT_WIRE }),
+  'needs-gain': ({ domain, arriving }) => ({ side: { domain, condition: 'needsGain' }, in: mono(arriving(null)), out: SILENT_WIRE }),
 
   // Mono wire in → Pan knob spreads it over L / R. Stereo wire in → Balance knob. Each side is
   // turned down as a whole: its peaks, average and noise alike.

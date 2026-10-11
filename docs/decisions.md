@@ -96,5 +96,15 @@ the descriptions). Each is what the user asked for; change one only when they as
   card shows it). Below Advanced it is one button, "HPF" under the high-pass sign (a slope into a
   flat line, as on a desk), lit or greyed out (its bypass), at a fixed 80 Hz; Advanced keeps the
   cutoff to choose zoomed in, and zoomed out shows that same button (its click its On / Off).
+- **A wire never moves a card** (2026-10-11): drawing a wire leaves both cards where they are (it
+  used to push the card it feeds, and its chain, right of its source — a monitor under its channel
+  or a loopback into the desk was thrown across the canvas). A card dropped onto a wire still makes
+  room for itself.
+- **The converters zoomed out are their name alone** (2026-10-11): no level block, as the HPF.
+- **The Recorder at Advanced is the Recorder Track** (2026-10-11): it follows its source — a stereo
+  wire in two channels, a mono one in one — with no Mono / Stereo switch (D23's switch dropped).
+- **Headphones have no knob** (2026-10-11): a Gain right before them sets their level (the desk's
+  Phones knob); fed by anything else they are silent, crossed out, and say why — as a passive speaker
+  without an amplifier. After an Amplifier they still blow.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

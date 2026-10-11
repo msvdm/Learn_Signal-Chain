@@ -558,17 +558,19 @@ describe('a condenser microphone needs 48V phantom power; a dynamic one does not
   })
 })
 
-describe('speakers: a passive one needs an amplifier, an active one (or headphones) is blown by it', () => {
+describe('speakers: a passive one needs an amplifier, an active one (or headphones) is blown by it; headphones need a Gain', () => {
   expectCards(signalOf([
     line('line'),
     card('passive', 'speaker'),
     card('amp', 'amp', { gainDb: -6 }),
     card('passive2', 'speaker'),
     card('active', 'active-speaker'),
-    card('phones', 'headphones', { volumeDb: -6 }),
+    card('knob', 'gain', { gainDb: -6 }),
+    card('phones', 'headphones'),
     card('phones2', 'headphones'),
+    card('phones3', 'headphones'),
   ], [
-    wire('line', 'passive'), wire('line', 'phones'),
+    wire('line', 'passive'), wire('line', 'knob'), wire('knob', 'phones'), wire('line', 'phones3'),
     // The app draws an Amplifier only into a passive speaker (connectionRules); the other two wires
     // come from one taking a bus's L / R over, or from an older file
     wire('line', 'amp'), wire('amp', 'passive2'), wire('amp', 'active'), wire('amp', 'phones2'),
@@ -579,9 +581,12 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
     passive2: { in: -16, out: -16, health: 'good' },
     // Speaker level, 40 dB over the line level it expects
     active:   { in: -16, out: 24, health: 'clipping', condition: 'blown' },
-    // Headphones work as an Active Speaker: their Volume, and blown by an amplifier
-    phones:   { in: -10, out: -16, health: 'good' },
+    knob:     { in: -10, out: -16, health: 'good' },
+    // Headphones have no knob: the Gain right before them sets their level; with none they are
+    // silent (the user's call, 2026-10-11); an amplifier blows them, Gain or not
+    phones:   { in: -16, out: -16, health: 'good' },
     phones2:  { in: -16, out: 24, health: 'clipping', condition: 'blown' },
+    phones3:  { in: -10, out: S, health: 'too-quiet', condition: 'needsGain' },
   })
 })
 
@@ -676,10 +681,11 @@ describe('a clip before a speaker is heard there, however green its meter (disto
     card('spk', 'active-speaker'),
     line('clean'),
     card('bus', 'master-bus'),
+    card('knob', 'gain'),
     card('phones', 'headphones'),
   ], [
     wire('line', 'hot'), wire('hot', 'fader'), wire('fader', 'sw'), wire('sw', 'spk'),
-    wire('fader', 'bus'), wire('clean', 'bus'), wire('bus:out-l', 'phones'),
+    wire('fader', 'bus'), wire('clean', 'bus'), wire('bus:out-l', 'knob'), wire('knob', 'phones'),
   ])
   const result = chain(true)
   const distorted = (id: string, r = result) => r.stages[id].distorted ?? false

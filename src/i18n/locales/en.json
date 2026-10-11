@@ -212,7 +212,7 @@
     },
     "headphones": {
       "label": "Headphones",
-      "volume": "Volume",
+      "needsGain": "No sound — headphones need a Gain knob right before them",
       "blown": "Blown! An amplifier's output is far too strong for them."
     },
     "di-box": {
@@ -557,7 +557,7 @@
       "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. An Amplifier's output plugs only into a passive speaker: that signal is far too strong for the line input of a speaker with its own amp inside — it would blow. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
     },
     "headphones": {
-      "what": "Headphones let one person listen to the chain: the engineer checking a channel, or a musician hearing their monitor mix. Here they work like an Active Speaker — a line-level signal in, a Volume knob for how loud.",
+      "what": "Headphones let one person listen to the chain: the engineer checking a channel, or a musician hearing their monitor mix. They have no knob of their own: a Gain right before them sets how loud, like the Phones knob on a desk. Without one they stay silent.",
       "why": "In a studio or on stage not everyone can listen on the speakers. Headphones put the sound right at one person's ears, without the room around it.",
       "tip": "Like an Active Speaker, they never go after an Amplifier: a power amp's signal is only for a passive speaker and far too strong for them — they would blow. If a card before them clips, they say “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
     },

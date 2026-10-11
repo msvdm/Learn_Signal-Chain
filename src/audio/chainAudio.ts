@@ -276,7 +276,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     let inSig = silence(1)
     let outSig = silence(1)
 
-    if (card.mode === 'needs-amp') {
+    if (card.mode === 'needs-amp' || card.mode === 'needs-gain') {
       inSig = arriving(card, 1)
     } else if (card.mode === 'pan') {
       // Mono in → the Pan knob spreads it over L / R (equal power); stereo in → the Balance knob
