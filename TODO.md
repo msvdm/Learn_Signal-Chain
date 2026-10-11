@@ -68,8 +68,8 @@ hand-off between sessions: tick the boxes, and write the stage's *Hand-off* line
 | `decoder` (new) | — | — | ✓ | stereo **digital** source, music loop |
 | `mixer` (new) | ✓ | — | — | all-in-one desk, visual only |
 | `stage-box` (new) | ✓ | — | — | many in, one snake out → mixer only |
-| `interface` (new) | ✓ | ✓ rec/playback | ✓ | see Stage 4 / 7 |
-| `daw` (new) | ✓ | ✓ rec/playback | ✓ | PC icon, dBFS meter |
+| `interface` (new) | ✓ | ✓ rec/playback | — | see Stage 4; A has ADC / DAC, Coder / Decoder instead (2026-10-11) |
+| `daw` (new) | ✓ | ✓ rec/playback | ✓ | PC icon, dBFS meter; one two-way USB wire to the Interface, no output at I (2026-10-11) |
 | `amp` | ✓ icon | ✓ | ✓ | → passive speaker only |
 | `phantom` (new, 48V) | — | ✓ | ✓ | bare on/off control |
 | `gain`, `hpf`, `pad`, `eq` | — | ✓ | ✓ | EQ: 3 knobs, no graph at I |
@@ -82,7 +82,7 @@ hand-off between sessions: tick the boxes, and write the stage's *Hand-off* line
 | `speaker` (passive) | ✓ | ✓ | ✓ | silent without an amp before it |
 | `studio-monitor` (new) | ✓ | ✓ | — | works like an active speaker |
 | `stream-broadcast` (new) | ✓ | ✓ | ✓ | at A: fed only by a Coder |
-| `recorder` (new) | ✓ | ✓ | ✓ full | A: Mono/Stereo, monitor out, VU or dBFS |
+| `recorder` (new) | ✓ | ✓ | ✓ full | follows its source (mono / stereo); A: "Recorder Track", monitor out, VU or dBFS |
 
 Palette groups: **Beginner** = Inputs · Devices (routing + processing together) · Outputs.
 **Intermediate / Advanced** = today's groups.
@@ -427,8 +427,9 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
 
 - [ ] `decoder`: stereo source whose signal is **digital** from the start (dBFS), music loop. The
   existing rule "analogue and digital chains can't meet in one mix bus" applies to it unchanged.
-- [ ] `recorder` at Advanced: a Mono | Stereo switch (`stereo: 'optional'`) on its input and a
-  **Monitor out** (passes the signal on, for headphones or monitors). Meter: dBFS on a digital
+- [ ] `recorder` at Advanced (named **Recorder Track** since 2026-10-11, `levelNames.advanced`): **no
+  Mono | Stereo switch** — it follows its source (the user's call, 2026-10-11: `stereo: 'follow'`
+  stays) — and a **Monitor out** (passes the signal on, for headphones or monitors). Meter: dBFS on a digital
   chain; on an analogue chain a **VU meter** (average-reading, ~300 ms, 0 VU = +4 dBu, scale −20 …
   +3 VU). A needle face, or the bar with a VU scale — pick the one that fits `SignalMeter`/`meterPaint`
   with less code, and say which at stage end.
@@ -436,10 +437,14 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
   passing the level on. Its only output → `broadcast` only. At Advanced, `broadcast` accepts only a
   `coder`. Fed an **analogue** signal, the Coder says "needs a digital signal — put an A/D converter
   before it" and is silent: the lesson that conversion alone isn't the whole picture.
-- [ ] `interface` / `daw` at Advanced: the cards show their converters (ADC in, DAC out wording), and
-  rule 5 is lifted for the digital side: `daw.out` may feed digital processing cards (EQ,
-  Compressor … → DAC), showing that a DAW *is* a mixer. The analogue/digital bus rule still holds.
-  Studio Monitor is hidden here (Stage 0 table).
+- [ ] `daw` at Advanced (the user's call, 2026-10-11): the **Audio Interface is not in Advanced's
+  palette** — the ADC / DAC and the Coder / Decoder take its place. The DAW has no output at
+  Intermediate (one two-way USB wire to the Interface) and "the ability to connect to a recording
+  track in advanced" (the user's words): ⛔ **ASK** which way (Recorder Track → DAW, or DAW →
+  Recorder Track), and whether its ports may then depend on the level (a decided default says
+  they never do), before building. The old plan (the DAW's output feeding digital processing
+  cards — a DAW *is* a mixer) is part of that question. The analogue/digital bus rule still
+  holds. Studio Monitor is hidden here (Stage 0 table).
 - [ ] Tests: decoder domain, coder condition, recorder meter domain.
 - [ ] Locales, icons, checks, commit. *Hand-off:* …
 

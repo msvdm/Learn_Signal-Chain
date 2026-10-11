@@ -648,6 +648,7 @@
     }
   },
   "levelNames": {
-    "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" }
+    "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" },
+    "advanced": { "recorder": "Recorder Track" }
   }
 }

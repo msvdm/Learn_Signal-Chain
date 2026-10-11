@@ -464,7 +464,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT }],
     outputs: [{ id: TO_PC_PORT }, ...SIDES],
     routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out-l', 'out-r'], as: 'dac' }],
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    // Advanced has its parts instead: the converters, the Coder and the Decoder
+    levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
   daw: {
