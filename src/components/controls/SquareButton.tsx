@@ -12,13 +12,16 @@ const TONES = {
   clipping: { rim: 'var(--signal-clipping)', fill: 'var(--signal-clipping-bg)', word: 'var(--signal-clipping-text)' },
   // Violet, as the Pan's knob (deeper on the light theme: index.css)
   accent:   { rim: 'var(--lsc-accent-lit)',  fill: 'var(--lsc-accent-lit-bg)',  word: 'var(--lsc-accent-text)' },
+  // Solid bright yellow: the PFL button
+  pfl:      { rim: 'var(--lsc-pfl)',         fill: 'var(--lsc-pfl-bg)',         word: 'var(--lsc-pfl-text)' },
 } as const
 
 export type ButtonTone = keyof typeof TONES
 
 /**
  * The big square On / Off button of a free-standing switch: its word, lit while on — green for the
- * On Off Switch, the hot colour for the Pad's −20 dB, red for 48V, violet for the HPF.
+ * On Off Switch (solid yellow as a PFL button), the hot colour for the Pad's −20 dB, red for 48V,
+ * violet for the HPF.
  */
 export function SquareButton({ on, tone, size, fontSize, onClick, children }: {
   on: boolean

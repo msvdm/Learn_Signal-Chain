@@ -194,6 +194,9 @@
     "main-fader": {
       "label": "Main Fader"
     },
+    "pfl": {
+      "label": "PFL"
+    },
     "master-bus": {
       "label": "Master Bus"
     },
@@ -516,6 +519,11 @@
       "what": "A fader wired straight after a bus becomes its Main Fader. It controls the whole mix with one handle — left and right move together — and the bus's L and R outputs move onto it, so the speakers now hang off the fader. Its Matrix send moves too, so Matrix Buses always get the mix after this fader.",
       "why": "This is the last level control before the speakers: it turns the whole mix up or down without changing the balance you built on the channels. One handle means left and right can never drift apart.",
       "tip": "Take a second wire from the bus's Mix output: it does not change when you move this fader, because it leaves before the fader. That is where a pre-fade listen (PFL) path starts. Effects such as a limiter may sit between the bus and this fader — it stays the Main Fader."
+    },
+    "pfl": {
+      "what": "PFL (Pre-Fade Listen) is a channel's listen button. This On Off Switch became one because it feeds the PFL bus: pressed (lit yellow), its channel goes to the headphones.",
+      "why": "With PFL you hear one channel on its own, before its fader — to set its Gain or find a problem — and the mix the audience hears does not change.",
+      "tip": "It works like any On Off Switch: only what it sends into the PFL bus changes. Take its wire from before the channel's Fader, so moving the fader does not change what you hear in the headphones."
     },
     "amp": {
       "what": "A power amplifier takes a line-level signal and boosts it to speaker-driving level — adding significant current, not just voltage. A passive speaker (one without a built-in amp) requires a power amplifier to produce any sound, and that is the only thing its output plugs into: the signal is far too strong for anything else. Its Volume knob only turns down: at 0 dB (fully up) the signal goes on unchanged, which is already plenty for the speaker. Turning it up further would only make a good line-level signal clip. Wire it to the L or R of a bus, its Main Fader or a Graphic EQ (or feed it any stereo wire) and it becomes a two-channel amp: the whole mix comes in on one wire, channel A takes the left side and channel B the right, each with its own Volume knob and its own output, L and R — one per speaker. Fed one channel, it stays a single-channel amp.",

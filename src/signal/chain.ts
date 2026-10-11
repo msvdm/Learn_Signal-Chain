@@ -78,6 +78,7 @@ export type StageRole =
   | 'preamp'     // a Gain after a microphone or a DI Box's XLR Out: lifts it up to line level
   | 'main-fader' // a Fader on a bus's Mix output: controls the whole mix
   | 'balance'    // a Pan fed a stereo wire
+  | 'pfl'        // an On Off Switch wired into a PFL Bus: that channel's PFL button
 // ── What the wiring makes of each card ────────────────────────────────────────
 
 /** How a card handles its signal — from the wiring, not the levels. */
@@ -229,6 +230,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       role: preamp ? 'preamp'
         : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
         : node.typeKey === 'pan' && followKind === 'stereo' ? 'balance'
+        : node.typeKey === 'switch' && graph.from(node.id).some((e) => graph.node(e.target)?.typeKey === 'pfl-bus') ? 'pfl'
         : undefined,
     })
   }

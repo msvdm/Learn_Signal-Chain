@@ -114,5 +114,8 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **The PFL Bus** (2026-10-11): a listening bus (Pre-Fade Listen), at Intermediate and Advanced —
   always stereo, a mono wire on both sides at full level (no Pan); one stereo output, no fader and no
   Main Fader takeover (the Gain before the headphones sets the level); it never feeds a Matrix Bus.
+- **The PFL button** (2026-10-11): an On Off Switch wired into a PFL Bus is that channel's PFL
+  button (role `pfl`: named PFL, its own help text) — "PFL" on it, on or off, lit solid bright yellow;
+  it works as any On Off Switch.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

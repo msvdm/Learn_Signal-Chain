@@ -225,6 +225,10 @@
   --lsc-accent-lit:    var(--lsc-accent);
   --lsc-accent-lit-bg: var(--lsc-accent-bg);
   --lsc-accent-text:   var(--lsc-accent-soft);
+  /* The PFL button, lit: solid bright yellow, a dark word */
+  --lsc-pfl:      #fde047;
+  --lsc-pfl-bg:   #facc15;
+  --lsc-pfl-text: #422006;
   --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
   --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
@@ -302,6 +306,9 @@
   --lsc-accent-lit:    #7d5fc9;
   --lsc-accent-lit-bg: rgba(125,95,201,0.14);
   --lsc-accent-text:   #5b3fa8;
+  --lsc-pfl:      #eab308;
+  --lsc-pfl-bg:   #fde047;
+  --lsc-pfl-text: #713f12;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */

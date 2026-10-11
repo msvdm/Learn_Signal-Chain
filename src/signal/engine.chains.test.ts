@@ -661,15 +661,18 @@ describe('the PFL Bus: stereo on one wire, every channel on both sides, no fader
   const result = signalOf([
     line('line'),
     card('keys', 'keyboard'),
+    card('sw', 'switch'),
     card('pfl', 'pfl-bus'),
     card('fader', 'fader'),
   ], [
-    wire('line', 'pfl'), wire('keys', 'pfl'), wire('pfl', 'fader'),
+    wire('line', 'sw'), wire('sw', 'pfl'), wire('keys', 'pfl'), wire('pfl', 'fader'),
   ])
 
   expectCards(result, {
     line:  { out: -10, health: 'good' },
     keys:  { out: [-10, -10], health: 'good' },
+    // An On Off Switch into it is that channel's PFL button: named so, it works the same
+    sw:    { in: -10, out: -10, health: 'good', role: 'pfl' },
     // The mono line on both sides at full level, each side of the Keyboard on its own: −10 and −10 add up
     pfl:   { in: [-3.98, -3.98], out: [-3.98, -3.98], health: 'good' },
     // A plain fader after it, not its Main Fader
