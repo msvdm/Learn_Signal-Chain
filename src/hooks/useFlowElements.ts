@@ -5,10 +5,12 @@ import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { outputKey } from '../graph/graph'
 import { drawnPorts } from '../graph/queries'
 import { isUsbReturn } from '../graph/usbLink'
-import { healthColor, humStrength } from '../signal/levels'
+import { wireFlows } from '../graph/wireFlow'
+import type { WireFlow } from '../graph/wireFlow'
+import { humStrength } from '../signal/levels'
 import { SOUND_PORT, TO_PC_PORT, portRows } from '../data/nodeRegistry'
 import type { NodePort } from '../data/nodeRegistry'
-import { healthOf, outDomainOf } from '../signal/engine'
+import { healthOf, levelOf, outDomainOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
@@ -19,6 +21,15 @@ import { keepSame } from '../utils/sameShape'
 
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
 const OVERVIEW_WIRE_WIDTH = 8
+
+/** A wire's colour by where its sound goes (D24) */
+const FLOW_COLOR: Record<WireFlow, string> = {
+  main:   'var(--lsc-wire-main)',
+  aux:    'var(--lsc-wire-aux)',
+  matrix: 'var(--lsc-wire-matrix)',
+  pfl:    'var(--lsc-wire-pfl)',
+  record: 'var(--lsc-wire-record)',
+}
 
 /** A card's size as React Flow measured it, and the outputs it had then */
 type MeasuredSize = { width: number; height: number; outputs: NodePort[] }
@@ -39,7 +50,7 @@ function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): 
 
 /**
  * The store's graph as React Flow draws it: nodes (selected, dimmed, with their measured size)
- * and wires (coloured by the level they carry). `keepSizes` takes the sizes React Flow measures.
+ * and wires (coloured by where their sound goes, red where it clips). `keepSizes` takes the sizes React Flow measures.
  */
 export function useFlowElements() {
   const graphNodes       = useSignalStore((s) => s.nodes)
@@ -123,13 +134,18 @@ export function useFlowElements() {
       return wirePassesThroughNode(points, cards, [edge.source, edge.target])
     }
 
+    const flows = wireFlows(graph)
     // A USB wire's way back is not drawn: the USB wire carries both ways (graph/usbLink.ts)
     return keepSame(lastFlowEdges, graphEdges.filter((edge) => !isUsbReturn(edge)).map((edge): Edge => {
       const sourceStage = stages[edge.source]
       const key         = outputKey(edge.source, edge.sourceHandle)
-      // Clipping from the peaks, the rest from the average — as the card it leaves
-      const health      = sourceStage ? healthOf(wires.get(key) ?? sourceStage.out, outDomainOf(sourceStage, edge.sourceHandle)) : null
-      const color       = health ? healthColor(health) : 'var(--lsc-border)'
+      const signal      = sourceStage && (wires.get(key) ?? sourceStage.out)
+      // Its colour is where its sound goes (D24); red where it clips (from the peaks, as the card it
+      // leaves — red is kept for problems); grey while it carries nothing
+      const health      = signal ? healthOf(signal, outDomainOf(sourceStage, edge.sourceHandle)) : null
+      const color       = health === 'clipping' ? 'var(--signal-clipping)'
+        : !signal || !isFinite(levelOf(signal)) ? 'var(--lsc-border)'
+        : FLOW_COLOR[flows.get(edge.id) ?? 'main']
 
       // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine
       const sound          = edge.sourceHandle === SOUND_PORT
@@ -141,9 +157,6 @@ export function useFlowElements() {
         hum: humDb === undefined ? undefined : humStrength(humDb),
         twoWay: edge.sourceHandle === TO_PC_PORT,
       }
-      // A send into a Matrix Bus has its own colour
-      const toMatrix = graphNodes.find((n) => n.id === edge.target)?.typeKey === 'matrix-bus'
-
       return {
         id:           edge.id,
         source:       edge.source,
@@ -153,7 +166,7 @@ export function useFlowElements() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: sound ? 'var(--lsc-fg-muted)' : toMatrix ? 'var(--lsc-matrix-send)' : color,
+          stroke: sound ? 'var(--lsc-fg-muted)' : color,
           strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',

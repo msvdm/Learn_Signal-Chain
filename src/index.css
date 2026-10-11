@@ -231,7 +231,12 @@
   --lsc-pfl-text: #422006;
   --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
-  --lsc-matrix-send: #818cf8; /* wires into a Matrix Bus */
+  /* Wires, by where their sound goes (D24): the Master Bus, an Aux, a Matrix, the PFL, what records or sends it out */
+  --lsc-wire-main:   var(--signal-good);
+  --lsc-wire-aux:    #5b9cf5;
+  --lsc-wire-matrix: #f050d8;
+  --lsc-wire-pfl:    #facc15;
+  --lsc-wire-record: #f4f4f5;
 
   /* Pro tip */
   --lsc-tip:    #facc15;
@@ -311,7 +316,11 @@
   --lsc-pfl-text: #713f12;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
-  --lsc-matrix-send: #8a6fd0; /* wires into a Matrix Bus */
+  --lsc-wire-main:   var(--signal-good);
+  --lsc-wire-aux:    #2f6fd6;
+  --lsc-wire-matrix: #d63bbd;
+  --lsc-wire-pfl:    #d4a106;
+  --lsc-wire-record: #25262a;
 
   /* Pro tip */
   --lsc-tip:    #d89548;

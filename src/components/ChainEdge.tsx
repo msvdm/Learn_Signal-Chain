@@ -59,7 +59,7 @@ export function ChainEdge({
   const mid  = d.twoWay ? halfway(orthogonalRoute(points)) : null
 
   const edgeStyle = routingWarn
-    ? { ...style, stroke: 'var(--signal-hot)', strokeDasharray: thick ? '16 8' : '6 4' }
+    ? { ...style, stroke: 'var(--signal-clipping)', strokeDasharray: thick ? '16 8' : '6 4' }
     : d.sound ? { ...style, ...dots }
     : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
 

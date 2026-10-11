@@ -127,7 +127,7 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
             // Right of the ring, just above the wire leaving it
             position: 'absolute', top: top - 17, right: isSend ? -36 : -24,
             fontSize: 10, fontWeight: 800, lineHeight: 1,
-            color: isSend ? 'var(--lsc-matrix-send)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
+            color: isSend ? 'var(--lsc-wire-matrix)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}
         >
           {side}

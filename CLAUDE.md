@@ -26,7 +26,7 @@ bun run preview  # Preview the production build locally
 - `src/audio/processors.test.ts` — the AudioWorklet's processors on plain blocks of samples
 - `src/audio/meters.test.ts`, `sounds.test.ts` — the meters' movement (D10); the Generator's sounds and the hiss
 - `src/utils/chainFile.test.ts` — what a Vocal does; version 1 files (a Line Input is a Keyboard, a Microphone gets the sound it picked up — D21)
-- `src/graph/mainFader.test.ts`, `queries.test.ts`, `connectionRules.test.ts`, `usbLink.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`; the USB link (its way back) and what an Audio Interface records (D22)
+- `src/graph/mainFader.test.ts`, `queries.test.ts`, `connectionRules.test.ts`, `usbLink.test.ts`, `wireFlow.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`; the USB link (its way back) and what an Audio Interface records (D22); each wire's colour (D24)
 - `src/components/nodes/overviewLayout.test.ts` — the zoomed-out face's layout (`overviewLayout`: the level block at most half the face, the name in the rest)
 
 ## Working on this project
@@ -34,7 +34,7 @@ bun run preview  # Preview the production build locally
 **How the work goes** (the user's way of working):
 - Work happens on `master`: the user is the only developer, so no branch for a piece of work (2026-10-06, the user's call) — only when they ask for one. Start with `git fetch` and check `master` is the remote's latest (a reused cloud container once started a session on a stale local branch); a session that finds itself on another branch (a cloud session's own) says so at the start, so its work doesn't end up off `master`. A piece of work: build it, `bun run lint` + `bun run build` + `bun test`, check it in the browser, update this file where it changed, commit — and tell the user what was done, the numbers measured, the choices made (to review) and what only they can check. One commit per step.
 - **Push only when the user says so.** "Push" = push `master`: GitHub runs `.github/workflows/build-check.yml` (lint, test, build) and deploys nothing. "Push and release" = push, then the next version tag (`git tag v0.2.0 && git push origin v0.2.0` — see `git tag`, propose the number: v0.x.0 for features, v0.x.y for fixes; the first was v0.1.0): only a `v*` tag, or *Run workflow* in the Actions tab, runs `deploy.yml` to GitHub Pages (its `github-pages` environment allows `master`, `gh-pages` and `v*` tags). `package.json`'s version stays 0.0.0. Then the GitHub Release: `gh release create vX.Y.Z --title "Learn Signal Chain X.Y" --notes-file <notes>` — the notes are README's *What's New* since the last release, shown to the user first. Never tag on your own.
-- **The user decides what the app teaches and how it looks.** When a decision is theirs — or real behaviour breaks the premise of one they made — ask, with a recommendation, before building around it (D8, D9 and D10 were asked that way, D11 with mock-ups). Their decisions are in `docs/decisions.md`: D1 … D23 in full (one line each below — the code cites them by number; a new one goes there in full, with its date) and *The user's smaller calls* (choices of look and feel: change one only when they ask).
+- **The user decides what the app teaches and how it looks.** When a decision is theirs — or real behaviour breaks the premise of one they made — ask, with a recommendation, before building around it (D8, D9 and D10 were asked that way, D11 with mock-ups). Their decisions are in `docs/decisions.md`: D1 … D24 in full (one line each below — the code cites them by number; a new one goes there in full, with its date) and *The user's smaller calls* (choices of look and feel: change one only when they ask).
 - **Prefer what the browser already does** (Web Audio and the like) over homemade simulations, and say so up front; flag it early when a step's code grows far beyond its plan (decision D7 came from a 1,600-line homemade time engine).
 - **Real sound can change a lesson**: measure, then rewrite the help text (en + bg) — never tune a processor to fit an old sentence. Every number a text quotes is checked against the number engine or a render (see below).
 - **No new packages so far** (the Vite plugins are written here). CI installs with `bun install --frozen-lockfile`, so a package needs `bun.lock` updated in the same commit — ask the user first.
@@ -96,6 +96,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `graph/queries.ts` — what the wiring makes of a card: `outputKind`, `getPorts` (pass the graph: ports are read from the wires; the same layout is always the same arrays), the Preamp, guitars and DI Boxes, `unwiredSource` (D11), `faderBusOf`
 - `graph/edits.ts` — pure graph edits (`newEdge`: the one way to make a wire)
 - `graph/mainFader.ts` — the L / R takeovers and the Matrix send
+- `graph/wireFlow.ts` — each wire's flow (D24): the bus or recording its sound ends up in, shared wires main, a wire ending at a speaker the bus it comes from
 - `graph/usbLink.ts` — the USB link (D22): one wire from an Interface's To computer into a DAW carries both ways; `commitGraph` keeps its way back (the DAW's hidden playback port into the Interface's hidden From computer — `hidden` ports: `drawnPorts` leaves them out, the canvas never draws that wire)
 - `graph/connectionRules.ts` — which inputs may take a wire (an Amplifier's output only a passive speaker); `wireTakesCard` (a card dropped onto a wire)
 - `signal/chain.ts` — `planChain` (what the wiring makes of each card, in signal order: the render works from it too — one plan per path, keyed by its `key`, doing its route's `job`: the Interface's ADC and DAC) and `runChain` (their levels; each output's domain: `outDomainOf`)
@@ -175,7 +176,7 @@ The level is `complexityLevel` in the store (persisted). **Levels are scales** (
 | `hot` | above unity, below +20 dBu | Yellow | Less headroom left |
 | `clipping` | **peaks** ≥ +20 dBu (clip level — where every gain stops) | Red | Distortion |
 
-The first three zones come from the average; **clipping comes from the peaks** (D4, at every level — D5; the engine takes no level): `getHealth(db, domain, peakDb)`, `healthOf(wire, domain)`. Everything that judges a signal — a stage's `health`, wires, port rings, the meters' health words and clip lines, the overview face — gives the loop's verdict, not the moment's. Digital levels (dBFS, after an ADC) use the same zones moved down by `ALIGNMENT_DB` (18: 0 dBu ↔ −18 dBFS) and clip at 0 dBFS (`ceilingOf(domain)`); meters, ports, wires and `formatDb` take the stage's domain (`stage.domain`, `stage.inDomain`).
+The first three zones come from the average; **clipping comes from the peaks** (D4, at every level — D5; the engine takes no level): `getHealth(db, domain, peakDb)`, `healthOf(wire, domain)`. Everything that judges a signal — a stage's `health`, port rings, the meters' health words and clip lines, the overview face, a wire's red — gives the loop's verdict, not the moment's. Wires show only clipping (red): their colour is where their sound goes (D24). Digital levels (dBFS, after an ADC) use the same zones moved down by `ALIGNMENT_DB` (18: 0 dBu ↔ −18 dBFS) and clip at 0 dBFS (`ceilingOf(domain)`); meters, ports, wires and `formatDb` take the stage's domain (`stage.domain`, `stage.inDomain`).
 
 **Meters** (`SignalMeter.tsx`; D16, D17): one bar per side — solid RMS, pale peaks, a thin hold line. Their **colours belong to the scale** (`meterZones`: blue up to the measured noise, green to unity, yellow, red in the top 2 dB), not to the verdict; the health word says the verdict. The scale runs evenly over 80 dB up to the ceiling, then a tail down to −∞ (`dbToPercent`). From Intermediate the Peak / RMS / Noise numbers, each in the colour of its place on the scale (`zoneAt`), and the movement (D10, D15); Beginner sees the bar and the loop's average (D3).
 
@@ -206,8 +207,9 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D19** — No hover messages: explanations go in the help popover (`theory`).
 - **D20** — Levels are scales: Beginner devices and connections only (no engine, no render, no real meters — D3 / D5 hold from Intermediate), Intermediate the analogue desk, Advanced the digital picture; some elements leave at harder levels.
 - **D21** — The microphone is not the sound: Vocal, Drum Kit, Acoustic and Guitar Amp feed a mic's Sound input; the source has the SPL meter; a Condenser needs a 48V switched on before its Preamp (`phantomPowered`), else it is silent (`noPhantom`).
-- **D22** — Interface and DAW at Intermediate record and play back only, never inside a chain; *Look inside* shows the digital strip; wire colours stay health only.
+- **D22** — Interface and DAW at Intermediate record and play back only, never inside a chain (one two-way USB wire); *Look inside* shows the digital strip.
 - **D23** — Advanced adds the digital picture: Decoder, Recorder (VU / dBFS), Coder → Stream / Broadcast.
+- **D24** — Wires are coloured by where their sound goes: green Master, blue Aux, magenta Matrix, yellow PFL, black / white Interface and Stream; red only for clipping and problems.
 
 (D2 and D6 were replaced by D8 and D9.)
 
@@ -215,7 +217,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 
 - `nodeTypes` is `NODE_COMPONENTS`, defined **outside** any component (no re-registration on every render). Components read their type from React Flow's `type` prop, nothing from `data`.
 - Interactive elements inside nodes carry `nodrag nopan`, so the canvas does not take their pointer events.
-- Edges are coloured from the engine's health (`useFlowElements`), not stored in React Flow state.
+- Edges are coloured by where their sound goes (`graph/wireFlow.ts`, D24) and red where the engine says they clip (`useFlowElements`), not stored in React Flow state.
 - Every prop of `<ReactFlow>` is stable between renders: no inline arrow functions, arrays or objects — `useStableHandlers`, hoisted constants.
 - **`nodeOrigin` is `[0, 0]`**: a node's `position` is its top-left corner. All layout helpers assume this.
 - What must escape the transformed viewport (`ConfirmDialog`, menus) is a `createPortal` to `document.body` — the viewport's `transform` breaks `position: fixed`. Overlays that must not start a wire or a waypoint carry `lsc-overlay`.

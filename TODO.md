@@ -404,7 +404,9 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
   `DETAIL_LEVEL`. A new pure `graph/reach.ts`: which nodes a source reaches, and each output's verdict
   (*sound* / *no sound — not connected* / *no sound — needs an amplifier*). Wires at Beginner: one
   neutral colour with the flow animation when they lead to an output (no health colours). Tests for
-  `reach.ts`.
+  `reach.ts`. ⛔ Since D24 (2026-10-11) wires are coloured by where their sound goes, at every level
+  (`graph/wireFlow.ts`, pure: no engine needed; only the red for clipping is the engine's) — ask the
+  user whether Beginner keeps those colours or one neutral colour before building this.
 - [ ] **Inputs are bare at every zoom** at Beginner: icon + name, no card, no meter (like
   `overviewBare` today). The mic shows no type buttons; the Vocal is a **human head**.
 - [ ] `mixer`: Parametric-EQ size (410 × 361). Its input takes any number of wires. Outputs: Main and
