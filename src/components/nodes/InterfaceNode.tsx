@@ -86,15 +86,16 @@ function Face({ box, lines, icon, footer }: {
 
 /**
  * Audio Interface: Line in → To computer (what it records, its meter in dBu), From computer → Line
- * out L / R (what the computer plays back) — two paths that never meet (NodeTypeDef `routes`).
+ * out (what the computer plays back, back along the same USB wire: no port on the left for it) —
+ * two paths that never meet (NodeTypeDef `routes`).
  */
 export function InterfaceNode({ id }: CardProps) {
   const { t }     = useTranslation()
   const text      = t.nodes.interface
   const Icon      = NODE_LOOK.interface.icon
   const recording = isFinite(levelOf(useStage(id)?.in))
-  // The DAW plays into From computer: both line outputs carry it
-  const playing   = isFinite(levelOf(useWire(outputKey(id, 'out-l'))))
+  // The DAW plays back along the USB wire: the line output carries it
+  const playing   = isFinite(levelOf(useWire(outputKey(id, 'out'))))
   const look      = useLookInside()
   return (
     <FaceCard

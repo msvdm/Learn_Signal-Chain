@@ -4,6 +4,7 @@ import { initialParams } from '../src/data/nodeRegistry'
 import type { WireKind } from '../src/graph/queries'
 import type { GraphSignalResult, StageResult, StageRole, WireSignal } from '../src/signal/engine'
 import { graphSignal, louderSide } from '../src/signal/engine'
+import { withUsbReturns } from '../src/graph/usbLink'
 import type { SideLevels, SignalDomain, SignalHealth } from '../src/signal/levels'
 import { CLIP_DBU, louder, sumNoiseToDb } from '../src/signal/levels'
 import type { StageCondition, Transfer } from '../src/signal/process'
@@ -50,7 +51,8 @@ export const VOICE: Expected = { out: -30, health: 'good' }
 export const line = (id: string, params: Record<string, NodeParamValue> = {}): SignalNode =>
   card(id, 'generator', { sound: 'noise', levelDb: -10, ...params })
 
-export const signalOf = (nodes: SignalNode[], edges: SignalEdge[]) => graphSignal(nodes, edges)
+/** The engine's picture of a chain, its wires as the store keeps them: every USB wire with its way back (graph/usbLink.ts). */
+export const signalOf = (nodes: SignalNode[], edges: SignalEdge[]) => graphSignal(nodes, withUsbReturns({ nodes, edges }))
 
 // ── What a card should show ─────────────────────────────────────────────────────
 

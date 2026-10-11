@@ -110,6 +110,30 @@ export function getPorts(
   return { inputs: def.inputs, outputs }
 }
 
+const DRAWN = new WeakMap<NodePort[], NodePort[]>()
+
+/** A stack of ports without its hidden ones (the same array for the same stack). */
+function drawn(ports: NodePort[]): NodePort[] {
+  let shown = DRAWN.get(ports)
+  if (!shown) {
+    shown = ports.some((p) => p.hidden) ? ports.filter((p) => !p.hidden) : ports
+    DRAWN.set(ports, shown)
+  }
+  return shown
+}
+
+/**
+ * The ports a card draws: getPorts without the hidden ones (the USB link's way back — usbLink.ts).
+ * The same arrays for the same layout, as getPorts.
+ */
+export function drawnPorts(
+  node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
+  view?: GraphView,
+): { inputs: NodePort[]; outputs: NodePort[] } {
+  const { inputs, outputs } = getPorts(node, view)
+  return { inputs: drawn(inputs), outputs: drawn(outputs) }
+}
+
 /**
  * The card whose Mix output feeds this one — straight in, or through effects on the way.
  * Null when no mix reaches it: also when one side of it does (an effect on an Amplifier's R output

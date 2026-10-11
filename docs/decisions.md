@@ -106,5 +106,10 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **Headphones have no knob** (2026-10-11): a Gain right before them sets their level (the desk's
   Phones knob); fed by anything else they are silent, crossed out, and say why — as a passive speaker
   without an amplifier. After an Amplifier they still blow.
+- **The USB link is one two-way wire** (2026-10-11, part of D22): drawn from the Interface's To
+  computer into the DAW, it carries what is recorded there and the DAW's playback back (no flow on
+  it, a ⇄ halfway). The DAW has no output of its own at Intermediate; the computer's sound comes out
+  of the Interface's one stereo line output ("From computer"), into a Gain or Fader on the desk, a
+  bus or the monitors.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

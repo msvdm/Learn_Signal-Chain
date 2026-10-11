@@ -355,6 +355,12 @@ map to inputs, `outputKey`), `graph/graph.ts` walks, the `adc` / `dac` entries i
     Both at every level (the table): Beginner shows these Intermediate cards until Stage 6.
   - Measured (engine and render agree): Keyboard −10 dBu through the desk → Interface −9.8 dBu → DAW
     −27.8 dBFS; the DAW's song −18 dBFS → Line out 0 dBu → a Studio Monitor 110 dB SPL.
+  - **Changed 2026-10-11 (the user's calls):** the USB link is **one two-way wire** (Interface's To
+    computer → DAW): the store keeps its way back (`graph/usbLink.ts`: the DAW's `playback` and the
+    Interface's `from-pc` are `hidden` ports, the wire is never drawn; the USB wire has no flow and a
+    ⇄ halfway). One computer per Interface. The DAW has no output of its own; the Interface's line
+    output is **one stereo `out`** ("From computer → Line out", row 1), into a Gain / Fader / bus /
+    monitor — straight into two monitors each folds it (+6 dBu, Hot).
 
 ## Stage 5 — "Look inside" (Intermediate)  ☑
 

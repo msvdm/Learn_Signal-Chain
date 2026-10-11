@@ -38,8 +38,8 @@ describe('a source not connected yet', () => {
     const nodes = [node('box', 'interface'), node('daw', 'daw'), node('keys', 'keyboard')]
     expect(unwiredSource('box', { nodes, edges: [] })).toBe(true)
     expect(unwiredSource('daw', { nodes, edges: [] })).toBe(true)
-    // Only playing back: connected (their meters read what they record: nothing)
-    const playing = [wire('daw', 'box', 'playback', 'from-pc')]
+    // Only linked by USB (the wire and its way back): connected — their meters read what they record: nothing
+    const playing = [wire('box', 'daw', 'to-pc', 'in'), wire('daw', 'box', 'playback', 'from-pc')]
     expect(unwiredSource('box', { nodes, edges: playing })).toBe(false)
     expect(unwiredSource('daw', { nodes, edges: playing })).toBe(false)
     expect(unwiredSource('box', { nodes, edges: [wire('keys', 'box')] })).toBe(false)

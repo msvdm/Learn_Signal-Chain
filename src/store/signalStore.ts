@@ -6,6 +6,7 @@ import { LEVELS, atLeast } from '../data/levels'
 import type { NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
 import type { GraphView, WireSource } from '../graph/graph'
 import { reconcileMainFaders } from '../graph/mainFader'
+import { withUsbReturns } from '../graph/usbLink'
 import {
   withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,
 } from '../graph/edits'
@@ -92,8 +93,8 @@ function getInitialCanvas() {
     const saved = parseChainFile(JSON.parse(localStorage.getItem(CANVAS_KEY) ?? 'null'))
     if (saved && saved.chain.nodes.length > 0) {
       const { nodes, edges, name, level } = saved.chain
-      // Its L / R takeovers settled as today's rules have them (as every change is: commitGraph)
-      return { nodes, edges: reconcileMainFaders(EMPTY_GRAPH, { nodes, edges }), chainName: name, complexityLevel: level }
+      // Its L / R takeovers and USB links settled as today's rules have them (as every change is: commitGraph)
+      return { nodes, edges: settle(EMPTY_GRAPH, { nodes, edges }), chainName: name, complexityLevel: level }
     }
   } catch { /* a broken save: start blank */ }
   return { nodes: [], edges: [], chainName: '', complexityLevel: getInitialComplexityLevel() }
@@ -387,13 +388,18 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 /** No wire is being drawn (a new canvas, undo / redo: the wire's start may be gone or have moved). */
 const NO_WIRE = { toolMode: 'select', wire: null } as const
 
+/** The wires as `graph` leaves them, after `prev`: its L / R takeovers settled, every USB wire with its way back. */
+function settle(prev: GraphView, graph: GraphView): SignalEdge[] {
+  return withUsbReturns({ nodes: graph.nodes, edges: reconcileMainFaders(prev, graph) })
+}
+
 /**
  * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
  * plugging or unplugging a wire, removing an element, switching a bus to Mono or a Relay to its
- * other input can each change it (graph/mainFader.ts) — and drops what pointed at elements or
- * wires that are gone. A new canvas (New, a level change, an opened chain) comes from nothing:
- * nothing is handed back to it, and nothing that pointed at the old canvas is kept, even where
- * the new one reuses its ids.
+ * other input can each change it (graph/mainFader.ts) —, keeps every USB wire's way back
+ * (graph/usbLink.ts) and drops what pointed at elements or wires that are gone. A new canvas
+ * (New, a level change, an opened chain) comes from nothing: nothing is handed back to it, and
+ * nothing that pointed at the old canvas is kept, even where the new one reuses its ids.
  */
 function commitGraph(
   s: SignalChainStore,
@@ -401,7 +407,7 @@ function commitGraph(
   { newCanvas = false } = {},
 ): Partial<SignalChainStore> {
   const prev    = newCanvas ? EMPTY_GRAPH : s
-  const settled = reconcileMainFaders(prev, graph)
+  const settled = settle(prev, graph)
   // Unchanged wires keep the same array, so what watches only the wires does not re-render
   const edges   = settled.length === graph.edges.length && settled.every((e, i) => e === graph.edges[i])
     ? graph.edges

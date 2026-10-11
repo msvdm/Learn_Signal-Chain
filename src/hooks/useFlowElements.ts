@@ -3,9 +3,10 @@ import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { outputKey } from '../graph/graph'
-import { getPorts } from '../graph/queries'
+import { drawnPorts } from '../graph/queries'
+import { isUsbReturn } from '../graph/usbLink'
 import { healthColor, humStrength } from '../signal/levels'
-import { SOUND_PORT, portRows } from '../data/nodeRegistry'
+import { SOUND_PORT, TO_PC_PORT, portRows } from '../data/nodeRegistry'
 import type { NodePort } from '../data/nodeRegistry'
 import { healthOf, outDomainOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
@@ -33,7 +34,7 @@ const lastFlowEdges = new Map<string, Edge>()
  * re-read the ports.
  */
 function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[]): NodePort[] {
-  return getPorts(node, { nodes, edges }).outputs
+  return drawnPorts(node, { nodes, edges }).outputs
 }
 
 /**
@@ -113,8 +114,8 @@ export function useFlowElements() {
       const srcNode = graphNodes.find((n) => n.id === edge.source)
       const tgtNode = graphNodes.find((n) => n.id === edge.target)
       if (!src || !tgt || !srcNode || !tgtNode) return false
-      const outs = getPorts(srcNode, graph).outputs
-      const ins  = getPorts(tgtNode, graph).inputs
+      const outs = drawnPorts(srcNode, graph).outputs
+      const ins  = drawnPorts(tgtNode, graph).inputs
       // Each port on its own line (a port's row, else its place)
       const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
       const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
@@ -122,7 +123,8 @@ export function useFlowElements() {
       return wirePassesThroughNode(points, cards, [edge.source, edge.target])
     }
 
-    return keepSame(lastFlowEdges, graphEdges.map((edge): Edge => {
+    // A USB wire's way back is not drawn: the USB wire carries both ways (graph/usbLink.ts)
+    return keepSame(lastFlowEdges, graphEdges.filter((edge) => !isUsbReturn(edge)).map((edge): Edge => {
       const sourceStage = stages[edge.source]
       const key         = outputKey(edge.source, edge.sourceHandle)
       // Clipping from the peaks, the rest from the average — as the card it leaves
@@ -137,6 +139,7 @@ export function useFlowElements() {
       const data: ChainEdgeData = {
         waypoints: edge.waypoints, routingWarning, stereo: wires.get(key)?.kind === 'stereo', overview, sound,
         hum: humDb === undefined ? undefined : humStrength(humDb),
+        twoWay: edge.sourceHandle === TO_PC_PORT,
       }
       // A send into a Matrix Bus has its own colour
       const toMatrix = graphNodes.find((n) => n.id === edge.target)?.typeKey === 'matrix-bus'

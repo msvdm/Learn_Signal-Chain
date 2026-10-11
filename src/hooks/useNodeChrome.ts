@@ -2,7 +2,7 @@ import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../store/signalStore'
 import type { TypeKey } from '../data/nodeRegistry'
 import { graphOf } from '../graph/graph'
-import { getPorts, unwiredSource } from '../graph/queries'
+import { drawnPorts, unwiredSource } from '../graph/queries'
 import { nodeAcceptsWire } from '../graph/connectionRules'
 import { chainColorsOf } from '../graph/chainColors'
 
@@ -17,8 +17,8 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   // (Gone for the moment the card is drawn while being removed)
   const node     = useSignalStore((s) => graphOf(s).node(nodeId))
   // The outputs follow the wiring (a bus's L / R taken over by its Main Fader …); a layout is always
-  // the same arrays (getPorts), so this changes only when the ports do
-  const ports    = useSignalStore(useShallow((s) => getPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s)))
+  // the same arrays (drawnPorts: the hidden ones left out), so this changes only when the ports do
+  const ports    = useSignalStore(useShallow((s) => drawnPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s)))
   /** Colours of the chains (sources) passing through, in a stable order */
   const chains   = useSignalStore(useShallow((s) => chainColorsOf(nodeId, s.nodes, s.edges)))
   const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.help?.nodeId === nodeId)

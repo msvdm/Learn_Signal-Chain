@@ -14,6 +14,8 @@ export type NodePort = {
    * stack: the Relay Switch's inputs on lines 0 and 2, its output centred between them on 1
    */
   row?: number
+  /** Never drawn, and no hand-drawn wire ends on it: the USB link's way back (graph/usbLink.ts) */
+  hidden?: true
 }
 
 /** The port line of each port of a stack (its `row`, else its place). */
@@ -150,9 +152,11 @@ export type SignalEdge = {
 }
 
 /**
- * The USB link between an Audio Interface and the computer (D22): what the Interface records goes
- * out on TO_PC into a DAW; the DAW plays back on PLAYBACK into the Interface's FROM_PC. Those wires
- * go nowhere else (graph/connectionRules.ts).
+ * The USB link between an Audio Interface and the computer (D22): one wire, drawn from the
+ * Interface's TO_PC into a DAW, carries the sound both ways — what the Interface records goes to
+ * the DAW, and the DAW plays back on PLAYBACK into the Interface's FROM_PC, along a wire of its own
+ * that nobody draws: the store keeps it with the USB wire (graph/usbLink.ts). PLAYBACK and FROM_PC
+ * are hidden ports; TO_PC goes only into a DAW (graph/connectionRules.ts).
  */
 export const TO_PC_PORT    = 'to-pc'
 export const FROM_PC_PORT  = 'from-pc'
@@ -459,12 +463,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   // records, the one under it plays back
   interface: {
     // A USB Audio Interface, two converters in a box: its line input (any number of wires: the
-    // channels to record) goes to the computer as numbers; the computer's sound comes back and out
-    // of its line outputs, Left and Right (one per studio monitor). The two never meet
+    // channels to record) goes to the computer as numbers, over the USB wire; the computer's sound
+    // comes back along it and out of its line output (one stereo wire, From computer: into the
+    // desk, or the monitors). The two never meet
     category: 'processor', stereo: 'always',
-    inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT }],
-    outputs: [{ id: TO_PC_PORT }, ...SIDES],
-    routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out-l', 'out-r'], as: 'dac' }],
+    inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT, hidden: true }],
+    outputs: [{ id: TO_PC_PORT }, { id: 'out' }],
+    routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out'], as: 'dac' }],
     // Advanced has its parts instead: the converters, the Coder and the Decoder
     levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
@@ -472,9 +477,10 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   daw: {
     // The computer's recording program: it records what the Interface sends it, and plays back a
     // song of its own (−18 dBFS on average: unity on the desk after the Interface) — what it plays
-    // never depends on what it records
+    // never depends on what it records. One port: the USB wire from the Interface, both ways (its
+    // playback leaves on a hidden port, back along that wire)
     category: 'source', stereo: 'always',
-    inputs: IN, outputs: [{ id: PLAYBACK_PORT }],
+    inputs: IN, outputs: [{ id: PLAYBACK_PORT, hidden: true }],
     routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT], as: 'daw' }],
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -18 },
