@@ -21,6 +21,8 @@ interface KnobControlProps {
   labelBelow?: boolean
   /** How far (px on screen, up / down) a drag takes it through its whole range */
   dragPx?: number
+  /** Where its coloured arc starts (default: min) — a Pan knob's centre, so it fills toward L or R */
+  origin?: number
 }
 
 const START_CLOCK = 225
@@ -46,10 +48,12 @@ export function KnobControl({
   layout = 'below',
   labelBelow = false,
   dragPx = 150,
+  origin,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
   const currentClock = START_CLOCK + normalizedValue * SWEEP
+  const normalizedOrigin = origin === undefined ? 0 : Math.max(0, Math.min(1, (origin - min) / range))
 
   const cx = size / 2
   const cy = size / 2
@@ -60,8 +64,12 @@ export function KnobControl({
   const trackStart = polarPoint(cx, cy, trackR, START_CLOCK)
   const trackEnd = polarPoint(cx, cy, trackR, START_CLOCK + SWEEP - 0.01)
 
-  const fillEnd = polarPoint(cx, cy, trackR, currentClock)
-  const fillLargeArc = normalizedValue * SWEEP >= 180 ? 1 : 0
+  // The coloured arc: from its origin to the value, clockwise
+  const [fillFrom, fillTo] = normalizedValue >= normalizedOrigin
+    ? [normalizedOrigin, normalizedValue] : [normalizedValue, normalizedOrigin]
+  const fillStart = polarPoint(cx, cy, trackR, START_CLOCK + fillFrom * SWEEP)
+  const fillEnd = polarPoint(cx, cy, trackR, START_CLOCK + fillTo * SWEEP)
+  const fillLargeArc = (fillTo - fillFrom) * SWEEP >= 180 ? 1 : 0
 
   const indicatorTip = polarPoint(cx, cy, trackR - stroke * 2, currentClock)
 
@@ -111,9 +119,9 @@ export function KnobControl({
         />
 
         {/* Fill arc */}
-        {normalizedValue > 0.005 && (
+        {fillTo - fillFrom > 0.005 && (
           <path
-            d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
+            d={`M ${fillStart.x.toFixed(2)},${fillStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
             fill="none"
             stroke={color}
             strokeWidth={stroke}

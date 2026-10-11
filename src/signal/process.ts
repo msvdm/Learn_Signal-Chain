@@ -29,6 +29,7 @@ export type StageCondition =
   | 'needsDi'             // an instrument going into a desk input without a DI Box: levels fine, high notes lost
   | 'noPhantom'           // a condenser microphone with no 48V phantom power: silent
   | 'encoderNeedsDigital' // an Encoder fed an analog signal: it packs numbers only, so it sends nothing
+  | 'dawNeedsDigital'     // a DAW fed an analog signal: a computer records numbers only
 
 /** Whether a card in each condition sends nothing — every condition says (a new one does not compile without). */
 export const SILENCES: Record<StageCondition, boolean> = {
@@ -43,6 +44,7 @@ export const SILENCES: Record<StageCondition, boolean> = {
   needsDi:             false,
   noPhantom:           true,
   encoderNeedsDigital: true,
+  dawNeedsDigital:     true,
 }
 
 /** One channel through a card. */
@@ -465,8 +467,9 @@ const PROCESS: Record<TypeKey, Process> = {
   broadcast:        (_, input, ctx) => pass(input, ctx),
   // Its two paths do an ADC's job and a DAC's (NodeTypeDef `routes`): nothing reaches here
   interface:        (_, input, ctx) => pass(input, ctx),
-  // What it plays back, a song (−18 dBFS); what it records is a Recorder's job (its route)
-  daw:              (node) => source(node, 'daw'),
+  // What it records: every wire in added up, numbers only (an analog signal it cannot take); the
+  // song it plays back below Advanced is a Decoder's job (its route)
+  daw: summing((_, input, ctx) => (ctx.fed && ctx.domain === 'analog' ? blocked('dawNeedsDigital', 'analog') : pass(input, ctx))),
   // A stream or a file unpacked: music, as numbers from the start (DIGITAL_SOURCES)
   decoder:          (node) => source(node, 'decoder'),
   // Beginner's devices (D20: no engine runs there): every wire in added up, passed on as it is

@@ -2,12 +2,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  HelpCircle, Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput,
+  HelpCircle, Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import { useGraphSignal } from '../hooks/useGraphSignal'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
+import { FLIPS, NODE_REGISTRY, isFlipped } from '../data/nodeRegistry'
 import { helpKeyOf } from '../utils/nodeName'
 import { useLatestRef } from '../hooks/useLatestRef'
 import { useDismiss } from '../hooks/useDismiss'
@@ -33,15 +33,16 @@ interface NodeMenuProps {
 }
 
 /**
- * Right-click menu of an element on the canvas: Help, Bypass / Turn back on, Cut, Copy,
- * Duplicate (left / right / up / down), Remove. With several elements selected, the
- * actions apply to all of them (Help and Bypass are left out).
+ * Right-click menu of an element on the canvas: Help, Bypass / Turn back on, Flip horizontal /
+ * vertical (the cards that flip: FLIPS), Cut, Copy, Duplicate (left / right / up / down), Remove.
+ * With several elements selected, the actions apply to all of them (Help, Bypass and Flip are left out).
  */
 export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, onRemove, onClose }: NodeMenuProps) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const setHelp          = useSignalStore((s) => s.setHelp)
   const setSelectedNode  = useSignalStore((s) => s.setSelectedNode)
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
+  const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { stages }       = useGraphSignal()
   const { t, fmt }       = useTranslation()
 
@@ -58,6 +59,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
   const hasHelp   = !many && Boolean(t.theory[helpKey])
   const bypassed  = node.bypassed ?? false
   const canBypass = !many && NODE_REGISTRY[node.typeKey].bypass
+  const flips     = many ? [] : (FLIPS[node.typeKey] ?? [])
 
   const act = (fn: () => void) => () => { fn(); onClose() }
 
@@ -82,7 +84,15 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
           onClick={act(() => toggleBypassNode(nodeId))}
         />
       )}
-      {(hasHelp || canBypass) && <MenuDivider />}
+      {flips.map((flip) => (
+        <MenuItem
+          key={flip}
+          icon={flip === 'h' ? <FlipHorizontal2 size={15} /> : <FlipVertical2 size={15} />}
+          label={flip === 'h' ? t.nodeMenu.flipH : t.nodeMenu.flipV}
+          onClick={act(() => updateNodeParams(nodeId, { [flip === 'h' ? 'flipH' : 'flipV']: !isFlipped(node, flip) }))}
+        />
+      ))}
+      {(hasHelp || canBypass || flips.length > 0) && <MenuDivider />}
       <MenuItem icon={<Scissors size={15} />} label={t.nodeMenu.cut} hint={`${MOD}X`} onClick={act(onCut)} />
       <MenuItem icon={<Copy size={15} />} label={t.nodeMenu.copy} hint={`${MOD}C`} onClick={act(onCopy)} />
       {/* Duplicate: one row, an arrow per side the copy can go */}

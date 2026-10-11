@@ -284,10 +284,11 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   decoder: {
     // A stream or a file (MP3, AAC …) unpacked into numbers: a source that is digital from the
-    // start (dBFS — DIGITAL_SOURCES in signal/process.ts), playing music, −18 dBFS on average
+    // start (dBFS — DIGITAL_SOURCES in signal/process.ts), playing music. Its peaks at −18 dBFS,
+    // EBU's level (the user's call, 2026-10-11): the music's are 12 dB above its average, −30
     category: 'source', inputs: [], outputs: OUT, stereo: 'always',
     levels: ADVANCED_ONLY, bypass: false, minSize: FACE_SIZE,
-    defaultParams: { levelDb: -18 },
+    defaultParams: { levelDb: -30 },
   },
   phantom: {
     // 48V phantom power: a bare button like the Pad (D21). It passes the signal on unchanged; a
@@ -428,8 +429,9 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   encoder: {
     // Packs the digital mix into a stream's format (MP3, AAC, Opus — ENCODER_FORMATS), its level
     // kept. It works on numbers only: fed an analog signal it sends nothing (D23 — encoding is more
-    // than converting). Its output goes only into Stream / Broadcast (graph/connectionRules.ts)
-    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    // than converting). Its output goes only into Stream / Broadcast (graph/connectionRules.ts).
+    // Always stereo, like what it feeds; a bus's L or R into it is the whole mix (TAKES_WHOLE_MIX)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'always',
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 259 },
     defaultParams: { format: 'mp3' },
   },
@@ -522,16 +524,16 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: {},
   },
   daw: {
-    // The computer's recording program: it records what the Interface sends it, and plays back a
-    // song of its own (−18 dBFS on average: unity on the desk after the Interface) — what it plays
-    // never depends on what it records. Below Advanced one port: the USB wire from the Interface,
-    // both ways (its playback leaves on a hidden port, back along that wire). At Advanced there is
-    // no Interface (D23): nothing plugs into it, and its song leaves on an output of its own, into
-    // a Recorder Track only
+    // The computer's recording program. Below Advanced: it records what the Interface sends it, over
+    // the USB wire, and plays back a song of its own (−18 dBFS on average: unity on the desk after
+    // the Interface; a file played — a Decoder's job), back along that wire (a hidden port). At
+    // Advanced there is no Interface (D23): a digital summing bus (the user's call, 2026-10-11) —
+    // digital signals in, as many as you like, added up in stereo; what it records leaves on an
+    // output of its own, into a Recorder Track only. Nothing in: silent
     category: 'source', stereo: 'always',
-    inputs: [{ id: 'in', levels: ['beginner', 'intermediate'] }],
+    inputs: [{ id: 'in', many: true }],
     outputs: [{ id: PLAYBACK_PORT, hidden: true }, { id: 'out', levels: ADVANCED_ONLY }],
-    routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT, 'out'], as: 'daw' }],
+    routes: [{ from: 'in', to: ['out'], as: 'daw' }, { from: null, to: [PLAYBACK_PORT], as: 'decoder' }],
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { levelDb: -18 },
   },
@@ -668,9 +670,55 @@ export interface ParamTypes {
   [band: `r${number}`]: number | undefined
   /** Matrix Bus: one send knob per bus (matrixSendParam); until it is turned, it sits at unity */
   [send: `send-${string}`]: number | undefined
+  /** Flipped horizontally (FLIPS): its sound flows right to left — its input on the right */
+  flipH: boolean | undefined
+  /** Flipped vertically (FLIPS): on its side — its input on top, its output at the bottom */
+  flipV: boolean | undefined
 }
 
 export type ParamKey = keyof ParamTypes
+
+// ── Flipping a card ────────────────────────────────────────────────────────────
+
+/** A way a card can be flipped: h — its sound flows the other way; v — turned on its side */
+export type Flip = 'h' | 'v'
+
+/**
+ * The cards that can be flipped (their right-click menu: Flip horizontal / vertical — the user's
+ * call, 2026-10-11): an On Off Switch or a Gain on its side above a PFL Bus, or flowing back toward
+ * a bus on the left; a speaker or headphones facing the other way (an Active Speaker flipped is a
+ * stage monitor, turned toward the band). Its ports go with it; the picture of a face is mirrored.
+ */
+export const FLIPS: Partial<Record<TypeKey, readonly Flip[]>> = {
+  gain:             ['h', 'v'],
+  switch:           ['h', 'v'],
+  'active-speaker': ['h'],
+  headphones:       ['h'],
+}
+
+/** Is this card flipped that way (a type that can't be never is)? */
+export function isFlipped(node: Pick<SignalNode, 'typeKey' | 'params'>, flip: Flip): boolean {
+  return (FLIPS[node.typeKey]?.includes(flip) ?? false) && param(node, flip === 'h' ? 'flipH' : 'flipV') === true
+}
+
+/** The side of its card a port sits on and its wire leaves or enters by */
+export type Facing = 'left' | 'right' | 'top' | 'bottom'
+
+/**
+ * Where a card's inputs (`target`) and outputs (`source`) sit: inputs left, outputs right — flipped
+ * horizontally the other way round; flipped vertically, the input on top and the output at the
+ * bottom (both ways: the input at the bottom, the output on top).
+ */
+export function portFacing(node: Pick<SignalNode, 'typeKey' | 'params'>, type: 'source' | 'target'): Facing {
+  const first = (type === 'target') !== isFlipped(node, 'h')
+  if (isFlipped(node, 'v')) return first ? 'top' : 'bottom'
+  return first ? 'left' : 'right'
+}
+
+/** An Active Speaker flipped to face the band: a stage monitor (its name and help text) */
+export function isStageMonitor(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
+  return node.typeKey === 'active-speaker' && isFlipped(node, 'h')
+}
 
 /** Settings that take one of a few words: any other word (from a file) falls back to the default. */
 const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
@@ -749,6 +797,13 @@ export function isStereoBus(node: Pick<SignalNode, 'typeKey' | 'params'>): boole
 }
 
 /** Which side a bus output carries: 'l' / 'r' for Left / Right outputs, null otherwise. */
+/**
+ * Cards that take a stereo mix's L or R as the whole mix — the holder's send (MATRIX_PORT, one
+ * stereo wire after the fader: graph/mainFader.ts): a Matrix Bus, and what sends the mix out to
+ * listeners as one stereo stream (the user's call, 2026-10-11).
+ */
+export const TAKES_WHOLE_MIX: ReadonlySet<TypeKey> = new Set<TypeKey>(['matrix-bus', 'broadcast', 'encoder'])
+
 export function portSide(portId: string): 'l' | 'r' | null {
   if (portId.endsWith('-l')) return 'l'
   if (portId.endsWith('-r')) return 'r'

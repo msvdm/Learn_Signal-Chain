@@ -233,16 +233,19 @@ export function MixerIcon({ size = 24 }: { size?: number }) {
   )
 }
 
-/** A stage box: a panel of sockets, the thick cable (the snake) leaving it. */
+/**
+ * A stage box: a panel of sockets, the snake leaving it straight out of its side — in a thinner
+ * line than lucide's, as it stands bare on the canvas (the user's call).
+ */
 export function StageBoxIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="15" height="13" rx="2" />
-      <g strokeWidth="1.5">
-        <circle cx="5.75" cy="8.25" r="1.25" /><circle cx="9.5" cy="8.25" r="1.25" /><circle cx="13.25" cy="8.25" r="1.25" />
-        <circle cx="5.75" cy="12.75" r="1.25" /><circle cx="9.5" cy="12.75" r="1.25" /><circle cx="13.25" cy="12.75" r="1.25" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="4.5" width="15" height="13" rx="1.5" />
+      <g strokeWidth="1.25">
+        <circle cx="5.25" cy="8.75" r="1.25" /><circle cx="9" cy="8.75" r="1.25" /><circle cx="12.75" cy="8.75" r="1.25" />
+        <circle cx="5.25" cy="13.25" r="1.25" /><circle cx="9" cy="13.25" r="1.25" /><circle cx="12.75" cy="13.25" r="1.25" />
       </g>
-      <path d="M17 10.5h2a2.5 2.5 0 0 1 2.5 2.5v8" strokeWidth="2.5" />
+      <path d="M16.5 11H22.5" strokeWidth="2" />
     </svg>
   )
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { CardProps } from './cardProps'
+import { ConditionNote } from './conditions'
 import { useNodeName } from '../../hooks/useNodeName'
 import { useStage, useWire } from '../../hooks/useGraphSignal'
 import { useSignalStore } from '../../store/signalStore'
@@ -109,26 +110,36 @@ export function InterfaceNode({ id }: CardProps) {
 
 /**
  * DAW: it records what arrives (its meter in dBFS) and, apart from that, plays back a song of its
- * own. At Advanced there is no Interface (D23): it records nothing, and plays its song out of an
- * output of its own, into a Recorder Track — its meter reads what it plays.
+ * own. At Advanced there is no Interface (D23): a digital summing bus — what it records, added up,
+ * leaves out of an output of its own, into a Recorder Track ("Records → Plays back"); its meter
+ * reads what it plays.
  */
 export function DawNode({ id }: CardProps) {
   const { t }     = useTranslation()
   const text      = t.nodes.daw
   const Icon      = NODE_LOOK.daw.icon
   const advanced  = useSignalStore((s) => s.complexityLevel === 'advanced')
-  const recording = isFinite(levelOf(useStage(id)?.in))
-  const playing   = useSignalStore((s) => s.edges.some((e) => e.source === id && (e.sourceHandle === PLAYBACK_PORT || e.sourceHandle === 'out')))
+  const stage     = useStage(id)
+  const recording = isFinite(levelOf(stage?.in))
+  const usbBack   = useSignalStore((s) => s.edges.some((e) => e.source === id && e.sourceHandle === PLAYBACK_PORT))
+  // At Advanced it plays back what it records
+  const playing   = advanced ? isFinite(levelOf(stage?.out)) : usbBack
   const look      = useLookInside()
+  // Fed an analog signal at Advanced it records nothing: a note under its icon says why (zoomed in)
+  const overview  = useSignalStore((s) => s.overview)
+  const condition = overview ? undefined : stage?.condition
   return (
     <FaceCard
       nodeId={id} typeKey="daw" label={useNodeName(id, 'daw')} meterAt={advanced ? 'out' : 'in'}
-      art={(box) => (
-        <Face
-          box={box} icon={<Icon />} footer={look && <LookInside type="daw" />}
-          lines={<PortLine row={0} from={advanced ? '' : text.records} to={text.playsBack} lit={[recording, playing]} arrow={false} />}
-        />
-      )}
+      art={(box) => {
+        const face = (h: number) => (
+          <Face
+            box={{ w: box.w, h }} icon={<Icon />} footer={look && <LookInside type="daw" />}
+            lines={<PortLine row={0} from={text.records} to={text.playsBack} lit={[recording, playing]} arrow={advanced} />}
+          />
+        )
+        return condition ? <ConditionNote condition={condition} typeKey="daw" box={box} face={face} /> : face(box.h)
+      }}
     />
   )
 }

@@ -83,6 +83,8 @@ const OLD_TYPES: Partial<Record<string, TypeKey>> = { 'line-in': 'keyboard' }
 const OLD_KEYS: Partial<Record<TypeKey, readonly string[]>> = {
   mic:      ['sensitivityDb', 'character'],
   keyboard: ['stereo', 'character'],
+  // No knob sets it: a file keeps the level of its day (−18 dBFS on average before 2026-10-11)
+  decoder:  ['levelDb'],
 }
 
 /** Saved params over the type's defaults: a file from an older version gets the newer knobs. */

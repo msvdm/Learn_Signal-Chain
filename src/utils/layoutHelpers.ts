@@ -1,8 +1,11 @@
-import type { NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isBareAt, isTypeKey, portRows } from '../data/nodeRegistry'
+import type { Facing, NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
+import { NODE_REGISTRY, isBareAt, isTypeKey, portFacing, portRows } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
-import { upstreamOf } from '../graph/graph'
+import { graphOf, upstreamOf } from '../graph/graph'
+import type { GraphView } from '../graph/graph'
+import { drawnPorts } from '../graph/queries'
 import { orthogonalRoute } from './wirePath'
+import { HEADER_H, PORT_GAP, PORT_TOP } from './cardGeometry'
 import type { Box, Pt, Size } from './geometry'
 import { rectOf, rectsOverlap } from './geometry'
 
@@ -26,24 +29,48 @@ export const MIN_NODE_GAP = 100
 const CLEARANCE = MIN_NODE_GAP / 2
 
 // ── Card geometry ──────────────────────────────────────────────────────────────
-// Every node card shares the same header height and port line, so wires between
-// cards stay straight no matter how tall each card is.
-export const HEADER_H = 56
-// First port centre, measured from the card top: just below the header's divider, clear of its
-// buttons. The ring is 28px (40px while it shows the unplug ×), so it never touches the line.
-export const PORT_TOP = HEADER_H + 24
-export const PORT_GAP = 36   // spacing between stacked ports on the same side (rings don't touch)
+// (HEADER_H, PORT_TOP, PORT_GAP: cardGeometry.ts — wires are routed by them too)
+export { HEADER_H, PORT_TOP, PORT_GAP } from './cardGeometry'
 // How far from a port's centre the mouse finds it (the cursor turns into a cross): twice the
 // ring's radius, so a port is easy to hit zoomed out — the ring itself stays 28px. Ports stacked
 // closer than twice this share the room between them half and half (NodePort).
 export const PORT_REACH = 28
 
-/** The centre of a port ring: on the left edge (inputs) or right edge (outputs), on port line `row` (portRows). */
-export function portPoint(card: Box, type: 'source' | 'target', row: number): Pt {
-  return {
-    x: type === 'source' ? card.position.x + card.size.w : card.position.x,
-    y: card.position.y + PORT_TOP + row * PORT_GAP,
+/**
+ * The centre of a port ring: on the edge it faces (`facing`: inputs left, outputs right — a flipped
+ * card's the other way, portFacing), on port line `row` (portRows); on its top or bottom edge, in
+ * the middle.
+ */
+export function portPoint(card: Box, type: 'source' | 'target', row: number, facing: Facing = type === 'source' ? 'right' : 'left'): Pt {
+  const { x, y } = card.position
+  switch (facing) {
+    case 'left':   return { x, y: y + PORT_TOP + row * PORT_GAP }
+    case 'right':  return { x: x + card.size.w, y: y + PORT_TOP + row * PORT_GAP }
+    case 'top':    return { x: x + card.size.w / 2, y }
+    case 'bottom': return { x: x + card.size.w / 2, y: y + card.size.h }
   }
+}
+
+/**
+ * A wire's route as it is drawn — from its output's ring, through its corners, to its input's,
+ * out of and into the sides they face — or null when a card of it is missing from `cards`.
+ */
+export function wireRoute(edge: SignalEdge, cards: Box[], view: GraphView, level: ComplexityLevel): Pt[] | null {
+  const graph   = graphOf(view)
+  const src     = cards.find((c) => c.id === edge.source)
+  const tgt     = cards.find((c) => c.id === edge.target)
+  const srcNode = graph.node(edge.source)
+  const tgtNode = graph.node(edge.target)
+  if (!src || !tgt || !srcNode || !tgtNode) return null
+  const outs = drawnPorts(srcNode, level, view).outputs
+  const ins  = drawnPorts(tgtNode, level, view).inputs
+  // Each port on its own line (a port's row, else its place)
+  const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
+  const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
+  const from = portFacing(srcNode, 'source')
+  const to   = portFacing(tgtNode, 'target')
+  const points = [portPoint(src, 'source', out, from), ...(edge.waypoints ?? []), portPoint(tgt, 'target', inp, to)]
+  return orthogonalRoute(points, { from, to })
 }
 
 // A card's size when its type has no `minSize` in the registry (most cards have one: the same at
@@ -228,25 +255,37 @@ export function makeRoomForInsert(newId: string, nodes: Box[], edges: SignalEdge
 
 // ── Edge insertion helpers ─────────────────────────────────────────────────────
 
+/** How far a point is from the segment a–b */
+function distanceToSegment(p: Pt, a: Pt, b: Pt): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len2 = dx * dx + dy * dy
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2))
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+}
+
 /**
- * Returns the edge that "owns" the given flow-coordinate drop point.
- * Each edge owns the horizontal band between the centre of its source and target.
- * Vertical tolerance is ±HIT_THRESHOLD around both nodes' port lines.
+ * The wire under a drop point (flow coordinates): the nearest one within HIT_THRESHOLD of the point,
+ * along its route as it is drawn (wireRoute) — a wire turning down to a PFL Bus as well as a
+ * straight one. `firstRun`: the point is on its first run, along its output's port line (a card
+ * dropped there sits right of its source, and both wires stay straight).
  */
-export function findEdgeAtPoint(point: Pt, edges: SignalEdge[], nodes: Box[]): SignalEdge | null {
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+export function findEdgeAtPoint(
+  point: Pt, edges: SignalEdge[], cards: Box[], view: GraphView, level: ComplexityLevel,
+): { edge: SignalEdge; firstRun: boolean } | null {
+  let best: { edge: SignalEdge; firstRun: boolean; distance: number } | null = null
   for (const edge of edges) {
-    const src = nodeMap.get(edge.source)
-    const tgt = nodeMap.get(edge.target)
-    if (!src || !tgt) continue
-    const srcCX = src.position.x + src.size.w / 2
-    const tgtCX = tgt.position.x + tgt.size.w / 2
-    if (point.x < srcCX || point.x > tgtCX) continue
-    const minY = Math.min(src.position.y, tgt.position.y) + PORT_TOP - HIT_THRESHOLD
-    const maxY = Math.max(src.position.y, tgt.position.y) + PORT_TOP + HIT_THRESHOLD
-    if (point.y < minY || point.y > maxY) continue
-    return edge
+    const route = wireRoute(edge, cards, view, level)
+    if (!route || route.length < 2) continue
+    // The runs from its output, rightward along its port line, before it first turns
+    let onLine = 0
+    while (route[1].x > route[0].x && onLine < route.length - 1 && route[onLine + 1].y === route[0].y) onLine++
+    for (let i = 0; i < route.length - 1; i++) {
+      const distance = distanceToSegment(point, route[i], route[i + 1])
+      if (distance > HIT_THRESHOLD || (best && distance >= best.distance)) continue
+      best = { edge, distance, firstRun: i < onLine }
+    }
   }
-  return null
+  return best && { edge: best.edge, firstRun: best.firstRun }
 }
 

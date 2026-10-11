@@ -1,6 +1,8 @@
 import type { EdgeProps } from '@xyflow/react'
 import { BaseEdge } from '@xyflow/react'
 import { buildWirePath, orthogonalRoute } from '../utils/wirePath'
+import type { RouteEnds } from '../utils/wirePath'
+import type { Facing } from '../data/nodeRegistry'
 import type { Pt } from '../utils/geometry'
 
 export interface ChainEdgeData extends Record<string, unknown> {
@@ -35,7 +37,7 @@ function halfway(route: Pt[]): Pt {
 }
 
 export function ChainEdge({
-  id, sourceX, sourceY, targetX, targetY,
+  id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
   style, markerEnd,
   data,
 }: EdgeProps) {
@@ -44,9 +46,11 @@ export function ChainEdge({
   const routingWarn = d.routingWarning ?? false
   const twin        = (d.stereo ?? false) && !routingWarn
 
-  // Build the path using the same algorithm as the live wire preview.
+  // Build the path using the same algorithm as the live wire preview: out of its output's side and
+  // into its input's (a flipped card's ports face another way — portFacing)
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
-  const edgePath = buildWirePath(points)
+  const ends: RouteEnds = { from: sourcePosition as Facing, to: targetPosition as Facing }
+  const edgePath = buildWirePath(points, ends)
 
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
   // The dash period stays a divisor of the 24px flow animation, so it loops smoothly.
@@ -57,7 +61,7 @@ export function ChainEdge({
   const dash  = thick && !d.still ? { strokeDasharray: '16 8' } : {}
   // Round dots, 8px apart (12px zoomed out): periods that divide the 24px flow animation
   const dots  = { strokeDasharray: thick ? '0 12' : '0 8', strokeLinecap: 'round' as const, strokeWidth: width * 1.6 }
-  const mid  = d.twoWay ? halfway(orthogonalRoute(points)) : null
+  const mid  = d.twoWay ? halfway(orthogonalRoute(points, ends)) : null
 
   const edgeStyle = routingWarn
     ? { ...style, stroke: 'var(--signal-clipping)', strokeDasharray: thick ? '16 8' : '6 4' }

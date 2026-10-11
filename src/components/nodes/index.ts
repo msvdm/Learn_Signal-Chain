@@ -95,5 +95,5 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   encoder:             EncoderNode,
   // Beginner's devices: the same at any level
   mixer:             MixerNode,
-  'stage-box':       BeginnerDevice,
+  'stage-box':       BeginnerInput,
 }

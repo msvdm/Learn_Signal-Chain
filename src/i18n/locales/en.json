@@ -122,7 +122,8 @@
     "digitalSignal": "Silent — the signal is digital. Pass it through a Digital to Analog Converter first.",
     "adcExpectsAnalog": "Silent — the signal is already digital.",
     "dacExpectsDigital": "Silent — the signal is analog. Put an Analog to Digital Converter before this one.",
-    "encoderNeedsDigital": "Silent — an Encoder works only on a digital signal. Put an Analog to Digital Converter before it."
+    "encoderNeedsDigital": "Silent — an Encoder works only on a digital signal. Put an Analog to Digital Converter before it.",
+    "dawNeedsDigital": "Silent — a computer records only numbers. Put an Analog to Digital Converter before it."
   },
   "hum": {
     "tag": "Hum"
@@ -329,6 +330,12 @@
     "recorder": {
       "records": "Records",
       "monitorOut": "Monitor out"
+    },
+    "mixer": {
+      "label": "Mixing desk"
+    },
+    "stage-monitor": {
+      "label": "Stage Monitor"
     }
   },
   "inside": {
@@ -396,7 +403,9 @@
     "selectAll": "Select everything",
     "insertChain": "Insert a saved chain here…",
     "selected": "{count} elements selected",
-    "removeMany": "Remove {count} elements"
+    "removeMany": "Remove {count} elements",
+    "flipH": "Flip horizontal",
+    "flipV": "Flip vertical"
   },
   "stereo": {
     "mono": "Mono",
@@ -601,7 +610,7 @@
     "active-speaker": {
       "what": "An active (powered) speaker has a built-in amplifier. It accepts line-level signals directly from a mixer, audio interface, or any line-level output — no separate power amp needed.",
       "why": "Active speakers are the standard in modern studio monitors and portable PA setups. The built-in amplifier is matched to the speaker driver, which is why powered monitors tend to have more consistent, accurate sound.",
-      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. An Amplifier's output plugs only into a passive speaker: that signal is far too strong for the line input of a speaker with its own amp inside — it would blow. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it."
+      "tip": "The volume knob adjusts the final output level. Good gain staging means getting a healthy green signal to this speaker — then use the volume knob to set how loud you want to listen, not to compensate for a too-quiet or too-loud chain. An Amplifier's output plugs only into a passive speaker: that signal is far too strong for the line input of a speaker with its own amp inside — it would blow. If a card before it clips, it says “Bad sound”: the peaks were cut off there, and turning down after that does not bring them back — the meters here can be green, but you hear the distortion. Find the red card and turn down before it. To make it a stage monitor facing the band, right-click it and choose Flip horizontal."
     },
     "headphones": {
       "what": "Headphones let one person listen to the chain: the engineer checking a channel, or a musician hearing their monitor mix. They have no knob of their own: a Gain right before them sets how loud, like the Phones knob on a desk. Without one they stay silent.",
@@ -639,7 +648,7 @@
       "tip": "Try this: set Sine at +10 dBu — the meters read Hot (yellow). Switch to Click at the same level and its wire turns red: the clicks' peaks reach the clip level (+20 dBu, where the sound distorts) while their average has not moved."
     },
     "decoder": {
-      "what": "A Decoder plays a song that arrives packed as numbers — a file or a stream (MP3, AAC …) — and unpacks it into a stereo signal that is digital from the start: its meter reads in dBFS, about −18 dBFS on average.",
+      "what": "A Decoder plays a song that arrives packed as numbers — a file or a stream (MP3, AAC …) — and unpacks it into a stereo signal that is digital from the start: its meter reads in dBFS. Its loudest moments reach −18 dBFS, the EBU standard level; its average sits about 12 dB lower, around −30 dBFS.",
       "why": "Much of what a sound system plays today never was an analog signal: music from a file, a stream, a computer. It stays digital until a Digital to Analog Converter turns it into a voltage for the speakers.",
       "tip": "It can go straight into digital cards (a Gain, an EQ, an Encoder). Into a mixing bus with analog channels it falls silent — analog and digital can't be mixed: put a Digital to Analog Converter after it first."
     },
@@ -699,7 +708,7 @@
       "tip": "To record a finished mix, wire the desk's mix into Line in (a Mixer's Main, or the Master Bus's L and R). To hear what the computer plays, wire Line out back into the desk, like any other channel."
     },
     "daw": {
-      "what": "A DAW (Digital Audio Workstation) is the recording program on a computer. One USB wire links it to the audio interface: it records what the interface sends, and plays a song of its own back along the same wire. In Advanced there is no audio interface: it plays its song out of an output of its own, into a Recorder Track.",
+      "what": "A DAW (Digital Audio Workstation) is the recording program on a computer. One USB wire links it to the audio interface: it records what the interface sends, and plays a song of its own back along the same wire. In Advanced there is no audio interface: digital signals plug straight into it — as many as you like, added together like a mixing bus, in stereo — and what it records comes out of its output into a Recorder Track.",
       "why": "Recording lets you listen back, fix and mix later. The DAW never sits inside your desk's chain: the sound goes in through the interface to be recorded, and comes back out through the interface to be heard.",
       "tip": "Its meter reads in dBFS, the computer's scale: 0 dBFS is the very top, where the sound clips. About −18 dBFS is healthy — the desk's normal level (0 dBu), with room left for the loud moments."
     },
@@ -712,6 +721,11 @@
       "what": "A box of sockets on the stage. The microphones and instruments plug into it, close to where they stand.",
       "why": "Instead of a dozen long cables running from the stage to the Mixer at the back of the room, one thick cable — the snake — carries them all.",
       "tip": "Its snake goes only into a Mixer. Everything plugged into the Stage Box reaches the Mixer as if it were plugged in there."
+    },
+    "stage-monitor": {
+      "what": "A stage monitor (a \"wedge\") is an active speaker on the floor of the stage, turned toward the players instead of the audience, so they can hear themselves while they play.",
+      "why": "On a loud stage the players cannot hear their own voice or instrument over the drums and the main speakers. Without a monitor a singer sings out of tune and a band loses its timing.",
+      "tip": "Feed it its own mix — the Mixer's Monitor output, or an Aux Bus on a desk — not the Main mix: the players want more of themselves and less of everything else. Keep it pointed away from the microphones: a microphone that hears the monitor sends the sound round and round until it howls (feedback). Flip it back to make it an Active Speaker again."
     }
   },
   "levelNames": {

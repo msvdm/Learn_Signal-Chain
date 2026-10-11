@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIX_PORT, canSplit, isStereoBus, portSide, splitsOnlyMix } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIX_PORT, TAKES_WHOLE_MIX, canSplit, isStereoBus, portSide, splitsOnlyMix } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from './queries'
 
@@ -12,7 +12,9 @@ import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '.
 // that point (a bus, its Main Fader, another EQ, amp or limiter): the chain carries one stereo wire
 // up to the last of them, which sends Left and Right out. A Fader or Limiter only after a bus. The Matrix send stays where it is (it is after the fader).
 // Matrix send: the same idea for Matrix Buses. A stereo bus's (or Main Fader's) L or R wired to a
-// Matrix Bus becomes its Matrix send — one stereo wire, after the fader.
+// Matrix Bus becomes its Matrix send — one stereo wire, after the fader. An L or R into Stream /
+// Broadcast or an Encoder becomes the same send, from whatever card holds the L / R
+// (TAKES_WHOLE_MIX): what goes out to listeners is the whole mix.
 // The ports themselves are read from the wires (getPorts), so these functions only move wires.
 
 /** Same two ports joined twice — keep the first. */
@@ -80,11 +82,14 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
   const byId = new Map(nodes.map((n) => [n.id, n]))
   // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and Main
   // Faders may feed one — isMatrixSource). Done before every takeover too, so a wire to a Matrix
-  // Bus never follows L / R onto a Graphic EQ or Amplifier: the send stays on the Main Fader.
-  const matrixSends = (list: SignalEdge[]) => list.map((e) =>
-    byId.get(e.target)?.typeKey === 'matrix-bus' && portSide(e.sourceHandle) !== null
+  // Bus never follows L / R onto a Graphic EQ or Amplifier: the send stays on the Main Fader. The
+  // same for Stream / Broadcast and an Encoder (TAKES_WHOLE_MIX)
+  const matrixSends = (list: SignalEdge[]) => list.map((e) => {
+    const target = byId.get(e.target)?.typeKey
+    return target !== undefined && TAKES_WHOLE_MIX.has(target) && portSide(e.sourceHandle) !== null
       ? { ...e, sourceHandle: MATRIX_PORT }
-      : e)
+      : e
+  })
   let next = edges
 
   // Takeovers, then tidying; a card that starts splitting (a Limiter fed a bus's mix) may be

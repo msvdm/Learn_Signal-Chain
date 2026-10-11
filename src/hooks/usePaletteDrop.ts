@@ -8,6 +8,7 @@ import { activeDragTypeKey } from '../utils/dragState'
 import { GRID, MIN_NODE_GAP, usualSize, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
 import type { Pt } from '../utils/geometry'
 import { wireTakesCard } from '../graph/connectionRules'
+import { isUsbReturn } from '../graph/usbLink'
 import type { ParsedChain } from '../utils/chainFile'
 import { useCanvasLayout } from './useCanvasLayout'
 import { useChainFile } from './useChainFile'
@@ -29,19 +30,26 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
   const pendingInsertRef = useRef<string | null>(null)
 
   /**
-   * Where a card dropped at `raw` goes if it lands on a wire (null if it doesn't): right of the
-   * wire's source and top-aligned with it, so the wires on both sides stay straight.
+   * Where a card dropped at `raw` goes if it lands on a wire (null if it doesn't). On the wire's first
+   * run, along its source's port line: right of the source and top-aligned with it, so the wires on
+   * both sides stay straight, and the chain after it makes room (`straight`). Further along (a wire
+   * turning down to a PFL Bus): where it is dropped, clear of the other cards.
    */
-  function insertSlot(raw: Pt, typeKey: TypeKey): { edge: SignalEdge; pos: Pt } | null {
+  function insertSlot(raw: Pt, typeKey: TypeKey): { edge: SignalEdge; pos: Pt; straight: boolean } | null {
     // Edges from Zustand: always in sync, unlike getEdges() which can lag
     const view  = useSignalStore.getState()
     const cards = layout.layoutSnapshot(view.nodes)
-    const edge  = findEdgeAtPoint(raw, view.edges, cards)
+    const hit   = findEdgeAtPoint(raw, view.edges.filter((e) => !isUsbReturn(e)), cards, view, view.complexityLevel)
+    const edge  = hit?.edge
     const src   = edge && cards.find((n) => n.id === edge.source)
-    if (!edge || !src || !wireTakesCard(typeKey, edge, view, view.complexityLevel)) return null
+    if (!hit || !edge || !src || !wireTakesCard(typeKey, edge, view, view.complexityLevel)) return null
+    if (!hit.firstRun) {
+      const size = usualSize(typeKey, view.complexityLevel, view.overview)
+      return { edge, pos: resolveOverlap(layout.dropOrigin(raw), size, cards), straight: false }
+    }
     const srcRight = src.position.x + src.size.w
     const minX     = Math.round((srcRight + MIN_NODE_GAP) / GRID) * GRID
-    return { edge, pos: { x: Math.max(minX, layout.dropOrigin(raw).x), y: src.position.y } }
+    return { edge, pos: { x: Math.max(minX, layout.dropOrigin(raw).x), y: src.position.y }, straight: true }
   }
 
   function onDragOver(e: React.DragEvent) {
@@ -84,7 +92,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
       store.insertOnWire({ id: newId, typeKey, position: slot.pos, params, bypassed: false }, slot.edge.id)
       // The cards around it move once React Flow has measured it (onMeasured): a type not
       // dropped before has no known size yet. The card stays hidden until then, so no overlap shows.
-      pendingInsertRef.current = newId
+      if (slot.straight) pendingInsertRef.current = newId
       return
     }
 

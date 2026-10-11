@@ -119,7 +119,8 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   const stereo    = useSignalStore((s) => s.wire !== null && outputKind(s.wire.source.nodeId, s.wire.source.handleId, s) === 'stereo')
   if (!wire || !cursor) return null
 
-  const path  = buildWirePath([wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos])
+  // Out of the side its output faces, into the side of the input it snaps to (a flipped card's)
+  const path  = buildWirePath([wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos], { from: wire.facing, to: cursor.snapFacing ?? undefined })
   const color = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
   // A Guitar Amp's sound as dots
   const sound  = wire.source.handleId === SOUND_PORT

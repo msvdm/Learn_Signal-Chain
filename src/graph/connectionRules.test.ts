@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { FROM_PC_PORT, PLAYBACK_PORT, TO_PC_PORT } from '../data/nodeRegistry'
+import type { ComplexityLevel } from '../data/levels'
 import { nodeAcceptsWire, portAcceptsWire, wireTakesCard } from './connectionRules'
 
 // Record and play back (D22): an Audio Interface and a DAW never sit inside a chain. The Interface's
@@ -21,11 +22,11 @@ const nodes = [
 ]
 const byId = (id: string) => nodes.find((n) => n.id === id)!
 /** Could a wire from `from` (card:port) be drawn into `to` (card:port), with `edges` already there? */
-const takes = (from: string, to: string, edges: SignalEdge[] = []) => {
+const takes = (from: string, to: string, edges: SignalEdge[] = [], level?: ComplexityLevel) => {
   const [nodeId, handleId = 'out'] = from.split(':')
   const [target, port = 'in'] = to.split(':')
   const source = { nodeId, handleId }
-  return nodeAcceptsWire(byId(target), source, edges, nodes) && portAcceptsWire(byId(target), port, edges, source)
+  return nodeAcceptsWire(byId(target), source, edges, nodes, level) && portAcceptsWire(byId(target), port, edges, source)
 }
 
 describe('the USB link between an Audio Interface and a DAW', () => {
@@ -33,6 +34,12 @@ describe('the USB link between an Audio Interface and a DAW', () => {
     expect(takes(`box:${TO_PC_PORT}`, 'daw')).toBe(true)
     for (const to of ['eq', 'bus', 'mon', 'rec', 'box2', `box2:${FROM_PC_PORT}`]) expect(takes(`box:${TO_PC_PORT}`, to)).toBe(false)
     for (const from of ['keys', 'pre', 'bus:out-l', 'box:out']) expect(takes(from, 'daw')).toBe(false)
+  })
+
+  it('at Advanced (no Interface) a DAW is a digital summing bus: it takes any wire, as many as you like', () => {
+    expect(takes('keys', 'daw', [], 'advanced')).toBe(true)
+    expect(takes('pre', 'daw', [wire('keys', 'daw')], 'advanced')).toBe(true)
+    expect(takes('keys', 'daw', [], 'intermediate')).toBe(false)
   })
 
   it('one computer per Interface: To computer takes one wire', () => {
@@ -60,6 +67,12 @@ describe('what an Audio Interface records: line-level signals, as many as you li
     expect(takes('mic', 'box')).toBe(false)
     expect(takes('p48', 'box', [wire('mic', 'p48')])).toBe(false)
     expect(takes('gtr', 'box')).toBe(false)
+    expect(takes('mic', 'box', [], 'intermediate')).toBe(false)
+  })
+
+  it('at Beginner (no levels there) a microphone and a guitar too, as into the Mixer', () => {
+    expect(takes('mic', 'box', [], 'beginner')).toBe(true)
+    expect(takes('gtr', 'box', [], 'beginner')).toBe(true)
   })
 
   it('never dropped into the middle of a wire', () => {

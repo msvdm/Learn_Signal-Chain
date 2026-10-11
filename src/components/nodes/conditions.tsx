@@ -43,6 +43,7 @@ const CONDITIONS: Record<StageCondition, ConditionText> = {
   needsDi:             { look: 'note',  tone: 'hot',      text: (t) => t.nodes.instrument.needsDi, icon: (size) => <DullToneIcon size={size} /> },
   noPhantom:           { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },
   encoderNeedsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.encoderNeedsDigital },
+  dawNeedsDigital:     { look: 'note',  tone: 'clipping', text: (t) => t.warnings.dawNeedsDigital },
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { getPorts } from './queries'
 import { planChain } from '../signal/chain'
+import { stillPicture } from '../signal/engine'
 import { reconcileMainFaders } from './mainFader'
 
 // A Limiter wired to a stereo bus's L or R takes the whole mix, as a Main Fader does: one stereo
@@ -60,5 +61,36 @@ describe('a Limiter after a stereo bus', () => {
     const g = settle([node('keys', 'keyboard'), lim, bus], [wire('keys', 'lim'), wire('lim', 'bus')])
     expect(g.wires).toEqual(['keys.out → lim', 'lim.out → bus'])
     expect(g.outputs('lim')).toEqual(['out'])
+  })
+})
+
+// What goes out to listeners is the whole mix: a bus's L or R into Stream / Broadcast or an Encoder
+// is its send — one stereo wire, after the fader — as into a Matrix Bus (the user's call, 2026-10-11)
+describe('Stream / Broadcast and an Encoder take the whole mix', () => {
+  const line = node('line', 'keyboard')
+  const bus  = node('bus', 'master-bus')
+
+  it("wired to a bus's L or R: the send, with both sides, while its L / R stay on the speakers", () => {
+    const g = settle([line, bus, node('air', 'broadcast'), node('spk', 'active-speaker'), node('cod', 'encoder')], [
+      wire('line', 'bus'), wire('bus', 'spk', 'out-l'), wire('bus', 'air', 'out-l'), wire('bus', 'cod', 'out-r'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.out-l → spk', 'bus.send → air', 'bus.send → cod'])
+    expect(g.outputs('bus')).toEqual(['out-l', 'out-r', 'send'])
+  })
+
+  it('Stream / Broadcast gets both sides of the mix', () => {
+    const nodes = [line, bus, node('air', 'broadcast')]
+    const edges = reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges: [wire('line', 'bus'), wire('bus', 'air', 'out-l')] })
+    const air   = stillPicture(nodes, edges).result.stages.air
+    expect(air.in?.kind).toBe('stereo')
+    expect(air.in?.l.rms).toBe(air.in?.r.rms)
+    expect(air.in?.r.rms).toBeGreaterThan(-20)
+  })
+
+  it('a Main Fader takes the send over: what goes out follows the fader', () => {
+    const g = settle([line, bus, node('air', 'broadcast'), node('main', 'fader')], [
+      wire('line', 'bus'), wire('bus', 'air', 'out-l'), wire('bus', 'main', 'out-r'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'main.send → air', 'bus.mix → main'])
   })
 })

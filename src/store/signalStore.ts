@@ -3,7 +3,7 @@ import type { Lang } from '../i18n/translations'
 import { LOCALES, DEFAULT_LANG } from '../i18n/locales/index'
 import type { ComplexityLevel } from '../data/levels'
 import { LEVELS, atLeast } from '../data/levels'
-import type { NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { Facing, NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
 import type { GraphView, WireSource } from '../graph/graph'
 import { reconcileMainFaders } from '../graph/mainFader'
 import { withUsbReturns } from '../graph/usbLink'
@@ -34,12 +34,14 @@ export interface HelpOpen {
 }
 
 /**
- * A wire being drawn: the output it starts from, where that port is and the corners clicked so far
- * (flow coordinates). Its loose end follows the cursor (useWireDrawing), which is not kept here.
+ * A wire being drawn: the output it starts from, where that port is, the side of its card it faces
+ * (a flipped card's — portFacing) and the corners clicked so far (flow coordinates). Its loose end
+ * follows the cursor (useWireDrawing), which is not kept here.
  */
 export interface WireDraft {
   source: WireSource
   start: Pt
+  facing: Facing
   waypoints: Pt[]
 }
 
@@ -157,7 +159,7 @@ export interface SignalChainStore {
   redo: () => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
-  startWire: (source: WireSource, start: Pt) => void
+  startWire: (source: WireSource, start: Pt, facing: Facing) => void
   /** A click in empty space while drawing: the wire turns a corner there */
   addWireCorner: (at: Pt) => void
   cancelWire: () => void
@@ -276,7 +278,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   // Back in Select mode nothing is being wired (a new canvas and undo / redo drop the wire too: NO_WIRE)
   setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wire: null } : { toolMode: mode }),
 
-  startWire: (source, start) => set({ wire: { source, start, waypoints: [] } }),
+  startWire: (source, start, facing) => set({ wire: { source, start, facing, waypoints: [] } }),
 
   // The source stays the same object, so the cards watching it do not re-render
   addWireCorner: (at) => set((s) => (s.wire ? { wire: { ...s.wire, waypoints: [...s.wire.waypoints, at] } } : {})),

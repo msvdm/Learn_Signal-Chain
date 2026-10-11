@@ -9,14 +9,14 @@ import { wireFlows } from '../graph/wireFlow'
 import type { WireFlow } from '../graph/wireFlow'
 import { reachIn } from '../graph/reach'
 import { humStrength } from '../signal/levels'
-import { SOUND_PORT, portRows } from '../data/nodeRegistry'
+import { SOUND_PORT } from '../data/nodeRegistry'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { ComplexityLevel } from '../data/levels'
 import type { NodePort } from '../data/nodeRegistry'
 import { healthOf, levelOf, outDomainOf } from '../signal/engine'
-import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
+import { nodeDims, recordMeasuredSize, wireRoute } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
-import { wirePassesThroughNode } from '../utils/wireValidation'
+import { routeCrossesCards } from '../utils/wireValidation'
 import { chainOfEdge } from '../graph/chainColors'
 import type { ChainEdgeData } from '../components/ChainEdge'
 import { useGraphSignal } from './useGraphSignal'
@@ -127,18 +127,8 @@ export function useFlowElements() {
 
     /** The wire runs through another card, as it is drawn: port, corners (if any), port — as its preview did. */
     function crossesCard(edge: SignalEdge): boolean {
-      const src = cards.find((c) => c.id === edge.source)
-      const tgt = cards.find((c) => c.id === edge.target)
-      const srcNode = graphNodes.find((n) => n.id === edge.source)
-      const tgtNode = graphNodes.find((n) => n.id === edge.target)
-      if (!src || !tgt || !srcNode || !tgtNode) return false
-      const outs = drawnPorts(srcNode, level, graph).outputs
-      const ins  = drawnPorts(tgtNode, level, graph).inputs
-      // Each port on its own line (a port's row, else its place)
-      const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
-      const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
-      const points = [portPoint(src, 'source', out), ...(edge.waypoints ?? []), portPoint(tgt, 'target', inp)]
-      return wirePassesThroughNode(points, cards, [edge.source, edge.target])
+      const route = wireRoute(edge, cards, graph, level)
+      return route !== null && routeCrossesCards(route, cards, [edge.source, edge.target])
     }
 
     const flows = beginner ? null : wireFlows(graph)

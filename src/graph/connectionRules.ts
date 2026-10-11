@@ -1,6 +1,7 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TO_PC_PORT, isBus } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, isBus } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
+import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { GraphView, WireSource } from './graph'
 import { drawnPorts, getPorts, instrumentAt, isMatrixSource, micLevelAt } from './queries'
 
@@ -14,8 +15,8 @@ const MIXER_OUTPUTS: ReadonlySet<string> = new Set([MIXER_MAIN_PORT, MIXER_MONIT
  * Bus inputs (Master, Aux, Matrix) and an Audio Interface's line input accept any number of wires —
  * just not the same wire twice. Every other input takes one wire.
  * The USB link (D22): an Interface's To computer goes only into a DAW — one wire, which carries the
- * sound both ways (graph/usbLink.ts) — and a DAW takes nothing else but a Mixer's output (Beginner:
- * a desk with USB). One computer per Interface. A hidden port takes no wire (the USB wire's way
+ * sound both ways (graph/usbLink.ts) — and below Advanced a DAW takes nothing else but a Mixer's
+ * output (Beginner: a desk with USB; nodeAcceptsWire). One computer per Interface. A hidden port takes no wire (the USB wire's way
  * back is the store's).
  */
 export function portAcceptsWire(
@@ -26,9 +27,8 @@ export function portAcceptsWire(
 ): boolean {
   if (source && node.id === source.nodeId) return false
   if (NODE_REGISTRY[node.typeKey].inputs.some((p) => p.id === handleId && p.hidden)) return false
-  // A port of its own (To computer, a Mixer's outputs): the rule needs no card lookup
-  const usb = source !== undefined && (source.handleId === TO_PC_PORT || MIXER_OUTPUTS.has(source.handleId))
-  if (source && (node.typeKey === 'daw' ? !usb : source.handleId === TO_PC_PORT)) return false
+  // To computer goes only into a DAW (a port of its own: the rule needs no card lookup)
+  if (source && node.typeKey !== 'daw' && source.handleId === TO_PC_PORT) return false
   // One computer per Interface
   if (source?.handleId === TO_PC_PORT && edges.some((e) => e.source === source.nodeId && e.sourceHandle === TO_PC_PORT)) return false
   const onPort = edges.filter((e) => e.target === node.id && e.targetHandle === handleId)
@@ -41,13 +41,15 @@ export function portAcceptsWire(
 /**
  * True when a wire from `source` may end on at least one input of `targetNode` (`level`: the canvas's
  * — some rules hold only at a level; none, only the rest).
- * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a Matrix send feeds only Matrix Buses.
+ * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a send (the whole mix on one
+ * wire) feeds only what takes a whole mix: a Matrix Bus, Stream / Broadcast, an Encoder.
  * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
  * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
  * An Amplifier's output is speaker level: only a passive speaker takes it; a Stage Box's snake goes
  * only into a Mixer. An Audio Interface records
  * line-level signals: not a microphone before its Preamp, nor a guitar (D22) — the computer's sound comes
- * out of its line output, into the desk or the monitors. The USB link: portAcceptsWire.
+ * out of its line output, into the desk or the monitors. At Beginner, with no levels, it takes them like
+ * the Mixer does (the user's call, 2026-10-11). The USB link: portAcceptsWire.
  * The digital picture (D23): an Encoder's output goes only into Stream / Broadcast, which at Advanced
  * takes nothing else; a DAW plays its song only into a Recorder Track, whose Monitor out goes into
  * a processing or routing card (back into a channel, or on to be heard) — not straight into an end
@@ -61,6 +63,10 @@ export function nodeAcceptsWire(
   level?: ComplexityLevel,
 ): boolean {
   if (targetNode.id === source.nodeId) return false
+  // Below Advanced a DAW takes only the USB link: an Interface's To computer, a Mixer's output (a
+  // desk with USB). At Advanced it is a digital summing bus: any wire (numbers only — signal/process.ts)
+  const usb = source.handleId === TO_PC_PORT || MIXER_OUTPUTS.has(source.handleId)
+  if (targetNode.typeKey === 'daw' && level !== 'advanced' && !usb) return false
   if ((targetNode.typeKey === 'mic') !== (source.handleId === SOUND_PORT)) return false
   if (targetNode.typeKey === 'guitar-amp' && instrumentAt(source.nodeId, source.handleId, { nodes, edges }) === null) return false
   const from = nodes.find((n) => n.id === source.nodeId)?.typeKey
@@ -71,11 +77,11 @@ export function nodeAcceptsWire(
   if (targetNode.typeKey === 'broadcast' && level === 'advanced' && from !== 'encoder') return false
   if (from === 'daw' && targetNode.typeKey !== 'recorder') return false
   if (from === 'recorder' && NODE_REGISTRY[targetNode.typeKey].category === 'sink') return false
-  if (targetNode.typeKey === 'interface' &&
+  if (targetNode.typeKey === 'interface' && (level === undefined || atLeast(level, SIGNAL_LEVEL)) &&
       (micLevelAt(source.nodeId, source.handleId, { nodes, edges }) || instrumentAt(source.nodeId, source.handleId, { nodes, edges }) !== null)) return false
   const toMatrix = targetNode.typeKey === 'matrix-bus'
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
-  if (!toMatrix && source.handleId === MATRIX_PORT) return false
+  if (!TAKES_WHOLE_MIX.has(targetNode.typeKey) && source.handleId === MATRIX_PORT) return false
   return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source))
 }
 

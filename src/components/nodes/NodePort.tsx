@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { X } from 'lucide-react'
@@ -15,14 +15,28 @@ import { outputKind } from '../../graph/queries'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
-import { MATRIX_PORT } from '../../data/nodeRegistry'
-import type { SignalEdge } from '../../data/nodeRegistry'
+import { MATRIX_PORT, portFacing } from '../../data/nodeRegistry'
+import type { Facing, SignalEdge } from '../../data/nodeRegistry'
 
 /** The wires plugged into this port. */
 function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source' | 'target'): SignalEdge[] {
   return type === 'source'
     ? graphOf(graph).from(nodeId).filter((e) => e.sourceHandle === portId)
     : graphOf(graph).into(nodeId).filter((e) => e.targetHandle === portId)
+}
+
+/** React Flow's side for each way a port faces */
+const POSITION: Record<Facing, Position> = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom }
+
+/** Where an output's L / R letter goes: right of the ring, just above its wire (left of it, facing left; beside it, top or bottom) */
+function letterPlace(facing: Facing, top: number, send: boolean): CSSProperties {
+  const away = send ? -36 : -24
+  switch (facing) {
+    case 'right':  return { top: top - 17, right: away }
+    case 'left':   return { top: top - 17, left: away }
+    case 'top':    return { top: -24, left: 'calc(50% + 18px)' }
+    case 'bottom': return { bottom: -24, left: 'calc(50% + 18px)' }
+  }
 }
 
 interface NodePortProps {
@@ -55,6 +69,19 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
   // Each piece is read on its own, so the port is redrawn only when one of them changes
   const connected = useSignalStore(useShallow((s) => wiresOn(s, nodeId, portId, type)))
 
+  // The side of the card it sits on (a flipped card's ports face another way): once it turns, React
+  // Flow re-reads the port so its wires leave from where it is now
+  const facing = useSignalStore((s) => {
+    const node = graphOf(s).node(nodeId)
+    return node ? portFacing(node, type) : type === 'source' ? 'right' : 'left'
+  })
+  const lastFacing = useRef(facing)
+  useEffect(() => {
+    if (lastFacing.current === facing) return
+    lastFacing.current = facing
+    updateNodeInternals(nodeId)
+  }, [facing, nodeId, updateNodeInternals])
+
   const ringColor = useSignalStore((s) => {
     const plugged = wiresOn(s, nodeId, portId, type)
     if (plugged.length === 0) return 'var(--lsc-border)'
@@ -81,14 +108,19 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0
   const showUnplug = canUnplug && (hovered || menuAt !== null)
-  // L / R on an output carrying one side; "L+R" on a Matrix send (both sides on one wire)
+  // L / R on an output carrying one side; "L+R" on a send (both sides on one wire), in the Matrix's
+  // colour while it feeds a Matrix Bus
   const isSend     = type === 'source' && portId === MATRIX_PORT
+  const toMatrix   = useSignalStore((s) => isSend && s.edges.some((e) =>
+    e.source === nodeId && e.sourceHandle === MATRIX_PORT && graphOf(s).node(e.target)?.typeKey === 'matrix-bus'))
   // (At Beginner, where no signal is worked out, what the wiring makes of the output)
   const sideKind   = useSignalStore((s) => type !== 'source' ? undefined
     : atLeast(s.complexityLevel, SIGNAL_LEVEL) ? signalIn(s).wires.get(outputKey(nodeId, portId))?.kind
     : outputKind(nodeId, portId, s))
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
   const top        = PORT_TOP + row * PORT_GAP
+  // On a top or bottom edge (a card on its side): in the middle of it, where React Flow puts it
+  const upright    = facing === 'top' || facing === 'bottom'
   // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the
   // port above or below, so each part of the room between two ports belongs to the nearer one
   const shared = Math.min(PORT_REACH, PORT_GAP / 2)
@@ -114,9 +146,9 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
       <Handle
         id={portId}
         type={type}
-        position={type === 'source' ? Position.Right : Position.Left}
+        position={POSITION[facing]}
         className={className}
-        style={{ ...reach, top, borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
+        style={{ ...reach, ...(upright ? {} : { top }), borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         // The ring grows while hovered or while a wire looks for an input. Once its size settles,
@@ -133,10 +165,10 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
         <span
           aria-hidden
           style={{
-            // Right of the ring, just above the wire leaving it
-            position: 'absolute', top: top - 17, right: isSend ? -36 : -24,
+            // Beside the ring, just above the wire leaving it (beside it, on a top or bottom edge)
+            position: 'absolute', ...letterPlace(facing, top, isSend),
             fontSize: 10, fontWeight: 800, lineHeight: 1,
-            color: isSend ? 'var(--lsc-wire-matrix)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
+            color: toMatrix ? 'var(--lsc-wire-matrix)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}
         >
           {side}

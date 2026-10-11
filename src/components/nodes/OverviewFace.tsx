@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useContext, useMemo } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useStore } from '@xyflow/react'
 import { shallow } from 'zustand/shallow'
@@ -6,6 +6,7 @@ import { LiveLevel, MeterBar, MeterScaleRow } from '../SignalMeter'
 import { zoneTextColor } from '../meterPaint'
 import type { LiveReading } from '../SignalMeter'
 import { levelParts } from '../../utils/readout'
+import { MirroredIcons } from './mirroredIcons'
 import { StableText } from '../controls/StableText'
 import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { getHealth, louder, SPL_SCALE_DB } from '../../signal/levels'
@@ -250,9 +251,10 @@ export function OverviewIcon({ icon, box, color = 'var(--lsc-fg)' }: {
   box: { w: number; h: number }
   color?: string
 }) {
-  const size = Math.max(0, Math.floor(Math.min(box.w, box.h)))
+  const size     = Math.max(0, Math.floor(Math.min(box.w, box.h)))
+  const mirrored = useContext(MirroredIcons)
   return (
-    <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color }}>
+    <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color, ...(mirrored ? { transform: 'scaleX(-1)' } : {}) }}>
       {icon}
     </span>
   )

@@ -25,17 +25,22 @@ Build chains like:
 
 Right-click any element and choose *What is this?*: it explains what the element does, why it is in the chain and what to watch out for — in plain language, without jargon. *Next* walks you along the chain, element by element.
 
-## What's New in 1.1
+## What's New in 2.0
 
 - **Each level is a different scale.** *Beginner* shows the devices in a room — a singer, a drum kit, microphones, a keyboard, a computer, a stage box, a mixer, speakers — and how they are wired. No numbers: every speaker, recorder or stream simply says whether sound reaches it. *Intermediate* opens up the channel strip of a small mixing desk (modelled on the Yamaha MG12XU). *Advanced* shows the parts and the digital side.
 - **The microphone is not the sound.** A Vocal (Speech or Singing), a Drum Kit, an Acoustic Guitar or a Guitar Amp makes sound in the air, with a meter of how loud it is (dB SPL). A dotted wire carries that sound to a Microphone, which turns it into a signal. One drum kit can feed several microphones.
 - **Dynamic or condenser microphone.** A condenser gives about 12 dB more signal from the same sound, but hears the room louder too — and stays silent until you put Phantom Power (48V) before its Preamp and switch it on.
 - **A real desk's channel strip** at Intermediate: 48V, Preamp, an 80 Hz high-pass button, a three-knob equalizer and a one-knob compressor (as on the Yamaha MG), each a bare control as on the desk. The full cards wait at Advanced.
 - **New sources and outputs:** Keyboard (stereo — it replaces the Line Input), Computer, Studio Monitor, Recorder, Stream / Broadcast. An Amplifier's output now goes only into a passive speaker, and a passive speaker without one says why it is silent.
-- **Record and play back.** An Audio Interface and a DAW (a recording program on a computer): one USB wire carries your mix into the computer and the computer's song back out, into the desk or the monitors. *Look inside* shows what the boxes hold: the same channel strip, as numbers.
-- **The digital picture** at Advanced: a Decoder plays a song that is digital from the start; an Encoder packs the mix into MP3, AAC or Opus for a Stream / Broadcast; the DAW plays its song into a Recorder Track, which shows an analog signal on a VU meter's needle.
+- **Record and play back.** An Audio Interface and a DAW (a recording program on a computer): one USB wire carries your mix into the computer and the computer's song back out, into the desk or the monitors. At Beginner a microphone or a guitar plugs straight into the Interface. *Look inside* shows what the boxes hold: the same channel strip, as numbers.
+- **The digital picture** at Advanced: a Decoder plays a song that is digital from the start, its peaks at −18 dBFS (the EBU level); an Encoder packs the mix into MP3, AAC or Opus for a Stream / Broadcast; the DAW adds up the digital signals it records, like a mixing bus, and plays them into a Recorder Track, which shows an analog signal on a VU meter's needle.
+- **Flip it.** Right-click a Gain or an On Off Switch to flip it horizontally (the sound flows right to left) or vertically (on its side: a PFL button standing under its channel). Flip an Active Speaker and it becomes a stage monitor facing the band; Headphones turn to face the other way too.
+- **Drop a card anywhere on a wire** and it goes into it — a wire turning down to a PFL Bus as well as a straight one.
+- **Stream / Broadcast and the Encoder get the whole mix:** a Master Bus's L or R wired into them sends both sides.
 - **The PFL Bus**: listen to one channel on its own in the headphones — an On Off Switch wired into it is that channel's PFL button. Headphones have no knob of their own: a Gain right before them sets how loud they are.
 - **Wires show where the sound goes:** green to the Master Bus, blue to an Aux Bus, magenta to a Matrix Bus, yellow to the PFL Bus, black into an Audio Interface or a stream. Red still means clipping or a problem. At Beginner every wire is one colour.
+- **At Beginner** the Mixer says *Mixing desk* in big letters across its top, and the Stage Box stands bare, like the microphones.
+- **The Pan knob** fills from the centre toward L or R.
 - **Old chains still open:** a saved Microphone gets the Vocal or Drum Kit it was picking up, and a Line Input becomes a Keyboard.
 
 ## Earlier
@@ -66,7 +71,7 @@ Each level shows the sound system at its own scale, from the room down to the pa
 |---|---|
 | Beginner — the room | The devices and how they connect: vocal, drum kit, microphone, keyboard, computer, instrument (an electric guitar), guitar amp; stage box, mixer, audio interface, DAW; active and passive speakers, amplifier, headphones, studio monitor, recorder, stream / broadcast. No numbers: each output says whether sound reaches it |
 | Intermediate — a small desk | You build the desk's channel strip yourself (the mixer and stage box leave): + acoustic guitar, DI box, phantom power (48V), gain (the preamp after a microphone), high-pass filter, pad, equalizer (three knobs), compressor (one knob), fader, on / off switch, relay switch, pan / balance, master bus, aux bus, PFL bus; the audio interface and DAW record and play back. On every meter the peaks, the noise and the Peak / RMS / Noise numbers, moving with the sound |
-| Advanced — the parts and the digital picture | + signal generator, decoder, parametric equalizer, the full compressor, noise gate, limiter, de-esser, graphic EQ, ADC / DAC, encoder, matrix bus; the recorder becomes a Recorder Track, fed by the DAW's song. The audio interface and studio monitor leave: the converters, the encoder and the decoder take their place |
+| Advanced — the parts and the digital picture | + signal generator, decoder, parametric equalizer, the full compressor, noise gate, limiter, de-esser, graphic EQ, ADC / DAC, encoder, matrix bus; the recorder becomes a Recorder Track, fed by the DAW (a digital summing bus). The audio interface and studio monitor leave: the converters, the encoder and the decoder take their place |
 
 Switch levels from the header at any time.
 

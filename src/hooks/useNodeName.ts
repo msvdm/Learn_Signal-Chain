@@ -5,10 +5,14 @@ import { nodeName } from '../utils/nodeName'
 import { graphOf } from '../graph/graph'
 import { signalIn } from './useGraphSignal'
 
-/** An element's name as its card shows it (nodeName): follows the wiring (Preamp, Main Fader, Balance). */
+/**
+ * An element's name as its card shows it (nodeName): follows the wiring (Preamp, Main Fader,
+ * Balance) and a flip (an Active Speaker turned toward the band: Stage Monitor).
+ */
 export function useNodeName(nodeId: string, typeKey: TypeKey): string {
   const { t }  = useTranslation()
   const label  = useSignalStore((s) => graphOf(s).node(nodeId)?.label)
   const role   = useSignalStore((s) => signalIn(s).stages[nodeId]?.role)
-  return nodeName(t, { typeKey, label }, { role })
+  const flipH  = useSignalStore((s) => graphOf(s).node(nodeId)?.params.flipH === true)
+  return nodeName(t, { typeKey, label, params: { flipH } }, { role })
 }

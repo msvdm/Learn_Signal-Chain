@@ -4,6 +4,7 @@ import { useReactFlow } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import { newEdge } from '../graph/edits'
 import type { Pt } from '../utils/geometry'
+import type { Facing } from '../data/nodeRegistry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -13,8 +14,15 @@ export interface WireCursor {
   pos: Pt
   /** The centre of the input under the cursor (the wire snaps to it) */
   snap: Pt | null
+  /** The side of its card that input faces (portFacing: a flipped card's) */
+  snapFacing: Facing | null
   /** The wire would run through another card */
   warning: boolean
+}
+
+/** The side of its card a port faces, as React Flow drew it (its react-flow__handle-<side> class). */
+function facingOf(el: HTMLElement): Facing {
+  return (['left', 'right', 'top', 'bottom'] as const).find((f) => el.classList.contains(`react-flow__handle-${f}`)) ?? 'left'
 }
 
 /** The react-flow handle element at a screen point. */
@@ -91,10 +99,12 @@ export function useWireDrawing(
       const hEl      = handleUnder(e.clientX, e.clientY)
       const onTarget = hEl?.classList.contains('target') ? hEl : null
       const snap     = onTarget ? handleFlowPos(onTarget, screenToFlowPosition) : null
+      const snapFacing = onTarget ? facingOf(onTarget) : null
       // The wire ends on its target's edge — only other cards in the way count as crossing
       const exclude = onTarget ? [wire.source.nodeId, onTarget.dataset.nodeid!] : [wire.source.nodeId]
-      const warning = wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], layout.layoutSnapshot(), exclude)
-      setCursor({ pos, snap, warning })
+      const ends    = { from: wire.facing, to: snapFacing ?? undefined }
+      const warning = wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], layout.layoutSnapshot(), exclude, ends)
+      setCursor({ pos, snap, snapFacing, warning })
     }
 
     document.addEventListener('mousemove', onMove)
@@ -107,8 +117,9 @@ export function useWireDrawing(
       useSignalStore.getState().startWire(
         { nodeId: hEl.dataset.nodeid!, handleId: hEl.dataset.handleid! },
         handleFlowPos(hEl, screenToFlowPosition),
+        facingOf(hEl),
       )
-      setCursor({ pos: at, snap: null, warning: false })
+      setCursor({ pos: at, snap: null, snapFacing: null, warning: false })
     }
 
     function onDown(e: MouseEvent) {

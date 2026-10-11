@@ -31,6 +31,7 @@ export interface Matchers {
   /** |received − expected| < 10^−numDigits / 2 */
   toBeCloseTo(expected: number, numDigits?: number): void
   toBeUndefined(): void
+  toBeNull(): void
   toBeGreaterThan(expected: number): void
   toBeLessThan(expected: number): void
   toBeLessThanOrEqual(expected: number): void
@@ -53,6 +54,7 @@ function matchers(actual: unknown, negate: boolean): Matchers {
     toBeCloseTo:     (expected, numDigits = 2) =>
       check(Object.is(num, expected) || Math.abs(num - expected) < 10 ** -numDigits / 2, 'toBeCloseTo', expected),
     toBeUndefined:   () => check(actual === undefined, 'toBeUndefined'),
+    toBeNull:        () => check(actual === null, 'toBeNull'),
     toBeGreaterThan: (expected) => check(num > expected, 'toBeGreaterThan', expected),
     toBeLessThan:    (expected) => check(num < expected, 'toBeLessThan', expected),
     toBeLessThanOrEqual: (expected) => check(num <= expected, 'toBeLessThanOrEqual', expected),

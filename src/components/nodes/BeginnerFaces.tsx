@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { VolumeX } from 'lucide-react'
 import type { CardProps } from './cardProps'
 import type { NodePort, TypeKey } from '../../data/nodeRegistry'
-import { FROM_PC_PORT } from '../../data/nodeRegistry'
+import { FROM_PC_PORT, isFlipped } from '../../data/nodeRegistry'
 import { useSignalStore } from '../../store/signalStore'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { useNodeName } from '../../hooks/useNodeName'
@@ -19,6 +19,7 @@ import { FACE_METER_ROOM } from './FaceCard'
 import { NOTE_LINE, noteLines, noteSize } from './noteLayout'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace, OverviewIcon } from './OverviewFace'
+import { MirroredIcons } from './mirroredIcons'
 import { PAD } from './overviewLayout'
 import { PortLine } from './InterfaceNode'
 import { LINE_H, lineTop } from './portLines'
@@ -39,6 +40,8 @@ const NAME_GAP  = 8
 const VERDICT_FAR = 44
 /** The Mixer's meter, this many times its usual size, as its drawing (its card's size: the registry) */
 const MIXER_SCALE = 3
+// A drawn device's name across its top, when it has no port lines (times its scale)
+const TITLE_SIZE = 22
 
 /** A face's size: its type's card (minSize, tall enough for its ports), and a still meter's room on the right if it has one. */
 function faceSize(typeKey: TypeKey, ports: { inputs: NodePort[]; outputs: NodePort[] }, meter: boolean): Size {
@@ -59,9 +62,9 @@ const layer = (right = 0): CSSProperties => ({
 })
 
 /**
- * An input (a sound, a microphone, a player, a guitar): its icon and its name, no card around it,
- * no meter — at every zoom, the name bigger zoomed out. The Vocal is a head, the Microphone has no
- * Dynamic | Condenser.
+ * An input (a sound, a microphone, a player, a guitar) or the Stage Box: its icon and its name, no
+ * card around it, no meter — at every zoom, the name bigger zoomed out. The Vocal is a head, the
+ * Microphone has no Dynamic | Condenser.
  */
 export function BeginnerInput({ id, type }: CardProps) {
   const typeKey = type as TypeKey
@@ -115,20 +118,23 @@ export function BeginnerOutput({ id, type }: CardProps) {
   const tone    = VERDICT_TONE[verdict]
   const Icon    = verdict === 'needs-amp' ? VolumeX : NODE_LOOK[typeKey].icon
   return (
-    <CardFrame nodeId={id} label={label} chrome={chrome} size={size}>
-      <div style={{ ...layer(), gap: 6 }}>
-        <OverviewIcon
-          icon={<Icon />} box={{ w: box.w, h: box.h - font * NOTE_LINE * lines - 6 }}
-          color={verdict === 'needs-amp' ? tone : undefined}
-        />
-        <span style={{ fontSize: font, fontWeight: 700, lineHeight: NOTE_LINE, textAlign: 'center', color: tone, maxWidth: box.w }}>{text}</span>
-      </div>
-    </CardFrame>
+    // Flipped horizontally (a speaker facing the band), its picture faces the other way
+    <MirroredIcons.Provider value={chrome.node !== undefined && isFlipped(chrome.node, 'h')}>
+      <CardFrame nodeId={id} label={label} chrome={chrome} size={size}>
+        <div style={{ ...layer(), gap: 6 }}>
+          <OverviewIcon
+            icon={<Icon />} box={{ w: box.w, h: box.h - font * NOTE_LINE * lines - 6 }}
+            color={verdict === 'needs-amp' ? tone : undefined}
+          />
+          <span style={{ fontSize: font, fontWeight: 700, lineHeight: NOTE_LINE, textAlign: 'center', color: tone, maxWidth: box.w }}>{text}</span>
+        </div>
+      </CardFrame>
+    </MirroredIcons.Provider>
   )
 }
 
 /**
- * A device shown as its icon: the Amplifier (no knob), the Stage Box, the DAW — the DAW with a
+ * A device shown as its icon: the Amplifier (no knob), the DAW — the DAW with a
  * still meter in dBFS beside it, lit while a sound reaches it (zoomed out its icon alone).
  */
 export function BeginnerDevice({ id, type }: CardProps) {
@@ -157,9 +163,10 @@ export function BeginnerDevice({ id, type }: CardProps) {
 
 /**
  * A device drawn as the box it is (the Mixer, Beginner's Audio Interface): its title, a line on
- * each port line naming what goes in and out there, its drawing, and a still meter in dBu (lit
- * while a sound reaches what it reads) — the meter `scale` times its usual size. Zoomed out its name
- * alone, in capitals (`nameFar`), or the same as zoomed in.
+ * each port line naming what goes in and out there — or, with no `lines`, its name big across the
+ * top instead —, its drawing, and a still meter in dBu (lit while a sound reaches what it reads) —
+ * the title and meter `scale` times their usual size. Zoomed out its name alone, in capitals
+ * (`nameFar`), or the same as zoomed in.
  */
 function DrawnDevice({ id, typeKey, meterAt, wide, scale = 1, nameFar, lines, drawing }: {
   id: string
@@ -170,7 +177,7 @@ function DrawnDevice({ id, typeKey, meterAt, wide, scale = 1, nameFar, lines, dr
   wide: boolean
   scale?: number
   nameFar: boolean
-  lines: ReactNode
+  lines?: ReactNode
   drawing: (box: { w: number; h: number }) => ReactNode
 }) {
   const chrome = useNodeChrome(id, typeKey)
@@ -186,19 +193,30 @@ function DrawnDevice({ id, typeKey, meterAt, wide, scale = 1, nameFar, lines, dr
   const hidden: CSSProperties = far ? { visibility: 'hidden' } : {}
   return (
     <CardFrame nodeId={id} label={label} chrome={chrome} size={size}>
-      <div
-        style={{
-          ...hidden, height: HEADER_H, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
-          padding: '0 10px 0 12px', borderBottom: '1px solid var(--lsc-border-soft)',
-        }}
-      >
-        <span className="lsc-node-icon" style={{ display: 'flex' }}><Icon size={16} /></span>
-        <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600 }}>{label}</span>
-      </div>
-      {/* Not drawn zoomed out: an arrow sets its own visibility */}
-      {!far && (
-        <div style={{ position: 'absolute', left: PAD, right: PAD, top: PAD, height: lineTop(1) + LINE_H, pointerEvents: 'none' }}>
-          {lines}
+      {lines ? (<>
+        <div
+          style={{
+            ...hidden, height: HEADER_H, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
+            padding: '0 10px 0 12px', borderBottom: '1px solid var(--lsc-border-soft)',
+          }}
+        >
+          <span className="lsc-node-icon" style={{ display: 'flex' }}><Icon size={16} /></span>
+          <span style={{ fontSize: 'var(--node-text-md)', fontWeight: 600 }}>{label}</span>
+        </div>
+        {/* Not drawn zoomed out: an arrow sets its own visibility */}
+        {!far && (
+          <div style={{ position: 'absolute', left: PAD, right: PAD, top: PAD, height: lineTop(1) + LINE_H, pointerEvents: 'none' }}>
+            {lines}
+          </div>
+        )}
+      </>) : (
+        <div
+          style={{
+            ...hidden, position: 'absolute', left: PAD, right: PAD, top: 0, height: top,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+          }}
+        >
+          <span style={{ fontSize: TITLE_SIZE * scale, fontWeight: 700, lineHeight: 1, whiteSpace: 'nowrap' }}>{label}</span>
         </div>
       )}
       <div style={{ ...hidden, position: 'absolute', left: PAD, right: PAD, top, bottom: PAD, display: 'flex', gap: 16 * scale, pointerEvents: 'none' }}>
@@ -222,27 +240,23 @@ function DrawnDevice({ id, typeKey, meterAt, wide, scale = 1, nameFar, lines, dr
 
 /**
  * The Mixer (Beginner): the whole desk in one box — any number of wires in, its mix out of Main
- * and Monitor. Drawn big (the user's call, 2026-10-11: three times the size), the same at every
- * zoom. Its meter reads its mix: lit while a sound reaches it.
+ * (the upper output) and Monitor. Drawn big (the user's call, 2026-10-11: three times the size), the
+ * same at every zoom; its name, "Mixing desk", big across the top — no port lines (the user's call:
+ * too small to read). Its meter reads its mix: lit while a sound reaches it.
  */
 export function MixerNode({ id }: CardProps) {
-  const { t } = useTranslation()
-  const lit   = useSignalStore((s) => soundAt(reachIn(s), id))
   return (
     <DrawnDevice
       id={id} typeKey="mixer" wide scale={MIXER_SCALE} nameFar={false}
-      lines={<>
-        <PortLine row={0} from={t.beginner.inputs} to={t.beginner.main} lit={[lit, lit]} arrow />
-        <PortLine row={1} from="" to={t.beginner.monitor} lit={[lit, lit]} arrow />
-      </>}
       drawing={(box) => <MixerDrawing box={box} />}
     />
   )
 }
 
 /**
- * Beginner's Audio Interface: the box drawn, its two paths named as at Intermediate (Line in → To
- * computer, From computer → Line out), its meter reading what it records.
+ * Beginner's Audio Interface: the box drawn, its two paths named almost as at Intermediate (Inputs
+ * → To computer: at Beginner a mic or a guitar goes in too; From computer → Line out), its meter
+ * reading what it records.
  */
 export function BeginnerInterface({ id }: CardProps) {
   const { t }     = useTranslation()
@@ -253,7 +267,7 @@ export function BeginnerInterface({ id }: CardProps) {
     <DrawnDevice
       id={id} typeKey="interface" meterAt="in" wide={false} nameFar
       lines={<>
-        <PortLine row={0} from={text.lineIn} to={text.toComputer} lit={[recording, recording]} arrow />
+        <PortLine row={0} from={t.beginner.inputs} to={text.toComputer} lit={[recording, recording]} arrow />
         <PortLine row={1} from={text.fromComputer} to={text.lineOut} lit={[playing, playing]} arrow />
       </>}
       drawing={(box) => <InterfaceDrawing box={box} />}

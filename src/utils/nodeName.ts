@@ -1,4 +1,5 @@
 import type { SignalNode } from '../data/nodeRegistry'
+import { isStageMonitor } from '../data/nodeRegistry'
 import type { Translations } from '../i18n/translations'
 import type { StageResult } from '../signal/engine'
 import type { WireKind } from '../graph/queries'
@@ -6,10 +7,11 @@ import type { WireKind } from '../graph/queries'
 /**
  * Which help text a node opens: its role in the chain if it has one (a Pan fed a stereo wire is a
  * Balance knob, a Fader on a bus's Mix output is the Main Fader, a Gain after a microphone is a
- * Preamp), else its type.
+ * Preamp), else what it is turned into (an Active Speaker flipped toward the band: a stage
+ * monitor), else its type.
  */
-export function helpKeyOf(node: Pick<SignalNode, 'typeKey'>, stage?: Pick<StageResult, 'role'>): string {
-  return stage?.role ?? node.typeKey
+export function helpKeyOf(node: Pick<SignalNode, 'typeKey' | 'params'>, stage?: Pick<StageResult, 'role'>): string {
+  return stage?.role ?? (isStageMonitor(node) ? 'stage-monitor' : node.typeKey)
 }
 
 /**
@@ -27,7 +29,7 @@ export function titleOf(t: Translations, key: string): string {
  */
 export function nodeName(
   t: Translations,
-  node: Pick<SignalNode, 'typeKey' | 'label'> | undefined,
+  node: Pick<SignalNode, 'typeKey' | 'label' | 'params'> | undefined,
   stage?: Pick<StageResult, 'role'>,
 ): string {
   if (!node) return '?'

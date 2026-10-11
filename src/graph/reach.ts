@@ -101,7 +101,8 @@ export function reachOf(view: GraphView): Reach {
     ends.set(key, false)   // a loop takes nothing more
     const node = graph.node(id)
     const def  = node && NODE_REGISTRY[node.typeKey]
-    const records = def?.routes?.some((r) => r.from === port && r.to.length === 0) ?? false
+    // (A DAW records what reaches it, whatever it sends on)
+    const records = node?.typeKey === 'daw' || (def?.routes?.some((r) => r.from === port && r.to.length === 0) ?? false)
     const taken = def?.category === 'sink' ? verdicts.get(id) === 'sound'
       : records || onward(graph, id, port).some((e) => carrying.has(e.id) && takesIt(e.target, e.targetHandle))
     ends.set(key, taken)

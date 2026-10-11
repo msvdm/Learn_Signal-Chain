@@ -742,8 +742,9 @@ describe('a clip before a speaker is heard there, however green its meter (disto
 })
 
 describe('the digital picture (D23): a Decoder, an Encoder, a Recorder Track, the DAW at Advanced', () => {
-  // A stream played (a Decoder: numbers from the start, −18 dBFS), through a digital Gain, packed by
-  // an Encoder for Stream / Broadcast: digital all the way, the level kept
+  // A stream played (a Decoder: numbers from the start, its peaks at −18 dBFS, its average −30),
+  // through a digital Gain, packed by an Encoder for Stream / Broadcast: digital all the way, the
+  // level kept. (The Decoder averaged −18 until 2026-10-11: the user put its peaks there, EBU's level)
   describe('a Decoder through an Encoder to Stream / Broadcast', () => {
     expectCards(signalOf([
       card('dec', 'decoder'),
@@ -753,10 +754,10 @@ describe('the digital picture (D23): a Decoder, an Encoder, a Recorder Track, th
     ], [
       wire('dec', 'gain'), wire('gain', 'cod'), wire('cod', 'air'),
     ]), {
-      dec:  { out: [-18, -18], health: 'good', domain: 'digital' },
-      gain: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
-      cod:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
-      air:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+      dec:  { out: [-30, -30], health: 'good', domain: 'digital' },
+      gain: { in: [-30, -30], out: [-30, -30], health: 'good', domain: 'digital', inDomain: 'digital' },
+      cod:  { in: [-30, -30], out: [-30, -30], health: 'good', domain: 'digital', inDomain: 'digital' },
+      air:  { in: [-30, -30], out: [-30, -30], health: 'good', domain: 'digital', inDomain: 'digital' },
     })
   })
 
@@ -777,9 +778,10 @@ describe('the digital picture (D23): a Decoder, an Encoder, a Recorder Track, th
       keys:  { out: [-10, -10], health: 'good' },
       cod:   { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'encoderNeedsDigital' },
       air:   { in: [S, S], out: [S, S], health: 'too-quiet' },
-      idle:  { out: S, health: 'too-quiet' },
+      // (Mono until 2026-10-11: an Encoder is always stereo now, like what it feeds — the user's call)
+      idle:  { out: [S, S], health: 'too-quiet' },
       keys2: { out: [-10, -10], health: 'good' },
-      dec:   { out: [-18, -18], health: 'good', domain: 'digital' },
+      dec:   { out: [-30, -30], health: 'good', domain: 'digital' },
       bus:   { out: [S, S], health: 'too-quiet', condition: 'domainMixedBus' },
     })
   })
@@ -813,25 +815,34 @@ describe('the digital picture (D23): a Decoder, an Encoder, a Recorder Track, th
     })
   })
 
-  // No Interface at Advanced: the DAW records nothing and plays its song into a Recorder Track. Its
-  // card shows the path in use — what it plays (chain.ts shownRoute)
-  describe('the DAW at Advanced plays its song into a Recorder Track', () => {
+  // No Interface at Advanced: the DAW is a digital summing bus into a Recorder Track (the user's
+  // call, 2026-10-11 — until then it played its own song there). Nothing in: silent; numbers only
+  describe('the DAW at Advanced adds up what it records, into a Recorder Track', () => {
     const result = signalOf([
+      card('dec', 'decoder'),
+      card('dec2', 'decoder'),
       card('daw', 'daw'),
       card('rec', 'recorder'),
       card('fad', 'fader'),
+      card('idle', 'daw'),
+      card('rec2', 'recorder'),
+      card('keys', 'keyboard'),
+      card('daw3', 'daw'),
     ], [
-      wire('daw', 'rec'), wire('rec', 'fad'),
+      wire('dec', 'daw'), wire('dec2', 'daw'), wire('daw', 'rec'), wire('rec', 'fad'),
+      wire('idle', 'rec2'), wire('keys', 'daw3'),
     ])
     expectCards(result, {
-      daw: { out: [-18, -18], health: 'good', domain: 'digital' },
-      rec: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
-      fad: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
-    })
-
-    it('plays the same song out of both its outputs: the Advanced one, and the USB link\'s way back', () => {
-      expectWire(result, 'daw:out', 'stereo', -18, -18)
-      expectWire(result, 'daw:playback', 'stereo', -18, -18)
+      dec:  { out: [-30, -30], health: 'good', domain: 'digital' },
+      dec2: { out: [-30, -30], health: 'good', domain: 'digital' },
+      // Two songs at −30 dBFS added as voltages: +6 dB
+      daw:  { in: [-23.98, -23.98], out: [-23.98, -23.98], health: 'good', domain: 'digital', inDomain: 'digital' },
+      rec:  { in: [-23.98, -23.98], out: [-23.98, -23.98], health: 'good', domain: 'digital', inDomain: 'digital' },
+      fad:  { in: [-23.98, -23.98], out: [-23.98, -23.98], health: 'good', domain: 'digital', inDomain: 'digital' },
+      keys: { out: [-10, -10], health: 'good' },
+      idle: { out: [S, S], health: 'too-quiet' },
+      rec2: { in: [S, S], out: [S, S], health: 'too-quiet' },
+      daw3: { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'dawNeedsDigital' },
     })
   })
 })
