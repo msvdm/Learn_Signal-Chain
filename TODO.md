@@ -525,7 +525,7 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
     an analog signal → `encoderNeedsDigital` (silent, `SILENCES`; its words a converter's line in
     capitals). `EncoderNode.tsx`: the three format buttons (`ChoiceButtons`), a few words on the chosen
     one (`nodes.encoder.goodFor`), "−18.0 dBFS → MP3" (what arrives, in its units). Named "Encoder" in
-    English (the user's call, 2026-10-11: the plan said "Coder"), "Кодер" in Bulgarian (the pair of
+    English (the user's call, 2026-10-11: the plan said "Coder"), "Енкодер" in Bulgarian (with
     "Декодер", the user's call).
   - **Recorder Track** (Advanced): a line across its face, "Records → Monitor out" (`PortLine`,
     lit while sound passes), the icon under it. On a digital signal the usual dBFS strip; on an
