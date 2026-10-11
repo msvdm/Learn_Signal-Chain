@@ -67,9 +67,10 @@ const UNDER_GAP = 6
 
 /**
  * A small face's icon with its choice buttons under it (the Microphone's Dynamic | Condenser: half
- * a face each way, no room beside the icon) — from Intermediate (CHOICE_LEVEL), zoomed in; otherwise
- * the icon alone. A condition's note goes under the icon, above the buttons (a condenser without
- * its 48V), the icon taking what height it leaves.
+ * a face each way, no room beside the icon) — from Intermediate (CHOICE_LEVEL), zoomed in. A
+ * condition's note goes under the icon, above the buttons (a condenser without its 48V), the icon
+ * taking what height it leaves. Zoomed out the icon alone, never a note: too small to read there,
+ * it only shrank the icon (the user's call).
  */
 export function FaceOverChoices({ nodeId, typeKey, box, buttons }: {
   nodeId: string
@@ -77,7 +78,12 @@ export function FaceOverChoices({ nodeId, typeKey, box, buttons }: {
   box: { w: number; h: number }
   buttons: ReactNode
 }) {
-  const choosing  = useSignalStore((s) => atLeast(s.complexityLevel, CHOICE_LEVEL) && !s.overview)
+  const overview  = useSignalStore((s) => s.overview)
+  const choosing  = useSignalStore((s) => atLeast(s.complexityLevel, CHOICE_LEVEL))
+  if (overview) {
+    const Icon = NODE_LOOK[typeKey].icon
+    return <OverviewIcon icon={<Icon />} box={box} />
+  }
   if (!choosing) return <SourceArt nodeId={nodeId} typeKey={typeKey} box={box} />
   return (
     <div style={{ width: box.w, height: box.h, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: UNDER_GAP }}>
