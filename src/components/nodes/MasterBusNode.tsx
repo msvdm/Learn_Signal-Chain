@@ -22,9 +22,9 @@ import { chainSourcesOfEdge } from '../../graph/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
 /**
- * Master Bus and Matrix Bus (always stereo), Aux Bus (mono or stereo).
+ * Master Bus and Matrix Bus (always stereo), Aux Bus (mono or stereo), PFL Bus (stereo on one wire).
  * One input that accepts any number of wires; they are added together.
- * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux on one.
+ * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux and the PFL on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
 const NO_GRAPH: GraphView = { nodes: [], edges: [] }

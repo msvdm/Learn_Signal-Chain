@@ -15,7 +15,7 @@ const wire = (source: string, target: string, sourceHandle = 'out', targetHandle
 
 const nodes = [
   node('box', 'interface'), node('box2', 'interface'), node('daw', 'daw'), node('daw2', 'daw'), node('keys', 'keyboard'),
-  node('fad', 'fader'),
+  node('fad', 'fader'), node('pfl', 'pfl-bus'), node('mtx', 'matrix-bus'),
   node('mic', 'mic'), node('p48', 'phantom'), node('pre', 'gain'), node('gtr', 'instrument'),
   node('eq', 'eq'), node('bus', 'master-bus'), node('mon', 'studio-monitor'), node('rec', 'recorder'),
 ]
@@ -67,5 +67,13 @@ describe('what an Audio Interface records: line-level signals, as many as you li
     expect(wireTakesCard('interface', view.edges[0], view)).toBe(false)
     expect(wireTakesCard('daw', view.edges[0], view)).toBe(false)
     expect(wireTakesCard('eq', view.edges[0], view)).toBe(true)
+  })
+})
+
+describe('the PFL Bus: for listening only', () => {
+  it('takes any number of channels, and never feeds a Matrix Bus', () => {
+    expect(takes('keys', 'pfl', [wire('pre', 'pfl')])).toBe(true)
+    expect(takes('pfl', 'mtx')).toBe(false)
+    expect(takes('pfl', 'fad')).toBe(true)
   })
 })

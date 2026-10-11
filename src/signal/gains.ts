@@ -89,6 +89,8 @@ const GAINS = {
   'master-bus':     (node) => param(node, 'faderDb'),
   'aux-bus':        (node) => param(node, 'faderDb'),
   'matrix-bus':     (node) => param(node, 'faderDb'),
+  // No fader: it only adds its wires up
+  'pfl-bus':        () => 0,
   speaker:          (node) => param(node, 'outputTrimDb'),
   'active-speaker': (node) => param(node, 'volumeDb'),
   'studio-monitor': (node) => param(node, 'volumeDb'),

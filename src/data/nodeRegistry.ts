@@ -48,7 +48,7 @@ export type TypeKey =
   | 'vocal' | 'drum-kit' | 'acoustic' | 'mic' | 'keyboard' | 'pc' | 'instrument' | 'guitar-amp' | 'generator'
   | 'phantom' | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
-  | 'master-bus' | 'aux-bus' | 'matrix-bus'
+  | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'pfl-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
   | 'interface' | 'daw'
 
@@ -88,9 +88,10 @@ export type NodeTypeDef = {
   bypass: boolean
   /**
    * A mixing bus: its input takes any number of wires, added together. 'mix': a Master or Aux Bus,
-   * whose mix may feed a Matrix Bus; 'matrix': the Matrix Bus, a bus of buses.
+   * whose mix may feed a Matrix Bus; 'matrix': the Matrix Bus, a bus of buses; 'pfl': the PFL Bus,
+   * for listening only (no Main Fader, no Matrix).
    */
-  bus?: 'mix' | 'matrix'
+  bus?: 'mix' | 'matrix' | 'pfl'
   /**
    * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
    * separately: the Graphic EQ and the Amplifier (a two-channel amp) for any stereo wire (`true`;
@@ -420,6 +421,15 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: ADVANCED_ONLY, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
+  'pfl-bus': {
+    // PFL (Pre-Fade Listen): what the engineer hears in the headphones — the channels whose PFL
+    // button is down (a Switch wired into it). Always stereo, a mono wire on both sides at full
+    // level (no Pan); one stereo output and no fader: the Gain before the headphones sets how loud.
+    // Never a Main Fader's or a Matrix Bus's
+    category: 'merge', inputs: IN, outputs: OUT, stereo: 'always', bus: 'pfl',
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
+    defaultParams: {},
+  },
   speaker: {
     // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
@@ -664,9 +674,14 @@ export function isNodeStereo(node: Pick<SignalNode, 'typeKey' | 'params'>): bool
   return support === 'optional' && node.params.stereo === true
 }
 
-/** A bus that sends its mix out as Left and Right: the Master, or an Aux set to Stereo. */
+/**
+ * A bus that sends its mix out as Left and Right: the Master, the Matrix, an Aux set to Stereo
+ * (not the PFL Bus: stereo on one wire).
+ */
 export function isStereoBus(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
-  return isBus(node.typeKey) && isNodeStereo(node)
+  if (!isBus(node.typeKey) || !isNodeStereo(node)) return false
+  const def = NODE_REGISTRY[node.typeKey]
+  return (def.stereoOutputs ?? def.outputs).some((p) => portSide(p.id) !== null)
 }
 
 /** Which side a bus output carries: 'l' / 'r' for Left / Right outputs, null otherwise. */

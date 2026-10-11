@@ -430,6 +430,7 @@
       "master-bus": "Master Bus",
       "aux-bus": "Aux Bus",
       "matrix-bus": "Matrix Bus",
+      "pfl-bus": "PFL Bus",
       "active-speaker": "Active Speaker",
       "headphones": "Headphones",
       "studio-monitor": "Studio Monitor",
@@ -535,6 +536,11 @@
       "what": "A matrix bus is a mix of your mixes. Only finished mixes go in, after their fader — the Master Bus or an Aux Bus — never a single microphone or instrument. Wire a bus's L or R output into the matrix and the wire becomes its Matrix send: one stereo wire that carries left and right together, drawn as a twin line in its own colour and marked L+R. A mono Aux Bus goes in from its output, or from the Fader after it, and lands on both sides at the same level. Each bus gets one knob on the card that sets how much of it goes in. A matrix bus is always stereo: its mix leaves on two wires, L and R.",
       "why": "Different places need a different blend, and the main mix must not change for them: small speakers along the front edge of the stage that need more vocals, delay speakers at the back of a hall, a speaker in the lobby, a feed for a recording or a livestream. Put a Fader after it to set its overall level — that Fader becomes its Main Fader.",
       "tip": "Try this: give the Master Bus a Main Fader, then wire the fader's L output into the matrix. Move the Main Fader: the matrix follows, because the send leaves after the fader — that is how matrix sends work on a real mixing desk. Try a microphone too: the matrix input does not light up, because a microphone is not a mix."
+    },
+    "pfl-bus": {
+      "what": "The PFL bus (Pre-Fade Listen) gathers the channels whose PFL button is pressed, so you can hear them in headphones. It takes their sound before the channel's fader, so you can check a channel without changing the mix.",
+      "why": "An engineer often needs to hear one channel on its own — to set its Gain, find a noise or check a microphone — while the audience keeps hearing the whole mix.",
+      "tip": "Take a channel's sound from before its Fader, through an On Off Switch, into the PFL bus: the switch becomes its PFL button. Then the PFL bus through a Gain into Headphones — the Gain sets how loud. Every channel lands on both ears; the bus has no fader."
     },
     "balance": {
       "what": "A balance control adjusts the relative loudness between the Left and Right channels of a stereo signal. At centre, both channels pass through equally. Turning left fades out the right channel; turning right fades out the left channel.",

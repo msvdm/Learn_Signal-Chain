@@ -111,5 +111,8 @@ the descriptions). Each is what the user asked for; change one only when they as
   it, a ⇄ halfway). The DAW has no output of its own at Intermediate; the computer's sound comes out
   of the Interface's one stereo line output ("From computer"), into a Gain or Fader on the desk, a
   bus or the monitors.
+- **The PFL Bus** (2026-10-11): a listening bus (Pre-Fade Listen), at Intermediate and Advanced —
+  always stereo, a mono wire on both sides at full level (no Pan); one stereo output, no fader and no
+  Main Fader takeover (the Gain before the headphones sets the level); it never feeds a Matrix Bus.
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users
   may upload their own sounds later.

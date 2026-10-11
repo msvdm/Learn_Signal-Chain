@@ -3,7 +3,7 @@ import {
   Drum, Guitar, Mic, KeyboardMusic, Plug,
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus, Zap,
-  Merge, Volume2,
+  Merge, Volume2, Ear,
   SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower, Usb,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
@@ -88,6 +88,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'master-bus':      { icon: Merge,             group: 'routing' },
   'aux-bus':         { icon: Merge,             group: 'routing' },
   'matrix-bus':      { icon: Merge,             group: 'routing' },
+  'pfl-bus':         { icon: Ear,               group: 'routing' },
   // Record and play back: the box between the desk and the computer, and the computer's recording program
   interface:         { icon: Usb,               group: 'routing' },
   daw:               { icon: DawIcon,           group: 'routing' },

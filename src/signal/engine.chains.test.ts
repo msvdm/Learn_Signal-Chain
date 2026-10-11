@@ -656,6 +656,31 @@ describe('record and play back (D22): an Audio Interface\'s two paths never meet
   })
 })
 
+describe('the PFL Bus: stereo on one wire, every channel on both sides, no fader of its own', () => {
+  // The user's call, 2026-10-11: a listening bus — no Main Fader, never into a Matrix Bus
+  const result = signalOf([
+    line('line'),
+    card('keys', 'keyboard'),
+    card('pfl', 'pfl-bus'),
+    card('fader', 'fader'),
+  ], [
+    wire('line', 'pfl'), wire('keys', 'pfl'), wire('pfl', 'fader'),
+  ])
+
+  expectCards(result, {
+    line:  { out: -10, health: 'good' },
+    keys:  { out: [-10, -10], health: 'good' },
+    // The mono line on both sides at full level, each side of the Keyboard on its own: −10 and −10 add up
+    pfl:   { in: [-3.98, -3.98], out: [-3.98, -3.98], health: 'good' },
+    // A plain fader after it, not its Main Fader
+    fader: { in: [-3.98, -3.98], out: [-3.98, -3.98], health: 'good' },
+  })
+
+  it('sends one stereo wire', () => {
+    expectWire(result, 'pfl:out', 'stereo', -3.98, -3.98)
+  })
+})
+
 describe('the song played back into the desk and the desk recorded: two paths of one Interface, no loop', () => {
   // DAW → Interface → Master Bus → the same Interface → DAW: card by card a loop, path by path none
   expectCards(signalOf([

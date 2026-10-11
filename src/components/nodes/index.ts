@@ -54,6 +54,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'master-bus':      MasterBusNode,
   'aux-bus':         MasterBusNode,
   'matrix-bus':      MasterBusNode,
+  'pfl-bus':         MasterBusNode,
   hpf:               HpfNode,
   eq:                EQNode,
   comp:              CompressorNode,

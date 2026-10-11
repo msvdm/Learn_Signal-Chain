@@ -233,7 +233,7 @@ const OUTPUT_NOISE: Partial<Record<TypeKey, number>> = {
   hpf: LINE_NOISE_DBU, eq: LINE_NOISE_DBU, 'graphic-eq': LINE_NOISE_DBU,
   comp: LINE_NOISE_DBU, 'noise-gate': LINE_NOISE_DBU, limiter: LINE_NOISE_DBU, deesser: LINE_NOISE_DBU,
   fader: LINE_NOISE_DBU,
-  'master-bus': BUS_NOISE_DBU, 'aux-bus': BUS_NOISE_DBU, 'matrix-bus': BUS_NOISE_DBU,
+  'master-bus': BUS_NOISE_DBU, 'aux-bus': BUS_NOISE_DBU, 'matrix-bus': BUS_NOISE_DBU, 'pfl-bus': BUS_NOISE_DBU,
   amp: AMP_NOISE_DBU, 'active-speaker': AMP_NOISE_DBU, 'studio-monitor': AMP_NOISE_DBU, headphones: AMP_NOISE_DBU,
   'guitar-amp': GUITAR_AMP_NOISE_DBU,
 }
@@ -445,6 +445,7 @@ const PROCESS: Record<TypeKey, Process> = {
   'master-bus':      busFader,
   'aux-bus':         busFader,
   'matrix-bus':      busFader,
+  'pfl-bus':         busFader,
   // Only runs with an amplifier before it (the engine checks); otherwise it is silent
   speaker: analogOnly('digitalToSpeaker', gained),
   'active-speaker': poweredSpeaker,
