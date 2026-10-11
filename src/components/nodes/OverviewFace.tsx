@@ -250,7 +250,7 @@ export function OverviewIcon({ icon, box, color = 'var(--lsc-fg)' }: {
   box: { w: number; h: number }
   color?: string
 }) {
-  const size = Math.floor(Math.min(box.w, box.h))
+  const size = Math.max(0, Math.floor(Math.min(box.w, box.h)))
   return (
     <span className="lsc-overview-icon" style={{ width: size, height: size, display: 'flex', color }}>
       {icon}

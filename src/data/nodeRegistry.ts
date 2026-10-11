@@ -226,6 +226,8 @@ const BUS_SIZE: Size  = { w: 398, h: 361 }
 const FACE_SIZE: Size = { w: 320, h: 328 }
 // The Keyboard's
 const SOURCE_SIZE: Size = { w: 320, h: 350 }
+// The Microphone's: half a face's each way (the user's call, 2026-10-11) — a small thing on a stand
+const MIC_SIZE: Size = { w: 160, h: 164 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 
 // The levels whose palette shows a type (`levels`)
@@ -255,7 +257,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Turns the sound it hears (its input: a Sound output, nothing else) into a weak signal (D21):
     // not a source — the chain's colour comes from the sound before it
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: MIC_SIZE,
     defaultParams: { micType: 'dynamic' },
   },
   // Line-level sources, always stereo (Left and Right on one wire): their level is their own

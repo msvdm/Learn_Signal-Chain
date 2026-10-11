@@ -34,9 +34,9 @@ const BUTTONS_GAP = 16
 const BUTTONS_H   = 96
 
 /**
- * A face's icon with its choice buttons beside it (a Vocal's Speech | Singing, a Microphone's
- * Dynamic | Condenser) — from Intermediate (CHOICE_LEVEL), zoomed in; otherwise the icon alone. A
- * condition's note goes under both, across the face (a condenser without its 48V).
+ * A face's icon with its choice buttons beside it (a Vocal's Speech | Singing) — from Intermediate
+ * (CHOICE_LEVEL), zoomed in; otherwise the icon alone. A condition's note goes under both, across
+ * the face.
  */
 export function FaceWithChoices({ nodeId, typeKey, box, buttons }: {
   nodeId: string
@@ -59,6 +59,33 @@ export function FaceWithChoices({ nodeId, typeKey, box, buttons }: {
     )
   }
   return condition ? <ConditionNote condition={condition} typeKey={typeKey} box={box} face={row} /> : row(box.h)
+}
+
+// A small face's choice buttons, stacked under its icon: their height, and the gap above them
+const UNDER_H   = 62
+const UNDER_GAP = 6
+
+/**
+ * A small face's icon with its choice buttons under it (the Microphone's Dynamic | Condenser: half
+ * a face each way, no room beside the icon) — from Intermediate (CHOICE_LEVEL), zoomed in; otherwise
+ * the icon alone. A condition's note goes under the icon, above the buttons (a condenser without
+ * its 48V), the icon taking what height it leaves.
+ */
+export function FaceOverChoices({ nodeId, typeKey, box, buttons }: {
+  nodeId: string
+  typeKey: TypeKey
+  box: { w: number; h: number }
+  buttons: ReactNode
+}) {
+  const choosing  = useSignalStore((s) => atLeast(s.complexityLevel, CHOICE_LEVEL) && !s.overview)
+  if (!choosing) return <SourceArt nodeId={nodeId} typeKey={typeKey} box={box} />
+  return (
+    <div style={{ width: box.w, height: box.h, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: UNDER_GAP }}>
+      <SourceArt nodeId={nodeId} typeKey={typeKey} box={{ w: box.w, h: box.h - UNDER_H - UNDER_GAP }} />
+      {/* The face ignores the pointer; the buttons take it back */}
+      <div style={{ width: '100%', height: UNDER_H, pointerEvents: 'auto' }}>{buttons}</div>
+    </div>
+  )
 }
 
 const CHARACTER_ICONS: Record<Character, typeof Music> = { speech: Speech, singing: Music }
@@ -88,7 +115,7 @@ export function CharacterButtons({ nodeId }: { nodeId: string }) {
   )
 }
 
-/** What a Microphone is: Dynamic | Condenser. */
+/** What a Microphone is: Dynamic | Condenser, stacked under its icon (FaceOverChoices). */
 export function MicTypeButtons({ nodeId }: { nodeId: string }) {
   const p                = useParams(nodeId, 'mic')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
@@ -104,8 +131,8 @@ export function MicTypeButtons({ nodeId }: { nodeId: string }) {
       label={t.nodes.mic.type}
       columns={1}
       item="row"
-      fontSize={13}
-      style={{ width: '100%', height: BUTTONS_H }}
+      fontSize={12}
+      style={{ width: '100%', height: '100%' }}
     />
   )
 }

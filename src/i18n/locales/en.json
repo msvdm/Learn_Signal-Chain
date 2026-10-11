@@ -146,7 +146,7 @@
       "type": "Microphone type",
       "dynamic": "Dynamic",
       "condenser": "Condenser",
-      "noPhantom": "No phantom power (48V) — a condenser mic needs it to work"
+      "noPhantom": "Needs 48V"
     },
     "preamp": {
       "label": "Preamp"
