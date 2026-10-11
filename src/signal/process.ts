@@ -80,8 +80,8 @@ export interface SourceSound {
 
 /**
  * What a source plays: a Vocal speaks or sings (its `character`), a Drum Kit drums, an Acoustic
- * Guitar, an Instrument and a Guitar Amp a guitar, a Keyboard and a PC music, the Generator its
- * Sound. Each but the Generator's is a loop of real sound (src/audio/loops).
+ * Guitar, an Instrument and a Guitar Amp a guitar, a Keyboard, a PC and a DAW music, the Generator
+ * its Sound. Each but the Generator's is a loop of real sound (src/audio/loops).
  */
 export type SoundKind = Character | GeneratorSound | 'music' | 'drums' | 'guitar'
 
@@ -92,7 +92,8 @@ export function soundKindOf(node: Pick<SignalNode, 'typeKey' | 'params'>): Sound
     case 'drum-kit':   return 'drums'
     case 'generator':  return param(node, 'sound')
     case 'keyboard':
-    case 'pc':         return 'music'
+    case 'pc':
+    case 'daw':        return 'music'
     default:           return 'guitar'
   }
 }
@@ -127,9 +128,10 @@ export const NOISE_BELOW = {
   vocal:        Infinity,
   'drum-kit':   Infinity,
   acoustic:     Infinity,
-  /** Keys, a computer, a player */
+  /** Keys, a computer, a player; a song a DAW plays back */
   keyboard:     80,
   pc:           80,
+  daw:          80,
   /** The pickups' hiss and buzz */
   instrument:   70,
   /** A test generator is cleaner than any player */
@@ -158,7 +160,8 @@ export const SOUND_SPL = { speech: 86, singing: 96, drums: 110, guitar: 90 } as 
 
 /**
  * A source's average level: how loud a Vocal, a Drum Kit or an Acoustic Guitar reaches a microphone
- * (on a Sound wire's scale), the level of a line, a guitar or the Generator (dBu: its `levelDb`).
+ * (on a Sound wire's scale), the level of a line, a guitar or the Generator (dBu: its `levelDb`), of
+ * what a DAW plays back (dBFS: it is digital — DIGITAL_SOURCES).
  */
 export function sourceLevelOf(node: Pick<SignalNode, 'typeKey' | 'params'>): number {
   switch (node.typeKey) {
@@ -219,7 +222,7 @@ export const GUITAR_AMP_NOISE_DBU = -76
  * passive speaker. Sources bring their own noise (NOISE_BELOW).
  */
 const PASSIVE = new Set<TypeKey>([
-  'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator',
+  'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator', 'daw',
   'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker', 'recorder', 'broadcast',
 ])
 
@@ -374,9 +377,12 @@ const gained: Process = (node, input, ctx) => pass(shifted(input, gainDbOf(node,
 
 const busFader: Process = summing(gained)
 
-/** A source: its sound at its level (sourceLevelOf). */
+/** Sources whose sound is numbers from the start (dBFS): a DAW playing back. */
+const DIGITAL_SOURCES: ReadonlySet<TypeKey> = new Set<TypeKey>(['daw'])
+
+/** A source: its sound at its level (sourceLevelOf), analog or digital. */
 const source = (node: SignalNode, typeKey: Source): SideResult =>
-  ({ out: sourceLevels(sourceLevelOf(node), soundOf(typeKey, node.params)), domain: 'analog' })
+  ({ out: sourceLevels(sourceLevelOf(node), soundOf(typeKey, node.params)), domain: DIGITAL_SOURCES.has(typeKey) ? 'digital' : 'analog' })
 
 /** An Active Speaker, or Headphones (the same, amplifier built in): its Volume. */
 const poweredSpeaker: Process = analogOnly('digitalToSpeaker', gained)
@@ -445,6 +451,10 @@ const PROCESS: Record<TypeKey, Process> = {
   // They take the sound in as it arrives, analog or digital: their meter reads what they record or send
   recorder:         (_, input, ctx) => pass(input, ctx),
   broadcast:        (_, input, ctx) => pass(input, ctx),
+  // Its two paths do an ADC's job and a DAC's (NodeTypeDef `routes`): nothing reaches here
+  interface:        (_, input, ctx) => pass(input, ctx),
+  // What it plays back, a song (−18 dBFS); what it records is a Recorder's job (its route)
+  daw:              (node) => source(node, 'daw'),
 }
 
 /**

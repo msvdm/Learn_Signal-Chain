@@ -34,6 +34,17 @@ describe('a source not connected yet', () => {
     expect(unwiredSource('gtr', view)).toBe(false)
   })
 
+  it('an Audio Interface or a DAW: not connected only while nothing at all is plugged in', () => {
+    const nodes = [node('box', 'interface'), node('daw', 'daw'), node('keys', 'keyboard')]
+    expect(unwiredSource('box', { nodes, edges: [] })).toBe(true)
+    expect(unwiredSource('daw', { nodes, edges: [] })).toBe(true)
+    // Only playing back: connected (their meters read what they record: nothing)
+    const playing = [wire('daw', 'box', 'playback', 'from-pc')]
+    expect(unwiredSource('box', { nodes, edges: playing })).toBe(false)
+    expect(unwiredSource('daw', { nodes, edges: playing })).toBe(false)
+    expect(unwiredSource('box', { nodes, edges: [wire('keys', 'box')] })).toBe(false)
+  })
+
   it('anything else is never "not connected": a card with nothing plugged in is silent, not unwired', () => {
     const nodes = [node('comp', 'comp'), node('amp', 'guitar-amp'), node('spk', 'active-speaker')]
     for (const id of ['comp', 'amp', 'spk']) expect(unwiredSource(id, { nodes, edges: [] })).toBe(false)

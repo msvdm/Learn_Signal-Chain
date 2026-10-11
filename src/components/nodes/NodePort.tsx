@@ -5,7 +5,7 @@ import { X } from 'lucide-react'
 import { useShallow } from 'zustand/shallow'
 import { useSignalStore } from '../../store/signalStore'
 import { getHealth, healthColor, sumSignalsToDb } from '../../signal/levels'
-import { graphSignal, levelOf, peakOf } from '../../signal/engine'
+import { graphSignal, levelOf, outDomainOf, peakOf } from '../../signal/engine'
 import { graphOf, outputKey } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../graph/connectionRules'
@@ -61,9 +61,9 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
       : plugged.map((e) => wires.get(outputKey(e.source, e.sourceHandle)))
     const db   = sumSignalsToDb(signals.map(levelOf))
     const peak = sumSignalsToDb(signals.map(peakOf))
-    // Judged in the domain of the card the signal comes from (dBu or dBFS)
-    const from = type === 'source' ? nodeId : plugged[0].source
-    return healthColor(getHealth(db, stages[from]?.domain, peak))
+    // Judged in the domain of the output the signal comes from (dBu or dBFS)
+    const from = type === 'source' ? { id: nodeId, port: portId } : { id: plugged[0].source, port: plugged[0].sourceHandle }
+    return healthColor(getHealth(db, outDomainOf(stages[from.id], from.port), peak))
   })
 
   const wiring        = useSignalStore((s) => s.wire !== null)

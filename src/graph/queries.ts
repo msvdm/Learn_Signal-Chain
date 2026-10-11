@@ -261,6 +261,24 @@ export function instrumentAt(nodeId: string, handleId: string, view: GraphView):
 }
 
 /**
+ * A microphone's signal still at mic level on this output: the microphone's own, a DI Box's XLR
+ * Out, or either through effects (a Pad, the 48V) before a Gain lifts it. An Audio Interface's line
+ * input takes none of them (D22).
+ */
+export function micLevelAt(nodeId: string, handleId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node) return false
+  if (node.typeKey === 'mic' || toMicLevel(node, handleId)) return true
+  if (node.typeKey === 'gain' || !passesThrough(node.typeKey)) return false
+  for (const { wire, source } of walkPassthrough(nodeId, graph)) {
+    if (source.typeKey === 'mic' || toMicLevel(source, wire.sourceHandle)) return true
+    if (source.typeKey === 'gain') return false
+  }
+  return false
+}
+
+/**
  * Every card reached from these wires, following them on through effect pedals (and whatever
  * `onward` lets through); `found` stops the walk with true.
  */
@@ -285,14 +303,19 @@ function reaches(
 
 /**
  * A source with nothing plugged into its output, or a microphone hearing nothing (no sound wired
- * into it — D21) — decision D11: no connection, no signal. It shows no level and no readings, and
- * its meters stand still, until it is wired.
+ * into it — D21), or a card of several paths with nothing plugged in anywhere (an Audio Interface,
+ * a DAW: one only playing back is connected, its meter reads what it records — nothing) — decision
+ * D11: no connection, no signal. It shows no level and no readings, and its meters stand still,
+ * until it is wired.
  */
 export function unwiredSource(nodeId: string, view: GraphView): boolean {
   const graph = graphOf(view)
   const node  = graph.node(nodeId)
-  if (node?.typeKey === 'mic') return graph.into(nodeId).length === 0
-  return node !== undefined && NODE_REGISTRY[node.typeKey].category === 'source' && graph.from(nodeId).length === 0
+  if (!node) return false
+  if (node.typeKey === 'mic') return graph.into(nodeId).length === 0
+  const def = NODE_REGISTRY[node.typeKey]
+  if (def.routes) return graph.into(nodeId).length === 0 && graph.from(nodeId).length === 0
+  return def.category === 'source' && graph.from(nodeId).length === 0
 }
 
 /**

@@ -4,11 +4,11 @@ import {
   Activity, ToggleLeft, Radio, Sliders,
   AudioWaveform, Minus, Zap,
   Merge, Volume2,
-  SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower,
+  SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower, Usb,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
-import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, LaptopIcon } from './icons'
+import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, LaptopIcon, DawIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -88,6 +88,9 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'master-bus':      { icon: Merge,             group: 'routing' },
   'aux-bus':         { icon: Merge,             group: 'routing' },
   'matrix-bus':      { icon: Merge,             group: 'routing' },
+  // Record and play back: the box between the desk and the computer, and the computer's recording program
+  interface:         { icon: Usb,               group: 'routing' },
+  daw:               { icon: DawIcon,           group: 'routing' },
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },

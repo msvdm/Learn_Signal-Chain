@@ -298,6 +298,16 @@
     },
     "balance": {
       "label": "Balance"
+    },
+    "interface": {
+      "lineIn": "Line in",
+      "toComputer": "To computer",
+      "fromComputer": "From computer",
+      "lineOut": "Line out"
+    },
+    "daw": {
+      "records": "Records",
+      "playsBack": "Plays back"
     }
   },
   "nodeControls": {
@@ -394,7 +404,9 @@
       "studio-monitor": "Studio Monitor",
       "recorder": "Recorder",
       "broadcast": "Stream / Broadcast",
-      "speaker": "Passive Speaker"
+      "speaker": "Passive Speaker",
+      "interface": "Audio Interface",
+      "daw": "DAW (Recording App)"
     }
   },
   "theory": {
@@ -592,6 +604,16 @@
       "what": "A Digital-to-Analog Converter (DAC) does the reverse of an ADC: it reads the digital numbers from your computer and reconstructs a continuously varying analog voltage. Using the same alignment, −18 dBFS becomes 0 dBu (unity) again, and anything after the DAC is back in the analog world.",
       "why": "Speakers and amplifiers are analog devices — they respond to voltage, not numbers. The DAC converts the digital mix back into real electrical signal so you can hear it through speakers. Without a DAC, digital audio stays in the computer.",
       "tip": "Place the DAC before any analog gear that follows — amplifiers, passive speakers, analog signal processors. The domain indicator on the node turns green (analog) after the DAC, confirming that everything downstream is back in the correct electrical domain."
+    },
+    "interface": {
+      "what": "An audio interface is the box between your desk and a computer. It records: the sound on its Line in goes to the computer through USB. It plays back: the computer's sound comes back through USB and out of its Line out, Left and Right.",
+      "why": "A computer cannot take a desk's output by itself. The interface turns the sound into numbers for the computer, and the computer's numbers back into sound — two paths that never meet.",
+      "tip": "To record a finished mix, wire the Master Bus's L and R into Line in. To hear what the computer plays, wire Line out L and R to a pair of studio monitors."
+    },
+    "daw": {
+      "what": "A DAW (Digital Audio Workstation) is the recording program on a computer. It records what the audio interface sends it, and plays back a song of its own.",
+      "why": "Recording lets you listen back, fix and mix later. The DAW never sits inside your desk's chain: the sound goes in through the interface to be recorded, and comes back out through the interface to be heard.",
+      "tip": "Its meter reads in dBFS, the computer's scale: 0 dBFS is the very top, where the sound clips. About −18 dBFS is healthy — the desk's normal level (0 dBu), with room left for the loud moments."
     }
   },
   "levelNames": {

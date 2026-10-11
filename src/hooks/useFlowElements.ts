@@ -7,7 +7,7 @@ import { getPorts } from '../graph/queries'
 import { healthColor, humStrength } from '../signal/levels'
 import { SOUND_PORT, portRows } from '../data/nodeRegistry'
 import type { NodePort } from '../data/nodeRegistry'
-import { healthOf } from '../signal/engine'
+import { healthOf, outDomainOf } from '../signal/engine'
 import { nodeDims, portPoint, recordMeasuredSize } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
@@ -66,13 +66,13 @@ export function useFlowElements() {
 
   // While wires are pointed at (unplug list, Matrix Bus row), their chains stay lit and the rest dims
   const highlight = useMemo(() => {
-    const chains = graphEdges.filter((e) => highlightEdgeIds.includes(e.id)).map((e) => chainOfEdge(e, graphEdges))
+    const chains = graphEdges.filter((e) => highlightEdgeIds.includes(e.id)).map((e) => chainOfEdge(e, graphEdges, graphNodes))
     if (chains.length === 0) return null
     return {
       nodeIds: new Set(chains.flatMap((c) => [...c.nodeIds])),
       edgeIds: new Set(chains.flatMap((c) => [...c.edgeIds])),
     }
-  }, [highlightEdgeIds, graphEdges])
+  }, [highlightEdgeIds, graphEdges, graphNodes])
 
   // These objects are rebuilt on every store change; the ones that come out the same are swapped
   // back for last time's (keepSame), so React Flow redraws only the cards that changed. A rebuilt
@@ -126,7 +126,7 @@ export function useFlowElements() {
       const sourceStage = stages[edge.source]
       const key         = outputKey(edge.source, edge.sourceHandle)
       // Clipping from the peaks, the rest from the average — as the card it leaves
-      const health      = sourceStage ? healthOf(wires.get(key) ?? sourceStage.out, sourceStage.domain) : null
+      const health      = sourceStage ? healthOf(wires.get(key) ?? sourceStage.out, outDomainOf(sourceStage, edge.sourceHandle)) : null
       const color       = health ? healthColor(health) : 'var(--lsc-border)'
 
       // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine

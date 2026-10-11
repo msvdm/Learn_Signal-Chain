@@ -43,6 +43,8 @@ interface OverviewFaceProps {
   reserveRight?: number
   /** The level reads dB SPL, the sound in the air (its card's SPL_DB) */
   spl?: number
+  /** The level shown: leaving the card (default), or arriving (an Audio Interface or a DAW: what it records) */
+  at?: 'in' | 'out'
 }
 
 /**
@@ -52,7 +54,7 @@ interface OverviewFaceProps {
  * (a source or a speaker: its icon) shows this face at every zoom: zoomed in beside its upright
  * meter, without the level block; zoomed out with it (D13).
  */
-export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, barOnly = false, status, shown, bypassed, reserveRight = 0, spl }: OverviewFaceProps) {
+export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, barOnly = false, status, shown, bypassed, reserveRight = 0, spl, at = 'out' }: OverviewFaceProps) {
   const { t }    = useTranslation()
   const detailed = useDetailShown()
   // The Peak, RMS and Noise rows (from Intermediate), unless the meter stands alone
@@ -62,9 +64,10 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
     const m = s.nodeLookup.get(nodeId)?.measured
     return m?.width && m?.height ? { w: m.width, h: m.height } : null
   }, shallow)
-  const levels = useStereoLevels(nodeId)
-  // A stereo signal leaving: two bars, L above R
-  const stereo = levels.output.r !== undefined
+  const stereoLevels = useStereoLevels(nodeId)
+  const levels = at === 'in' ? stereoLevels.input : stereoLevels.output
+  // A stereo signal: two bars, L above R
+  const stereo = levels.r !== undefined
 
   const layout = useMemo(() => size && overviewLayout({
     W: size.w, H: size.h, label, nameMax: NODE_LOOK[typeKey].nameMax,
@@ -76,11 +79,11 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
   if (!layout) return null
 
   // The level leaving the card (its louder side)
-  const { l, r } = levels.output
+  const { l, r } = levels
   const side   = r ? louder(l, r) : l
   const db     = side.rms
-  const state  = levels.outHealth
-  const unitText = levelParts(db, levels.outDomain, spl)[1]
+  const state  = levels.health
+  const unitText = levelParts(db, levels.domain, spl)[1]
   // From Intermediate the bar's blue part is its noise (D17); every number takes the colour of its place
   const noise  = detailed ? side.noise : undefined
   const numberFont: CSSProperties = { fontFamily: 'var(--lsc-font-mono)', fontSize: layout.number, fontWeight: 700 }
@@ -97,8 +100,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
       {detailed && rowName(which === 'hold' ? t.meters.peak : t.meters.rms)}
       <LiveLevel
         db={which === 'hold' ? side.peak : db} reading={which}
-        source={shown && detailed ? { nodeId, at: 'out', side: 'louder' } : undefined}
-        domain={levels.outDomain} spl={spl} noise={noise} reserve={NUMBER_SAMPLE} align="end"
+        source={shown && detailed ? { nodeId, at, side: 'louder' } : undefined}
+        domain={levels.domain} spl={spl} noise={noise} reserve={NUMBER_SAMPLE} align="end"
         style={numberFont}
       />
       {unitLabel}
@@ -107,11 +110,11 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
   // One bar (L / R each its own), coloured along its scale; the red line at its end while that side clips
   const bar = (s: SideLevels, which: 'l' | 'r' | 'louder') => (
     <MeterBar
-      db={s.rms} height={layout.bar} domain={levels.outDomain} shift={spl === undefined ? undefined : spl - SPL_SCALE_DB}
-      clipping={getHealth(s.rms, levels.outDomain, s.peak) === 'clipping'}
+      db={s.rms} height={layout.bar} domain={levels.domain} shift={spl === undefined ? undefined : spl - SPL_SCALE_DB}
+      clipping={getHealth(s.rms, levels.domain, s.peak) === 'clipping'}
       peak={detailed ? s.peak : undefined} noise={detailed ? s.noise : undefined}
       // Moves only while it is shown (zoomed out, or a face-only card)
-      source={shown ? { nodeId, at: 'out', side: which } : undefined}
+      source={shown ? { nodeId, at, side: which } : undefined}
     />
   )
   const healthWord = (
@@ -206,7 +209,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
           {r && (
             <span aria-hidden style={{ fontSize: layout.meterH - layout.bar, fontWeight: 700, lineHeight: 1, height: 0, overflow: 'hidden', visibility: 'hidden' }}>L</span>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}><MeterScaleRow domain={levels.outDomain} spl={spl} size={layout.scale} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}><MeterScaleRow domain={levels.domain} spl={spl} size={layout.scale} /></div>
         </div>
         {!barOnly && <><div
           style={{
@@ -227,8 +230,8 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
           <div style={{ marginTop: ROW_GAP, height: layout.number, display: 'flex', alignItems: 'baseline', lineHeight: 1, whiteSpace: 'nowrap' }}>
             <span>
               {rowName(t.meters.noise)}
-              <StableText reserve={[NUMBER_SAMPLE]} align="end" style={{ ...numberFont, color: zoneTextColor(side.noise, levels.outDomain, side.noise) }}>
-                {levelParts(side.noise, levels.outDomain, spl)[0]}
+              <StableText reserve={[NUMBER_SAMPLE]} align="end" style={{ ...numberFont, color: zoneTextColor(side.noise, levels.domain, side.noise) }}>
+                {levelParts(side.noise, levels.domain, spl)[0]}
               </StableText>
               {unitLabel}
             </span>

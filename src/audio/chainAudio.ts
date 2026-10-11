@@ -95,13 +95,13 @@ function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
   const ids = new Set<string>()
   const guess = new Set(['eq', 'graphic-eq', 'hpf'])
   for (const card of plans) {
-    const own = guess.has(card.node.typeKey) || isDynamics(card.node.typeKey) || stereoFileOf(card, sounds) !== undefined
-    if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.nodeId))) ids.add(card.node.id)
+    const own = guess.has(card.job.typeKey) || isDynamics(card.job.typeKey) || stereoFileOf(card, sounds) !== undefined
+    if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.from))) ids.add(card.key)
   }
   return ids
 }
 
-/** What a stereo source plays (a Keyboard, a PC): a stereo file's left and right (none: a mono file, or anything else). */
+/** What a stereo source plays (a Keyboard, a PC, a DAW): a stereo file's left and right (none: a mono file, or anything else). */
 function stereoFileOf(card: CardPlan, sounds: ChainSounds): AudioBuffer | undefined {
   if (card.mode !== 'source' || !card.plays || !isNodeStereo(card.node)) return undefined
   const kind = soundKindOf(card.node)
@@ -191,8 +191,8 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
 
   /** Clipped where it could come near its ceiling. */
   const clippedIfNear = (x: Sig, card: CardPlan, domain: SignalDomain): Sig => {
-    const peak = peakOf(still.cards.get(card.node.id)?.out)
-    const margin = CLIP_MARGIN_DB[guessed.has(card.node.id) ? 'guessed' : 'sure']
+    const peak = peakOf(still.cards.get(card.key)?.out)
+    const margin = CLIP_MARGIN_DB[guessed.has(card.key) ? 'guessed' : 'sure']
     return peak >= ceilingOf(domain) - margin ? clipped(x, domain) : x
   }
 
@@ -245,6 +245,9 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     // The ends that only take the sound in: what reaches them is what they record or send
     recorder: (_, x) => x,
     broadcast: (_, x) => x,
+    // Their paths do an ADC's and a DAC's job, a Recorder's, a source's (NodeTypeDef `routes`): nothing reaches here
+    interface: (_, x) => x,
+    daw: (_, x) => x,
     hpf: ({ node }, x) => filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }]),
     eq: ({ node }, x) => filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
       type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',
@@ -267,8 +270,8 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
   }
 
   for (const card of plans) {
-    const { node } = card
-    const levels = still.cards.get(node.id)
+    const { node, job } = card
+    const levels = still.cards.get(card.key)
     if (!levels) continue
     let inSig = silence(1)
     let outSig = silence(1)
@@ -286,7 +289,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         ? sideBySide(inSig, (l) => gain(sides.l, l), (r) => gain(sides.r, r))
         : twoSides(gain(sides.l, inSig), gain(sides.r, inSig))
     } else if (card.mode === 'source') {
-      outSig = clippedIfNear(source(card), card, 'analog')
+      outSig = clippedIfNear(source(card), card, levels.domain)
       // A stereo source: one channel the same on both sides (a stereo file is already both)
       if (isNodeStereo(node)) outSig = gain(0, outSig, 2)
     } else {
@@ -301,7 +304,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         outSig = clippedIfNear(inSig, card, levels.inDomain)
       } else {
         // Its own noise (D18): before its gain (a Gain's), then after its job, in the units it leaves in
-        const own = ownNoiseOf(node, { domain: levels.inDomain, preamp: card.preamp, fed: card.fed })
+        const own = ownNoiseOf(job, { domain: levels.inDomain, preamp: card.preamp, fed: card.fed })
         let out = processed(card, isFinite(own.in) ? plus(inSig, hiss(own.in, channels)) : inSig)
         if (isFinite(own.out)) out = plus(out, hiss(own.out, channels))
         outSig = clippedIfNear(out, card, levels.domain)
@@ -317,13 +320,13 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     }
 
     // A source's input is what it hears, not what it works on: the engine shows none
-    if (card.mode !== 'source' && !sameAsWire(card, inSig.channels)) taps.push({ id: node.id, at: 'in', parts: inSig.parts })
-    taps.push({ id: node.id, at: 'out', parts: outSig.parts })
+    if (card.mode !== 'source' && !sameAsWire(card, inSig.channels)) taps.push({ id: card.key, at: 'in', parts: inSig.parts })
+    taps.push({ id: card.key, at: 'out', parts: outSig.parts })
     if (node.typeKey === 'deesser' && !node.bypassed) {
       // Its sibilant band: what arrives less what is below its Frequency — leaving, what leaves
       // less that same part (it passes untouched)
       const below = minusBelow(inSig, Math.min(param(node, 'frequencyHz'), 0.45 * ctx.sampleRate))
-      taps.push({ id: node.id, at: 'band-in', parts: plus(inSig, below).parts }, { id: node.id, at: 'band-out', parts: plus(outSig, below).parts })
+      taps.push({ id: card.key, at: 'band-in', parts: plus(inSig, below).parts }, { id: card.key, at: 'band-out', parts: plus(outSig, below).parts })
     }
 
     for (const o of card.outputs) {
@@ -360,11 +363,11 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
    * (signal/gains.ts — one gain node, or one per side when they differ), every other type its own.
    */
   function processed(card: CardPlan, x: Sig): Sig {
-    const { node } = card
-    const left = gainDbOf(node, { preamp: card.preamp, side: x.channels === 1 ? null : 'l' })
-    if (left === undefined) return OTHERS[node.typeKey as Exclude<TypeKey, GainType>](card, x)
+    const { job } = card
+    const left = gainDbOf(job, { preamp: card.preamp, side: x.channels === 1 ? null : 'l' })
+    if (left === undefined) return OTHERS[job.typeKey as Exclude<TypeKey, GainType>]({ ...card, node: job }, x)
     if (x.channels === 1) return gain(left, x)
-    const right = gainDbOf(node, { preamp: card.preamp, side: 'r' })!
+    const right = gainDbOf(job, { preamp: card.preamp, side: 'r' })!
     return right === left ? gain(left, x) : sideBySide(x, (l) => gain(left, l), (r) => gain(right, r))
   }
 

@@ -7,6 +7,8 @@ import { LEVELS } from './levels'
 /** A connection point. */
 export type NodePort = {
   id: string
+  /** Takes any number of wires, added together (an Audio Interface's line input; a bus's input takes them anyway) */
+  many?: true
   /**
    * Its port line (0 = the first, PORT_TOP; one PORT_GAP apart), when not its place in the
    * stack: the Relay Switch's inputs on lines 0 and 2, its output centred between them on 1
@@ -46,8 +48,16 @@ export type TypeKey =
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
+  | 'interface' | 'daw'
 
 export type Size = { w: number; h: number }
+
+/**
+ * One path through a card whose outputs never meet (NodeTypeDef `routes`): the input it reads, the
+ * outputs it sends on, and the type whose job it does on the way. `from` null: it makes its own
+ * sound (a DAW plays back); `to` empty: it only takes the signal in (a DAW records).
+ */
+export type Route = { from: string | null; to: readonly string[]; as: TypeKey }
 
 /**
  * What an element type is and does. Its look (icon, palette group) is in
@@ -99,6 +109,13 @@ export type NodeTypeDef = {
    * previews.
    */
   bareSize?: Size
+  /**
+   * Paths that never meet, each from one input to one output (an Audio Interface records its line
+   * input to the computer and, apart from that, plays the computer's sound out; a DAW records what
+   * it gets and plays back a sound of its own). The card shows the first. None: one path, every
+   * input into every output. Every input and output is on one route.
+   */
+  routes?: readonly Route[]
   /** Zoomed out drawn bare at Advanced too (the HPF's button, its click its On / Off) */
   bareZoomedOut?: true
   /**
@@ -131,6 +148,15 @@ export type SignalEdge = {
   // When present, the wire follows these waypoints instead of a plain two-point elbow.
   waypoints?: { x: number; y: number }[]
 }
+
+/**
+ * The USB link between an Audio Interface and the computer (D22): what the Interface records goes
+ * out on TO_PC into a DAW; the DAW plays back on PLAYBACK into the Interface's FROM_PC. Those wires
+ * go nowhere else (graph/connectionRules.ts).
+ */
+export const TO_PC_PORT    = 'to-pc'
+export const FROM_PC_PORT  = 'from-pc'
+export const PLAYBACK_PORT = 'playback'
 
 /** A DI Box's Direct Out: the instrument passed on unchanged, for a guitar amp (its XLR Out is 'out'). */
 export const DI_DIRECT_PORT = 'direct'
@@ -427,6 +453,29 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'sink', inputs: IN, outputs: [], stereo: 'always',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
+  },
+  // Record and play back (D22). Each path from its own port line, left to right: the top one
+  // records, the one under it plays back
+  interface: {
+    // A USB Audio Interface, two converters in a box: its line input (any number of wires: the
+    // channels to record) goes to the computer as numbers; the computer's sound comes back and out
+    // of its line outputs, Left and Right (one per studio monitor). The two never meet
+    category: 'processor', stereo: 'always',
+    inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT }],
+    outputs: [{ id: TO_PC_PORT }, ...SIDES],
+    routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out-l', 'out-r'], as: 'dac' }],
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: {},
+  },
+  daw: {
+    // The computer's recording program: it records what the Interface sends it, and plays back a
+    // song of its own (−18 dBFS on average: unity on the desk after the Interface) — what it plays
+    // never depends on what it records
+    category: 'source', stereo: 'always',
+    inputs: IN, outputs: [{ id: PLAYBACK_PORT }],
+    routes: [{ from: 'in', to: [], as: 'recorder' }, { from: null, to: [PLAYBACK_PORT], as: 'daw' }],
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    defaultParams: { levelDb: -18 },
   },
 }
 

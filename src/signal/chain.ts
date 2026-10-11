@@ -1,6 +1,7 @@
-import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
+import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
-import { graphOf, drivingWire, fedBy, flowOrder, outputKey } from '../graph/graph'
+import type { CardPath } from '../graph/graph'
+import { graphOf, drivingWire, fedBy, flowPaths, outputKey, pathSends, wiresInto } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
 import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, phantomPowered, preampSourceOf } from '../graph/queries'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
@@ -47,6 +48,14 @@ export function humOf(w: WireSignal | undefined): number {
   return w ? Math.max(w.l.hum, w.r.hum) : -Infinity
 }
 
+/**
+ * The domain output `port` of a card leaves in (`stage`: its StageResult): the card's, or on a card
+ * of several paths its path's (`outDomains`).
+ */
+export function outDomainOf(stage: { domain: SignalDomain; outDomains?: Record<string, SignalDomain> } | undefined, port: string): SignalDomain {
+  return stage?.outDomains?.[port] ?? stage?.domain ?? 'analog'
+}
+
 /** The health of a signal, judged in `domain`: clipping from its peaks, the rest from its average. */
 export function healthOf(w: WireSignal | undefined, domain: SignalDomain = 'analog'): SignalHealth {
   return getHealth(levelOf(w), domain, peakOf(w))
@@ -87,15 +96,24 @@ type CardMode =
  */
 export interface CardPlan {
   node: SignalNode
+  /**
+   * What its levels are keyed by (ChainLevels `cards`, the render's taps): the card's id — on a card
+   * of several paths (NodeTypeDef `routes`) its first path's; the others' their own (pathKey)
+   */
+  key: string
+  /** One of a card's paths (NodeTypeDef `routes`): which; none for a card that is one path */
+  route?: Route
+  /** The card as its maths sees it: itself, or on a route the type whose job it does there (an Audio Interface's ADC) */
+  job: SignalNode
   mode: CardMode
   /**
    * The wires it adds up: the output each comes from (its `key` — what `wires` are keyed by — and
-   * its card), with a Matrix Bus's send knob on it (dB)
+   * the plan sending it, `from`: its key), with a Matrix Bus's send knob on it (dB)
    */
-  used: { key: string; nodeId: string; sendDb: number }[]
+  used: { key: string; from: string; sendDb: number }[]
   /**
-   * The cards whose domain decides its own: every card plugged in (a bus cannot mix analog and
-   * digital), a Relay only the one on its selected input
+   * The wires whose domain decides its own (their keys): every wire plugged in (a bus cannot mix
+   * analog and digital), a Relay only the one on its selected input
    */
   domainFrom: string[]
   /** What the wire it follows carries (a follow card, Pan); 'mono' when none */
@@ -126,18 +144,35 @@ const keyOf = (e: SignalEdge) => outputKey(e.source, e.sourceHandle)
  */
 const POWERED_SPEAKERS: ReadonlySet<TypeKey> = new Set<TypeKey>(['active-speaker', 'studio-monitor', 'headphones'])
 
-/** Every card the signal reaches, in signal order (cards in a loop, and after one, are left out). */
+/** The key of a card's path other than its first (CardPlan `key`). */
+export function pathKey(nodeId: string, route: Route): string {
+  return `${nodeId}>${route.to[0] ?? route.from}`
+}
+
+/** A path's key: its card's id for the card's first (or only) path. */
+function keyOfPath({ node, route }: CardPath): string {
+  return route && route !== NODE_REGISTRY[node.typeKey].routes?.[0] ? pathKey(node.id, route) : node.id
+}
+
+/**
+ * Every card the signal reaches, in signal order (cards in a loop, and after one, are left out) —
+ * a card of several paths once per path (NodeTypeDef `routes`), each where its signal comes.
+ */
 export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] {
   const graph = graphOf({ nodes, edges })
   const kinds = new Map<string, WireKind>()
+  /** The plan sending each output (its key) */
+  const sentBy = new Map<string, string>()
   const plans: CardPlan[] = []
 
-  for (const node of flowOrder(graph)) {
-    const incoming = graph.into(node.id)
+  for (const path of flowPaths(graph)) {
+    const { node, route } = path
+    const key      = keyOfPath(path)
+    const incoming = wiresInto(path, graph)
     const def      = NODE_REGISTRY[node.typeKey]
     const relay    = node.typeKey === 'relay'
     // A "follow" node passes on what its wire carries — the Relay follows its selected input
-    const driving    = drivingWire(node, graph)
+    const driving    = relay ? drivingWire(node, graph) : incoming[0]
     const followKind = (driving && kinds.get(keyOf(driving))) || 'mono'
     // The wires it works on: everything plugged in (every wire on a bus's input), but only the
     // Relay's selected input
@@ -155,28 +190,34 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       ? taperToDb(param(node, matrixSendParam(matrixSendKey(e, graph))) ?? TAPER_UNITY)
       : 0
 
+    // A route making its own sound is a source (a DAW playing back); one that takes its signal in is not (the DAW recording)
+    const source = route ? route.from === null : def.category === 'source'
+    const job    = route ? { ...node, typeKey: route.as } : node
     const mode: CardMode =
       // A passive speaker needs a power amplifier somewhere before it
       node.typeKey === 'speaker' && fed && !fedBy(node.id, 'amp', graph) ? 'needs-amp'
       : node.typeKey === 'pan' ? 'pan'
-      : def.category === 'source' ? 'source'
-      : isStereo && isDynamics(node.typeKey) && !node.bypassed ? 'linked'
+      : source ? 'source'
+      : isStereo && isDynamics(job.typeKey) && !node.bypassed ? 'linked'
       : isStereo ? 'stereo'
       : 'mono'
 
-    const outputs = getPorts(node, graph).outputs.map((port) => ({
+    const outputs = getPorts(node, graph).outputs.filter((port) => pathSends(path, port.id)).map((port) => ({
       key:    outputKey(node.id, port.id),
       kind:   outputKind(node.id, port.id, graph),
       // A DI Box's Direct Out passes on what arrives, at instrument level; the rest is its XLR Out
       direct: node.typeKey === 'di-box' && port.id === DI_DIRECT_PORT,
     }))
-    for (const o of outputs) kinds.set(o.key, o.kind)
+    for (const o of outputs) {
+      kinds.set(o.key, o.kind)
+      sentBy.set(o.key, key)
+    }
 
     plans.push({
-      node, mode, followKind, fed, preamp, outputs,
-      used:        used.map((e) => ({ key: keyOf(e), nodeId: e.source, sendDb: sendDb(e) })),
-      domainFrom:  relay ? (driving ? [driving.source] : []) : incoming.map((e) => e.source),
-      plays:       def.category === 'source',
+      node, key, route, job, mode, followKind, fed, preamp, outputs,
+      used:        used.map((e) => ({ key: keyOf(e), from: sentBy.get(keyOf(e)) ?? e.source, sendDb: sendDb(e) })),
+      domainFrom:  relay ? (driving ? [keyOf(driving)] : []) : incoming.map(keyOf),
+      plays:       source,
       amped:       POWERED_SPEAKERS.has(node.typeKey) && fedBy(node.id, 'amp', graph),
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
@@ -205,7 +246,7 @@ export interface CardLevels {
 }
 
 export interface ChainLevels {
-  /** Keyed by node id */
+  /** Keyed by the plans' keys: a card's id (a card of several paths: its first path's — CardPlan `key`) */
   cards: Map<string, CardLevels>
   /** What each output sends, keyed by outputKey */
   wires: Map<string, WireSignal>
@@ -283,17 +324,16 @@ const MODES: Record<CardMode, (at: CardAt) => CardRun> = {
   // The louder side drives the detector (reading by reading); the same change goes to both
   // sides, then each gets the card's own output noise (D18 — a dynamics card has no input noise)
   linked: ({ card, domain, mixedDomains, arriving }) => {
-    const { node } = card
     const l   = arriving('l')
     const r   = arriving('r')
     const ctx = contextOf(card, domain, mixedDomains, null)
     const detector = louder(l, r)
-    const job      = processJob(node, detector, ctx)
+    const done     = processJob(card.job, detector, ctx)
     const linked   = (s: SideLevels) => {
-      const changed = eachReading((k) => (isFinite(detector[k]) ? s[k] + (job.out[k] - detector[k]) : s[k]))
-      return withOutputNoise(node, { ...job, out: changed }, ctx)
+      const changed = eachReading((k) => (isFinite(detector[k]) ? s[k] + (done.out[k] - detector[k]) : s[k]))
+      return withOutputNoise(card.job, { ...done, out: changed }, ctx)
     }
-    return { side: job, in: stereo(l, r), out: stereo(linked(l), linked(r)) }
+    return { side: done, in: stereo(l, r), out: stereo(linked(l), linked(r)) }
   },
 
   // Once per side
@@ -317,10 +357,12 @@ const MODES: Record<CardMode, (at: CardAt) => CardRun> = {
 export function runChain(plans: CardPlan[]): ChainLevels {
   const cards  = new Map<string, CardLevels>()
   const wires  = new Map<string, WireSignal>()
-  const domainOf = (id: string) => cards.get(id)?.domain ?? 'analog'
+  /** The domain each output sends in (keyed like `wires`) */
+  const domains  = new Map<string, SignalDomain>()
+  const domainOf = (key: string) => domains.get(key) ?? 'analog'
 
   for (const card of plans) {
-    const { node } = card
+    const { node, job } = card
 
     // Analog or digital: what arrives decides (the Relay: its selected input). A bus can't mix them.
     const [first, ...others] = card.domainFrom
@@ -332,7 +374,7 @@ export function runChain(plans: CardPlan[]): ChainLevels {
       const input = arriving(side)
       // Bypassed: passed on as it is, with no hiss of its own (a bus still adds its wires up)
       if (node.bypassed && card.fed) return { out: flattenPeaks(input, inputDomain), domain: inputDomain }
-      return processSide(node, input, contextOf(card, inputDomain, mixedDomains, side))
+      return processSide(job, input, contextOf(card, inputDomain, mixedDomains, side))
     }
 
     const { side, in: inSig, out } = MODES[card.mode]({ card, domain: inputDomain, mixedDomains, arriving, runSide })
@@ -359,11 +401,14 @@ export function runChain(plans: CardPlan[]): ChainLevels {
     // shuts it off in the pauses); only Ground Lift on the DI takes it away.
     if (card.groundLoop) outSig = { ...outSig, l: humming(outSig.l), r: humming(outSig.r) }
 
-    cards.set(node.id, {
+    cards.set(card.key, {
       in: inSig, out: outSig, domain: side.domain, inDomain: inputDomain, mixedDomains,
       gainReductionDb: side.gainReductionDb, condition,
     })
-    for (const o of card.outputs) wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
+    for (const o of card.outputs) {
+      wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
+      domains.set(o.key, side.domain)
+    }
   }
 
   return { cards, wires }

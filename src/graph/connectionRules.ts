@@ -1,14 +1,16 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { MATRIX_PORT, NODE_REGISTRY, SOUND_PORT, isBus } from '../data/nodeRegistry'
+import { FROM_PC_PORT, MATRIX_PORT, NODE_REGISTRY, PLAYBACK_PORT, SOUND_PORT, TO_PC_PORT, isBus } from '../data/nodeRegistry'
 import type { GraphView, WireSource } from './graph'
-import { getPorts, instrumentAt, isMatrixSource } from './queries'
+import { getPorts, instrumentAt, isMatrixSource, micLevelAt } from './queries'
 
 type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
 
 /**
  * True when this input port can take one more wire.
- * Bus inputs (Master, Aux, Matrix) accept any number of wires — just not the same wire twice.
- * Every other input takes one wire.
+ * Bus inputs (Master, Aux, Matrix) and an Audio Interface's line input accept any number of wires —
+ * just not the same wire twice. Every other input takes one wire.
+ * The USB link (D22): an Interface's To computer goes only into a DAW, and a DAW takes nothing
+ * else; a DAW's playback goes only into an Interface's From computer, which takes nothing else.
  */
 export function portAcceptsWire(
   node: TargetNode,
@@ -17,8 +19,10 @@ export function portAcceptsWire(
   source?: WireSource,
 ): boolean {
   if (source && node.id === source.nodeId) return false
+  if (source && (node.typeKey === 'daw') !== (source.handleId === TO_PC_PORT)) return false
+  if (source && (handleId === FROM_PC_PORT) !== (source.handleId === PLAYBACK_PORT)) return false
   const onPort = edges.filter((e) => e.target === node.id && e.targetHandle === handleId)
-  if (isBus(node.typeKey)) {
+  if (isBus(node.typeKey) || NODE_REGISTRY[node.typeKey].inputs.some((p) => p.id === handleId && p.many)) {
     return !source || !onPort.some((e) => e.source === source.nodeId && e.sourceHandle === source.handleId)
   }
   return onPort.length === 0
@@ -29,7 +33,8 @@ export function portAcceptsWire(
  * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a Matrix send feeds only Matrix Buses.
  * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
  * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
- * An Amplifier's output is speaker level: only a passive speaker takes it.
+ * An Amplifier's output is speaker level: only a passive speaker takes it. An Audio Interface records
+ * line-level signals: not a microphone before its Preamp, nor a guitar (D22). The USB link: portAcceptsWire.
  */
 export function nodeAcceptsWire(
   targetNode: TargetNode,
@@ -41,6 +46,8 @@ export function nodeAcceptsWire(
   if ((targetNode.typeKey === 'mic') !== (source.handleId === SOUND_PORT)) return false
   if (targetNode.typeKey === 'guitar-amp' && instrumentAt(source.nodeId, source.handleId, { nodes, edges }) === null) return false
   if (targetNode.typeKey !== 'speaker' && nodes.some((n) => n.id === source.nodeId && n.typeKey === 'amp')) return false
+  if (targetNode.typeKey === 'interface' && source.handleId !== PLAYBACK_PORT &&
+      (micLevelAt(source.nodeId, source.handleId, { nodes, edges }) || instrumentAt(source.nodeId, source.handleId, { nodes, edges }) !== null)) return false
   const toMatrix = targetNode.typeKey === 'matrix-bus'
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
   if (!toMatrix && source.handleId === MATRIX_PORT) return false
@@ -54,11 +61,12 @@ const DROPPED = '__dropped__'
  * True when a card of this type dropped onto `wire` goes in the middle of it: the wire is replaced
  * by one from its source into the card's first input and one from the card's first output to its
  * target (withNodeOnWire), and each must be a wire you could draw by hand. Otherwise the card is
- * placed where it was dropped, unwired.
+ * placed where it was dropped, unwired. A card of several paths (an Audio Interface, a DAW) never
+ * goes into a chain (D22).
  */
 export function wireTakesCard(typeKey: TypeKey, wire: SignalEdge, view: GraphView): boolean {
   const def = NODE_REGISTRY[typeKey]
-  if (def.inputs.length === 0 || def.outputs.length === 0) return false
+  if (def.inputs.length === 0 || def.outputs.length === 0 || def.routes) return false
   const card: SignalNode = { id: DROPPED, typeKey, position: { x: 0, y: 0 }, params: {}, bypassed: false }
   const { inputs, outputs } = getPorts(card)
   const nodes  = [...view.nodes, card]

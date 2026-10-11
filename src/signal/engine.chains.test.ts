@@ -607,6 +607,65 @@ describe('the ends: a Studio Monitor works as an Active Speaker, a Recorder keep
   })
 })
 
+describe('record and play back (D22): an Audio Interface\'s two paths never meet, a DAW plays a song of its own', () => {
+  // A Computer at 0 dBu recorded: the Interface turns it into numbers (−18 dBFS) for the DAW. The
+  // DAW's song (−18 dBFS) comes back out of the Interface at 0 dBu, Left and Right to two monitors
+  const chain = (pcDb: number) => signalOf([
+    card('pc', 'pc', { levelDb: pcDb }),
+    card('box', 'interface'),
+    card('daw', 'daw'),
+    card('monL', 'studio-monitor'),
+    card('monR', 'studio-monitor'),
+  ], [
+    wire('pc', 'box'), wire('box:to-pc', 'daw'), wire('daw:playback', 'box:from-pc'),
+    wire('box:out-l', 'monL'), wire('box:out-r', 'monR'),
+  ])
+  const result = chain(0)
+
+  expectCards(result, {
+    pc:   { out: [0, 0], health: 'good' },
+    // The card shows what it records: in at 0 dBu, to the computer at −18 dBFS
+    box:  { in: [0, 0], out: [-18, -18], health: 'good', domain: 'digital' },
+    // The DAW shows what it records
+    daw:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+    monL: { in: 0, out: 0, health: 'good' },
+    monR: { in: 0, out: 0, health: 'good' },
+  })
+
+  it('plays back its song at −18 dBFS, out of the Interface at 0 dBu: one side on each line output', () => {
+    expectWire(result, 'daw:playback', 'stereo', -18, -18)
+    expectWire(result, 'box:to-pc', 'stereo', -18, -18)
+    expectWire(result, 'box:out-l', 'left', 0, S)
+    expectWire(result, 'box:out-r', 'right', S, 0)
+  })
+
+  it('each output leaves in its own domain: numbers to the computer, an analog signal out', () => {
+    expect(result.stages.box.outDomains).toEqual({ 'to-pc': 'digital', 'out-l': 'analog', 'out-r': 'analog' })
+  })
+
+  it('what it plays back never depends on what it records', () => {
+    const quieter = chain(-20)
+    expectDb(average(quieter.stages.daw.in, 'l'), -38)
+    expectWire(quieter, 'box:out-l', 'left', 0, S)
+  })
+})
+
+describe('the song played back into the desk and the desk recorded: two paths of one Interface, no loop', () => {
+  // DAW → Interface → Master Bus → the same Interface → DAW: card by card a loop, path by path none
+  expectCards(signalOf([
+    card('box', 'interface'),
+    card('daw', 'daw'),
+    card('bus', 'master-bus'),
+  ], [
+    wire('daw:playback', 'box:from-pc'), wire('box:out-l', 'bus'), wire('box:out-r', 'bus'),
+    wire('bus:out-l', 'box'), wire('bus:out-r', 'box'), wire('box:to-pc', 'daw'),
+  ]), {
+    box: { in: [0, 0], out: [-18, -18], health: 'good', domain: 'digital' },
+    daw: { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
+    bus: { in: [0, 0], out: [0, 0], health: 'good' },
+  })
+})
+
 describe('a clip before a speaker is heard there, however green its meter (distorted)', () => {
   // A Gain 20 dB too hot clips the music's peaks; the Fader after it brings the level back down
   const chain = (on: boolean) => signalOf([

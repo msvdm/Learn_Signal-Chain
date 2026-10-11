@@ -15,7 +15,7 @@ import { sameShape } from '../utils/sameShape'
 
 // What the cards import from here; the walk itself is chain.ts
 export type { StageRole, WireSignal } from './chain'
-export { SILENT_WIRE, healthOf, humOf, levelOf, louderSide, peakOf } from './chain'
+export { SILENT_WIRE, healthOf, humOf, levelOf, louderSide, outDomainOf, peakOf } from './chain'
 
 /** What one card does to the signal. */
 export interface StageResult {
@@ -29,6 +29,11 @@ export interface StageResult {
   domain: SignalDomain
   /** Analog or digital, arriving */
   inDomain: SignalDomain
+  /**
+   * A card of several paths (NodeTypeDef `routes`): the domain each output leaves in, by port — an
+   * Audio Interface sends numbers to the computer and an analog signal out (chain.ts outDomainOf)
+   */
+  outDomains?: Record<string, SignalDomain>
   /**
    * How far a dynamics card at work turns the signal (its average) down: over a loop, makeup gain
    * left out. Undefined for every other card, and for a dynamics card bypassed. The marks on its
@@ -105,16 +110,18 @@ export function graphSignal(nodes: SignalNode[], edges: SignalEdge[], measured: 
 /**
  * Every card that plays a clipped signal marked `distorted`: one whose own peaks reach the ceiling
  * (health `clipping`), and every card after it on the wires it works on (a Relay's selected input,
- * a bus's wires) — unless it sends nothing (a Switch turned off).
+ * a bus's wires) — unless it sends nothing (a Switch turned off). A card of several paths is judged
+ * on the one it shows; its others pass on none (what an Audio Interface records never reaches what
+ * it plays back).
  */
 function withDistortion(result: GraphSignalResult, plans: CardPlan[]): GraphSignalResult {
   const clipped = new Set<string>()
   let stages = result.stages
   for (const card of plans) {
     const id    = card.node.id
-    const stage = result.stages[id]
+    const stage = card.key === id ? result.stages[id] : undefined
     if (!stage || levelOf(stage.out) <= SILENCE_DB) continue
-    const before = card.used.some((u) => clipped.has(u.nodeId))
+    const before = card.used.some((u) => clipped.has(u.from))
     if (!before && stage.health !== 'clipping') continue
     clipped.add(id)
     if (stages === result.stages) stages = { ...result.stages }
@@ -156,10 +163,23 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
   const { cards, wires } = levels
   const stages: Record<string, StageResult> = {}
   const hums   = new Map<string, number>()
+  /** A card of several paths: each output's domain */
+  const outDomains = new Map<string, Record<string, SignalDomain>>()
 
   for (const card of plans) {
     const { node } = card
-    const at = cards.get(node.id)!
+    const at = cards.get(card.key)!
+    for (const o of card.outputs) {
+      const h = humOf(wires.get(o.key))
+      if (isFinite(h)) hums.set(o.key, h)
+    }
+    if (card.route) {
+      const domains = outDomains.get(node.id) ?? {}
+      for (const port of card.route.to) domains[port] = at.domain
+      outDomains.set(node.id, domains)
+    }
+    // The card shows its first path
+    if (card.key !== node.id) continue
     const hum = humOf(at.out)
 
     stages[node.id] = {
@@ -174,10 +194,9 @@ function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
       role: card.role,
       ...(isFinite(hum) ? { hum } : {}),
     }
-    for (const o of card.outputs) {
-      const h = humOf(wires.get(o.key))
-      if (isFinite(h)) hums.set(o.key, h)
-    }
+  }
+  for (const [id, domains] of outDomains) {
+    if (stages[id]) stages[id] = { ...stages[id], outDomains: domains }
   }
 
   return { stages, wires, hums }

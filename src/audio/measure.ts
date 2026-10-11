@@ -36,7 +36,7 @@ const SLICE_FRAMES = Math.round(SLICE_S * MEASURE_RATE)
 /** How long the noise is measured (s): steady noise reads to about 0.02 dB in this long; 100 waves of a hum. */
 const QUIET_S = 2
 
-/** What a render measured: every card and every output, and how every card's signal moved. */
+/** What a render measured: every card and every output, and how every card's signal moved (cards keyed like the plans: CardPlan `key`). */
 export interface Measurement {
   stages: Map<string, MeasuredStage>
   wires: Map<string, WireSignal>
@@ -76,8 +76,8 @@ async function soundsOf(plans: CardPlan[]): Promise<ChainSounds> {
 }
 
 /** How long a card takes to forget where it started (s): a dynamics card at work its settling time (audio/dynamics.ts), any other none. */
-function settleOf({ node }: CardPlan): number {
-  return node.bypassed ? 0 : dynamicsOf(node)?.settleS(node) ?? 0
+function settleOf({ node, job }: CardPlan): number {
+  return node.bypassed ? 0 : dynamicsOf(job)?.settleS(job) ?? 0
 }
 
 /**
@@ -88,9 +88,9 @@ function settleSecondsOf(plans: CardPlan[]): number {
   const settled = new Map<string, number>()
   let longest = 0
   for (const card of plans) {
-    const before = Math.max(0, ...card.used.map((u) => settled.get(u.nodeId) ?? 0))
+    const before = Math.max(0, ...card.used.map((u) => settled.get(u.from) ?? 0))
     const mine = before + settleOf(card)
-    settled.set(card.node.id, mine)
+    settled.set(card.key, mine)
     longest = Math.max(longest, mine)
   }
   return 0.05 + Math.min(LOOP_S, longest)
@@ -193,15 +193,15 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
   const movingWires = new Map<string, MovingSlices>()
 
   for (const card of plans) {
-    const { node } = card
-    const levels = still.cards.get(node.id)
+    const { node, key } = card
+    const levels = still.cards.get(key)
     if (!levels) continue
     const at = (where: Tap['at'], like: WireSignal) => {
-      const r = readingsAt.get(`${node.id}/${where}`)
+      const r = readingsAt.get(`${key}/${where}`)
       return r ? signalOf(r.music, r.quiet, like) : undefined
     }
     const slicesAtTap = (where: Tap['at'], kind: WireKind) => {
-      const s = slicesAt.get(`${node.id}/${where}`)
+      const s = slicesAt.get(`${key}/${where}`)
       return s ? slicesOf(s, kind, silent) : undefined
     }
     // What arrives was measured on the one wire before it, unless the card adds wires up (or folds
@@ -220,9 +220,9 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
     if (inMoving) moves.in = movingOf(inMoving)
 
     // A dynamics card at work: how far it turned the average down (a De-esser: its sibilant band)
-    const dynamics = node.bypassed ? undefined : dynamicsOf(node)
+    const dynamics = node.bypassed ? undefined : dynamicsOf(card.job)
     if (dynamics) {
-      const makeupDb = dynamics.makeupDb(node)
+      const makeupDb = dynamics.makeupDb(card.job)
       const bandIn   = at('band-in', levels.in)
       const bandOut  = at('band-out', levels.out)
       stage.gainReductionDb = Math.max(0, bandIn && bandOut
@@ -240,8 +240,8 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
       moves.curveIn  = frames(curveIn)
       moves.curveOut = frames(curveOut)
     }
-    stages.set(node.id, stage)
-    moving.set(node.id, moves)
+    stages.set(key, stage)
+    moving.set(key, moves)
     for (const o of card.outputs) {
       wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
       movingWires.set(o.key, onPort(o.kind, o.direct && inMoving ? inMoving : outMoving, sliceSides))

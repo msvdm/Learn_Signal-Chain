@@ -1,4 +1,5 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { upstreamOf } from './graph'
 
 /**
@@ -30,9 +31,9 @@ export function pickChainColor(nodes: SignalNode[]): string {
   return best
 }
 
-/** The chain one wire belongs to: the wire itself plus everything feeding it. */
-export function chainOfEdge(edge: SignalEdge, edges: SignalEdge[]): { nodeIds: Set<string>; edgeIds: Set<string> } {
-  const up = upstreamOf(edge.source, edges)
+/** The chain one wire belongs to: the wire itself plus everything feeding it (graph/graph.ts upstreamOf). */
+export function chainOfEdge(edge: SignalEdge, edges: SignalEdge[], nodes: SignalNode[]): { nodeIds: Set<string>; edgeIds: Set<string> } {
+  const up = upstreamOf(edge.source, edges, nodes)
   up.edgeIds.add(edge.id)
   up.nodeIds.add(edge.target)
   return up
@@ -40,7 +41,7 @@ export function chainOfEdge(edge: SignalEdge, edges: SignalEdge[]): { nodeIds: S
 
 /** Colours of the chains that pass through a node, in a stable order. */
 export function chainColorsOf(nodeId: string, nodes: SignalNode[], edges: SignalEdge[]): string[] {
-  const { nodeIds } = upstreamOf(nodeId, edges)
+  const { nodeIds } = upstreamOf(nodeId, edges, nodes)
   const colors: string[] = []
   for (const n of nodes) {
     if (nodeIds.has(n.id) && n.color && !colors.includes(n.color)) colors.push(n.color)
@@ -48,8 +49,8 @@ export function chainColorsOf(nodeId: string, nodes: SignalNode[], edges: Signal
   return colors
 }
 
-/** The source nodes (chain starts) that feed a wire. */
+/** The source nodes (chain starts) that feed a wire: the sources (a DAW too, recording or not), and whatever has nothing plugged in. */
 export function chainSourcesOfEdge(edge: SignalEdge, nodes: SignalNode[], edges: SignalEdge[]): SignalNode[] {
-  const { nodeIds } = upstreamOf(edge.source, edges)
-  return nodes.filter((n) => nodeIds.has(n.id) && !edges.some((e) => e.target === n.id))
+  const { nodeIds } = upstreamOf(edge.source, edges, nodes)
+  return nodes.filter((n) => nodeIds.has(n.id) && (NODE_REGISTRY[n.typeKey].category === 'source' || !edges.some((e) => e.target === n.id)))
 }

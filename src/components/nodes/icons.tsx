@@ -209,3 +209,14 @@ export function LaptopIcon({ size = 24 }: { size?: number }) {
     </svg>
   )
 }
+
+/** A DAW: a computer screen with a recording's waveform on it. */
+export function DawIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M6 9.5v1M8.5 7.5v5M11 8.5v3M13.5 6.5v7M16 8v4M18 9.5v1" strokeWidth="1.5" />
+    </svg>
+  )
+}

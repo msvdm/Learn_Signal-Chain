@@ -315,13 +315,46 @@ map to inputs, `outputKey`), `graph/graph.ts` walks, the `adc` / `dac` entries i
 - At Intermediate the cards show **no** converter wording: Interface = USB box icon with an input
   meter (dBu) and a USB/return indicator; DAW = PC screen icon with a dBFS meter.
 - Meters: the Interface's input meter in dBu, the DAW in dBFS (the `stage.domain` system exists).
-- [ ] Registry + routing + engine + render (`OTHERS`: reuse the ADC/DAC nodes' code), pure tests:
+- [x] Registry + routing + engine + render (`OTHERS`: reuse the ADC/DAC nodes' code), pure tests:
   record path level (0 dBu in → −18 dBFS at the DAW), playback path (−18 dBFS → 0 dBu out), no cycle.
-- [ ] Cards, icons, locales.
-- [ ] Browser check: Master L/R → Interface → DAW, and DAW → Interface → Studio Monitors.
-- [ ] Checks + commit.
+- [x] Cards, icons, locales.
+- [x] Browser check: Master L/R → Interface → DAW, and DAW → Interface → Studio Monitors.
+- [x] Checks + commit.
 - [ ] ⛔ **ASK** — send the user the two screenshots and one line on how it behaves; wait for an OK
-  before Stage 5. *Hand-off:* …
+  before Stage 5. *Hand-off:*
+  - **Routes** (`NodeTypeDef.routes`, `Route` in `nodeRegistry.ts`): a card's paths that never meet,
+    each `{ from, to: [...], as }` — the input it reads (null: makes its own sound), the outputs it
+    sends on (empty: only takes in), the type whose job it does (`as`). Interface: `in → to-pc` as
+    `adc`, `from-pc → out-l / out-r` as `dac`; DAW: `in →` as `recorder` (records), `→ playback` as
+    `daw` (its own song, a digital source: `DIGITAL_SOURCES` in `process.ts`, −18 dBFS). The card
+    shows its **first** route.
+  - The walk is path by path (`flowPaths` in `graph.ts`; `flowOrder` = its cards): Interface →
+    desk → the same Interface is no loop (tested). `planChain` makes one `CardPlan` per path:
+    `key` (the card's id for its first path, `pathKey` for the others — `cards`, taps and the render's
+    readings are keyed by it), `route`, `job` (the node as its maths sees it: `{ ...node, typeKey:
+    route.as }` — PROCESS, GAINS, OTHERS, ownNoiseOf take it). `used[].from` is the sending plan's
+    key; `domainFrom` holds wire keys; each output's domain is kept per wire (`StageResult.outDomains`,
+    `outDomainOf(stage, port)` — wire colours, port rings and `withMeasured` read it).
+  - **The Interface has Line out L / R** (not one stereo `out` as planned): one stereo out into two
+    monitors folded L + R into each, +6 dBu, "Hot". `portSide` makes them `left` / `right` wires.
+  - **The USB link** (`portAcceptsWire`): `to-pc` → only a DAW's input, and a DAW takes nothing
+    else; the DAW's output is `playback` (`PLAYBACK_PORT`, a port of its own so the rule needs no
+    node lookup) → only `from-pc`, which takes nothing else (Stage 6: add the Mixer here). The line
+    input takes many wires (`NodePort.many`) but no mic-level (`micLevelAt`, `queries.ts`) or
+    instrument-level signal (`nodeAcceptsWire`). `wireTakesCard` is false for any card with routes.
+  - **Not connected** (`unwiredSource`): a card with routes only while nothing at all is plugged
+    in — a DAW only playing back is connected, its meter (what it records) reads nothing.
+  - **Chain colours** follow routes (`upstreamOf(id, edges, nodes)`): monitors after the playback
+    show only the DAW's colour. `chainSourcesOfEdge` counts sources as chain starts even when wired in.
+  - Cards (`InterfaceNode.tsx`: `InterfaceNode`, `DawNode`): `FaceCard` with `meterAt="in"` (new:
+    the meter and the zoomed-out level read what arrives — `OverviewFace` `at`); a line across the
+    face on each port line ("Line in ──→ To computer", "From computer ──→ Line out"; the DAW
+    "Records · Plays back", no arrow), each name lit (accent) while sound passes; zoomed out the icon
+    alone. Icons: lucide `Usb`, ours `DawIcon` (a screen with a waveform). Palette: Routing, after the
+    buses ("Audio Interface", "DAW (Recording App)" / "Аудио интерфейс", "DAW (програма за запис)").
+    Both at every level (the table): Beginner shows these Intermediate cards until Stage 6.
+  - Measured (engine and render agree): Keyboard −10 dBu through the desk → Interface −9.8 dBu → DAW
+    −27.8 dBFS; the DAW's song −18 dBFS → Line out 0 dBu → a Studio Monitor 110 dB SPL.
 
 ## Stage 5 — "Look inside" (Intermediate)  ☐
 
