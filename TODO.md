@@ -395,7 +395,7 @@ D22, explanation 2. Read: `ConfirmDialog.tsx` (portal pattern), `icons.tsx`.
     turned into numbers for the computer, and the computer's numbers back into sound. You can build
     it yourself in Advanced.") is new. Step names spell the jargon out (not "HPF", "EQ").
 
-## Stage 6 — Beginner: the macro scale  ☐ (built; waiting for the user's look-and-feel OK)
+## Stage 6 — Beginner: the macro scale  ☑
 
 D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElements.ts` (edge colour),
 `FaceCard.tsx`, `OverviewFace.tsx` (grep `overviewBare`), `NodeWrapper.tsx` (header only).
@@ -424,8 +424,9 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
   Stage Box → Mixer → Amp → Passive speakers, Mixer → Active wedges, PC → Mixer, Mixer → Interface ⇄
   DAW. Screenshot zoomed in and zoomed out.
 - [x] Checks + commit.
-- [ ] ⛔ **ASK** — show the Mixer drawing and the whole stage plan; wait for the user's look-and-feel
-  OK. *Hand-off:*
+- [x] ⛔ **ASK** — show the Mixer drawing and the whole stage plan; wait for the user's look-and-feel
+  OK (2026-10-11: "I like the drawing" — the Mixer three times bigger, no zoomed-out name card;
+  a mic straight into a speaker stays "Sound": "still a signal chain"). *Hand-off:*
   - **No engine at Beginner**: `SIGNAL_LEVEL` (`levels.ts`); `signalIn(s)` (`hooks/useGraphSignal.ts`)
     is the engine's picture from Intermediate and an empty one at Beginner — `useStage`, `useWire`,
     `useGraphSignal`, `useNodeName` and `NodePort` read it. `store/measuring.ts` renders nothing at
@@ -442,7 +443,8 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
     (`ChainEdgeData.still`); stereo twin lines and the ports' L / R letters from `outputKind` (the
     wiring); plugged port rings neutral. The wire preview reads `outputKind` at every level.
   - **New types** `mixer` (410 × 361, `in` many, outputs `main` / `monitor` — `MIXER_MAIN_PORT`,
-    `MIXER_MONITOR_PORT`; `category: 'merge'`, stereo always) and `stage-box` (FACE_SIZE, `in` many,
+    `MIXER_MONITOR_PORT`; `category: 'merge'`, stereo always; after the ASK 1230 × 728 — three times
+    as wide, as tall as its drawing then is) and `stage-box` (FACE_SIZE, `in` many,
     `out`), both `levels: ['beginner']`, palette Devices before the Interface. Rules: a Stage Box's
     output only into a Mixer (`nodeAcceptsWire`); a DAW takes a Mixer's output too (`portAcceptsWire`).
   - **Mixer ⇄ DAW** (my call, to review): a wire from a Mixer's output into a DAW is a USB wire like
@@ -456,14 +458,15 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
     `MixerDrawing`: six strips, master section) and Interface (`InterfaceDrawing`: two combo inputs,
     gains, 48V, monitor knob, USB sign, phones) a header, port lines (`PortLine`, geometry in
     `portLines.ts`) and a drawing with a dBu `StillMeter` (`SignalMeter.tsx`: both bars at −6 dB
-    under unity while lit, no numbers); zoomed out the name in capitals (MIXER, AUDIO INTERFACE).
+    under unity while lit, no numbers; the Mixer's three times its size — `MIXER_SCALE`); zoomed out
+    the Interface's name in capitals, the Mixer the same as zoomed in.
     Beginner faces have no meter room, so sizes are remembered apart (`shapeKey` `:beginner`).
   - Texts: `palette.items` / `theory` for `mixer`, `stage-box`; `beginner.*` (verdicts, Inputs, Main,
     Monitor). Bulgarian: Миксер, Стейдж бокс (мултикор), Основен / Монитор, „Има звук“.
   - Checked in the pane and headless (Brave over CDP): the stage plan light / dark, en / bg, zoomed
     in and out; every type on a Beginner canvas (no errors, nothing rendered); the same at
-    Intermediate (the render runs). Not done: a mic straight into a speaker reads "Sound" at
-    Beginner (no preamp check) — asked.
+    Intermediate (the render runs). A mic straight into a speaker reads "Sound" at Beginner — kept
+    (the user's call).
 
 ## Stage 7 — Advanced: Decoder, Recorder, Coder → Broadcast  ☐
 

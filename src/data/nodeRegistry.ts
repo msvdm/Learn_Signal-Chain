@@ -506,7 +506,9 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // or a DAW (a wire into a DAW brings the computer's sound back: graph/usbLink.ts)
     category: 'merge', stereo: 'always',
     inputs: [{ id: 'in', many: true }], outputs: [{ id: MIXER_MAIN_PORT }, { id: MIXER_MONITOR_PORT }],
-    levels: ['beginner'], bypass: false, minSize: { w: 410, h: 361 },
+    // Drawn big (the user's call, 2026-10-11): three times as wide as the Parametric EQ's card, as
+    // tall as its drawing then is (BeginnerFaces.tsx)
+    levels: ['beginner'], bypass: false, minSize: { w: 1230, h: 728 },
     defaultParams: {},
   },
   'stage-box': {
