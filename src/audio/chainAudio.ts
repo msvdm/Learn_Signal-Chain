@@ -248,7 +248,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     recorder: (_, x) => x,
     broadcast: (_, x) => x,
     // Packs the numbers for a stream, its level kept (fed an analog signal it is silent: SILENCES)
-    coder: (_, x) => x,
+    encoder: (_, x) => x,
     // Their paths do an ADC's and a DAC's job, a Recorder's, a source's (NodeTypeDef `routes`): nothing reaches here
     interface: (_, x) => x,
     daw: (_, x) => x,

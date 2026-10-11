@@ -212,7 +212,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D20** — Levels are scales: Beginner devices and connections only (no engine, no render, no real meters — D3 / D5 hold from Intermediate), Intermediate the analogue desk, Advanced the digital picture; some elements leave at harder levels.
 - **D21** — The microphone is not the sound: Vocal, Drum Kit, Acoustic and Guitar Amp feed a mic's Sound input; the source has the SPL meter; a Condenser needs a 48V switched on before its Preamp (`phantomPowered`), else it is silent (`noPhantom`).
 - **D22** — Interface and DAW at Intermediate record and play back only, never inside a chain (one two-way USB wire); *Look inside* shows the digital strip.
-- **D23** — Advanced adds the digital picture: Decoder, Recorder (VU / dBFS), Coder → Stream / Broadcast.
+- **D23** — Advanced adds the digital picture: Decoder, Recorder (VU / dBFS), Encoder → Stream / Broadcast.
 - **D24** — Wires are coloured by where their sound goes: green Master, blue Aux, magenta Matrix, yellow PFL, black / white Interface and Stream; red only for clipping and problems.
 
 (D2 and D6 were replaced by D8 and D9.)

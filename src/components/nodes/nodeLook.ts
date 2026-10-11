@@ -84,7 +84,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   'graphic-eq':      { icon: Sliders,           group: 'processing' },
   dac:               { icon: DacIcon,           group: 'processing', headerSize: 20 },
   // The digital mix packed for a stream (D23), last before Stream / Broadcast
-  coder:             { icon: FileArchive,       group: 'processing' },
+  encoder:             { icon: FileArchive,       group: 'processing' },
   // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },

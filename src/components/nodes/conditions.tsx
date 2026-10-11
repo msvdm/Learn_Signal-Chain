@@ -31,18 +31,18 @@ interface ConditionText {
  * icon crossed out, a blown one); the words, their colour and their place come from here.
  */
 const CONDITIONS: Record<StageCondition, ConditionText> = {
-  domainMixedBus:    { look: 'label', tone: 'clipping', text: (t) => t.warnings.domainMixedBus },
+  domainMixedBus:      { look: 'label', tone: 'clipping', text: (t) => t.warnings.domainMixedBus },
   // An amplifier, a speaker, headphones or a Guitar Amp fed a digital signal: one text for them all
-  digitalToAmp:      { look: 'label', tone: 'clipping', text: (t) => t.warnings.digitalSignal },
-  digitalToSpeaker:  { look: 'note',  tone: 'clipping', text: (t) => t.warnings.digitalSignal },
-  adcExpectsAnalog:  { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.adcExpectsAnalog },
-  dacExpectsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.dacExpectsDigital },
-  needsAmp:          { look: 'note',  tone: 'hot',      text: (t) => t.nodes.speaker.needsAmp },
-  needsGain:         { look: 'note',  tone: 'hot',      text: (t) => t.nodes.headphones.needsGain },
-  blown:             { look: 'note',  tone: 'clipping', text: (t, typeKey) => t.nodes[typeKey === 'headphones' ? 'headphones' : 'active-speaker'].blown },
-  needsDi:           { look: 'note',  tone: 'hot',      text: (t) => t.nodes.instrument.needsDi, icon: (size) => <DullToneIcon size={size} /> },
-  noPhantom:         { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },
-  coderNeedsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.coderNeedsDigital },
+  digitalToAmp:        { look: 'label', tone: 'clipping', text: (t) => t.warnings.digitalSignal },
+  digitalToSpeaker:    { look: 'note',  tone: 'clipping', text: (t) => t.warnings.digitalSignal },
+  adcExpectsAnalog:    { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.adcExpectsAnalog },
+  dacExpectsDigital:   { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.dacExpectsDigital },
+  needsAmp:            { look: 'note',  tone: 'hot',      text: (t) => t.nodes.speaker.needsAmp },
+  needsGain:           { look: 'note',  tone: 'hot',      text: (t) => t.nodes.headphones.needsGain },
+  blown:               { look: 'note',  tone: 'clipping', text: (t, typeKey) => t.nodes[typeKey === 'headphones' ? 'headphones' : 'active-speaker'].blown },
+  needsDi:             { look: 'note',  tone: 'hot',      text: (t) => t.nodes.instrument.needsDi, icon: (size) => <DullToneIcon size={size} /> },
+  noPhantom:           { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },
+  encoderNeedsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.encoderNeedsDigital },
 }
 
 /**

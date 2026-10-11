@@ -48,7 +48,7 @@ export function portAcceptsWire(
  * only into a Mixer. An Audio Interface records
  * line-level signals: not a microphone before its Preamp, nor a guitar (D22) — the computer's sound comes
  * out of its line output, into the desk or the monitors. The USB link: portAcceptsWire.
- * The digital picture (D23): a Coder's output goes only into Stream / Broadcast, which at Advanced
+ * The digital picture (D23): an Encoder's output goes only into Stream / Broadcast, which at Advanced
  * takes nothing else; a DAW plays its song only into a Recorder Track, whose Monitor out goes into
  * a processing or routing card (back into a channel, or on to be heard) — not straight into an end
  * point.
@@ -67,8 +67,8 @@ export function nodeAcceptsWire(
   if (targetNode.typeKey !== 'speaker' && from === 'amp') return false
   // A Stage Box's snake goes only into a Mixer
   if (targetNode.typeKey !== 'mixer' && from === 'stage-box') return false
-  if (from === 'coder' && targetNode.typeKey !== 'broadcast') return false
-  if (targetNode.typeKey === 'broadcast' && level === 'advanced' && from !== 'coder') return false
+  if (from === 'encoder' && targetNode.typeKey !== 'broadcast') return false
+  if (targetNode.typeKey === 'broadcast' && level === 'advanced' && from !== 'encoder') return false
   if (from === 'daw' && targetNode.typeKey !== 'recorder') return false
   if (from === 'recorder' && NODE_REGISTRY[targetNode.typeKey].category === 'sink') return false
   if (targetNode.typeKey === 'interface' &&

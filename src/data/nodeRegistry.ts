@@ -55,7 +55,7 @@ export type TypeKey =
   | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'pfl-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
-  | 'interface' | 'daw' | 'mixer' | 'stage-box' | 'decoder' | 'coder'
+  | 'interface' | 'daw' | 'mixer' | 'stage-box' | 'decoder' | 'encoder'
 
 export type Size = { w: number; h: number }
 
@@ -195,11 +195,11 @@ export const MIC_TYPES = ['dynamic', 'condenser'] as const
 export type MicType = typeof MIC_TYPES[number]
 
 /**
- * What a Coder packs the sound into for a stream (param `format`, D23): three of the formats
+ * What an Encoder packs the sound into for a stream (param `format`, D23): three of the formats
  * streams use. Each keeps the level; what they change is how much detail the listener gets.
  */
-export const CODER_FORMATS = ['mp3', 'aac', 'opus'] as const
-export type CoderFormat = typeof CODER_FORMATS[number]
+export const ENCODER_FORMATS = ['mp3', 'aac', 'opus'] as const
+export type EncoderFormat = typeof ENCODER_FORMATS[number]
 
 /** The easiest level whose Vocals and Microphones show their choices (Speech | Singing, Dynamic | Condenser). */
 export const CHOICE_LEVEL: ComplexityLevel = 'intermediate'
@@ -423,8 +423,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 259 },
     defaultParams: { alignmentDb: 18 },
   },
-  coder: {
-    // Packs the digital mix into a stream's format (MP3, AAC, Opus — CODER_FORMATS), its level
+  encoder: {
+    // Packs the digital mix into a stream's format (MP3, AAC, Opus — ENCODER_FORMATS), its level
     // kept. It works on numbers only: fed an analog signal it sends nothing (D23 — encoding is more
     // than converting). Its output goes only into Stream / Broadcast (graph/connectionRules.ts)
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
@@ -499,7 +499,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   broadcast: {
     // Stream / Broadcast: the mix sent out to listeners far away, always in stereo (a mono wire goes
-    // out on both sides). At Advanced it takes only a Coder's output (graph/connectionRules.ts)
+    // out on both sides). At Advanced it takes only an Encoder's output (graph/connectionRules.ts)
     category: 'sink', inputs: IN, outputs: [], stereo: 'always',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
@@ -515,7 +515,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT, hidden: true }],
     outputs: [{ id: TO_PC_PORT }, { id: 'out' }],
     routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out'], as: 'dac' }],
-    // Advanced has its parts instead: the converters, the Coder and the Decoder
+    // Advanced has its parts instead: the converters, the Encoder and the Decoder
     levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
@@ -629,8 +629,8 @@ export interface ParamTypes {
   character: Character
   /** Microphone: dynamic or condenser (MIC_TYPES) */
   micType: MicType
-  /** Coder: the stream's format (CODER_FORMATS) */
-  format: CoderFormat
+  /** Encoder: the stream's format (ENCODER_FORMATS) */
+  format: EncoderFormat
   /** Generator: what it plays (GENERATOR_SOUNDS) */
   sound: GeneratorSound
   /** The Mono | Stereo switch (Generator, Aux Bus) */
@@ -674,7 +674,7 @@ export type ParamKey = keyof ParamTypes
 const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
   character:     CHARACTERS,
   micType:       MIC_TYPES,
-  format:        CODER_FORMATS,
+  format:        ENCODER_FORMATS,
   sound:         GENERATOR_SOUNDS,
   selectedInput: ['a', 'b'],
 }

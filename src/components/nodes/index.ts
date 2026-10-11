@@ -28,7 +28,7 @@ import { DeesserNode }        from './DeesserNode'
 import { RelayNode }          from './RelayNode'
 import { PanNode }            from './PanNode'
 import { AdcDacNode }         from './AdcDacNode'
-import { CoderNode }          from './CoderNode'
+import { EncoderNode }          from './EncoderNode'
 import { GeneratorNode }      from './GeneratorNode'
 import { RecorderNode }       from './RecorderNode'
 import { DawNode, InterfaceNode } from './InterfaceNode'
@@ -92,7 +92,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   daw:               atBeginner(BeginnerDevice, DawNode),
   adc:               AdcDacNode,
   dac:               AdcDacNode,
-  coder:             CoderNode,
+  encoder:             EncoderNode,
   // Beginner's devices: the same at any level
   mixer:             MixerNode,
   'stage-box':       BeginnerDevice,

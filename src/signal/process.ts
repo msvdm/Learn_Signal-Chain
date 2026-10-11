@@ -18,31 +18,31 @@ import { MIC_GAIN_DB, gainDbOf, geqBandDb } from './gains'
  * components/nodes/conditions.tsx.
  */
 export type StageCondition =
-  | 'domainMixedBus'    // a bus fed analog and digital signals at once
-  | 'digitalToAmp'      // an amplifier fed a digital signal
-  | 'digitalToSpeaker'  // a speaker fed a digital signal
-  | 'adcExpectsAnalog'  // an ADC fed a digital signal
-  | 'dacExpectsDigital' // a DAC fed an analog signal
-  | 'needsAmp'          // a passive speaker with no amplifier before it: silent
-  | 'needsGain'         // headphones with no Gain right before them: silent
-  | 'blown'             // an active speaker fed from an amplifier: far too strong, it breaks
-  | 'needsDi'           // an instrument going into a desk input without a DI Box: levels fine, high notes lost
-  | 'noPhantom'         // a condenser microphone with no 48V phantom power: silent
-  | 'coderNeedsDigital' // a Coder fed an analog signal: it packs numbers only, so it sends nothing
+  | 'domainMixedBus'      // a bus fed analog and digital signals at once
+  | 'digitalToAmp'        // an amplifier fed a digital signal
+  | 'digitalToSpeaker'    // a speaker fed a digital signal
+  | 'adcExpectsAnalog'    // an ADC fed a digital signal
+  | 'dacExpectsDigital'   // a DAC fed an analog signal
+  | 'needsAmp'            // a passive speaker with no amplifier before it: silent
+  | 'needsGain'           // headphones with no Gain right before them: silent
+  | 'blown'               // an active speaker fed from an amplifier: far too strong, it breaks
+  | 'needsDi'             // an instrument going into a desk input without a DI Box: levels fine, high notes lost
+  | 'noPhantom'           // a condenser microphone with no 48V phantom power: silent
+  | 'encoderNeedsDigital' // an Encoder fed an analog signal: it packs numbers only, so it sends nothing
 
 /** Whether a card in each condition sends nothing — every condition says (a new one does not compile without). */
 export const SILENCES: Record<StageCondition, boolean> = {
-  domainMixedBus:    true,
-  digitalToAmp:      true,
-  digitalToSpeaker:  true,
-  adcExpectsAnalog:  true,
-  dacExpectsDigital: true,
-  needsAmp:          true,
-  needsGain:         true,
-  blown:             false,
-  needsDi:           false,
-  noPhantom:         true,
-  coderNeedsDigital: true,
+  domainMixedBus:      true,
+  digitalToAmp:        true,
+  digitalToSpeaker:    true,
+  adcExpectsAnalog:    true,
+  dacExpectsDigital:   true,
+  needsAmp:            true,
+  needsGain:           true,
+  blown:               false,
+  needsDi:             false,
+  noPhantom:           true,
+  encoderNeedsDigital: true,
 }
 
 /** One channel through a card. */
@@ -445,7 +445,7 @@ const PROCESS: Record<TypeKey, Process> = {
   },
   // Packs numbers into a stream's format, the level kept (D23): an analog signal it cannot take —
   // converting is a converter's job, packing is its own
-  coder: (_, input, ctx) => (ctx.fed && ctx.domain === 'analog' ? blocked('coderNeedsDigital', 'analog') : pass(input, ctx)),
+  encoder: (_, input, ctx) => (ctx.fed && ctx.domain === 'analog' ? blocked('encoderNeedsDigital', 'analog') : pass(input, ctx)),
   dac: (node, input, ctx) => {
     if (ctx.domain === 'analog') return blocked('dacExpectsDigital', 'analog')
     // Its own noise is added on its analog side (ownNoiseOf)

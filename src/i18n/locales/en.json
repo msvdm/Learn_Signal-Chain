@@ -122,7 +122,7 @@
     "digitalSignal": "Silent — the signal is digital. Pass it through a Digital to Analog Converter first.",
     "adcExpectsAnalog": "Silent — the signal is already digital.",
     "dacExpectsDigital": "Silent — the signal is analog. Put an Analog to Digital Converter before this one.",
-    "coderNeedsDigital": "Silent — a Coder works only on a digital signal. Put an Analog to Digital Converter before it."
+    "encoderNeedsDigital": "Silent — an Encoder works only on a digital signal. Put an Analog to Digital Converter before it."
   },
   "hum": {
     "tag": "Hum"
@@ -290,7 +290,7 @@
     "dac": {
       "label": "Digital to Analog Converter"
     },
-    "coder": {
+    "encoder": {
       "format": "Format",
       "formats": {
         "mp3": "MP3",
@@ -460,7 +460,7 @@
       "pan": "Pan / Balance",
       "adc": "Analog to Digital Converter",
       "dac": "Digital to Analog Converter",
-      "coder": "Coder",
+      "encoder": "Encoder",
       "master-bus": "Master Bus",
       "aux-bus": "Aux Bus",
       "matrix-bus": "Matrix Bus",
@@ -621,7 +621,7 @@
     "broadcast": {
       "what": "Stream / Broadcast sends the mix to listeners far away — an internet stream, a radio or TV broadcast. It is always stereo: a mono signal goes out on both sides.",
       "why": "Many events are heard by more people online or on the radio than in the room. The listeners at home hear only what reaches this point.",
-      "tip": "Send it a healthy green level: too quiet and listeners turn their volume up into the hiss, too loud and it distorts. If a card before it clips, it says “Bad sound” — find the red card and turn down before it. In Advanced it takes only a Coder: the mix is packed into a stream's format first."
+      "tip": "Send it a healthy green level: too quiet and listeners turn their volume up into the hiss, too loud and it distorts. If a card before it clips, it says “Bad sound” — find the red card and turn down before it. In Advanced it takes only an Encoder: the mix is packed into a stream's format first."
     },
     "di-box": {
       "what": "A DI box (Direct Injection) takes a guitar, bass or keyboard and turns it into a mic-level signal for the desk: its XLR Out is about 20 dB quieter than what goes in, so a Gain after it works as a Preamp, just like after a microphone. Its Direct Out passes the instrument on unchanged, for a guitar amp on stage.",
@@ -641,7 +641,7 @@
     "decoder": {
       "what": "A Decoder plays a song that arrives packed as numbers — a file or a stream (MP3, AAC …) — and unpacks it into a stereo signal that is digital from the start: its meter reads in dBFS, about −18 dBFS on average.",
       "why": "Much of what a sound system plays today never was an analog signal: music from a file, a stream, a computer. It stays digital until a Digital to Analog Converter turns it into a voltage for the speakers.",
-      "tip": "It can go straight into digital cards (a Gain, an EQ, a Coder). Into a mixing bus with analog channels it falls silent — analog and digital can't be mixed: put a Digital to Analog Converter after it first."
+      "tip": "It can go straight into digital cards (a Gain, an EQ, an Encoder). Into a mixing bus with analog channels it falls silent — analog and digital can't be mixed: put a Digital to Analog Converter after it first."
     },
     "noise-gate": {
       "what": "A noise gate is a switch controlled by level. When the signal rises above the threshold, the gate opens and the signal passes through unchanged. When the signal falls below the threshold, the gate closes and the output is silence.",
@@ -688,9 +688,9 @@
       "why": "Speakers and amplifiers are analog devices — they respond to voltage, not numbers. The DAC converts the digital mix back into real electrical signal so you can hear it through speakers. Without a DAC, digital audio stays in the computer.",
       "tip": "Place the DAC before any analog gear that follows — amplifiers, passive speakers, analog signal processors. The domain indicator on the node turns green (analog) after the DAC, confirming that everything downstream is back in the correct electrical domain."
     },
-    "coder": {
-      "what": "A Coder packs the digital mix into a stream's format — MP3, AAC or Opus — so it is small enough to send to listeners over the internet. The level stays the same: what changes is how much detail fits.",
-      "why": "A stream or a broadcast never sends the raw numbers: they are far too big. Packing them is a job of its own, after the conversion — an Analog to Digital Converter turns the sound into numbers, the Coder packs those numbers. That is why, in Advanced, Stream / Broadcast takes only a Coder.",
+    "encoder": {
+      "what": "An Encoder packs the digital mix into a stream's format — MP3, AAC or Opus — so it is small enough to send to listeners over the internet. The level stays the same: what changes is how much detail fits.",
+      "why": "A stream or a broadcast never sends the raw numbers: they are far too big. Packing them is a job of its own, after the conversion — an Analog to Digital Converter turns the sound into numbers, the Encoder packs those numbers. That is why, in Advanced, Stream / Broadcast takes only an Encoder.",
       "tip": "MP3 plays everywhere; AAC is what phones and video sites use; Opus has the least delay, for live talk. Fed an analog signal it stays silent: put an Analog to Digital Converter before it."
     },
     "interface": {

@@ -4,7 +4,7 @@ The user's plan (2026-10-10). Levels stop being "more palette items" and become 
 - **Beginner** — the macro world: *devices*, not components. Connections only, no signal maths.
 - **Intermediate** — the analogue channel strip of a small desk (Yamaha MG12XU as the model), with the
   Interface and DAW present only to record and play back.
-- **Advanced** — micro scale: today's full chain plus ADC/DAC thinking, Decoder, Coder, a real Recorder.
+- **Advanced** — micro scale: today's full chain plus ADC/DAC thinking, Decoder, Encoder, a real Recorder.
 
 Work through the stages **in order, one stage per session** (`/clear` between stages). This file is the
 hand-off between sessions: tick the boxes, and write the stage's *Hand-off* lines before you commit.
@@ -68,7 +68,7 @@ hand-off between sessions: tick the boxes, and write the stage's *Hand-off* line
 | `decoder` (new) | — | — | ✓ | stereo **digital** source, music loop |
 | `mixer` (new) | ✓ | — | — | all-in-one desk, visual only |
 | `stage-box` (new) | ✓ | — | — | many in, one snake out → mixer only |
-| `interface` (new) | ✓ | ✓ rec/playback | — | see Stage 4; A has ADC / DAC, Coder / Decoder instead (2026-10-11) |
+| `interface` (new) | ✓ | ✓ rec/playback | — | see Stage 4; A has ADC / DAC, Encoder / Decoder instead (2026-10-11) |
 | `daw` (new) | ✓ | ✓ rec/playback | ✓ | PC icon, dBFS meter; one two-way USB wire to the Interface, no output at I (2026-10-11) |
 | `amp` | ✓ icon | ✓ | ✓ | → passive speaker only |
 | `phantom` (new, 48V) | — | ✓ | ✓ | bare on/off control |
@@ -77,11 +77,11 @@ hand-off between sessions: tick the boxes, and write the stage's *Hand-off* line
 | `noise-gate`, `limiter`, `deesser` | — | — | ✓ | hidden at Intermediate |
 | `graphic-eq`, `adc`, `dac`, `matrix-bus` | — | — | ✓ | unchanged |
 | `fader`, `switch`, `relay`, `pan`, `master-bus`, `aux-bus` | — | ✓ | ✓ | routing unchanged |
-| `coder` (new) | — | — | ✓ | format buttons, out → Broadcast only |
+| `encoder` (new) | — | — | ✓ | format buttons, out → Broadcast only |
 | `active-speaker`, `headphones` | ✓ | ✓ | ✓ | |
 | `speaker` (passive) | ✓ | ✓ | ✓ | silent without an amp before it |
 | `studio-monitor` (new) | ✓ | ✓ | — | works like an active speaker |
-| `stream-broadcast` (new) | ✓ | ✓ | ✓ | at A: fed only by a Coder |
+| `stream-broadcast` (new) | ✓ | ✓ | ✓ | at A: fed only by an Encoder |
 | `recorder` (new) | ✓ | ✓ | ✓ full | follows its source (mono / stereo); A: "Recorder Track", monitor out, VU or dBFS |
 
 Palette groups: **Beginner** = Inputs · Devices (routing + processing together) · Outputs.
@@ -107,7 +107,7 @@ Read: `src/data/levels.ts`, `src/data/nodeRegistry.ts`, `src/components/nodes/no
     the MG12XU's USB; (2) a **Look inside** button shows the same channel strip, digital, inside
     the box. Wire colours stay for signal health only — the digital side is not colour-coded.
   - **D23 — Advanced adds the digital picture:** Decoder (digital source), Recorder (Mono/Stereo,
-    monitor out, VU on analogue, dBFS on digital), Coder (encoding is more than A/D conversion) →
+    monitor out, VU on analogue, dBFS on digital), Encoder (encoding is more than A/D conversion) →
     Stream/Broadcast.
 - [x] Registry: replace `minLevel` with `levels: ComplexityLevel[]`. Update `availableAt` and every
   `minLevel` reader (grep). Apply the table above **for existing types only**. New types come in
@@ -253,7 +253,7 @@ Read: `SpeakerNode.tsx`, `ActiveSpeakerNode.tsx`, `AmpNode.tsx`, `connectionRule
 
 - [x] `studio-monitor`: works like `active-speaker` (built-in amp, SPL meter), its own icon.
 - [x] `broadcast` (Stream / Broadcast): a sink, stereo, dBu meter at I. At Advanced it accepts only
-  a `coder` (rule added in Stage 7).
+  a `encoder` (rule added in Stage 7).
 - [x] `recorder` (simple form, B/I): a sink with a level meter (dBu at I).
 - [x] `speaker` (passive) and `amp` now also at B and I. Rule: the `amp` output feeds **only**
   `speaker`, at every level (`nodeAcceptsWire`). The existing "passive speaker needs an amp" logic
@@ -267,7 +267,7 @@ Read: `SpeakerNode.tsx`, `ActiveSpeakerNode.tsx`, `AmpNode.tsx`, `connectionRule
     the set an Amplifier blows.
   - **Recorder** (`stereo: 'follow'`: records a stereo wire in two channels, a mono one in one) and
     **Stream / Broadcast** (`broadcast`, `stereo: 'always'`: a mono wire goes out on both sides):
-    sinks, `PASSIVE`, `PROCESS` `pass` (analog or digital as it arrives — Stage 7 adds the Coder
+    sinks, `PASSIVE`, `PROCESS` `pass` (analog or digital as it arrives — Stage 7 adds the Encoder
     rule), `OTHERS` identity. One card for both, `RecorderNode.tsx` (`FaceCard`, the big icon, its
     meter in dBu labelled Input — `FaceMeter` labels any sink without SPL so; notes: Bad sound, hum).
     Icons: lucide's `CassetteTape`, `RadioTower`. Stage 7's Advanced Recorder (Mono | Stereo switch,
@@ -468,7 +468,7 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
     Intermediate (the render runs). A mic straight into a speaker reads "Sound" at Beginner — kept
     (the user's call).
 
-## Stage 7 — Advanced: Decoder, Recorder, Coder → Broadcast  ☑
+## Stage 7 — Advanced: Decoder, Recorder, Encoder → Broadcast  ☑
 
 D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digital bus check),
 `SignalMeter.tsx` (scales only).
@@ -483,12 +483,12 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
   chain; on an analogue chain a **VU meter** (average-reading, ~300 ms, 0 VU = +4 dBu, scale −20 …
   +3 VU). A needle face, or the bar with a VU scale — pick the one that fits `SignalMeter`/`meterPaint`
   with less code, and say which at stage end.
-- [x] `coder`: a small card with format buttons (MP3 · AAC · Opus; param `format`, `PARAM_CHOICES`),
+- [x] `encoder`: a small card with format buttons (MP3 · AAC · Opus; param `format`, `PARAM_CHOICES`),
   passing the level on. Its only output → `broadcast` only. At Advanced, `broadcast` accepts only a
-  `coder`. Fed an **analogue** signal, the Coder says "needs a digital signal — put an A/D converter
+  `encoder`. Fed an **analogue** signal, the Encoder says "needs a digital signal — put an A/D converter
   before it" and is silent: the lesson that conversion alone isn't the whole picture.
 - [x] `daw` at Advanced (the user's calls, 2026-10-11 — **"keep it simple"**): the **Audio Interface
-  is not in Advanced's palette** — the ADC / DAC and the Coder / Decoder take its place. The DAW has
+  is not in Advanced's palette** — the ADC / DAC and the Encoder / Decoder take its place. The DAW has
   no output at Intermediate (one two-way USB wire to the Interface); at Advanced it has one — its
   song (digital, −18 dBFS) — that goes **only into a Recorder Track**: DAW → Recorder Track →
   any processing or routing card. So the DAW's ports depend on the level (the user overrules the
@@ -497,7 +497,7 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
   Interface, so no USB wire). Nothing plugs into the DAW at Advanced. The old plan (the DAW's output
   feeding digital processing cards — a DAW *is* a mixer) is dropped. The analogue/digital bus rule
   still holds. Studio Monitor is hidden here (Stage 0 table).
-- [x] Tests: decoder domain, coder condition, recorder meter domain.
+- [x] Tests: decoder domain, encoder condition, recorder meter domain.
 - [x] Locales, icons, checks, commit. *Hand-off:*
   - **Ports drawn per level** (the user's call for the DAW): `NodePort.levels` — drawn (and wired)
     only at those levels; `drawnPorts(node, level, view?)` (`graph/queries.ts`) leaves out `hidden`
@@ -511,21 +511,22 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
     (render, movement, live meters unchanged). The DAW at Advanced shows its song (`meterAt="out"`
     there), at I what it records — every old reading the same.
   - **Rules** (`nodeAcceptsWire(…, level?)`, `wireTakesCard(…, level)` — every caller passes the
-    store's level; `cloneGroup` takes it too): a Coder's output only into Stream / Broadcast; at
-    Advanced Stream / Broadcast only from a Coder; a DAW's output only into a Recorder; a Recorder's
-    Monitor out into anything but an end point (`category: 'sink'` — so an Amplifier, a Coder, a
+    store's level; `cloneGroup` takes it too): an Encoder's output only into Stream / Broadcast; at
+    Advanced Stream / Broadcast only from an Encoder; a DAW's output only into a Recorder; a Recorder's
+    Monitor out into anything but an end point (`category: 'sink'` — so an Amplifier, an Encoder, a
     bus, a Gain, a Fader take it; my reading of "processing or routing"). A Recorder dropped onto a
     wire at Advanced goes in mid-chain (it has an output there).
   - **Decoder** (`decoder`, sources, after the Generator; lucide `FileMusic`): a stereo source,
     −18 dBFS (`levelDb`), music loop, noise 80 dB under (`NOISE_BELOW`), `DIGITAL_SOURCES`,
     `PASSIVE`; `InstrumentNode` draws it (a face, dBFS meter). Into a bus with analog channels:
     `domainMixedBus`, unchanged (tested).
-  - **Coder** (`coder`, processing, after the DAC; lucide `FileArchive`; 320 × 259): `format`
-    (`CODER_FORMATS` mp3 · aac · opus, `PARAM_CHOICES`), passes the level on; fed (and only when fed)
-    an analog signal → `coderNeedsDigital` (silent, `SILENCES`; its words a converter's line in
-    capitals). `CoderNode.tsx`: the three format buttons (`ChoiceButtons`), a few words on the chosen
-    one (`nodes.coder.goodFor`), "−18.0 dBFS → MP3" (what arrives, in its units). Named "Coder" /
-    "Кодер", the plan's word ("Encoder" is the usual one — the user may prefer it).
+  - **Encoder** (`encoder`, processing, after the DAC; lucide `FileArchive`; 320 × 259): `format`
+    (`ENCODER_FORMATS` mp3 · aac · opus, `PARAM_CHOICES`), passes the level on; fed (and only when fed)
+    an analog signal → `encoderNeedsDigital` (silent, `SILENCES`; its words a converter's line in
+    capitals). `EncoderNode.tsx`: the three format buttons (`ChoiceButtons`), a few words on the chosen
+    one (`nodes.encoder.goodFor`), "−18.0 dBFS → MP3" (what arrives, in its units). Named "Encoder" in
+    English (the user's call, 2026-10-11: the plan said "Coder"), "Кодер" in Bulgarian (the pair of
+    "Декодер", the user's call).
   - **Recorder Track** (Advanced): a line across its face, "Records → Monitor out" (`PortLine`,
     lit while sound passes), the icon under it. On a digital signal the usual dBFS strip; on an
     analog one **a needle face** (`components/VuMeter.tsx`), not a bar: a bar would need a second
@@ -537,15 +538,15 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
     voltage (`vuSwing`: 0 VU at 71 %), red from 0; the needle reads the meters' 300 ms RMS (D10).
     Checked: a Keyboard at −10 dBu reads −14.0 VU, its needles moving −16 … −12; the Generator's
     noise at +4 dBu +0.0 VU, steady.
-  - Wire colours needed nothing: the Coder → Stream wire and the wires before it are black (D24's
+  - Wire colours needed nothing: the Encoder → Stream wire and the wires before it are black (D24's
     `record`), DAW → Recorder Track green.
-  - Texts (en + bg): `palette.items` decoder / coder, `theory.decoder`, `theory.coder`, a sentence
+  - Texts (en + bg): `palette.items` decoder / encoder, `theory.decoder`, `theory.encoder`, a sentence
     each added to `theory.recorder` (what + tip: the Track, the VU), `theory.daw` (what: Advanced),
-    `theory.broadcast` (tip: only a Coder at Advanced); `nodes.coder.*`, `nodes.recorder.records` /
-    `monitorOut`, `warnings.coderNeedsDigital`.
-  - Tests: `connectionRules.test.ts` (the digital picture's rules, a Recorder / Coder dropped onto a
-    wire), `engine.chains.test.ts` (Decoder → Gain → Coder → Stream digital all the way; a Coder fed
-    analog, a Coder unplugged, a Decoder with analog channels in a bus; a Recorder Track's domain
+    `theory.broadcast` (tip: only an Encoder at Advanced); `nodes.encoder.*`, `nodes.recorder.records` /
+    `monitorOut`, `warnings.encoderNeedsDigital`.
+  - Tests: `connectionRules.test.ts` (the digital picture's rules, a Recorder / Encoder dropped onto a
+    wire), `engine.chains.test.ts` (Decoder → Gain → Encoder → Stream digital all the way; an Encoder fed
+    analog, an Encoder unplugged, a Decoder with analog channels in a bus; a Recorder Track's domain
     and Monitor out; the DAW at Advanced), `levels.test.ts` (the VU's maths). No reading moved.
   - Checked in the pane (light / dark, en / bg): the six chains above; Intermediate unchanged (the
     Recorder has only its input, the DAW records through the Interface); the palette at Advanced.

@@ -741,14 +741,14 @@ describe('a clip before a speaker is heard there, however green its meter (disto
   })
 })
 
-describe('the digital picture (D23): a Decoder, a Coder, a Recorder Track, the DAW at Advanced', () => {
+describe('the digital picture (D23): a Decoder, an Encoder, a Recorder Track, the DAW at Advanced', () => {
   // A stream played (a Decoder: numbers from the start, −18 dBFS), through a digital Gain, packed by
-  // a Coder for Stream / Broadcast: digital all the way, the level kept
-  describe('a Decoder through a Coder to Stream / Broadcast', () => {
+  // an Encoder for Stream / Broadcast: digital all the way, the level kept
+  describe('a Decoder through an Encoder to Stream / Broadcast', () => {
     expectCards(signalOf([
       card('dec', 'decoder'),
       card('gain', 'gain'),
-      card('cod', 'coder'),
+      card('cod', 'encoder'),
       card('air', 'broadcast'),
     ], [
       wire('dec', 'gain'), wire('gain', 'cod'), wire('cod', 'air'),
@@ -760,14 +760,14 @@ describe('the digital picture (D23): a Decoder, a Coder, a Recorder Track, the D
     })
   })
 
-  // Encoding is more than converting: an analog signal into a Coder gives nothing to send. Nothing
+  // Encoding is more than converting: an analog signal into an Encoder gives nothing to send. Nothing
   // plugged in, it says nothing. A Decoder meets the analog desk only after a DAC
-  describe('a Coder fed an analog signal is silent; a Decoder cannot be mixed with analog channels', () => {
+  describe('an Encoder fed an analog signal is silent; a Decoder cannot be mixed with analog channels', () => {
     expectCards(signalOf([
       card('keys', 'keyboard'),
-      card('cod', 'coder'),
+      card('cod', 'encoder'),
       card('air', 'broadcast'),
-      card('idle', 'coder'),
+      card('idle', 'encoder'),
       card('keys2', 'keyboard'),
       card('dec', 'decoder'),
       card('bus', 'master-bus'),
@@ -775,7 +775,7 @@ describe('the digital picture (D23): a Decoder, a Coder, a Recorder Track, the D
       wire('keys', 'cod'), wire('cod', 'air'), wire('keys2', 'bus'), wire('dec', 'bus'),
     ]), {
       keys:  { out: [-10, -10], health: 'good' },
-      cod:   { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'coderNeedsDigital' },
+      cod:   { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'encoderNeedsDigital' },
       air:   { in: [S, S], out: [S, S], health: 'too-quiet' },
       idle:  { out: S, health: 'too-quiet' },
       keys2: { out: [-10, -10], health: 'good' },

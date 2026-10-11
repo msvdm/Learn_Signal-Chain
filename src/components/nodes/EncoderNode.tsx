@@ -1,6 +1,6 @@
 import type { CardProps } from './cardProps'
-import type { CoderFormat } from '../../data/nodeRegistry'
-import { CODER_FORMATS } from '../../data/nodeRegistry'
+import type { EncoderFormat } from '../../data/nodeRegistry'
+import { ENCODER_FORMATS } from '../../data/nodeRegistry'
 import { NodeWrapper } from './NodeWrapper'
 import { ConditionLabel } from './conditions'
 import { ChoiceButtons } from '../controls/ChoiceButtons'
@@ -15,31 +15,31 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { LEVEL_SAMPLE, levelParts } from '../../utils/readout'
 
 /**
- * Coder (D23): packs the digital mix into a stream's format — MP3, AAC or Opus, chosen with its
+ * Encoder (D23): packs the digital mix into a stream's format — MP3, AAC or Opus, chosen with its
  * buttons, a few words under them on what the chosen one is good for — and passes its level on.
  * Its line reads what arrives, in its units, and the format it leaves in. Fed an analog signal it
  * sends nothing and says so in capitals, as a converter does: packing is not converting.
  */
-export function CoderNode({ id }: CardProps) {
-  const p                = useParams(id, 'coder')
+export function EncoderNode({ id }: CardProps) {
+  const p                = useParams(id, 'encoder')
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const { t }            = useTranslation()
-  const text             = t.nodes.coder
+  const text             = t.nodes.encoder
   const condition        = useStage(id)?.condition
   const { inLevel, inDomain } = useStereoLevels(id)
   const format           = p('format')
   const [value, unit]    = levelParts(inLevel, inDomain)
 
-  const choices: Choice<CoderFormat>[] = CODER_FORMATS.map((f) => ({ value: f, label: text.formats[f], icon: null }))
+  const choices: Choice<EncoderFormat>[] = ENCODER_FORMATS.map((f) => ({ value: f, label: text.formats[f], icon: null }))
 
   return (
-    <NodeWrapper nodeId={id} typeKey="coder" label={useNodeName(id, 'coder')} align="center" showLevel={false}>
+    <NodeWrapper nodeId={id} typeKey="encoder" label={useNodeName(id, 'encoder')} align="center" showLevel={false}>
       <ChoiceButtons
         choices={choices} value={format} onChange={(f) => updateNodeParams(id, { format: f })}
         label={text.format} columns={3} fontSize={14} style={{ width: '100%', height: 38 }}
       />
       <div style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', textAlign: 'center' }}>
-        <StableText reserve={CODER_FORMATS.map((f) => text.goodFor[f])} align="center">{text.goodFor[format]}</StableText>
+        <StableText reserve={ENCODER_FORMATS.map((f) => text.goodFor[f])} align="center">{text.goodFor[format]}</StableText>
       </div>
       {/* What arrives, then what leaves: the same level, packed */}
       <div style={{ fontSize: 16, fontFamily: 'var(--lsc-font-mono)', whiteSpace: 'nowrap', textAlign: 'center' }}>
@@ -49,7 +49,7 @@ export function CoderNode({ id }: CardProps) {
         {' → '}
         <span style={{ fontWeight: 700, color: condition ? 'var(--signal-clipping)' : 'var(--lsc-accent)' }}>{text.formats[format]}</span>
       </div>
-      {condition && <ConditionLabel condition={condition} typeKey="coder" />}
+      {condition && <ConditionLabel condition={condition} typeKey="encoder" />}
     </NodeWrapper>
   )
 }
