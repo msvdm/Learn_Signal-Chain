@@ -486,7 +486,7 @@
     "drum-kit": {
       "what": "A drum kit: loud, sharp hits. It is sound in the air — a Microphone turns it into a signal.",
       "why": "Wire its Sound into a Microphone (a dotted line). One kit can feed several microphones, as on a real stage: one on the kick drum, one on the snare, one above the kit.",
-      "tip": "Close up a drum reaches about 110 dB SPL — 24 dB louder than speech, so its Preamp needs about 24 dB less gain. Its hits also jump far above the average, so they reach the clip level sooner."
+      "tip": "Close up a drum reaches about 110 dB SPL — 24 dB louder than speech, so its Preamp needs about 24 dB less gain. Its hits also jump far above the average, so they reach the clip level (where the sound distorts) sooner."
     },
     "acoustic": {
       "what": "An acoustic guitar: no pickup, no cable — its sound comes out of its wooden body, into the air.",
@@ -496,7 +496,7 @@
     "mic": {
       "what": "The microphone turns sound in the air into an electrical signal — a very weak one: about −60 dBu for a voice into a dynamic microphone.",
       "why": "It hears only what is wired into its Sound input: a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar Amp (a dotted line). It also hears the room around it: the quiet hiss left when the music stops.",
-      "tip": "Its wire is blue (too quiet) — normal at this stage: the Preamp’s job is to fix that. From Intermediate on, choose its type. Dynamic: tough, needs no power. Condenser: about 12 dB more signal from the same sound, so the Preamp needs less gain — but it hears the room 12 dB louder too, and it needs power: put a Phantom Power (48V) between it and the Preamp, switched on — without it, it sends nothing."
+      "tip": "Its signal is far too weak to use as it is — normal at this stage: the Preamp’s job is to fix that. From Intermediate on, choose its type. Dynamic: tough, needs no power. Condenser: about 12 dB more signal from the same sound, so the Preamp needs less gain — but it hears the room 12 dB louder too, and it needs power: put a Phantom Power (48V) between it and the Preamp, switched on — without it, it sends nothing."
     },
     "keyboard": {
       "what": "A keyboard (a synthesizer or a digital piano) sends a line-level signal — about −10 dBu, already strong enough for the desk. It is stereo: Left and Right travel on one wire.",
@@ -636,7 +636,7 @@
     "generator": {
       "what": "A signal generator makes a test sound by itself: a steady tone (Sine), hiss (Noise) or short pulses (Click). Its Level knob sets how strong it is — 0 dBu is the level the desk is built around. Switch it to Stereo to test a stereo chain: the same sound on Left and Right, on one wire.",
       "why": "Engineers send a known sound through a chain to check every stage before the musicians arrive. Every sound has loudest moments (its peaks) above its average level, and the gap depends on the sound: about 3 dB for a sine, 18 dB for clicks. The meters show the average; the peaks are what clip.",
-      "tip": "Try this: set Sine at +10 dBu — its wire is yellow (hot). Switch to Click at the same level and the wire turns red: the clicks' peaks reach the clip level (+20 dBu) while their average has not moved."
+      "tip": "Try this: set Sine at +10 dBu — the meters read Hot (yellow). Switch to Click at the same level and its wire turns red: the clicks' peaks reach the clip level (+20 dBu, where the sound distorts) while their average has not moved."
     },
     "decoder": {
       "what": "A Decoder plays a song that arrives packed as numbers — a file or a stream (MP3, AAC …) — and unpacks it into a stereo signal that is digital from the start: its meter reads in dBFS, about −18 dBFS on average.",
@@ -696,7 +696,7 @@
     "interface": {
       "what": "An audio interface is the box between your desk and a computer. One USB wire to the computer carries the sound both ways. It records: the sound on its Line in goes to the computer. It plays back: the computer's sound comes back along the same wire and out of its Line out.",
       "why": "A computer cannot take a desk's output by itself. The interface turns the sound into numbers for the computer, and the computer's numbers back into sound — two paths that never meet.",
-      "tip": "To record a finished mix, wire the Master Bus's L and R into Line in. To hear what the computer plays, wire Line out into a Gain or a Fader on your desk, like any other channel."
+      "tip": "To record a finished mix, wire the desk's mix into Line in (a Mixer's Main, or the Master Bus's L and R). To hear what the computer plays, wire Line out back into the desk, like any other channel."
     },
     "daw": {
       "what": "A DAW (Digital Audio Workstation) is the recording program on a computer. One USB wire links it to the audio interface: it records what the interface sends, and plays a song of its own back along the same wire. In Advanced there is no audio interface: it plays its song out of an output of its own, into a Recorder Track.",
