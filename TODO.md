@@ -404,9 +404,8 @@ D20. Read: `store/measuring.ts`, `hooks/useGraphSignal.ts`, `hooks/useFlowElemen
   `DETAIL_LEVEL`. A new pure `graph/reach.ts`: which nodes a source reaches, and each output's verdict
   (*sound* / *no sound — not connected* / *no sound — needs an amplifier*). Wires at Beginner: one
   neutral colour with the flow animation when they lead to an output (no health colours). Tests for
-  `reach.ts`. ⛔ Since D24 (2026-10-11) wires are coloured by where their sound goes, at every level
-  (`graph/wireFlow.ts`, pure: no engine needed; only the red for clipping is the engine's) — ask the
-  user whether Beginner keeps those colours or one neutral colour before building this.
+  `reach.ts`. **Neutral** (the user's call, 2026-10-11): D24's colours by destination
+  (`graph/wireFlow.ts`) start at Intermediate; at Beginner every wire is the one neutral colour.
 - [ ] **Inputs are bare at every zoom** at Beginner: icon + name, no card, no meter (like
   `overviewBare` today). The mic shows no type buttons; the Vocal is a **human head**.
 - [ ] `mixer`: Parametric-EQ size (410 × 361). Its input takes any number of wires. Outputs: Main and
@@ -437,7 +436,9 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
   existing rule "analogue and digital chains can't meet in one mix bus" applies to it unchanged.
 - [ ] `recorder` at Advanced (named **Recorder Track** since 2026-10-11, `levelNames.advanced`): **no
   Mono | Stereo switch** — it follows its source (the user's call, 2026-10-11: `stereo: 'follow'`
-  stays) — and a **Monitor out** (passes the signal on, for headphones or monitors). Meter: dBFS on a digital
+  stays) — and an output that passes what it records on (its Monitor out) into **any processing or
+  routing card** (the user's call, 2026-10-11: "bring it back to a channel or listen to it" — a
+  Gain, a Fader, a bus …; to listen, through them to an output: headphones need their Gain). Meter: dBFS on a digital
   chain; on an analogue chain a **VU meter** (average-reading, ~300 ms, 0 VU = +4 dBu, scale −20 …
   +3 VU). A needle face, or the bar with a VU scale — pick the one that fits `SignalMeter`/`meterPaint`
   with less code, and say which at stage end.
@@ -445,14 +446,16 @@ D23. Read: the domain logic (grep `domain`, `inDomain`, the mixed analogue/digit
   passing the level on. Its only output → `broadcast` only. At Advanced, `broadcast` accepts only a
   `coder`. Fed an **analogue** signal, the Coder says "needs a digital signal — put an A/D converter
   before it" and is silent: the lesson that conversion alone isn't the whole picture.
-- [ ] `daw` at Advanced (the user's call, 2026-10-11): the **Audio Interface is not in Advanced's
-  palette** — the ADC / DAC and the Coder / Decoder take its place. The DAW has no output at
-  Intermediate (one two-way USB wire to the Interface) and "the ability to connect to a recording
-  track in advanced" (the user's words): ⛔ **ASK** which way (Recorder Track → DAW, or DAW →
-  Recorder Track), and whether its ports may then depend on the level (a decided default says
-  they never do), before building. The old plan (the DAW's output feeding digital processing
-  cards — a DAW *is* a mixer) is part of that question. The analogue/digital bus rule still
-  holds. Studio Monitor is hidden here (Stage 0 table).
+- [ ] `daw` at Advanced (the user's calls, 2026-10-11 — **"keep it simple"**): the **Audio Interface
+  is not in Advanced's palette** — the ADC / DAC and the Coder / Decoder take its place. The DAW has
+  no output at Intermediate (one two-way USB wire to the Interface); at Advanced it has one — its
+  song (digital, −18 dBFS) — that goes **only into a Recorder Track**: DAW → Recorder Track →
+  any processing or routing card. So the DAW's ports depend on the level (the user overrules the
+  decided default for this one card): the simplest way is its `playback` port shown at Advanced
+  (today it is hidden, the USB wire's way back — `graph/usbLink.ts`; at Advanced there is no
+  Interface, so no USB wire). Nothing plugs into the DAW at Advanced. The old plan (the DAW's output
+  feeding digital processing cards — a DAW *is* a mixer) is dropped. The analogue/digital bus rule
+  still holds. Studio Monitor is hidden here (Stage 0 table).
 - [ ] Tests: decoder domain, coder condition, recorder meter domain.
 - [ ] Locales, icons, checks, commit. *Hand-off:* …
 
