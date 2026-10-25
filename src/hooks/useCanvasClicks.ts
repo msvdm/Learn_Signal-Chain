@@ -106,9 +106,7 @@ export function useCanvasClicks(
 
   function onPaneClick() {
     if (!canSelect()) return
-    const { setSelection, setHelp } = useSignalStore.getState()
-    setSelection([])
-    setHelp(null)
+    useSignalStore.getState().setSelection([])
   }
 
   return { onNodeClick, onNodeDragStart, selectFromBox, onPaneClick }

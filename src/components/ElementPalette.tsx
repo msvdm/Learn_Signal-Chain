@@ -255,7 +255,7 @@ export function ElementPalette() {
         </p>
       )}
 
-      {/* Help and Remove live in the right-click menu, which nothing else shows */}
+      {/* Remove lives in the right-click menu, which nothing else shows */}
       <p
         style={{
           marginTop: 'auto', marginBottom: 0, padding: '10px 2px 0', flexShrink: 0,

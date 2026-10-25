@@ -82,17 +82,11 @@ export function DIBoxNode({ id }: CardProps) {
           {output(text.xlrOut, xlr, text.micLevel, true)}
           {output(text.directOut, direct, text.instrumentLevel, false)}
 
-          {/* The description, or the hum note in its place: both keep their space, so the card never resizes */}
-          <div style={{ display: 'grid', borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}>
+          {/* The hum note keeps its space when hidden, so the card never resizes */}
+          <div style={{ borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}>
             <div
               className="lsc-wrap-text"
-              style={{ gridArea: '1 / 1', lineHeight: 1.375, color: 'var(--lsc-fg-muted)', visibility: hum ? 'hidden' : 'visible' }}
-            >
-              {text.description}
-            </div>
-            <div
-              className="lsc-wrap-text"
-              style={{ gridArea: '1 / 1', lineHeight: 1.375, color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
+              style={{ lineHeight: 1.375, color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
             >
               {text.hum}
             </div>

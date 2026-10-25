@@ -715,7 +715,7 @@ export function portFacing(node: Pick<SignalNode, 'typeKey' | 'params'>, type: '
   return first ? 'left' : 'right'
 }
 
-/** An Active Speaker flipped to face the band: a stage monitor (its name and help text) */
+/** An Active Speaker flipped to face the band: a stage monitor (its name) */
 export function isStageMonitor(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
   return node.typeKey === 'active-speaker' && isFlipped(node, 'h')
 }

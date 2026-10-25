@@ -140,7 +140,7 @@ export function NodeWrapper({
           </span>
         )}
         <span style={{ flex: 1 }} />
-        {/* On/Off (processing elements only) — Help and Remove are in the right-click menu */}
+        {/* On/Off (processing elements only) — Remove is in the right-click menu */}
         <div className="nodrag nopan" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           {canBypass && (
             <button

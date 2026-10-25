@@ -8,7 +8,7 @@ import { chainColorsOf } from '../graph/chainColors'
 
 /**
  * What the shell around an element's controls shows (CardFrame, FreeControl): its ports, the
- * colours of the chains passing through it, whether it is selected (or its help is open), whether
+ * colours of the chains passing through it, whether it is selected, whether
  * the wire being drawn could land on it, and whether it is a source not connected yet. Each part is
  * read on its own, so the shell is redrawn only when one of them changes — not on every change of
  * the graph.
@@ -21,7 +21,7 @@ export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   const ports    = useSignalStore(useShallow((s) => drawnPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s.complexityLevel, s)))
   /** Colours of the chains (sources) passing through, in a stable order */
   const chains   = useSignalStore(useShallow((s) => chainColorsOf(nodeId, s.nodes, s.edges)))
-  const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId) || s.help?.nodeId === nodeId)
+  const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))
   const overview = useSignalStore((s) => s.overview)
   /** A wire is being drawn and this element can take it */
   const wireTarget = useSignalStore((s) => {

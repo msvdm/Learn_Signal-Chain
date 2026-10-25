@@ -136,9 +136,6 @@ function InsideView({ type, onClose }: { type: keyof typeof INSIDE; onClose: () 
             </Fragment>
           ))}
         </div>
-        <p style={{ margin: 0, padding: '0 20px', fontSize: 13, lineHeight: 1.5, color: 'var(--lsc-fg-muted)', textWrap: 'pretty' }}>
-          {text.says}
-        </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: 16 }}>
           <button
             autoFocus

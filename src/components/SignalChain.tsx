@@ -14,7 +14,6 @@ import '@xyflow/react/dist/style.css'
 import { NODE_COMPONENTS }      from './nodes'
 import { ChainEdge }            from './ChainEdge'
 import { ConnectingToast }      from './ConnectingToast'
-import { HelpPopover }          from './Tooltip'
 import { NodeMenu, CanvasMenu } from './NodeMenu'
 import { CanvasTools }          from './CanvasTools'
 import { CanvasOverlays }       from './CanvasOverlays'
@@ -87,7 +86,7 @@ export function SignalChain() {
   const drop         = usePaletteDrop(actions.insertChainAt)
   const flow         = useFlowElements()
 
-  // Right-click menu of an element (Help, Bypass, Cut, Copy, Duplicate, Remove) — `targets` are
+  // Right-click menu of an element (Bypass, Flip, Cut, Copy, Duplicate, Remove) — `targets` are
   // what its actions apply to: the element, or the whole selection it belongs to
   const [nodeMenu, setNodeMenu]     = useState<{ nodeId: string; targets: string[]; x: number; y: number } | null>(null)
   // Right-click menu of the empty canvas (Paste here, Select everything); `at` in flow coordinates
@@ -207,7 +206,6 @@ export function SignalChain() {
 
       <CanvasOverlays cursor={cursor} ghosts={ghosts} />
 
-      <HelpPopover />
       {nodeMenu && (
         <NodeMenu
           {...nodeMenu}

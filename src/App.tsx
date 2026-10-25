@@ -9,6 +9,7 @@ import { SignalChain } from './components/SignalChain'
 import { ElementPalette } from './components/ElementPalette'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { FileMenu } from './components/FileMenu'
+import { TutorialButton } from './components/Tutorial'
 import { NoticeToast } from './components/NoticeToast'
 import { Radio, Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { Lang } from './i18n/translations'
@@ -154,7 +155,7 @@ function App() {
             })}
           </nav>
 
-          {/* Right: file, snap to grid, theme, language */}
+          {/* Right: file, snap to grid, theme, language, the tutorial */}
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
             <FileMenu onNew={() => setPending({ kind: 'reset' })} buttonStyle={headerBtn} />
 
@@ -248,6 +249,8 @@ function App() {
                 </div>
               )}
             </div>
+
+            <TutorialButton style={headerBtn} />
           </div>
         </header>
 

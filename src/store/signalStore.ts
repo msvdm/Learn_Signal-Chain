@@ -27,12 +27,6 @@ type GraphSnapshot = GraphView
 
 const EMPTY_GRAPH: GraphSnapshot = { nodes: [], edges: [] }
 
-/** The help popover, open on an element: `key` is its text in `theory` (helpKeyOf: a role or a type). */
-export interface HelpOpen {
-  nodeId: string
-  key: string
-}
-
 /**
  * A wire being drawn: the output it starts from, where that port is, the side of its card it faces
  * (a flipped card's — portFacing) and the corners clicked so far (flow coordinates). Its loose end
@@ -109,8 +103,6 @@ export interface SignalChainStore {
   /** The element palette on the left is shown (persisted); collapsed = more room for the canvas. */
   paletteOpen: boolean
   complexityLevel: ComplexityLevel
-  /** The help popover: the element it is anchored to and which text it shows (its role or type) */
-  help: HelpOpen | null
   /** Selected elements (several with the Select tool, Ctrl+click or Shift+drag) */
   selectedNodeIds: string[]
   toolMode: ToolMode
@@ -149,8 +141,6 @@ export interface SignalChainStore {
   setTheme: (theme: Theme) => void
   setSnapToGrid: (on: boolean) => void
   setPaletteOpen: (open: boolean) => void
-  /** Open the help popover on an element (null: close it) */
-  setHelp: (help: HelpOpen | null) => void
   setSelectedNode: (id: string | null) => void
   setSelection: (ids: string[]) => void
   setLeftTool: (tool: LeftTool) => void
@@ -207,7 +197,6 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   theme: initialTheme,
   snapToGrid: stored('snapToGrid') !== 'false',
   paletteOpen: stored('paletteOpen') !== 'false',
-  help: null,
   selectedNodeIds: [],
   toolMode: 'select',
   leftTool: 'drag',
@@ -235,7 +224,6 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
   setPaletteOpen: (open) => set({ paletteOpen: open }),
 
-  setHelp: (help) => set({ help }),
 
   setSelectedNode: (id) => set({ selectedNodeIds: id ? [id] : [] }),
 
@@ -419,7 +407,7 @@ function commitGraph(
 }
 
 /**
- * The selection, the help popover, highlighted wires and a wire being drawn, kept only where
+ * The selection, highlighted wires and a wire being drawn, kept only where
  * they still point at an element or wire of `graph`. Only what changes is returned.
  */
 function pruneRefs(s: SignalChainStore, graph: GraphView): Partial<SignalChainStore> {
@@ -430,7 +418,6 @@ function pruneRefs(s: SignalChainStore, graph: GraphView): Partial<SignalChainSt
   return {
     ...(selected.length < s.selectedNodeIds.length ? { selectedNodeIds: selected } : {}),
     ...(highlight.length < s.highlightEdgeIds.length ? { highlightEdgeIds: highlight } : {}),
-    ...(s.help && !nodeIds.has(s.help.nodeId) ? { help: null } : {}),
     ...(s.wire && !nodeIds.has(s.wire.source.nodeId) ? NO_WIRE : {}),
   }
 }

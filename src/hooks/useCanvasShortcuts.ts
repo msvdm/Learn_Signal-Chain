@@ -16,8 +16,7 @@ export interface CanvasActions {
 }
 
 /**
- * The canvas keys. Esc cancels the wire being drawn, otherwise closes the help popover, otherwise
- * drops the selection. Ctrl / ⌘ + C, X, V (at the mouse when it is over the canvas), D (duplicate
+ * The canvas keys. Esc cancels the wire being drawn, otherwise drops the selection. Ctrl / ⌘ + C, X, V (at the mouse when it is over the canvas), D (duplicate
  * to the right), A (select everything), Z (undo), Shift+Z or Y (redo); Delete / Backspace removes
  * the selection. Not while typing in a field — nor, except Esc, in an open menu or dialog.
  */
@@ -37,7 +36,6 @@ export function useCanvasShortcuts(wrapperRef: RefObject<HTMLDivElement | null>,
       const store = useSignalStore.getState()
       if (e.key === 'Escape') {
         if (store.wire) store.cancelWire()
-        else if (store.help) store.setHelp(null)
         else store.setSelection([])
         return
       }

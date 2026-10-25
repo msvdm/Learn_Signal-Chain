@@ -73,7 +73,7 @@ function foldToMono(w: WireSignal): SideLevels {
 const humming = (s: SideLevels): SideLevels =>
   ({ ...s, noise: sumNoiseToDb([s.noise, HUM_DBU]), hum: sumNoiseToDb([s.hum, HUM_DBU]) })
 
-/** A card working as something more than its type: it changes its name and its help text. */
+/** A card working as something more than its type: it changes its name. */
 export type StageRole =
   | 'preamp'     // a Gain after a microphone or a DI Box's XLR Out: lifts it up to line level
   | 'main-fader' // a Fader on a bus's Mix output: controls the whole mix

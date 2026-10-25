@@ -23,7 +23,12 @@ Build chains like:
 
 **Voice → Microphone → Preamp → EQ → Compressor → Fader → Master Bus → Speaker**
 
-Right-click any element and choose *What is this?*: it explains what the element does, why it is in the chain and what to watch out for — in plain language, without jargon. *Next* walks you along the chain, element by element.
+The app does not explain what each element is — that is the teacher's part. It shows what the chain does, as truthfully as it can. Click **?** next to the language button for a short tutorial on how the app works, with example chains to open.
+
+## What's New in 2.1
+
+- **A tutorial for teachers and students.** The **?** button next to the language button opens it: how to build and wire a chain, the three levels, what the meters, colours and wires show, saving and sharing — and eight example chains to open and change: a singer on two speakers, a band on stage, recording a voice, a vocal channel, a monitor mix, a guitar with a DI box, a voice through the converters and a live stream.
+- **The app no longer explains the elements.** *What is this?* and its help texts are gone: a paragraph about a microphone or a compressor always leaves something out, and can mislead a beginner. What each element is, the teacher explains; the app shows what the chain does.
 
 ## What's New in 2.0
 
@@ -110,7 +115,7 @@ Sources for the noise figures:
 
 ## Contributing
 
-Contributions of all kinds are welcome — whether that's fixing a bug, improving an explanation, adding a new language, or suggesting a feature. There is no "right" level of experience required.
+Contributions of all kinds are welcome — whether that's fixing a bug, adding a new language, suggesting an example chain, or suggesting a feature. There is no "right" level of experience required.
 
 ### Adding a Translation
 
@@ -137,7 +142,7 @@ Edit the relevant `.json` file directly and open a PR. If you spot something unn
 ### Other Ways to Contribute
 
 - **Fix a bug** — open an issue or a PR
-- **Improve an explanation** — the help texts in `en.json` under `"theory"` are the educational core of the app; clearer wording is always valuable
+- **Report something the app gets wrong** — a level, a meter or a note that does not match real equipment; the app must never mislead a class
 - **Report a confusing UI** — especially welcome since the app targets complete beginners
 - **Suggest a feature** — open an issue; ideas for future additions include a frequency spectrum analyser and reverb/delay nodes
 

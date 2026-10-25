@@ -45,7 +45,7 @@ export function NoticeToast() {
         <span style={{ flex: 1 }}>{notice.text}</span>
         <button
           onClick={clearNotice}
-          aria-label={t.tooltip.close}
+          aria-label={t.app.close}
           style={{
             display: 'flex', padding: 4, border: 'none', borderRadius: 6,
             background: 'transparent', color: 'inherit', opacity: 0.75, cursor: 'pointer',

@@ -197,11 +197,10 @@ export function pathSends(path: CardPath, port: string): boolean {
 /**
  * Paths in the order the signal flows through them: each after everything that feeds it — so a
  * card's paths that never meet can sit apart (an Audio Interface's recording after its playback,
- * when what it plays back goes into the desk it records). `first` picks between paths that are
- * ready at the same time (default: their cards' order in the graph). Paths in a loop, and
- * everything after one, are left out.
+ * when what it plays back goes into the desk it records). Paths ready at the same time keep their
+ * cards' order in the graph. Paths in a loop, and everything after one, are left out.
  */
-export function flowPaths(view: GraphView, first?: (a: SignalNode, b: SignalNode) => number): CardPath[] {
+export function flowPaths(view: GraphView): CardPath[] {
   const graph = graphOf(view)
   const paths = view.nodes.flatMap(pathsOf)
   // The path each routed input feeds (keyed like an output: card and port)
@@ -214,10 +213,8 @@ export function flowPaths(view: GraphView, first?: (a: SignalNode, b: SignalNode
 
   const waiting = new Map<CardPath, number>()
   for (const p of paths) waiting.set(p, wiresInto(p, graph).filter((e) => graph.node(e.source)).length)
-  const byNode = first && ((a: CardPath, b: CardPath) => first(a.node, b.node))
   const ready  = paths.filter((p) => waiting.get(p) === 0)
   const sorted: CardPath[] = []
-  if (byNode) ready.sort(byNode)
   while (ready.length > 0) {
     const path = ready.shift()!
     sorted.push(path)
@@ -229,28 +226,6 @@ export function flowPaths(view: GraphView, first?: (a: SignalNode, b: SignalNode
       waiting.set(next, remaining)
       if (remaining === 0) ready.push(next)
     }
-    if (byNode) ready.sort(byNode)
   }
   return sorted
-}
-
-/**
- * Cards in the order the signal flows through them: each after everything that feeds it (a card
- * of several paths where the first of them comes). `first` picks between cards that are ready at the same
- * time (default: their order in the graph). Cards in a loop, and everything after one, are left out.
- */
-export function flowOrder(view: GraphView, first?: (a: SignalNode, b: SignalNode) => number): SignalNode[] {
-  return [...new Set(flowPaths(view, first).map((p) => p.node))]
-}
-
-/**
- * Cards in signal-flow order for the help popover's Previous / Next: sources first, each after
- * everything that feeds it; ties (and loops, at the end) go left to right, then top to bottom.
- */
-export function chainOrder(view: GraphView): SignalNode[] {
-  const byPosition = (a: SignalNode, b: SignalNode) =>
-    a.position.x - b.position.x || a.position.y - b.position.y
-  const ordered = flowOrder(view, byPosition)
-  const placed  = new Set(ordered.map((n) => n.id))
-  return [...ordered, ...[...view.nodes].sort(byPosition).filter((n) => !placed.has(n.id))]
 }

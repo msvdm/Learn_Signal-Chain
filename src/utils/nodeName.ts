@@ -5,12 +5,12 @@ import type { StageResult } from '../signal/engine'
 import type { WireKind } from '../graph/queries'
 
 /**
- * Which help text a node opens: its role in the chain if it has one (a Pan fed a stereo wire is a
+ * Which name a node goes by: its role in the chain if it has one (a Pan fed a stereo wire is a
  * Balance knob, a Fader on a bus's Mix output is the Main Fader, a Gain after a microphone is a
  * Preamp), else what it is turned into (an Active Speaker flipped toward the band: a stage
  * monitor), else its type.
  */
-export function helpKeyOf(node: Pick<SignalNode, 'typeKey' | 'params'>, stage?: Pick<StageResult, 'role'>): string {
+function nameKeyOf(node: Pick<SignalNode, 'typeKey' | 'params'>, stage?: Pick<StageResult, 'role'>): string {
   return stage?.role ?? (isStageMonitor(node) ? 'stage-monitor' : node.typeKey)
 }
 
@@ -23,7 +23,7 @@ export function titleOf(t: Translations, key: string): string {
 }
 
 /**
- * An element's name, everywhere it is shown — its card, the help popover, the unplug list, a
+ * An element's name, everywhere it is shown — its card, the unplug list, a
  * Matrix Bus row: a name of its own (from a saved chain), else the name of its role (Preamp,
  * Main Fader, Balance) or type.
  */
@@ -33,7 +33,7 @@ export function nodeName(
   stage?: Pick<StageResult, 'role'>,
 ): string {
   if (!node) return '?'
-  return node.label ?? titleOf(t, helpKeyOf(node, stage))
+  return node.label ?? titleOf(t, nameKeyOf(node, stage))
 }
 
 /** 'L' / 'R' for a wire that carries one side of a stereo mix, null otherwise. */
