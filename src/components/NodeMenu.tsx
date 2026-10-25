@@ -56,7 +56,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
 
   const many      = targets.length > 1
   const helpKey   = helpKeyOf(node, stages[nodeId])
-  const hasHelp   = !many && Boolean(t.theory[helpKey])
+  const hasHelp   = !many && t.theory[helpKey] !== undefined
   const bypassed  = node.bypassed ?? false
   const canBypass = !many && NODE_REGISTRY[node.typeKey].bypass
   const flips     = many ? [] : (FLIPS[node.typeKey] ?? [])

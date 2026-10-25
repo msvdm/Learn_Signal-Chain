@@ -128,7 +128,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `components/controls/StableText.tsx` — a reading that keeps the width of its widest value; `ParamKnob.tsx` — a knob turning one of its card's settings (reads `useParams`, writes `updateNodeParams`)
 - `utils/layoutHelpers.ts` — canvas placement maths on `Box`es (`cardMinSize`, `cardHeight`, `PORT_TOP`, `PORT_GAP`, `PORT_REACH`)
 - `utils/chainFile.ts` — the saved-chain format; `utils/nodeName.ts` — an element's name and help key wherever it is shown
-- `i18n/locales/en.json`, `bg.json` — all text, and the help popover's (`theory`: `what`, `why`, `tip`); `i18n/translations.ts` types it from `en.json`, so `bg.json` must have every key (the build fails otherwise)
+- `i18n/locales/en.json`, `bg.json` — all text, and the help popover's (`theory`: one text per type or role, shown as one card); `i18n/translations.ts` types it from `en.json`, so `bg.json` must have every key (the build fails otherwise)
 - `vite-offline.ts` (below), `vite-worklet.ts` (`?worklet`: a file's code as a string — the file must import nothing), `scripts/make-loops.py` (the loops; deterministic: run it again after a change)
 
 ### Offline (no extra packages)
@@ -247,7 +247,7 @@ Add the type's key to `TypeKey` in `src/data/nodeRegistry.ts`: every table keyed
    - A bare control, not a card (like Gain / Pan / Fader / Switch / Pad / 48V) → use `FreeControl`, and give it a `freeSize` in the registry
    - A knob for a setting → `ParamKnob` (a Compressor-like card's Attack / Release: `AttackRelease` in `DynamicsLayout.tsx`)
 4. `NODE_COMPONENTS` in `src/components/nodes/index.ts` (its card; at Beginner, if it is there, its face from `BeginnerFaces.tsx` through `atBeginner`) and `NODE_LOOK` in `src/components/nodes/nodeLook.ts` (icon, palette group — its place in that table is its place in the palette)
-5. Its palette name (`palette.items`) and educational text (`theory`: `what`, `why`, `tip`) in **both** `src/i18n/locales/en.json` and `bg.json` (the build fails without them). No English in the components: even ON / OFF and "0 dB in" come from the locales
+5. Its palette name (`palette.items`) and educational text (`theory`: one text) in **both** `src/i18n/locales/en.json` and `bg.json` (the build fails without them). No English in the components: even ON / OFF and "0 dB in" come from the locales
 
 ### Adding a new level
 

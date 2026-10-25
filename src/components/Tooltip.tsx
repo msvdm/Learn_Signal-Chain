@@ -78,12 +78,12 @@ export function HelpPopover() {
   const order = useMemo(
     () => chainOrder({ nodes, edges })
       .map((n) => ({ id: n.id, helpKey: helpKeyOf(n, stages[n.id]) }))
-      .filter((n) => Boolean(t.theory[n.helpKey])),
+      .filter((n) => t.theory[n.helpKey] !== undefined),
     [nodes, edges, stages, t],
   )
 
   const entry = helpKey ? t.theory[helpKey] : undefined
-  if (!activeId || !helpKey || !entry || !anchor) return null
+  if (!activeId || !helpKey || entry === undefined || !anchor) return null
 
   const idx  = order.findIndex((n) => n.id === activeId)
   const prev = idx > 0 ? order[idx - 1] : undefined
@@ -171,25 +171,7 @@ export function HelpPopover() {
         </div>
 
         {/* Body */}
-        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <section>
-            <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whatIsThis}</h4>
-            <p style={paragraph}>{entry.what}</p>
-          </section>
-          <section>
-            <h4 className="lsc-overline" style={{ margin: 0 }}>{t.tooltip.whyIsItHere}</h4>
-            <p style={paragraph}>{entry.why}</p>
-          </section>
-          <section
-            style={{
-              borderRadius: 12, background: 'var(--lsc-tip-bg)', border: '1px solid var(--lsc-tip-bd)',
-              padding: '10px 12px',
-            }}
-          >
-            <h4 className="lsc-overline" style={{ margin: 0, color: 'var(--lsc-tip-fg)' }}>{t.tooltip.proTip}</h4>
-            <p style={{ ...paragraph, color: 'var(--lsc-tip-fg)' }}>{entry.tip}</p>
-          </section>
-        </div>
+        <p style={paragraph}>{entry}</p>
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '0 14px 12px' }}>
@@ -224,5 +206,5 @@ export function HelpPopover() {
 }
 
 const paragraph: CSSProperties = {
-  margin: '3px 0 0', fontSize: 13, lineHeight: 1.5, textWrap: 'pretty',
+  margin: 0, padding: '12px 14px', fontSize: 13, lineHeight: 1.5, textWrap: 'pretty',
 }

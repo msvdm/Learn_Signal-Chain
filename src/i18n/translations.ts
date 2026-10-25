@@ -7,12 +7,6 @@ export type Lang = string
 /** The text of one language: exactly the keys of en.json (other locales are checked against it). */
 export type LocaleStrings = typeof en
 
-export interface TheoryEntry {
-  what: string
-  why: string
-  tip: string
-}
-
 /**
  * All UI text, typed from en.json — add a key there (and to every other locale) and it is typed.
  * The tables looked up by node type are records: every type must have a palette name and a help
@@ -21,7 +15,7 @@ export interface TheoryEntry {
  */
 export type Translations = Omit<LocaleStrings, 'palette' | 'theory' | 'levelNames'> & {
   palette: Omit<LocaleStrings['palette'], 'items'> & { items: Record<TypeKey, string> & Record<string, string> }
-  theory: Record<TypeKey, TheoryEntry> & Record<string, TheoryEntry>
+  theory: Record<TypeKey, string> & Record<string, string>
   /**
    * Names that change with the level, by node type: a card that is simpler on a lower level is
    * named for it (Intermediate's three-knob "Equalizer"). Replaces its palette name and card label.
