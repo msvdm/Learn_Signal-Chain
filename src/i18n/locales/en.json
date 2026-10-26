@@ -478,129 +478,128 @@
     "button": "How it works",
     "title": "How it works",
     "sections": {
-      "start": "Getting started",
-      "build": "Building a chain",
+      "welcome": "What it's for",
+      "start": "Your first chain",
+      "build": "Working on the canvas",
       "levels": "The three levels",
-      "meters": "Meters and colours",
-      "wires": "Wires",
+      "meters": "Reading the meters",
+      "wires": "Wires and colours",
       "save": "Saving and sharing",
-      "examples": "Example chains"
+      "examples": "Examples"
+    },
+    "welcome": {
+      "intro": "Learn Signal Chain lets you build a sound system on screen and watch what happens to the sound as it travels through it. You place the equipment and connect it with wires, and the app shows you where the sound gets to, how strong it is and where something goes wrong.\n\nIt's made for music and sound engineering classes, and for anyone who has never touched a mixing desk. A teacher can build a setup on the projector and change it while the class watches. Students can try their own ideas, make mistakes without breaking anything and see the result straight away.\n\nThe app doesn't tell you what each piece of equipment is or how it's used in real life. That part is left to the teacher. What it does is show, as faithfully as it can, what a chain like yours would do.\n\nEverything runs in your web browser. There's nothing to install, and nothing you build leaves your computer unless you share it.",
+      "points": []
     },
     "start": {
-      "intro": "Learn Signal Chain shows what happens to a sound on its way to the speakers, a recording or a stream. You build the chain yourself, element by element, and each element shows what reaches it. The app does not explain what each element is — that is the teacher's part. It shows what the chain does.",
+      "intro": "Here's a quick first chain: a singer, a microphone and a speaker.",
       "points": [
-        "Choose a level at the top: **Beginner**, **Intermediate** or **Advanced**.",
-        "Open the elements panel (the button at the top left) and drag an element onto the canvas. On an empty canvas, the highlighted tile is a good first pick.",
-        "Click an element's output (a ring on its right side), then the input of another element (a ring on its left side). A wire joins them.",
-        "Follow the sound: at Beginner, each speaker, recorder or stream says whether sound reaches it; from Intermediate, the meters show how strong it is."
+        "Check that **Beginner** is selected at the top of the screen.",
+        "Drag a **Vocal** from the elements panel on the left onto the canvas. If the panel is closed, open it with the button in the top left corner. Then add a **Microphone** and an **Active Speaker**.",
+        "Click the small circle on the right side of the Vocal, then the circle on the left side of the Microphone. A wire now joins them.",
+        "Connect the Microphone to the Active Speaker in the same way.",
+        "The speaker now says **Sound**. Point at its input, click the red × that appears, and it tells you there's no sound."
       ]
     },
     "build": {
-      "intro": "Everything works with the mouse, and there are no modes to switch: point at a port and you are wiring; point anywhere else and you are moving things.",
+      "intro": "Everything is done with the mouse, and there are no modes to switch between. When the pointer is over an input or an output you're wiring, and anywhere else you're moving things around.",
       "points": [
-        "**Add** — drag an element from the elements panel onto the canvas. Drop it onto a wire and it goes into that wire, between the two elements the wire joins (when it can go there).",
-        "**Wire** — click an output, then one of the inputs that light up. Click empty space on the way to add a bend. Esc or a right-click stops.",
-        "One output can feed several inputs: click it again to start another wire.",
-        "**Unplug** — point at a connected input: it turns into a red ×. Click it. An input holding several wires lists them, so you can pick one.",
-        "**Right-click an element** to bypass it (the signal passes through unchanged), flip it, cut, copy, duplicate or remove it. Right-click empty canvas to paste, select everything or insert a saved chain.",
-        "**What a click does** (bottom left): **Drag** moves elements, and the canvas when you drag empty space. **Select** picks several elements. **Remove** removes what you click. **Undo** and **Redo** are there too.",
-        "Turn a knob or move a fader by dragging it with the left mouse button.",
-        "**Snap to grid** (at the top) lines elements up as you move them. Zoom with the mouse wheel or the buttons at the bottom left; zoomed far out, the elements show less detail, so a big chain stays readable.",
-        "Keys: {mod}Z undo, {mod}Y redo, {mod}C copy, {mod}X cut, {mod}V paste, {mod}D duplicate, {mod}A select everything, Delete removes what is selected."
+        "**Add equipment** by dragging it from the elements panel. If you drop it onto a wire, it goes into the middle of that wire, as long as the connection makes sense.",
+        "**Connect** by clicking an output and then an input. While you're drawing a wire, the inputs that can take it light up. Click empty space on the way to add a bend, or press Esc to cancel.",
+        "One output can feed several inputs, so the same signal can go to more than one place.",
+        "**Unplug** a wire by pointing at the input it goes into and clicking the red × that appears.",
+        "**Right-click** a piece of equipment to see what you can do with it, such as bypassing it (letting the signal through unchanged), flipping it, copying it or removing it.",
+        "The buttons in the bottom left set what a click does: **Drag** moves things, **Select** picks several at once and **Remove** deletes. **Undo** and **Redo** are next to them.",
+        "The usual shortcuts work too: {mod}Z to undo, {mod}C and {mod}V to copy and paste, and Delete to remove what's selected."
       ]
     },
     "levels": {
-      "intro": "Each level shows the sound system at its own scale. Switching level clears the canvas (the app asks first), and every level starts empty.",
+      "intro": "The levels show the same world at three scales, from the whole room down to the inside of the equipment. Pick one at the top of the screen. Switching level clears the canvas, so save your work first if you want to keep it.",
       "points": [
-        "**Beginner — the room.** The devices and how they connect: voices and instruments, microphones, a stage box, a mixing desk, a computer, speakers, a recorder, a stream. No numbers: each speaker, recorder or stream simply says whether sound reaches it.",
-        "**Intermediate — a small mixing desk.** You build the desk's channel yourself, one control at a time. The meters show how strong the signal is, its peaks and its noise, and they move with the sound.",
-        "**Advanced — the parts and the digital side.** The full processors, the converters that turn sound into numbers and back, and a stream. After a converter, levels are digital, in dBFS: 0 dBFS is the very top, and nothing can go above it."
+        "**Beginner** is about the room: microphones, instruments, a mixing desk, speakers and a computer. You learn what connects to what. There are no numbers yet. Each speaker, recorder or stream tells you whether sound reaches it.",
+        "**Intermediate** opens up the mixing desk. You build a channel yourself, control by control, from the microphone to the speakers. Meters appear and show how strong the signal is at every step.",
+        "**Advanced** adds the full set of processors and the digital side: converters that turn sound into numbers and back, and an encoder for sending your mix out as a live stream."
       ]
     },
     "meters": {
-      "intro": "From Intermediate, the app plays a short loop of real sound through the chain — a voice, drums, music — silently, inside your browser, and measures it at every element. The meters show what it measured. You hear nothing: the app makes no sound.",
+      "intro": "From Intermediate on, the app plays a short piece of real sound through your chain, such as a voice, a drum beat or some music. It does this silently, inside the browser, and measures the result at every piece of equipment. The meters replay what it measured, so they move the way the sound does.\n\nLevels are given in decibels (dB). A higher number means a stronger signal. On most meters, 0 dB marks the top of the green zone, the normal working level.",
       "points": [
-        "The solid bar is the average level. The pale part above it is the peaks — the loudest moments. A thin line holds the highest peak for a few seconds. The blue part at the bottom is the noise: what is left when the music stops.",
-        "The colours belong to the scale: blue up to the noise, green up to 0 dB, yellow above it, red at the very top.",
-        "The word under a meter is the verdict on the whole loop:",
-        "Clipping is judged on the peaks: a drum hit can clip while its average still looks fine.",
-        "**Peak**, **RMS** (the average) and **Noise** under a meter give the numbers.",
-        "Where the sound is in the air — a voice, a drum kit, a speaker — the meter shows how loud it is to the ear, in dB SPL.",
-        "The ring around each port shows the health of the signal there. Grey means nothing is connected.",
-        "A short note on an element says when something is wrong, such as **Not connected**.",
-        "At Beginner there are no meters to read: each speaker, recorder or stream says whether sound reaches it."
+        "The solid part of the bar is the average level, which is close to how loud the sound seems. The pale part above it shows the peaks, the short loudest moments. The blue part at the bottom is the noise you'd hear if the music stopped.",
+        "The word under each meter sums up the whole piece of sound:",
+        "The ring around each input and output uses the same colours, so you can spot a problem along the chain at a glance. A grey ring means nothing is connected.",
+        "Clipping is judged on the peaks, not on the average. A drum can clip even when its average level looks fine.",
+        "Where the sound travels through the air, as with a singer or a speaker, the meter shows loudness in dB SPL, the scale used for what our ears hear.",
+        "After a converter the signal is digital, and the meters read dBFS. There, 0 is the absolute top: anything louder is lost.",
+        "When something is wrong, the equipment says so in a short note, for example when a condenser microphone isn't getting the power it needs."
       ],
       "health": {
-        "too-quiet": "so weak it is close to the noise",
+        "too-quiet": "so weak that it's close to the noise",
         "good": "a healthy level",
-        "hot": "strong, with less room left before it distorts",
-        "clipping": "the peaks hit the top: the sound is distorted"
+        "hot": "strong, with little room left before it distorts",
+        "clipping": "the loudest moments are cut off and the sound is distorted"
       }
     },
     "wires": {
-      "intro": "One wire carries the whole signal — a stereo signal too.",
+      "intro": "A single wire carries the whole signal, stereo included. Stereo wires are drawn as a double line, and an output that carries only the left or the right side is marked **L** or **R**.",
       "points": [
-        "A stereo wire is drawn as a double line. An output that carries only the left or the right side shows an **L** or an **R**.",
-        "From Intermediate, a wire's colour shows where its sound ends up:",
-        "**Red** means the sound on that wire clips, or something is wrong there. A **grey** wire carries nothing.",
-        "A dotted wire is sound in the air: from a voice, a drum kit or an amp to a microphone.",
-        "Wires that carry sound move in the direction the sound flows.",
-        "At Beginner, every wire has the same colour."
+        "From Intermediate on, a wire's colour shows where its sound ends up:",
+        "**Red** means the signal on that wire is clipping, or that something there needs your attention. A **grey** wire isn't carrying any signal.",
+        "A dotted line is sound travelling through the air, from a singer, a drum kit, an acoustic guitar or a guitar amp into a microphone.",
+        "Wires that carry sound are animated in the direction the sound flows.",
+        "At Beginner, all wires are the same colour."
       ],
       "colours": {
-        "main": "To the Master Bus — the main mix",
-        "aux": "To an Aux Bus",
-        "matrix": "To a Matrix Bus",
-        "pfl": "To the PFL Bus",
-        "record": "Into an Audio Interface, or to a stream"
+        "main": "Master Bus (the main mix)",
+        "aux": "Aux Bus",
+        "matrix": "Matrix Bus",
+        "pfl": "PFL Bus",
+        "record": "Audio Interface or stream"
       }
     },
     "save": {
-      "intro": "The canvas is kept in this browser: close the app, and your chain is there when you come back.",
+      "intro": "Your canvas is saved in this browser as you work. Close the app, and it'll be waiting for you next time you open it in the same browser.",
       "points": [
-        "**File → Save to a file** saves the chain as a file, to open later or send to someone.",
-        "**File → Save as a picture** saves a picture for a worksheet or a chat. The chain is hidden inside it: **File → Open** turns the picture back into the chain.",
-        "**File → Copy a share link** copies a link. Anyone who opens it gets their own copy of the chain.",
-        "**File → Open** opens a saved file or picture. **File → New** clears the canvas.",
-        "**File → Download the app** saves the whole app as one file. Double-click it and it opens in the web browser, with no internet. Copy it to a USB stick or a shared folder for a class.",
-        "For a lesson: build a chain beforehand and share its link or file. Each student gets their own copy to change."
+        "**File → Save to a file** keeps a copy you can open later or send to someone.",
+        "**File → Save as a picture** makes an image for a worksheet or a presentation. The chain is stored inside the picture, so **File → Open** turns it back into a chain you can edit.",
+        "**File → Copy a share link** gives you a link to send to your students. Everyone who opens it gets their own copy to work on.",
+        "**File → Download the app** saves the whole app as a single file. Copy it to a USB stick or a shared folder, and it opens in any web browser, even without an internet connection."
       ]
     },
     "examples": {
-      "intro": "Open a chain to see it work, then change it. On an empty canvas it simply opens; otherwise the app asks whether it replaces what is there or goes beside it. The app switches to the chain's level.",
+      "intro": "These ready-made chains are a good starting point for a lesson, or for exploring on your own. Open one, look at how it's built, then change something and see what happens. The app switches to the example's level when you open it.",
       "open": "Open",
       "chains": {
         "singer": {
           "name": "A singer on two speakers",
-          "about": "A voice, a microphone, the mixing desk and two active speakers."
+          "about": "A singer, a microphone and a mixing desk feeding two speakers. The simplest live setup."
         },
         "band": {
           "name": "A band on stage",
-          "about": "Voice, drums, guitar and keyboard through a stage box into the mixing desk. The main mix goes to an amplifier and two passive speakers, the monitor mix to a stage monitor."
+          "about": "Vocals, drums, guitar and keyboard plugged into a stage box and sent to the mixing desk. The audience hears an amplifier and two speakers, and the band hears a stage monitor."
         },
         "recording": {
           "name": "Recording a voice",
-          "about": "A microphone into an audio interface, recorded on a computer. The computer's sound comes back out to two studio monitors."
+          "about": "A singer recorded on a computer through an audio interface, with studio monitors to listen back on."
         },
         "vocalChannel": {
           "name": "A vocal channel",
-          "about": "Microphone, preamp, high-pass filter, equalizer and compressor, then the fader and pan into the master bus and two speakers."
+          "about": "One microphone through a complete channel: preamp, filter, equalizer, compressor, fader and pan, then out to the speakers."
         },
         "monitorMix": {
           "name": "A monitor mix",
-          "about": "A voice into the main mix, and also, at its own level, into an aux bus that feeds a stage monitor."
+          "about": "The singer's voice goes to the audience speakers and, at a separate level, to a monitor on stage."
         },
         "guitarDi": {
           "name": "A guitar with a DI box",
-          "about": "The DI box sends the guitar to the desk and to its amp. A microphone on the amp gives a second channel. Both meet in the master bus."
+          "about": "An electric guitar split by a DI box. One feed goes straight to the desk, the other to an amp with a microphone in front of it."
         },
         "converters": {
           "name": "Through the converters",
-          "about": "A voice turned into numbers, processed digitally, and turned back into a signal for a speaker."
+          "about": "A voice turned into digital, processed as numbers and turned back into a signal for the speaker."
         },
         "stream": {
           "name": "A live stream",
-          "about": "A voice channel, digital after the converter, into the master bus, packed by an encoder and sent out as a stream."
+          "about": "A voice channel turned into digital and sent out as a live stream."
         }
       }
     }

@@ -16,7 +16,7 @@ import { MOD } from '../utils/shortcut'
 type Section = keyof Translations['tutorial']['sections']
 type TextSection = Exclude<Section, 'examples'>
 
-const SECTIONS: Section[] = ['start', 'build', 'levels', 'meters', 'wires', 'save', 'examples']
+const SECTIONS: Section[] = ['welcome', 'start', 'build', 'levels', 'meters', 'wires', 'save', 'examples']
 
 /** The health words' colours, as the meters draw them */
 const HEALTH = [
@@ -39,7 +39,7 @@ const WIRES = [
 export function TutorialButton({ style }: { style: CSSProperties }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const [section, setSection] = useState<Section>('start')
+  const [section, setSection] = useState<Section>('welcome')
   return (
     <>
       <button
@@ -147,18 +147,22 @@ function TutorialView({ section, onSection, onClose }: { section: Section; onSec
   )
 }
 
-/** A page of text: its intro and its points (Getting started's numbered), with the colour keys where they belong. */
+/**
+ * A page of text: its intro (paragraphs apart by a blank line) and its points, if any (the first
+ * chain's steps numbered), with the colour keys where they belong.
+ */
 function TextPage({ section }: { section: TextSection }) {
   const { t, fmt } = useTranslation()
   const page   = t.tutorial[section]
+  const points: readonly string[] = page.points
   const List   = section === 'start' ? 'ol' : 'ul'
   // The colour key goes under the point that introduces it (the one ending in a colon)
-  const keyAt  = page.points.findIndex((p) => p.endsWith(':'))
+  const keyAt  = points.findIndex((p) => p.endsWith(':'))
   return (
     <>
-      <p style={paragraph}>{rich(page.intro)}</p>
-      <List style={{ margin: '12px 0 0', paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {page.points.map((point, i) => (
+      {page.intro.split('\n\n').map((para) => <p key={para} style={{ ...paragraph, marginBottom: 10 }}>{rich(para)}</p>)}
+      {points.length > 0 && <List style={{ margin: '4px 0 0', paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {points.map((point, i) => (
           <li key={point} style={{ ...paragraph, paddingLeft: 2 }}>
             {rich(fmt(point, { mod: MOD }))}
             {i === keyAt && section === 'meters' && (
@@ -169,15 +173,21 @@ function TextPage({ section }: { section: TextSection }) {
             )}
           </li>
         ))}
-      </List>
+      </List>}
     </>
   )
 }
 
 /** Swatches: a colour, a name and what it means — a meter's colour as a chip, a wire's as a line. */
 function ColourKey({ rows, line = false }: { rows: (readonly [colour: string, name: string, meaning?: string])[]; line?: boolean }) {
+  const meanings = rows.some(([, , meaning]) => meaning)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: '6px 10px', margin: '8px 0 2px' }}>
+    <div
+      style={{
+        display: 'grid', gridTemplateColumns: meanings ? 'auto auto 1fr' : 'auto 1fr',
+        alignItems: 'center', gap: '6px 12px', margin: '8px 0 2px', fontSize: 13, lineHeight: 1.4,
+      }}
+    >
       {rows.map(([colour, name, meaning]) => (
         <Fragment key={name}>
           <span
@@ -185,9 +195,8 @@ function ColourKey({ rows, line = false }: { rows: (readonly [colour: string, na
               ? { width: 28, height: 4, borderRadius: 2, background: colour }
               : { width: 28, height: 14, borderRadius: 3, background: colour }}
           />
-          <span style={{ fontSize: 13, lineHeight: 1.4 }}>
-            {meaning ? <><strong style={{ color: colour }}>{name}</strong> — {meaning}</> : name}
-          </span>
+          {meanings ? <strong style={{ color: colour }}>{name}</strong> : <span>{name}</span>}
+          {meanings && <span style={{ color: 'var(--lsc-fg-muted)' }}>{meaning}</span>}
         </Fragment>
       ))}
     </div>
