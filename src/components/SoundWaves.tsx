@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { Pt } from '../utils/geometry'
 import { rippleArc, rippleGrowth, ripplesBetween } from '../utils/soundRipples'
 
-// Sound in the air, from a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar Amp into a microphone:
+// Sound in the air, from a Vocal, a Drum Kit, an Acoustic Instrument or a Guitar Amp into a microphone:
 // ripples spread from the source and travel straight to the microphone, with no line
 // (utils/soundRipples.ts). The cables between cards are dashes. Each ripple's arc moves by an SVG
 // animation of its path.

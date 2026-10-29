@@ -200,6 +200,26 @@ export function VocalIcon({ size = 24 }: { size?: number }) {
   )
 }
 
+/**
+ * An acoustic instrument (the Acoustic Instrument): a saxophone — its mouthpiece, the neck curving
+ * into the body, five keys down it, the bend up into the bell. Drawn after the user's picture
+ * (2026-10-29), in the Vocal's thinner line; drawn small a little heavier.
+ */
+export function SaxIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={size < 24 ? 1.5 : 1} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.69" y="3.99" width="3.1" height="1.2" rx="0.6" transform="rotate(-20 5.24 4.59)" />
+      {/* The neck's outer line, down to the first key; its inner line, down the body, round the
+          bend and up the bell's outer side; the bend's inner side up to the bell */}
+      <path d="M6.8 3.81C8 2.9 9.4 2.38 10.2 2.4C11.8 2.4 13.1 3.8 13.3 6.75" />
+      <path d="M6.8 5.11C8 4.2 9.2 3.8 9.92 3.81C10.7 3.82 11.22 4.9 11.22 6.8L10.18 18.89C10.1 21 11.3 22.01 12.52 22.01C14 22.01 15.2 21.3 15.77 20.45C17.6 18 19.4 15.3 20.32 13.69" />
+      <path d="M12.78 16.49L12.85 17.6C12.9 19 13.5 19.41 13.9 19.4C14.4 19.4 14.6 18.8 14.65 18L14.86 12.39" />
+      <ellipse cx="17.59" cy="13.04" rx="2.81" ry="1" transform="rotate(13.4 17.59 13.04)" />
+      {[7.45, 9.5, 11.55, 13.6, 15.64].map((y) => <circle key={y} cx="12.78" cy={y} r="0.85" />)}
+    </svg>
+  )
+}
+
 /** A laptop (the Computer): its screen, the base flaring out under it and the touchpad. After the user's picture. */
 export function LaptopIcon({ size = 24 }: { size?: number }) {
   return (

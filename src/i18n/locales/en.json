@@ -431,12 +431,12 @@
     "items": {
       "vocal": "Vocal",
       "drum-kit": "Drum Kit",
-      "acoustic": "Acoustic Guitar",
+      "acoustic": "Acoustic Instrument",
       "mic": "Microphone",
       "phantom": "Phantom Power (48V)",
       "keyboard": "Keyboard",
       "pc": "Computer",
-      "instrument": "Instrument",
+      "instrument": "Hi-Z Instrument",
       "di-box": "DI Box",
       "guitar-amp": "Guitar Amp",
       "generator": "Generator",
@@ -546,7 +546,7 @@
         "**Red** means the signal is clipping, or that something there needs your attention. A **grey** connection isn't carrying any signal.",
         "Dashes are a cable carrying the sound as electricity (an analog signal).",
         "Dashes and dots, like Morse code, are a digital connection: the sound travels as numbers, after a converter or along a USB cable.",
-        "Waves spreading straight from a singer, a drum kit, an acoustic guitar or a guitar amp to a microphone are sound travelling through the air (no cable).",
+        "Waves spreading straight from a singer, a drum kit, an acoustic instrument or a guitar amp to a microphone are sound travelling through the air (no cable).",
         "At Beginner, all connections are the same colour."
       ],
       "colours": {

@@ -62,6 +62,13 @@ the descriptions). Each is what the user asked for; change one only when they as
   base flaring out under the screen, with a touchpad. The head had three waves from its mouth until
   2026-10-29 (the user's call: "The new connection form is a wave, so we don't need two waves. Let
   it be just a head"); since then it is the head alone, in the middle of the icon.
+- **The inputs** (2026-10-29, the user's list): the Vocal a low to mid level acoustic source, its
+  peaks and character Speech or Singing; the Drum Kit a loud, percussive acoustic source; the
+  Acoustic Guitar became the **Acoustic Instrument** — a quiet, melodic acoustic source, a saxophone
+  on its icon (after the user's picture), at every level (Beginner too); it still plays the guitar
+  loop at 90 dB SPL. The Instrument became the **Hi-Z Instrument** (its icon kept): a weak signal
+  from a high-impedance output. The Keyboard (a stereo line) and the Computer (a stereo line,
+  compressed music) as they were.
 - **Zoomed out, the Microphone, Line Input and Instrument are bare** (`overviewBare`): their icon
   over a horizontal level bar and its scale, no numbers, no card around them (a selection still
   draws its ring) — like the Gain knob. Since D21 the Keyboard, the PC, the sounds in the air and

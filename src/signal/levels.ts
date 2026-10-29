@@ -274,7 +274,7 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
 // ── Sound in the air (dB SPL) ──────────────────────────────────────────────────
 
 /**
- * A Sound wire (waves: sound in the air, from a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar
+ * A Sound wire (waves: sound in the air, from a Vocal, a Drum Kit, an Acoustic Instrument or a Guitar
  * Amp to a microphone — D21) carries the sound as a level: that level plus this is how loud it is
  * in dB SPL where the microphone stands (process.ts SOUND_SPL: a voice speaking 86, −30 on the wire).
  */
@@ -282,7 +282,7 @@ export const SOUND_SPL_DB = 116
 
 /**
  * Where a card's sound is in the air, its meter reads dB SPL — how loud: its level plus this. What
- * makes a sound for a microphone (a Vocal, a Drum Kit, an Acoustic Guitar, a Guitar Amp): its Sound
+ * makes a sound for a microphone (a Vocal, a Drum Kit, an Acoustic Instrument, a Guitar Amp): its Sound
  * wire's level (SOUND_SPL_DB). A speaker, a metre away: 0 dBu in plays 110 dB SPL, the clip level
  * (+20 dBu) 130 — a powerful PA speaker's most. Headphones: 0 dBu plays 95 (−10 dBu: 85, the level
  * studios mix at; 115 at most).

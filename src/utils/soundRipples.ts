@@ -1,6 +1,6 @@
 import type { Pt } from './geometry'
 
-// Sound in the air (a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar Amp into a microphone) goes
+// Sound in the air (a Vocal, a Drum Kit, an Acoustic Instrument or a Guitar Amp into a microphone) goes
 // straight through the air, not along a cable's route: ripples — pieces of circles round the
 // source's port, aimed at the microphone — spread from it and travel to the microphone, with no
 // line (the user's pick from three mock-ups, 2026-10-29). components/SoundWaves.tsx draws them.

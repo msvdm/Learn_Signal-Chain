@@ -167,7 +167,7 @@ export function sourceLevels(level: number, sound: SourceSound): SideLevels {
 export const SOUND_SPL = { speech: 86, singing: 96, drums: 110, guitar: 90 } as const
 
 /**
- * A source's average level: how loud a Vocal, a Drum Kit or an Acoustic Guitar reaches a microphone
+ * A source's average level: how loud a Vocal, a Drum Kit or an Acoustic Instrument reaches a microphone
  * (on a Sound wire's scale), the level of a line, a guitar or the Generator (dBu: its `levelDb`), of
  * what a DAW plays back or a Decoder unpacks (dBFS: it is digital — DIGITAL_SOURCES).
  */

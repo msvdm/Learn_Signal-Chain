@@ -183,7 +183,7 @@ export const MIXER_MONITOR_PORT = 'monitor'
 export const DI_DIRECT_PORT = 'direct'
 
 /**
- * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Guitar's, a Guitar Amp's: a wire of waves
+ * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Instrument's, a Guitar Amp's: a wire of waves
  * that only a microphone can take (D21).
  */
 export const SOUND_PORT = 'sound'
@@ -257,8 +257,9 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: {},
   },
   acoustic: {
+    // An acoustic instrument (a saxophone on its icon; it plays the guitar loop): at Beginner too
     category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
-    levels: FROM_INTERMEDIATE, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
   mic: {
