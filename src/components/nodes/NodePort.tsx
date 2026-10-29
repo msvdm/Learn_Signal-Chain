@@ -16,7 +16,8 @@ import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
 import { MATRIX_PORT, portFacing } from '../../data/nodeRegistry'
-import type { Facing, SignalEdge } from '../../data/nodeRegistry'
+import type { Facing, PortLabel, SignalEdge } from '../../data/nodeRegistry'
+import { useTranslation } from '../../i18n/useTranslation'
 
 /** The wires plugged into this port. */
 function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source' | 'target'): SignalEdge[] {
@@ -40,6 +41,17 @@ function letterPlace(facing: Facing, top: number | string, send: boolean): CSSPr
   }
 }
 
+/** Where a port's name goes: beside the ring, above its wire (beside it, on a top or bottom edge) */
+function namePlace(facing: Facing, top: number | string): CSSProperties {
+  const above = typeof top === 'number' ? top - 19 : `calc(${top} - 19px)`
+  switch (facing) {
+    case 'right':  return { top: above, left: 'calc(100% + 18px)' }
+    case 'left':   return { top: above, right: 'calc(100% + 18px)' }
+    case 'top':    return { top: -24, left: 'calc(50% + 18px)' }
+    case 'bottom': return { bottom: -24, left: 'calc(50% + 18px)' }
+  }
+}
+
 interface NodePortProps {
   nodeId: string
   portId: string
@@ -48,6 +60,8 @@ interface NodePortProps {
   row: number
   /** Halfway down its card's side instead (a Sound output: NodePort `middle` in the registry) */
   middle?: boolean
+  /** Its name, beside its ring (NodePort `label` in the registry: the Guitar Amp's DI Out) */
+  label?: PortLabel
   /** Another port of its stack on the line above / below */
   near: { above: boolean; below: boolean }
 }
@@ -63,7 +77,8 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, row, middle = false, near }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, row, middle = false, label, near }: NodePortProps) {
+  const { t } = useTranslation()
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
@@ -175,6 +190,18 @@ export function NodePort({ nodeId, portId, type, row, middle = false, near }: No
           }}
         >
           {side}
+        </span>
+      )}
+      {label && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute', ...namePlace(facing, top),
+            fontSize: 11, fontWeight: 800, lineHeight: 1, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+            color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
+          }}
+        >
+          {t.ports[label]}
         </span>
       )}
       {menuAt && <UnplugMenu wires={connected} anchor={menuAt} onClose={() => setMenuAt(null)} />}

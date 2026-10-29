@@ -1,13 +1,13 @@
 import type { GeneratorSound, TypeKey } from '../data/nodeRegistry'
 import { isDynamics, isGeneratorSound, isNodeStereo, param } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
-import type { CardPlan, ChainLevels } from '../signal/chain'
+import type { CardPlan, ChainLevels, OutputTap } from '../signal/chain'
 import { peakOf } from '../signal/chain'
 import type { SignalDomain } from '../signal/levels'
 import { HUM_DBU, ceilingOf } from '../signal/levels'
 import { NOISE_BELOW, SILENCES, balanceSides, ownNoiseOf, panSides, soundKindOf, sourceLevelOf } from '../signal/process'
 import type { GainType } from '../signal/gains'
-import { gainDbOf, geqBandDb } from '../signal/gains'
+import { AMP_DI_DB, gainDbOf, geqBandDb } from '../signal/gains'
 import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
 import type { DynamicsSettings } from './processors'
 import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
@@ -59,11 +59,12 @@ interface Feed extends Sig {
 
 /**
  * Where a signal is measured — what arrives at a card, what leaves it; on a De-esser also the
- * sibilant band of each, to see how far it turned that down — and what to measure there.
+ * sibilant band of each, to see how far it turned that down; on a Guitar Amp what its DI Out sends
+ * — and what to measure there.
  */
 export interface Tap {
   id: string
-  at: 'in' | 'out' | 'band-in' | 'band-out'
+  at: 'in' | 'out' | 'band-in' | 'band-out' | 'di-out'
   parts: Part[]
 }
 
@@ -318,17 +319,27 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       }
     }
 
-    // A DI Box in a ground loop: a hum on its XLR Out — from there on it is part of the noise
-    if (card.groundLoop && outSig.parts.length > 0) {
+    // A Guitar Amp's DI Out: what arrives at mic level, before its Volume (D26)
+    const ampDi = card.outputs.some((o) => o.tap === 'di-out')
+    let diSig = outSig
+    if (ampDi) diSig = levels.condition !== undefined && SILENCES[levels.condition] ? silence(1) : gain(AMP_DI_DB, inSig)
+
+    // A ground loop: a hum on the output to the desk (a DI Box's XLR Out, a Guitar Amp's DI Out) —
+    // from there on it is part of the noise
+    const humming = (sig: Sig): Sig => {
+      if (!card.groundLoop || sig.parts.length === 0) return sig
       const mains = new OscillatorNode(ctx, { frequency: HUM_HZ })
       mains.start(0)
       // An oscillator swings ±1: its RMS is 1/√2
-      outSig = plus(outSig, gain(20 * Math.log10(ampOf(HUM_DBU) * Math.SQRT2), one(mains, 1), outSig.channels))
+      return plus(sig, gain(20 * Math.log10(ampOf(HUM_DBU) * Math.SQRT2), one(mains, 1), sig.channels))
     }
+    if (ampDi) diSig = humming(diSig)
+    else outSig = humming(outSig)
 
     // A source's input is what it hears, not what it works on: the engine shows none
     if (card.mode !== 'source' && !sameAsWire(card, inSig.channels)) taps.push({ id: card.key, at: 'in', parts: inSig.parts })
     taps.push({ id: card.key, at: 'out', parts: outSig.parts })
+    if (ampDi) taps.push({ id: card.key, at: 'di-out', parts: diSig.parts })
     if (node.typeKey === 'deesser' && !node.bypassed) {
       // Its sibilant band: what arrives less what is below its Frequency — leaving, what leaves
       // less that same part (it passes untouched)
@@ -336,10 +347,9 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       taps.push({ id: card.key, at: 'band-in', parts: plus(inSig, below).parts }, { id: card.key, at: 'band-out', parts: plus(outSig, below).parts })
     }
 
-    for (const o of card.outputs) {
-      // A DI Box's Direct Out passes on what arrives
-      wires.set(o.key, onPort(o.direct ? inSig : outSig, o.kind))
-    }
+    // A DI Box's Direct Out passes on what arrives; a Guitar Amp's DI Out sends it at mic level
+    const tapped: Record<OutputTap, Sig> = { out: outSig, in: inSig, 'di-out': diSig }
+    for (const o of card.outputs) wires.set(o.key, onPort(tapped[o.tap], o.kind))
   }
   return taps
 

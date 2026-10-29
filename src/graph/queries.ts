@@ -1,7 +1,7 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import {
-  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT,
+  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT, AMP_DI_PORT,
   canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
@@ -263,9 +263,10 @@ const DESK_INPUTS: ReadonlySet<TypeKey> = new Set<TypeKey>([
   'gain', 'fader', 'master-bus', 'aux-bus', 'matrix-bus', 'pfl-bus', 'adc', 'amp', 'active-speaker', 'studio-monitor', 'headphones', 'speaker',
 ])
 
-/** A DI Box output that brings the instrument down to mic level: its XLR Out, unless it is bypassed. */
+/** An output that sends an instrument at mic level: a DI Box's XLR Out (unless it is bypassed), a Guitar Amp's DI Out. */
 function toMicLevel(node: SignalNode, handleId: string): boolean {
-  return node.typeKey === 'di-box' && !node.bypassed && handleId !== DI_DIRECT_PORT
+  return (node.typeKey === 'di-box' && !node.bypassed && handleId !== DI_DIRECT_PORT)
+    || (node.typeKey === 'guitar-amp' && handleId === AMP_DI_PORT)
 }
 
 /** An effect a guitar's signal goes through as it is (a pedal): one input, and not a desk input. */
@@ -376,13 +377,15 @@ export function needsDi(instrumentId: string, view: GraphView): boolean {
 }
 
 /**
- * A ground loop through this DI Box: its Direct Out feeds a Guitar Amp (plugged into the mains on
- * stage) while its XLR Out goes to the desk (plugged in too), and Ground Lift is off — the two
- * grounds meet through the box and the desk picks up a hum.
+ * A ground loop, and a hum on the desk's input (D1): through a DI Box — its Direct Out feeds a Guitar
+ * Amp (plugged into the mains on stage) while its XLR Out goes to the desk (plugged in too) —, or
+ * through a Guitar Amp's own DI Out to the desk (D26); in both, Ground Lift off: the two grounds meet
+ * through the cable.
  */
 export function groundLoop(diId: string, view: GraphView): boolean {
   const graph = graphOf(view)
   const di    = graph.node(diId)
+  if (di?.typeKey === 'guitar-amp') return !param(di, 'groundLift') && graph.from(diId).some((e) => e.sourceHandle === AMP_DI_PORT)
   if (!di || di.typeKey !== 'di-box' || di.bypassed || param(di, 'groundLift')) return false
   const out = graph.from(diId)
   if (!out.some((e) => e.sourceHandle !== DI_DIRECT_PORT)) return false

@@ -243,8 +243,16 @@ export async function measureChain(plans: CardPlan[], still: ChainLevels): Promi
     stages.set(key, stage)
     moving.set(key, moves)
     for (const o of card.outputs) {
-      wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
-      movingWires.set(o.key, onPort(o.kind, o.direct && inMoving ? inMoving : outMoving, sliceSides))
+      // A DI Box's Direct Out passes on what arrives; a Guitar Amp's DI Out was measured on its own
+      const like = still.wires.get(o.key) ?? levels.out
+      const sig  = o.tap === 'in' ? inSig
+        : o.tap === 'di-out' ? at('di-out', like) ?? signalOf([], [], like)
+        : outSig
+      const moved = o.tap === 'in' ? inMoving ?? outMoving
+        : o.tap === 'di-out' ? slicesAtTap('di-out', like.kind) ?? slicesOf([], like.kind, silent)
+        : outMoving
+      wires.set(o.key, onPort(o.kind, sig, LEVEL_SIDES))
+      movingWires.set(o.key, onPort(o.kind, moved, sliceSides))
     }
   }
   return { stages, wires, moving }

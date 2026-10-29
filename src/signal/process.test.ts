@@ -150,12 +150,16 @@ describe('amplifiers and speakers', () => {
     expect(out('amp', -10, { gainDb: -6, gainDbR: -2 }, { side: 'l' })).toBe(-16)
   })
 
-  // Changed on purpose (2026-10-06): its Volume goes to 11 — 1 plays a guitar at −16 (100 dB SPL),
-  // 1.5 dB more a step, 11 at −1 (115 dB SPL); 0 is silent
-  it('a Guitar Amp plays the guitar louder as its Volume goes up to 11', () => {
+  // Changed on purpose (2026-10-06): its Volume goes to 11. And again (2026-10-29, "not working
+  // correctly"): it turns like a real amp's — silent at 0, quiet low down, each halving of the knob
+  // about 8 dB quieter; 5 and 11 as before (−10, −1). Until then every step was 1.5 dB: 100 dB SPL
+  // at 1, then nothing at 0
+  it("a Guitar Amp plays the guitar louder as its Volume goes up to 11, like a real amp's knob", () => {
     expect(out('guitar-amp', -30)).toBe(-10)
-    expect(out('guitar-amp', -30, { volume: 1 })).toBe(-16)
     expect(out('guitar-amp', -30, { volume: 11 })).toBe(-1)
+    expect(out('guitar-amp', -30, { volume: 1 })).toBeCloseTo(-28.4, 1)
+    expect(out('guitar-amp', -30, { volume: 0.5 })).toBeCloseTo(-36.3, 1)
+    expect(out('guitar-amp', -30, { volume: 5 }) - out('guitar-amp', -30, { volume: 2.5 })).toBeCloseTo(7.9, 1)
     expect(out('guitar-amp', -30, { volume: 0 })).toBe(S)
   })
 

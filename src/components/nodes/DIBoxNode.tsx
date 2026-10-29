@@ -12,6 +12,7 @@ import { useParams } from '../../hooks/useParams'
 import { levelOf } from '../../signal/engine'
 import { DI_DIRECT_PORT } from '../../data/nodeRegistry'
 import { outputKey } from '../../graph/graph'
+import { GroundLiftButton } from './GroundLiftButton'
 
 /** Its controls and the two outputs' levels and what they are for, between its meter and its outputs */
 const MIDDLE_W = 300
@@ -56,28 +57,7 @@ export function DIBoxNode({ id }: CardProps) {
       <MeterSides nodeId={id} output={false}>
         <div style={{ width: MIDDLE_W, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Ground lift: lights up while there is a hum to fix */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <span style={{ color: 'var(--lsc-fg)' }}>
-              {text.groundLift}
-            </span>
-            <button
-              className="nodrag nopan"
-              onClick={() => updateNodeParams(id, { groundLift: !groundLift })}
-              style={{
-                fontSize: 'var(--node-text-xs)', fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: 'var(--lsc-radius-sm)',
-                border: `${hum ? 2 : 1}px solid ${hum ? 'var(--signal-clipping)' : groundLift ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
-                background: hum ? 'var(--signal-clipping-bg)' : groundLift ? 'var(--lsc-accent-bg)' : 'transparent',
-                color: hum ? 'var(--signal-clipping-text)' : groundLift ? 'var(--lsc-accent-soft)' : 'var(--lsc-fg)',
-                cursor: 'pointer',
-              }}
-            >
-              <StableText reserve={[t.nodeControls.on, t.nodeControls.off]} align="center">
-                {groundLift ? t.nodeControls.on : t.nodeControls.off}
-              </StableText>
-            </button>
-          </div>
+          <GroundLiftButton on={groundLift} hum={hum} onToggle={() => updateNodeParams(id, { groundLift: !groundLift })} />
 
           {output(text.xlrOut, xlr, text.micLevel, true)}
           {output(text.directOut, direct, text.instrumentLevel, false)}

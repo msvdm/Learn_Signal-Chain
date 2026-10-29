@@ -19,6 +19,8 @@ export type NodePort = {
    * instrument itself, not a socket (the user's call, 2026-10-29)
    */
   middle?: true
+  /** Its name, beside its ring (the locales' `ports`): the Guitar Amp's DI Out among its outputs */
+  label?: PortLabel
   /** Never drawn, and no hand-drawn wire ends on it: the USB link's way back (graph/usbLink.ts) */
   hidden?: true
   /**
@@ -27,6 +29,9 @@ export type NodePort = {
    */
   levels?: readonly ComplexityLevel[]
 }
+
+/** The names a port can show beside its ring (the locales' `ports`). */
+export type PortLabel = 'diOut'
 
 /** The port line of each port of a stack (its `row`, else its place). */
 export function portRows(ports: NodePort[]): number[] {
@@ -181,6 +186,12 @@ export const MIXER_MONITOR_PORT = 'monitor'
 
 /** A DI Box's Direct Out: the instrument passed on unchanged, for a guitar amp (its XLR Out is 'out'). */
 export const DI_DIRECT_PORT = 'direct'
+
+/**
+ * A Guitar Amp's DI Out: what it plays, as a balanced mic-level signal for the desk's Preamp — at
+ * the same level whatever its Volume (signal/gains.ts AMP_DI_DB, D26).
+ */
+export const AMP_DI_PORT = 'di-out'
 
 /**
  * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Instrument's, a Guitar Amp's: a wire of waves
@@ -379,11 +390,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { groundLift: false },
   },
   'guitar-amp': {
-    // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
-    category: 'processor', inputs: IN, outputs: SOUND_OUT, stereo: 'never',
+    // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone.
+    // Its DI Out sends it to the desk at mic level, on the first port line (D26)
+    category: 'processor', inputs: IN, stereo: 'never',
+    outputs: [SOUND_OUT[0], { id: AMP_DI_PORT, row: 0, label: 'diOut' }],
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
-    // Its Volume knob goes to 11 (signal/process.ts guitarAmpGainDb)
-    defaultParams: { volume: 5 },
+    // Its Volume knob goes to 11 (signal/gains.ts guitarAmpGainDb); Ground Lift on its DI Out (D26)
+    defaultParams: { volume: 5, groundLift: false },
   },
   amp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',

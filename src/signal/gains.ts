@@ -33,14 +33,26 @@ export const DI_DROP_DB = 20
 export const MIC_GAIN_DB: Record<MicType, number> = { dynamic: -30, condenser: -18 }
 
 /**
- * A Guitar Amp's Volume knob goes to 11 — one louder. At 1 it plays a guitar at its usual level
- * 14 dB up (−16 on its Sound wire: 100 dB SPL, levels.ts SPL_DB), every step 1.5 dB more, 115 dB SPL
- * at 11; 0 is silent. At 5 (its default) a dynamic microphone in front of it gets −40 dBu.
+ * A Guitar Amp's Volume knob goes to 11 — one louder. It turns like a real amp's (an audio taper):
+ * silent at 0, quiet low down, a guitar at its usual level 20 dB up at 5 (its default: −10 on its
+ * Sound wire, 106 dB SPL — levels.ts SPL_DB; a dynamic microphone in front of it gets −40 dBu), 29
+ * up at 11 (115 dB SPL). Each halving of the knob is about 8 dB quieter: 88 dB SPL at 1. (Until
+ * 2026-10-29 every step was 1.5 dB: 100 dB SPL at 1, and nothing at 0 — "not working correctly".)
  */
 export const GUITAR_AMP_MAX = 11
+const AMP_AT_5_DB   = 20
+const AMP_AT_MAX_DB = 29
 export function guitarAmpGainDb(volume: number): number {
-  return volume <= 0 ? -Infinity : 14 + (volume - 1) * 1.5
+  return volume <= 0 ? -Infinity
+    : AMP_AT_5_DB + (AMP_AT_MAX_DB - AMP_AT_5_DB) * Math.log10(volume / 5) / Math.log10(GUITAR_AMP_MAX / 5)
 }
+
+/**
+ * A Guitar Amp's DI Out (D26): the guitar at mic level, as strong as a dynamic microphone in front
+ * of the amp at its default Volume (−40 dBu for a guitar at its usual −30) — taken before its Volume,
+ * so the desk gets the same level however loud the amp plays on stage.
+ */
+export const AMP_DI_DB = AMP_AT_5_DB + MIC_GAIN_DB.dynamic
 
 /** What a gain depends on besides the card's knobs. */
 export interface GainContext {

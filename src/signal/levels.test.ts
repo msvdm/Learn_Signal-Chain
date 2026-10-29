@@ -320,8 +320,9 @@ describe('dB SPL — the sound in the air, from a Vocal, a Drum Kit, a Guitar Am
     for (const typeKey of ['vocal', 'drum-kit', 'acoustic', 'guitar-amp'] as const) expect(SPL_DB[typeKey]).toBe(SOUND_SPL_DB)
   })
 
-  it('a Guitar Amp plays 100 dB SPL at 1, 106 at 5, 115 at 11 (it goes to 11)', () => {
-    expect(formatSpl(-30 + guitarAmpGainDb(1), SPL_DB['guitar-amp']!)).toBe('100 dB SPL')
+  // Changed on purpose (2026-10-29): its knob turns like a real amp's — 88 dB SPL at 1 (100 before)
+  it('a Guitar Amp plays 88 dB SPL at 1, 106 at 5, 115 at 11 (it goes to 11)', () => {
+    expect(formatSpl(-30 + guitarAmpGainDb(1), SPL_DB['guitar-amp']!)).toBe('88 dB SPL')
     expect(formatSpl(-30 + guitarAmpGainDb(5), SPL_DB['guitar-amp']!)).toBe('106 dB SPL')
     expect(formatSpl(-30 + guitarAmpGainDb(GUITAR_AMP_MAX), SPL_DB['guitar-amp']!)).toBe('115 dB SPL')
   })

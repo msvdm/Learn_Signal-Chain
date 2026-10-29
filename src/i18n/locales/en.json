@@ -605,6 +605,9 @@
       }
     }
   },
+  "ports": {
+    "diOut": "DI Out"
+  },
   "levelNames": {
     "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" },
     "advanced": {

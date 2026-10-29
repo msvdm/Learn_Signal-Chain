@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { EQBand } from '../data/nodeRegistry'
+import type { EQBand, NodeParamValue } from '../data/nodeRegistry'
 import type { Expected } from '../../test/chains'
 import { S, VOICE, average, card, expectCards, expectDb, expectWire, heard, line, signalOf, voiceInto, wire } from '../../test/chains'
 
@@ -235,6 +235,55 @@ describe('the same rig with Ground Lift on: no hum', () => {
   })
 
   it('has no hum on any wire', () => {
+    expect(result.hums.size).toBe(0)
+  })
+})
+
+/**
+ * A guitar into a Guitar Amp, its DI Out to a Preamp (D26): mic level, the same whatever the amp's
+ * Volume; in a ground loop until its Ground Lift is on — the hum on the DI Out, not on its Sound.
+ */
+const ampDi = (amp: Record<string, NodeParamValue>) => signalOf([
+  card('gtr', 'instrument'),
+  card('amp', 'guitar-amp', amp),
+  card('mic', 'mic'),
+  card('pre', 'gain'),
+], [
+  wire('gtr', 'amp'), wire('amp:sound', 'mic'), wire('amp:di-out', 'pre'),
+])
+
+describe("a Guitar Amp's DI Out", () => {
+  it('sends the guitar at mic level, as loud as a microphone in front of the amp at 5: −40 dBu', () => {
+    const result = ampDi({ groundLift: true })
+    expectWire(result, 'amp:di-out', 'mono', -40, -40)
+    expect(result.stages.mic.out.l.rms).toBe(-40)
+  })
+
+  it('the same at any Volume: it is taken before it (only the Sound changes)', () => {
+    for (const volume of [0, 1, 11]) expectWire(ampDi({ volume, groundLift: true }), 'amp:di-out', 'mono', -40, -40)
+    expect(ampDi({ volume: 0, groundLift: true }).stages.mic.out.l.rms).toBe(-Infinity)
+  })
+
+  it('the Gain after it works as its Preamp', () => {
+    expect(ampDi({ groundLift: true }).stages.pre.role).toBe('preamp')
+  })
+
+  it('Ground Lift off: a hum on the DI Out, and from there on — none on its Sound', () => {
+    const result = ampDi({})
+    expect(result.hums.get('amp:di-out')).toBe(-80)
+    expect(result.hums.has('amp:sound')).toBe(false)
+    expect(result.stages.amp.hum).toBeUndefined()
+    expect(result.stages.pre.hum).toBe(-40)
+  })
+
+  it('Ground Lift on: no hum', () => {
+    expect(ampDi({ groundLift: true }).hums.size).toBe(0)
+  })
+
+  it('no wire on the DI Out: no ground loop', () => {
+    const result = signalOf([card('gtr', 'instrument'), card('amp', 'guitar-amp'), card('mic', 'mic')], [
+      wire('gtr', 'amp'), wire('amp:sound', 'mic'),
+    ])
     expect(result.hums.size).toBe(0)
   })
 })

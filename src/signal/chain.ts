@@ -1,5 +1,5 @@
 import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY, AMP_DI_PORT, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import type { CardPath, Graph } from '../graph/graph'
 import { graphOf, drivingWire, fedBy, flowPaths, outputKey, pathSends, wiresInto } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
@@ -7,9 +7,10 @@ import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, pha
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideContext, SideResult, StageCondition } from './process'
-import { SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processJob, processSide, withOutputNoise } from './process'
+import { SILENCES, SPEAKER_LEVEL_DB, balanceSides, flattenPeaks, panSides, processJob, processSide, withOutputNoise } from './process'
 import type { Side, SideOps, Sided } from './sided'
 import { onPort } from './sided'
+import { AMP_DI_DB } from './gains'
 
 // The walk through a chain: what the wiring makes of each card (planChain, once per change of the
 // graph) and the levels the number engine gives every card and every wire (runChain) — per side,
@@ -130,11 +131,25 @@ export interface CardPlan {
   needsDi: boolean
   /** A condenser microphone hearing a sound, with no 48V switched on before its Preamp: no power, no signal */
   unpowered: boolean
-  /** A DI Box in a ground loop: a hum starts on its XLR Out */
+  /** In a ground loop (D1): a hum starts on the output to the desk — a DI Box's XLR Out, a Guitar Amp's DI Out */
   groundLoop: boolean
   role?: StageRole
-  /** Its outputs: their key (outputKey), what each carries, and a DI Box's Direct Out */
-  outputs: { key: string; kind: WireKind; direct: boolean }[]
+  /** Its outputs: their key (outputKey), what each carries, where it is taken (OutputTap) */
+  outputs: { key: string; kind: WireKind; tap: OutputTap }[]
+}
+
+/**
+ * Where an output's signal is taken: what leaves the card (`out`); what arrives (`in`: a DI Box's
+ * Direct Out); what arrives at mic level, whatever the card's knob (`di-out`: a Guitar Amp's DI Out —
+ * gains.ts AMP_DI_DB, D26).
+ */
+export type OutputTap = 'out' | 'in' | 'di-out'
+
+/** Where a card's output is taken (OutputTap). */
+export function tapOf(typeKey: TypeKey, portId: string): OutputTap {
+  if (typeKey === 'di-box' && portId === DI_DIRECT_PORT) return 'in'
+  if (typeKey === 'guitar-amp' && portId === AMP_DI_PORT) return 'di-out'
+  return 'out'
 }
 
 const keyOf = (e: SignalEdge) => outputKey(e.source, e.sourceHandle)
@@ -224,8 +239,9 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
     const outputs = getPorts(node, graph).outputs.filter((port) => pathSends(path, port.id)).map((port) => ({
       key:    outputKey(node.id, port.id),
       kind:   outputKind(node.id, port.id, graph),
-      // A DI Box's Direct Out passes on what arrives, at instrument level; the rest is its XLR Out
-      direct: node.typeKey === 'di-box' && port.id === DI_DIRECT_PORT,
+      // A DI Box's Direct Out passes on what arrives, at instrument level; a Guitar Amp's DI Out
+      // sends it at mic level
+      tap:    tapOf(node.typeKey, port.id),
     }))
     for (const o of outputs) {
       kinds.set(o.key, o.kind)
@@ -240,7 +256,7 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
       amped,
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
-      groundLoop:  node.typeKey === 'di-box' && groundLoop(node.id, graph),
+      groundLoop:  (node.typeKey === 'di-box' || node.typeKey === 'guitar-amp') && groundLoop(node.id, graph),
       role: preamp ? 'preamp'
         : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
         : node.typeKey === 'pan' && followKind === 'stereo' ? 'balance'
@@ -417,17 +433,27 @@ export function runChain(plans: CardPlan[]): ChainLevels {
       outSig    = SILENT_WIRE
     }
 
-    // A DI Box in a ground loop starts a hum on its XLR Out. It is part of the noise from there on:
-    // every card treats it as it treats the noise (a fader turns it down with the music, a gate
-    // shuts it off in the pauses); only Ground Lift on the DI takes it away.
-    if (card.groundLoop) outSig = { ...outSig, l: humming(outSig.l), r: humming(outSig.r) }
+    // A ground loop starts a hum on the output to the desk: a DI Box's XLR Out (what leaves it), a
+    // Guitar Amp's DI Out (not its Sound). It is part of the noise from there on: every card treats
+    // it as it treats the noise (a fader turns it down with the music, a gate shuts it off in the
+    // pauses); only Ground Lift takes it away.
+    const hum   = (w: WireSignal): WireSignal => (card.groundLoop ? { ...w, l: humming(w.l), r: humming(w.r) } : w)
+    const ampDi = card.outputs.some((o) => o.tap === 'di-out')
+    if (!ampDi) outSig = hum(outSig)
+    // A Guitar Amp's DI Out: what arrives at mic level, before its Volume (silent with it, when the
+    // amp can't play — fed a digital signal)
+    const diOut = ampDi
+      ? hum(condition !== undefined && SILENCES[condition] ? SILENT_WIRE
+        : { ...inSig, l: shifted(inSig.l, AMP_DI_DB), r: shifted(inSig.r, AMP_DI_DB) })
+      : outSig
+    const tapped: Record<OutputTap, WireSignal> = { out: outSig, in: inSig, 'di-out': diOut }
 
     cards.set(card.key, {
       in: inSig, out: outSig, domain: side.domain, inDomain: inputDomain, mixedDomains,
       gainReductionDb: side.gainReductionDb, condition,
     })
     for (const o of card.outputs) {
-      wires.set(o.key, onPort(o.kind, o.direct ? inSig : outSig, LEVEL_SIDES))
+      wires.set(o.key, onPort(o.kind, tapped[o.tap], LEVEL_SIDES))
       domains.set(o.key, side.domain)
     }
   }

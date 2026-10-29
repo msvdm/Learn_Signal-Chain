@@ -27,7 +27,7 @@ export function PortStack({ nodeId, ports }: {
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" row={inRows[i]} near={near(inRows, inRows[i])} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" row={outRows[i]} middle={port.middle}
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" row={outRows[i]} middle={port.middle} label={port.label}
           near={port.middle ? ALONE : near(outRows, outRows[i])} />
       ))}
     </>

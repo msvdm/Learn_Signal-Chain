@@ -605,6 +605,9 @@
       }
     }
   },
+  "ports": {
+    "diOut": "DI изход"
+  },
   "levelNames": {
     "intermediate": { "eq": "Еквалайзер", "hpf": "Високочестотен филтър" },
     "advanced": {
