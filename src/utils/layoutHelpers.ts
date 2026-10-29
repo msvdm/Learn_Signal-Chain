@@ -38,14 +38,17 @@ export const PORT_REACH = 28
 
 /**
  * The centre of a port ring: on the edge it faces (`facing`: inputs left, outputs right — a flipped
- * card's the other way, portFacing), on port line `row` (portRows); on its top or bottom edge, in
- * the middle.
+ * card's the other way, portFacing), on port line `row` (portRows) — halfway down it when `middle`
+ * (a Sound output); on its top or bottom edge, in the middle.
  */
-export function portPoint(card: Box, type: 'source' | 'target', row: number, facing: Facing = type === 'source' ? 'right' : 'left'): Pt {
+export function portPoint(
+  card: Box, type: 'source' | 'target', row: number, facing: Facing = type === 'source' ? 'right' : 'left', middle = false,
+): Pt {
   const { x, y } = card.position
+  const across   = middle ? y + card.size.h / 2 : y + PORT_TOP + row * PORT_GAP
   switch (facing) {
-    case 'left':   return { x, y: y + PORT_TOP + row * PORT_GAP }
-    case 'right':  return { x: x + card.size.w, y: y + PORT_TOP + row * PORT_GAP }
+    case 'left':   return { x, y: across }
+    case 'right':  return { x: x + card.size.w, y: across }
     case 'top':    return { x: x + card.size.w / 2, y }
     case 'bottom': return { x: x + card.size.w / 2, y: y + card.size.h }
   }
@@ -65,11 +68,12 @@ export function wireRoute(edge: SignalEdge, cards: Box[], view: GraphView, level
   const outs = drawnPorts(srcNode, level, view).outputs
   const ins  = drawnPorts(tgtNode, level, view).inputs
   // Each port on its own line (a port's row, else its place)
-  const out  = portRows(outs)[outs.findIndex((p) => p.id === edge.sourceHandle)] ?? 0
+  const outAt = outs.findIndex((p) => p.id === edge.sourceHandle)
+  const out  = portRows(outs)[outAt] ?? 0
   const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
   const from = portFacing(srcNode, 'source')
   const to   = portFacing(tgtNode, 'target')
-  const start = portPoint(src, 'source', out, from)
+  const start = portPoint(src, 'source', out, from, outs[outAt]?.middle)
   const end   = portPoint(tgt, 'target', inp, to)
   // Sound in the air goes straight to the microphone (components/SoundWaves.tsx)
   if (edge.sourceHandle === SOUND_PORT) return [start, end]
@@ -238,7 +242,8 @@ export function makeRoomForInsert(newId: string, nodes: Box[], edges: SignalEdge
     if (e.source === newId || e.target === newId) continue
     const src = byId.get(e.source)
     const tgt = byId.get(e.target)
-    if (!src || !tgt) continue
+    // (Sound in the air goes straight, over any card: nothing to make room for)
+    if (!src || !tgt || e.sourceHandle === SOUND_PORT) continue
     // (Both ends on the first port line)
     const route = orthogonalRoute([portPoint(src, 'source', 0), ...(e.waypoints ?? []), portPoint(tgt, 'target', 0)])
     if (isBelow(src) && runUnderCard(route[0], route[1])) inTheWay.push(src)

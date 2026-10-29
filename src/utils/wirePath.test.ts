@@ -80,11 +80,12 @@ describe('the wire under a drop', () => {
   })
 })
 
-// Sound in the air goes straight to the microphone (components/SoundWaves.tsx): no corners
+// Sound in the air goes straight to the microphone (components/SoundWaves.tsx), from halfway down
+// its source's card (the user's call, 2026-10-29): no corners
 describe('sound in the air under a drop', () => {
   const card = (id: string, typeKey: TypeKey, x: number, y: number): SignalNode =>
     ({ id, typeKey, position: { x, y }, params: {}, bypassed: false })
-  // The Vocal's Sound out at (200, 400 + PORT_TOP), the microphone's input at (400, PORT_TOP): straight up and right
+  // The Vocal's Sound out halfway down its right side, at (200, 500); the microphone's input at (400, PORT_TOP)
   const nodes = [card('voice', 'vocal', 0, 400), card('mic', 'mic', 400, 0)]
   const edges: SignalEdge[] = [{
     id: 'air', source: 'voice', sourceHandle: SOUND_PORT, target: 'mic', targetHandle: 'in',
@@ -93,8 +94,9 @@ describe('sound in the air under a drop', () => {
   const cards = nodes.map((n): Box => ({ id: n.id, position: n.position, size: { w: 200, h: 200 } }))
   const find  = (x: number, y: number) => findEdgeAtPoint({ x, y }, edges, cards, { nodes, edges }, 'intermediate')
 
-  it('found halfway along the straight line, not along a corner', () => {
-    expect(find(300, 200 + PORT_TOP)?.edge.id).toBe('air')
+  it('found along the straight line, not along a corner', () => {
+    // A quarter of the way along the line, from (200, 500) to (400, 80)
+    expect(find(250, 500 - (500 - PORT_TOP) / 4)?.edge.id).toBe('air')
     expect(find(300, 900)).toBeNull()
   })
 })

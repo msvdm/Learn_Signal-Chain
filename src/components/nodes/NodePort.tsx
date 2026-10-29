@@ -29,11 +29,12 @@ function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source
 const POSITION: Record<Facing, Position> = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom }
 
 /** Where an output's L / R letter goes: right of the ring, just above its wire (left of it, facing left; beside it, top or bottom) */
-function letterPlace(facing: Facing, top: number, send: boolean): CSSProperties {
-  const away = send ? -36 : -24
+function letterPlace(facing: Facing, top: number | string, send: boolean): CSSProperties {
+  const away  = send ? -36 : -24
+  const above = typeof top === 'number' ? top - 17 : `calc(${top} - 17px)`
   switch (facing) {
-    case 'right':  return { top: top - 17, right: away }
-    case 'left':   return { top: top - 17, left: away }
+    case 'right':  return { top: above, right: away }
+    case 'left':   return { top: above, left: away }
     case 'top':    return { top: -24, left: 'calc(50% + 18px)' }
     case 'bottom': return { bottom: -24, left: 'calc(50% + 18px)' }
   }
@@ -45,6 +46,8 @@ interface NodePortProps {
   type: 'source' | 'target'
   /** Its port line (0 = the first, just below the header) */
   row: number
+  /** Halfway down its card's side instead (a Sound output: NodePort `middle` in the registry) */
+  middle?: boolean
   /** Another port of its stack on the line above / below */
   near: { above: boolean; below: boolean }
 }
@@ -60,7 +63,7 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, row, middle = false, near }: NodePortProps) {
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
   const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
@@ -118,7 +121,7 @@ export function NodePort({ nodeId, portId, type, row, near }: NodePortProps) {
     : atLeast(s.complexityLevel, SIGNAL_LEVEL) ? signalIn(s).wires.get(outputKey(nodeId, portId))?.kind
     : outputKind(nodeId, portId, s))
   const side       = isSend ? 'L+R' : sideLetter(sideKind)
-  const top        = PORT_TOP + row * PORT_GAP
+  const top        = middle ? '50%' : PORT_TOP + row * PORT_GAP
   // On a top or bottom edge (a card on its side): in the middle of it, where React Flow puts it
   const upright    = facing === 'top' || facing === 'bottom'
   // The area the mouse finds the port in (index.css): PORT_REACH around it, up to half way to the

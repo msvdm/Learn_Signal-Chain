@@ -9,7 +9,10 @@ import { NodePort } from './NodePort'
 
 // Pieces every element's shell draws around its controls (CardFrame, FreeControl; useNodeChrome)
 
-/** The element's inputs down its left edge and outputs down its right, from the first port line. */
+/** A port with no other port next to it */
+const ALONE = { above: false, below: false }
+
+/** The element's inputs down its left edge and outputs down its right, from the first port line (a Sound output halfway down). */
 export function PortStack({ nodeId, ports }: {
   nodeId: string
   ports: { inputs: Port[]; outputs: Port[] }
@@ -24,7 +27,8 @@ export function PortStack({ nodeId, ports }: {
         <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="target" row={inRows[i]} near={near(inRows, inRows[i])} />
       ))}
       {ports.outputs.map((port, i) => (
-        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" row={outRows[i]} near={near(outRows, outRows[i])} />
+        <NodePort key={port.id} nodeId={nodeId} portId={port.id} type="source" row={outRows[i]} middle={port.middle}
+          near={port.middle ? ALONE : near(outRows, outRows[i])} />
       ))}
     </>
   )

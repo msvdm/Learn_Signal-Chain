@@ -8,7 +8,8 @@ import type { ChainFile } from './chainFile'
 import { GRID, PORT_TOP } from './layoutHelpers'
 
 // The tutorial's example chains (D25): built here, opened like a saved chain (File → Open).
-// Cards in a row share their top, so their port lines — and the wires between them — are straight.
+// Cards in a row share their port line, so the wires between them are straight: their first port
+// line — a sound source's Sound output is halfway down its card, so the rest of its row sits lower.
 
 export type ExampleKey =
   | 'singer' | 'band' | 'recording'
@@ -50,6 +51,11 @@ function sizeOf(typeKey: TypeKey, level: ComplexityLevel): Size {
   return { w: size[0], h: size[1] }
 }
 
+/** How far below a card's top its wires leave or arrive: its first port line, or halfway down (a Sound output). */
+function portLineOf(typeKey: TypeKey, level: ComplexityLevel): number {
+  return NODE_REGISTRY[typeKey].outputs[0]?.middle ? sizeOf(typeKey, level).h / 2 : PORT_TOP
+}
+
 /** Room between two cards (px). */
 const GAP = 2 * GRID
 const snap = (v: number) => Math.ceil(v / GRID) * GRID
@@ -69,10 +75,11 @@ function sketch(level: ComplexityLevel) {
 
   return {
     put,
-    /** Cards left to right from (x, y) */
+    /** Cards left to right from (x, y), on one port line (the lowest of theirs: the highest card's top is y) */
     row(x: number, y: number, cards: Card[]) {
+      const line = Math.max(...cards.map(([, typeKey]) => portLineOf(typeKey, level)))
       for (const card of cards) {
-        put(card, x, y)
+        put(card, x, y + line - portLineOf(card[1], level))
         x += snap(sizeOf(card[1], level).w) + GAP
       }
     },
@@ -129,7 +136,7 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
   singer: (name) => {
     const s = sketch('beginner')
     s.row(0, 0, [['voice', 'vocal'], ['mic', 'mic'], ['desk', 'mixer']])
-    s.put(['left', 'active-speaker'], s.right('desk'), 0)
+    s.put(['left', 'active-speaker'], s.right('desk'), s.y('desk'))
     s.put(['right', 'active-speaker'], s.right('desk'), s.below('left'))
     s.chain('voice', 'mic', 'desk')
     s.wire('desk', 'left', 'main')
@@ -144,10 +151,12 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     const end = s.right('voiceMic') - GAP
     s.put(['guitar', 'instrument'], end - snap(sizeOf('instrument', 'beginner').w), s.below('drums'))
     s.put(['keys', 'keyboard'], end - snap(sizeOf('keyboard', 'beginner').w), s.below('guitar'))
-    s.put(['box', 'stage-box'], s.right('voiceMic'), 0)
-    s.put(['desk', 'mixer'], s.right('box'), 0)
-    s.put(['amp', 'amp'], s.right('desk'), 0)
-    s.put(['left', 'speaker'], s.right('amp'), 0)
+    // On the voice's port line, as its microphone
+    const top = s.y('voiceMic')
+    s.put(['box', 'stage-box'], s.right('voiceMic'), top)
+    s.put(['desk', 'mixer'], s.right('box'), top)
+    s.put(['amp', 'amp'], s.right('desk'), top)
+    s.put(['left', 'speaker'], s.right('amp'), top)
     s.put(['right', 'speaker'], s.right('amp'), s.below('left'))
     s.put(['wedge', 'active-speaker', FLIPPED], s.right('amp'), s.below('right'))
     s.chain('voice', 'voiceMic', 'box')

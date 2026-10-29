@@ -149,7 +149,9 @@ the descriptions). Each is what the user asked for; change one only when they as
   its corners: "this is strange"). Each ripple grows round the source, then travels on at that size
   (circles still round the source made a ladder of flat lines on a long throw); at least three, like
   the waves on the sources' icons. Corners saved on such a connection before are not drawn; a click
-  in empty space while drawing one adds none. `utils/soundRipples.ts`. Digital — an output the engine says sends numbers,
+  in empty space while drawing one adds none; it leaves from halfway down its source's card (the
+  user's call: "place the handle of all acoustic instruments in the middle of their respective
+  cards" — the Guitar Amp's too), not its first port line. `utils/soundRipples.ts`. Digital — an output the engine says sends numbers,
   or a USB wire (at Beginner too): dashes and dots like Morse code (option C, "it looks like a morse
   code to me"; tweaked from bunched and spread dots to a dash, two dots, a dash, a dot), drawn as
   outlines on a stereo wire. `utils/wireLook.ts`, `components/SoundWaves.tsx`.

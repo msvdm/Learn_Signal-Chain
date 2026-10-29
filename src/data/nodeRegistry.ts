@@ -14,6 +14,11 @@ export type NodePort = {
    * stack: the Relay Switch's inputs on lines 0 and 2, its output centred between them on 1
    */
   row?: number
+  /**
+   * Halfway down its card's side, not on a port line: a Sound output — the sound leaves the
+   * instrument itself, not a socket (the user's call, 2026-10-29)
+   */
+  middle?: true
   /** Never drawn, and no hand-drawn wire ends on it: the USB link's way back (graph/usbLink.ts) */
   hidden?: true
   /**
@@ -183,6 +188,9 @@ export const DI_DIRECT_PORT = 'direct'
  */
 export const SOUND_PORT = 'sound'
 
+/** Their output: Sound, halfway down the card's side */
+const SOUND_OUT: NodePort[] = [{ id: SOUND_PORT, middle: true }]
+
 /**
  * What a Vocal does (param `character`): speak or sing. Chosen from Intermediate up; at Beginner it
  * speaks (the first).
@@ -239,17 +247,17 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   // Sound in the air (D21): each sends it on its Sound output, which only a microphone takes — one
   // may feed several. How loud each is: signal/process.ts SOUND_SPL
   vocal: {
-    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: { character: 'speech' },
   },
   'drum-kit': {
-    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
   acoustic: {
-    category: 'source', inputs: [], outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
     levels: FROM_INTERMEDIATE, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},
   },
@@ -371,7 +379,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'guitar-amp': {
     // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone
-    category: 'processor', inputs: IN, outputs: [{ id: SOUND_PORT }], stereo: 'never',
+    category: 'processor', inputs: IN, outputs: SOUND_OUT, stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     // Its Volume knob goes to 11 (signal/process.ts guitarAmpGainDb)
     defaultParams: { volume: 5 },
