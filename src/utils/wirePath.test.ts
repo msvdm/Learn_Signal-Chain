@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { orthogonalRoute, pointAlong, routeLength } from './wirePath'
+import { orthogonalRoute } from './wirePath'
 import { findEdgeAtPoint, PORT_TOP } from './layoutHelpers'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { portFacing } from '../data/nodeRegistry'
+import { SOUND_PORT, portFacing } from '../data/nodeRegistry'
 import type { Box } from './geometry'
 
 // Wires are routed at right angles, out of the side of its card an output faces and into the side
@@ -33,26 +33,6 @@ describe('a wire to or from a flipped card', () => {
   it('out of an output at the bottom: straight down out of it', () => {
     const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 300, y: 400 }], { from: 'bottom' })
     expect(route.slice(0, 2)).toEqual([{ x: 0, y: 0 }, { x: 0, y: 40 }])
-  })
-})
-
-// Sound in the air is drawn as waves along the wire's route (components/SoundWaves.tsx)
-describe('a point along a route', () => {
-  const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }])  // 100 right, 100 down, 100 right
-
-  it('the route is as long as its runs', () => {
-    expect(routeLength(route)).toBe(300)
-  })
-
-  it('on each run, facing the way the route goes there', () => {
-    expect(pointAlong(route, 50)).toEqual({ x: 50, y: 0, angle: 0 })
-    expect(pointAlong(route, 150)).toEqual({ x: 100, y: 50, angle: 90 })
-    expect(pointAlong(route, 250)).toEqual({ x: 150, y: 100, angle: 0 })
-  })
-
-  it('held at its ends', () => {
-    expect(pointAlong(route, -10)).toEqual({ x: 0, y: 0, angle: 0 })
-    expect(pointAlong(route, 400)).toEqual({ x: 200, y: 100, angle: 0 })
   })
 })
 
@@ -97,5 +77,24 @@ describe('the wire under a drop', () => {
 
   it('far from every wire: none', () => {
     expect(find(450, 350)).toBeNull()
+  })
+})
+
+// Sound in the air goes straight to the microphone (components/SoundWaves.tsx): no corners
+describe('sound in the air under a drop', () => {
+  const card = (id: string, typeKey: TypeKey, x: number, y: number): SignalNode =>
+    ({ id, typeKey, position: { x, y }, params: {}, bypassed: false })
+  // The Vocal's Sound out at (200, 400 + PORT_TOP), the microphone's input at (400, PORT_TOP): straight up and right
+  const nodes = [card('voice', 'vocal', 0, 400), card('mic', 'mic', 400, 0)]
+  const edges: SignalEdge[] = [{
+    id: 'air', source: 'voice', sourceHandle: SOUND_PORT, target: 'mic', targetHandle: 'in',
+    waypoints: [{ x: 300, y: 900 }],   // a corner saved before 2026-10-29: not drawn
+  }]
+  const cards = nodes.map((n): Box => ({ id: n.id, position: n.position, size: { w: 200, h: 200 } }))
+  const find  = (x: number, y: number) => findEdgeAtPoint({ x, y }, edges, cards, { nodes, edges }, 'intermediate')
+
+  it('found halfway along the straight line, not along a corner', () => {
+    expect(find(300, 200 + PORT_TOP)?.edge.id).toBe('air')
+    expect(find(300, 900)).toBeNull()
   })
 })

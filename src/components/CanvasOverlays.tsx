@@ -5,7 +5,7 @@ import { useEdgeReshape } from '../hooks/useEdgeReshape'
 import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
-import { buildWirePath, orthogonalRoute } from '../utils/wirePath'
+import { buildWirePath } from '../utils/wirePath'
 import { morseDash } from '../utils/wireLook'
 import { SOUND_PORT } from '../data/nodeRegistry'
 import { outputKind } from '../graph/queries'
@@ -74,7 +74,8 @@ function ReshapeHandles() {
   return (
     <ViewportLayer zIndex={95}>
       {(zoom) => edges.map((edge) => {
-        const wps = edge.waypoints ?? []
+        // (Sound in the air goes straight: corners saved on it are not drawn)
+        const wps = edge.sourceHandle === SOUND_PORT ? [] : edge.waypoints ?? []
         if (wps.length === 0) return null
         return (
           <g key={edge.id}>
@@ -130,17 +131,28 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   const ends   = { from: wire.facing, to: cursor.snapFacing ?? undefined }
   const path   = buildWirePath(points, ends)
   const color  = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
-  // Sound in the air: waves, standing still while it is drawn
-  const sound  = wire.source.handleId === SOUND_PORT
+
+  // Sound in the air: ripples straight to the cursor (no corners), standing still while it is drawn
+  if (wire.source.handleId === SOUND_PORT) {
+    return (
+      <ViewportLayer zIndex={100}>
+        {(zoom) => (
+          <>
+            <SoundWaves from={wire.start} to={cursor.snap ?? cursor.pos} color={color} size={1 / zoom} still />
+            {cursor.snap && <circle cx={cursor.snap.x} cy={cursor.snap.y} r={11 / zoom} fill="none" stroke={color} strokeWidth={2 / zoom} />}
+          </>
+        )}
+      </ViewportLayer>
+    )
+  }
 
   return (
     <ViewportLayer zIndex={100}>
       {(zoom) => {
-        const sw   = (sound ? 1.25 : 2.5) / zoom
-        const dash = sound ? undefined : digital ? morseDash((stereo ? 2 : 1) / zoom) : `${6 / zoom} ${4 / zoom}`
+        const sw   = 2.5 / zoom
+        const dash = digital ? morseDash((stereo ? 2 : 1) / zoom) : `${6 / zoom} ${4 / zoom}`
         return (
           <>
-            {sound && <SoundWaves path={path} route={orthogonalRoute(points, ends)} color={color} size={1 / zoom} still />}
             <path
               d={path}
               fill="none"
@@ -148,7 +160,6 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
               strokeWidth={stereo ? sw * 2.2 : sw}
               strokeDasharray={dash}
               strokeLinecap="round"
-              opacity={sound ? 0.4 : undefined}
             />
             {stereo && (
               <path

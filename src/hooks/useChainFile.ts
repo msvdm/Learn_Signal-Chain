@@ -1,6 +1,7 @@
 import { useReactFlow } from '@xyflow/react'
 import { toBlob } from 'html-to-image'
 import { useSignalStore } from '../store/signalStore'
+import { SOUND_PORT } from '../data/nodeRegistry'
 import { useTranslation } from '../i18n/useTranslation'
 import { takeGroup } from '../utils/nodeGroup'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -82,9 +83,10 @@ export function useChainFile() {
       // The cards are drawn again (through React Flow, a few frames); then the crossfade ends
       await waitFor(() => !viewport.querySelector(NOT_IN_PICTURE))
       if (zoomedOut) await wait(FADE_MS + 30)
-      // Wires routed around the cards may reach past them
+      // Wires routed around the cards may reach past them (sound in the air goes straight: corners
+      // saved on it are not drawn)
       const box  = getNodesBounds(getNodes())
-      const pts  = chain.edges.flatMap((e) => e.waypoints ?? [])
+      const pts  = chain.edges.filter((e) => e.sourceHandle !== SOUND_PORT).flatMap((e) => e.waypoints ?? [])
       const left = Math.min(box.x, ...pts.map((p) => p.x)) - PICTURE_PAD
       const top  = Math.min(box.y, ...pts.map((p) => p.y)) - PICTURE_PAD
       const w    = Math.max(box.x + box.width, ...pts.map((p) => p.x)) + PICTURE_PAD - left

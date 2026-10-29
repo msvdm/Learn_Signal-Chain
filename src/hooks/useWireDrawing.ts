@@ -5,6 +5,7 @@ import { useSignalStore } from '../store/signalStore'
 import { newEdge } from '../graph/edits'
 import type { Pt } from '../utils/geometry'
 import type { Facing } from '../data/nodeRegistry'
+import { SOUND_PORT } from '../data/nodeRegistry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { useCanvasLayout } from './useCanvasLayout'
@@ -103,7 +104,9 @@ export function useWireDrawing(
       // The wire ends on its target's edge — only other cards in the way count as crossing
       const exclude = onTarget ? [wire.source.nodeId, onTarget.dataset.nodeid!] : [wire.source.nodeId]
       const ends    = { from: wire.facing, to: snapFacing ?? undefined }
-      const warning = wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], layout.layoutSnapshot(), exclude, ends)
+      // (Sound in the air may pass over a card: it goes straight to the microphone)
+      const warning = wire.source.handleId !== SOUND_PORT &&
+        wirePassesThroughNode([wire.start, ...wire.waypoints, snap ?? pos], layout.layoutSnapshot(), exclude, ends)
       setCursor({ pos, snap, snapFacing, warning })
     }
 
@@ -190,8 +193,8 @@ export function useWireDrawing(
         return
       }
 
-      // Click in empty space → commit a corner waypoint
-      store.addWireCorner(flowPos)
+      // Click in empty space → commit a corner waypoint (none on sound in the air: it goes straight)
+      if (wire.source.handleId !== SOUND_PORT) store.addWireCorner(flowPos)
     }
 
     function onContext(e: MouseEvent) {

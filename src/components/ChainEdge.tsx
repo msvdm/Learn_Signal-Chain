@@ -16,7 +16,8 @@ export interface ChainEdgeData extends Record<string, unknown> {
   /** Zoomed out: drawn thicker, with longer dashes */
   overview?: boolean
   /** What it carries (utils/wireLook.ts): an analog signal (dashes), a digital one (dashes and dots
-      like Morse code) or sound in the air into a microphone (waves). Analog when not given */
+      like Morse code) or sound in the air into a microphone (ripples, straight to it — its corners
+      are not drawn). Analog when not given */
   look?: WireLook
   /** Carries a DI Box ground-loop hum, this strong (0 … 1, humStrength): a red glow under it, wider as it grows */
   hum?: number
@@ -46,6 +47,22 @@ export function ChainEdge({
   data,
 }: EdgeProps) {
   const d           = (data ?? {}) as ChainEdgeData
+  const thick       = d.overview ?? false
+
+  // Sound in the air goes straight to the microphone, whatever corners were saved: ripples, no line
+  if (d.look === 'sound') {
+    return (
+      <SoundWaves
+        from={{ x: sourceX, y: sourceY }}
+        to={{ x: targetX, y: targetY }}
+        color={style?.stroke}
+        size={thick ? 2 : 1}
+        still={d.still}
+        style={{ opacity: style?.opacity, transition: style?.transition }}
+      />
+    )
+  }
+
   const waypoints   = d.waypoints ?? []
   const routingWarn = d.routingWarning ?? false
   const twin        = (d.stereo ?? false) && !routingWarn
@@ -55,16 +72,14 @@ export function ChainEdge({
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
   const ends: RouteEnds = { from: sourcePosition as Facing, to: targetPosition as Facing }
   const edgePath = buildWirePath(points, ends)
-  const sound    = d.look === 'sound'
   const digital  = d.look === 'digital'
 
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
   // The dash period stays a divisor of the flow animation (24 px; a digital wire's 240), so it loops smoothly.
   const width = Number(style?.strokeWidth ?? 3)
-  const thick = d.overview ?? false
   // The flow shows which way the sound goes: none on a two-way wire, nor on a still one (solid —
-  // a digital wire keeps its dashes and dots, which say what it is). Sound in the air: its waves move
-  const flow  = routingWarn || d.twoWay || d.still || sound ? undefined
+  // a digital wire keeps its dashes and dots, which say what it is)
+  const flow  = routingWarn || d.twoWay || d.still ? undefined
     : digital ? 'signal-line-digital' : 'signal-line-animated'
   const dash  = digital ? { strokeDasharray: morseDash((thick ? 2 : 1) * (twin ? 2 : 1)), strokeLinecap: 'round' as const }
     : thick && !d.still ? { strokeDasharray: '16 8' } : {}
@@ -72,8 +87,6 @@ export function ChainEdge({
 
   const edgeStyle = routingWarn
     ? { ...style, stroke: 'var(--signal-clipping)', strokeDasharray: thick ? '16 8' : '6 4' }
-    // Under the waves a faint line, so the way they go reads at a glance
-    : sound ? { ...style, strokeWidth: width / 2, opacity: 0.3 * Number(style?.opacity ?? 1) }
     : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
 
   return (
@@ -95,16 +108,6 @@ export function ChainEdge({
         markerEnd={markerEnd}
         className={flow}
       />
-      {sound && !routingWarn && (
-        <SoundWaves
-          path={edgePath}
-          route={orthogonalRoute(points, ends)}
-          color={style?.stroke}
-          size={thick ? 2 : 1}
-          still={d.still}
-          style={{ opacity: style?.opacity, transition: style?.transition }}
-        />
-      )}
       {/* Stereo: a canvas-coloured line down the middle splits the wire into two.
           Same dash animation, so both move together. */}
       {twin && (

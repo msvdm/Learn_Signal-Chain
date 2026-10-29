@@ -1,5 +1,5 @@
 import type { Facing, NodePort, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, isBareAt, isTypeKey, portFacing, portRows } from '../data/nodeRegistry'
+import { NODE_REGISTRY, SOUND_PORT, isBareAt, isTypeKey, portFacing, portRows } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { graphOf, upstreamOf } from '../graph/graph'
 import type { GraphView } from '../graph/graph'
@@ -69,8 +69,11 @@ export function wireRoute(edge: SignalEdge, cards: Box[], view: GraphView, level
   const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
   const from = portFacing(srcNode, 'source')
   const to   = portFacing(tgtNode, 'target')
-  const points = [portPoint(src, 'source', out, from), ...(edge.waypoints ?? []), portPoint(tgt, 'target', inp, to)]
-  return orthogonalRoute(points, { from, to })
+  const start = portPoint(src, 'source', out, from)
+  const end   = portPoint(tgt, 'target', inp, to)
+  // Sound in the air goes straight to the microphone (components/SoundWaves.tsx)
+  if (edge.sourceHandle === SOUND_PORT) return [start, end]
+  return orthogonalRoute([start, ...(edge.waypoints ?? []), end], { from, to })
 }
 
 // A card's size when its type has no `minSize` in the registry (most cards have one: the same at

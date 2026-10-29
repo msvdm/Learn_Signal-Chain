@@ -4,7 +4,7 @@ import type { SignalDomain } from '../signal/levels'
 
 // How a wire is drawn, by what it carries (the user's call, 2026-10-29): an analog cable in dashes
 // (index.css signal-line-animated), a digital one in dashes and dots like Morse code, and sound in
-// the air as small waves travelling to the microphone (components/SoundWaves.tsx). Its colour says
+// the air as waves spreading straight to the microphone (components/SoundWaves.tsx). Its colour says
 // where the sound goes (D24); its look, what kind of connection it is.
 
 export type WireLook = 'analog' | 'digital' | 'sound'

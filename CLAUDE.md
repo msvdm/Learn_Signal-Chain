@@ -29,7 +29,7 @@ bun run preview  # Preview the production build locally
 - `src/utils/chainFile.test.ts` — what a Vocal does; version 1 files (a Line Input is a Keyboard, a Microphone gets the sound it picked up — D21)
 - `src/graph/mainFader.test.ts`, `queries.test.ts`, `connectionRules.test.ts`, `usbLink.test.ts`, `wireFlow.test.ts`, `reach.test.ts` — L / R takeovers; `unwiredSource` (D11), `faderBusOf`; the USB link (its way back) and what an Audio Interface records (D22); each wire's colour (D24); where the sound goes at Beginner (D20)
 - `src/components/nodes/overviewLayout.test.ts` — the zoomed-out face's layout (`overviewLayout`: the level block at most half the face, the name in the rest)
-- `src/utils/wirePath.test.ts` — wires out of and into the sides a flipped card's ports face (`orthogonalRoute`, `portFacing`), the wire under a drop (`findEdgeAtPoint`)
+- `src/utils/wirePath.test.ts`, `soundRipples.test.ts` — wires out of and into the sides a flipped card's ports face (`orthogonalRoute`, `portFacing`), the wire under a drop (`findEdgeAtPoint`; sound in the air goes straight); the ripples of sound in the air
 
 ## Working on this project
 
@@ -225,7 +225,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 
 - `nodeTypes` is `NODE_COMPONENTS`, defined **outside** any component (no re-registration on every render). Components read their type from React Flow's `type` prop, nothing from `data`.
 - Interactive elements inside nodes carry `nodrag nopan`, so the canvas does not take their pointer events.
-- Edges are coloured by where their sound goes (`graph/wireFlow.ts`, D24) and red where the engine says they clip (`useFlowElements`), not stored in React Flow state. Their look is what they carry (`utils/wireLook.ts`): an analog cable dashes, a digital one dashes and dots like Morse code, sound in the air waves moving to the microphone (`SoundWaves.tsx`: SVG `animateMotion`, about 1 ms of main thread a second per moving wave — at most 20 a wire).
+- Edges are coloured by where their sound goes (`graph/wireFlow.ts`, D24) and red where the engine says they clip (`useFlowElements`), not stored in React Flow state. Their look is what they carry (`utils/wireLook.ts`): an analog cable dashes, a digital one dashes and dots like Morse code, sound in the air ripples spreading straight to the microphone, no line and no corners (`SoundWaves.tsx`, its geometry `utils/soundRipples.ts`: an SVG animation of each ripple's path, about 1.5 ms of main thread a second per moving ripple — 3 to 8 a connection; `wireRoute`, the wiring and the picture take it as straight).
 - Every prop of `<ReactFlow>` is stable between renders: no inline arrow functions, arrays or objects — `useStableHandlers`, hoisted constants.
 - **`nodeOrigin` is `[0, 0]`**: a node's `position` is its top-left corner. All layout helpers assume this.
 - What must escape the transformed viewport (`ConfirmDialog`, menus) is a `createPortal` to `document.body` — the viewport's `transform` breaks `position: fixed`. Overlays that must not start a wire or a waypoint carry `lsc-overlay`.
