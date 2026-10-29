@@ -178,7 +178,7 @@ export const MIXER_MONITOR_PORT = 'monitor'
 export const DI_DIRECT_PORT = 'direct'
 
 /**
- * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Guitar's, a Guitar Amp's: a dotted wire
+ * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Guitar's, a Guitar Amp's: a wire of waves
  * that only a microphone can take (D21).
  */
 export const SOUND_PORT = 'sound'

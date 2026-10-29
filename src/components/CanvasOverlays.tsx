@@ -5,9 +5,13 @@ import { useEdgeReshape } from '../hooks/useEdgeReshape'
 import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
-import { buildWirePath } from '../utils/wirePath'
+import { buildWirePath, orthogonalRoute } from '../utils/wirePath'
+import { morseDash } from '../utils/wireLook'
 import { SOUND_PORT } from '../data/nodeRegistry'
 import { outputKind } from '../graph/queries'
+import { outDomainOf } from '../signal/engine'
+import { signalIn } from '../hooks/useGraphSignal'
+import { SoundWaves } from './SoundWaves'
 
 /**
  * What is drawn over the canvas, in flow coordinates: the drag handles on wires' corners, the
@@ -117,21 +121,26 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   // A wire drawn from a stereo output previews as a twin line, like the wire it will become (what
   // the wiring makes of the output: at Beginner too, where no signal is worked out)
   const stereo    = useSignalStore((s) => s.wire !== null && outputKind(s.wire.source.nodeId, s.wire.source.handleId, s) === 'stereo')
+  // From an output that sends numbers: dashes and dots, as the wire will be (utils/wireLook.ts)
+  const digital   = useSignalStore((s) => s.wire !== null && outDomainOf(signalIn(s).stages[s.wire.source.nodeId], s.wire.source.handleId) === 'digital')
   if (!wire || !cursor) return null
 
   // Out of the side its output faces, into the side of the input it snaps to (a flipped card's)
-  const path  = buildWirePath([wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos], { from: wire.facing, to: cursor.snapFacing ?? undefined })
-  const color = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
-  // A Guitar Amp's sound as dots
+  const points = [wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos]
+  const ends   = { from: wire.facing, to: cursor.snapFacing ?? undefined }
+  const path   = buildWirePath(points, ends)
+  const color  = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
+  // Sound in the air: waves, standing still while it is drawn
   const sound  = wire.source.handleId === SOUND_PORT
 
   return (
     <ViewportLayer zIndex={100}>
       {(zoom) => {
-        const sw   = (sound ? 4 : 2.5) / zoom
-        const dash = sound ? `0 ${8 / zoom}` : `${6 / zoom} ${4 / zoom}`
+        const sw   = (sound ? 1.25 : 2.5) / zoom
+        const dash = sound ? undefined : digital ? morseDash((stereo ? 2 : 1) / zoom) : `${6 / zoom} ${4 / zoom}`
         return (
           <>
+            {sound && <SoundWaves path={path} route={orthogonalRoute(points, ends)} color={color} size={1 / zoom} still />}
             <path
               d={path}
               fill="none"
@@ -139,6 +148,7 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
               strokeWidth={stereo ? sw * 2.2 : sw}
               strokeDasharray={dash}
               strokeLinecap="round"
+              opacity={sound ? 0.4 : undefined}
             />
             {stereo && (
               <path

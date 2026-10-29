@@ -30,6 +30,8 @@ The app does not explain what each element is — that is the teacher's part. It
 - **A tutorial for teachers and students.** The **?** button next to the language button opens it: how to build and wire a chain, the three levels, what the meters, colours and wires show, saving and sharing — and eight example chains to open and change: a singer on two speakers, a band on stage, recording a voice, a vocal channel, a monitor mix, a guitar with a DI box, a voice through the converters and a live stream.
 - **The app no longer explains the elements.** *What is this?* and its help texts are gone: a paragraph about a microphone or a compressor always leaves something out, and can mislead a beginner. What each element is, the teacher explains; the app shows what the chain does.
 
+- **Each kind of connection looks different.** Sound travelling through the air, from a singer, a drum kit, an acoustic guitar or a guitar amp into a microphone, is drawn as small waves moving toward the microphone, in the same colour as the rest of the chain. A digital connection (after a converter, or a USB cable) is dashes and dots, like Morse code. An analog cable keeps its dashes.
+
 ## What's New in 2.0
 
 - **Each level is a different scale.** *Beginner* shows the devices in a room — a singer, a drum kit, microphones, a keyboard, a computer, a stage box, a mixer, speakers — and how they are wired. No numbers: every speaker, recorder or stream simply says whether sound reaches it. *Intermediate* opens up the channel strip of a small mixing desk (modelled on the Yamaha MG12XU). *Advanced* shows the parts and the digital side.

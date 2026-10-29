@@ -90,6 +90,34 @@ function turnedRoute(points: Pt[], from: Facing, to: Facing): Pt[] {
   return withoutRepeats(route)
 }
 
+/** The length of a route of straight runs. */
+export function routeLength(route: Pt[]): number {
+  let length = 0
+  for (let i = 1; i < route.length; i++) length += Math.hypot(route[i].x - route[i - 1].x, route[i].y - route[i - 1].y)
+  return length
+}
+
+/** A point on a route, and the way the route goes there (degrees: 0 right, 90 down). */
+export interface RoutePoint extends Pt {
+  angle: number
+}
+
+/** The point `at` px along a route (held at its ends). */
+export function pointAlong(route: Pt[], at: number): RoutePoint {
+  let left = Math.max(0, at)
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1]
+    const b = route[i]
+    const run = Math.hypot(b.x - a.x, b.y - a.y)
+    if (left <= run || i === route.length - 1) {
+      const t = run > 0 ? Math.min(1, left / run) : 0
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI }
+    }
+    left -= run
+  }
+  return { ...route[0], angle: 0 }
+}
+
 /**
  * Build an orthogonal SVG path with rounded corners (radius shrinks on short segments).
  */

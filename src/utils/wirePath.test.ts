@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { orthogonalRoute } from './wirePath'
+import { orthogonalRoute, pointAlong, routeLength } from './wirePath'
 import { findEdgeAtPoint, PORT_TOP } from './layoutHelpers'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { portFacing } from '../data/nodeRegistry'
@@ -33,6 +33,26 @@ describe('a wire to or from a flipped card', () => {
   it('out of an output at the bottom: straight down out of it', () => {
     const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 300, y: 400 }], { from: 'bottom' })
     expect(route.slice(0, 2)).toEqual([{ x: 0, y: 0 }, { x: 0, y: 40 }])
+  })
+})
+
+// Sound in the air is drawn as waves along the wire's route (components/SoundWaves.tsx)
+describe('a point along a route', () => {
+  const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }])  // 100 right, 100 down, 100 right
+
+  it('the route is as long as its runs', () => {
+    expect(routeLength(route)).toBe(300)
+  })
+
+  it('on each run, facing the way the route goes there', () => {
+    expect(pointAlong(route, 50)).toEqual({ x: 50, y: 0, angle: 0 })
+    expect(pointAlong(route, 150)).toEqual({ x: 100, y: 50, angle: 90 })
+    expect(pointAlong(route, 250)).toEqual({ x: 150, y: 100, angle: 0 })
+  })
+
+  it('held at its ends', () => {
+    expect(pointAlong(route, -10)).toEqual({ x: 0, y: 0, angle: 0 })
+    expect(pointAlong(route, 400)).toEqual({ x: 200, y: 100, angle: 0 })
   })
 })
 

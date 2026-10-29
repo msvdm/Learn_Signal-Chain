@@ -9,7 +9,7 @@ import { wireFlows } from '../graph/wireFlow'
 import type { WireFlow } from '../graph/wireFlow'
 import { reachIn } from '../graph/reach'
 import { humStrength } from '../signal/levels'
-import { SOUND_PORT } from '../data/nodeRegistry'
+import { wireLook } from '../utils/wireLook'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { ComplexityLevel } from '../data/levels'
 import type { NodePort } from '../data/nodeRegistry'
@@ -139,25 +139,29 @@ export function useFlowElements() {
       const sourceStage = stages[edge.source]
       const key         = outputKey(edge.source, edge.sourceHandle)
       const signal      = sourceStage && (wires.get(key) ?? sourceStage.out)
-      // Its colour is where its sound goes (D24); red where it clips (from the peaks, as the card it
-      // leaves — red is kept for problems); grey while it carries nothing. At Beginner one colour.
-      const health      = signal ? healthOf(signal, outDomainOf(sourceStage, edge.sourceHandle)) : null
+      const domain      = outDomainOf(sourceStage, edge.sourceHandle)
+      // Its colour is where its sound goes (D24) — sound in the air too; red where it clips (from
+      // the peaks, as the card it leaves — red is kept for problems); grey while it carries nothing.
+      // At Beginner one colour.
+      const health      = signal ? healthOf(signal, domain) : null
       const color       = reach ? 'var(--lsc-wire-neutral)'
         : health === 'clipping' ? 'var(--signal-clipping)'
         : !signal || !isFinite(levelOf(signal)) ? 'var(--lsc-border)'
         : FLOW_COLOR[flows?.get(edge.id) ?? 'main']
 
-      // A Guitar Amp's sound into a microphone travels through the air: crossing a card is fine
-      const sound          = edge.sourceHandle === SOUND_PORT
+      // Its look is what it carries: a cable analog or digital, or sound in the air into a microphone —
+      // which travels through the air, so crossing a card is fine. A USB wire is digital at Beginner too
+      const usb            = isUsbWire(edge, wiring)
+      const look           = wireLook(edge, domain, usb)
       const humDb          = hums.get(key)
-      const routingWarning = !sound && crossesCard(edge)
+      const routingWarning = look !== 'sound' && crossesCard(edge)
 
       const data: ChainEdgeData = {
-        waypoints: edge.waypoints, routingWarning, overview, sound,
+        waypoints: edge.waypoints, routingWarning, overview, look,
         // Beginner: what the wiring makes of the output (no signal is worked out there)
         stereo: (reach ? outputKind(edge.source, edge.sourceHandle, graph) : wires.get(key)?.kind) === 'stereo',
         hum: humDb === undefined ? undefined : humStrength(humDb),
-        twoWay: isUsbWire(edge, wiring),
+        twoWay: usb,
         still: reach !== null && !reach.flowing.has(edge.id),
       }
       return {
@@ -169,7 +173,7 @@ export function useFlowElements() {
         type:         'chain',
         animated:     false,
         style:        {
-          stroke: sound && !reach ? 'var(--lsc-fg-muted)' : color,
+          stroke: color,
           strokeWidth: overview ? OVERVIEW_WIRE_WIDTH : 3,
           opacity: highlight && !highlight.edgeIds.has(edge.id) ? 0.15 : 1,
           transition: 'opacity 0.15s',

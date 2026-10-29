@@ -2,8 +2,11 @@ import type { EdgeProps } from '@xyflow/react'
 import { BaseEdge } from '@xyflow/react'
 import { buildWirePath, orthogonalRoute } from '../utils/wirePath'
 import type { RouteEnds } from '../utils/wirePath'
+import { morseDash } from '../utils/wireLook'
+import type { WireLook } from '../utils/wireLook'
 import type { Facing } from '../data/nodeRegistry'
 import type { Pt } from '../utils/geometry'
+import { SoundWaves } from './SoundWaves'
 
 export interface ChainEdgeData extends Record<string, unknown> {
   waypoints?: Pt[]
@@ -12,8 +15,9 @@ export interface ChainEdgeData extends Record<string, unknown> {
   stereo?: boolean
   /** Zoomed out: drawn thicker, with longer dashes */
   overview?: boolean
-  /** A Guitar Amp's sound into a microphone (through the air, not a cable): drawn as dots */
-  sound?: boolean
+  /** What it carries (utils/wireLook.ts): an analog signal (dashes), a digital one (dashes and dots
+      like Morse code) or sound in the air into a microphone (waves). Analog when not given */
+  look?: WireLook
   /** Carries a DI Box ground-loop hum, this strong (0 … 1, humStrength): a red glow under it, wider as it grows */
   hum?: number
   /** The USB wire between an Audio Interface and a DAW: the sound goes both ways — no flow, a ⇄ halfway */
@@ -51,21 +55,25 @@ export function ChainEdge({
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
   const ends: RouteEnds = { from: sourcePosition as Facing, to: targetPosition as Facing }
   const edgePath = buildWirePath(points, ends)
+  const sound    = d.look === 'sound'
+  const digital  = d.look === 'digital'
 
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
-  // The dash period stays a divisor of the 24px flow animation, so it loops smoothly.
+  // The dash period stays a divisor of the flow animation (24 px; a digital wire's 240), so it loops smoothly.
   const width = Number(style?.strokeWidth ?? 3)
   const thick = d.overview ?? false
-  // The flow shows which way the sound goes: none on a two-way wire, nor on a still one (solid)
-  const flow  = routingWarn || d.twoWay || d.still ? undefined : 'signal-line-animated'
-  const dash  = thick && !d.still ? { strokeDasharray: '16 8' } : {}
-  // Round dots, 8px apart (12px zoomed out): periods that divide the 24px flow animation
-  const dots  = { strokeDasharray: thick ? '0 12' : '0 8', strokeLinecap: 'round' as const, strokeWidth: width * 1.6 }
+  // The flow shows which way the sound goes: none on a two-way wire, nor on a still one (solid —
+  // a digital wire keeps its dashes and dots, which say what it is). Sound in the air: its waves move
+  const flow  = routingWarn || d.twoWay || d.still || sound ? undefined
+    : digital ? 'signal-line-digital' : 'signal-line-animated'
+  const dash  = digital ? { strokeDasharray: morseDash((thick ? 2 : 1) * (twin ? 2 : 1)), strokeLinecap: 'round' as const }
+    : thick && !d.still ? { strokeDasharray: '16 8' } : {}
   const mid  = d.twoWay ? halfway(orthogonalRoute(points, ends)) : null
 
   const edgeStyle = routingWarn
     ? { ...style, stroke: 'var(--signal-clipping)', strokeDasharray: thick ? '16 8' : '6 4' }
-    : d.sound ? { ...style, ...dots }
+    // Under the waves a faint line, so the way they go reads at a glance
+    : sound ? { ...style, strokeWidth: width / 2, opacity: 0.3 * Number(style?.opacity ?? 1) }
     : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
 
   return (
@@ -87,6 +95,16 @@ export function ChainEdge({
         markerEnd={markerEnd}
         className={flow}
       />
+      {sound && !routingWarn && (
+        <SoundWaves
+          path={edgePath}
+          route={orthogonalRoute(points, ends)}
+          color={style?.stroke}
+          size={thick ? 2 : 1}
+          still={d.still}
+          style={{ opacity: style?.opacity, transition: style?.transition }}
+        />
+      )}
       {/* Stereo: a canvas-coloured line down the middle splits the wire into two.
           Same dash animation, so both move together. */}
       {twin && (

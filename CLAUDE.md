@@ -225,7 +225,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 
 - `nodeTypes` is `NODE_COMPONENTS`, defined **outside** any component (no re-registration on every render). Components read their type from React Flow's `type` prop, nothing from `data`.
 - Interactive elements inside nodes carry `nodrag nopan`, so the canvas does not take their pointer events.
-- Edges are coloured by where their sound goes (`graph/wireFlow.ts`, D24) and red where the engine says they clip (`useFlowElements`), not stored in React Flow state.
+- Edges are coloured by where their sound goes (`graph/wireFlow.ts`, D24) and red where the engine says they clip (`useFlowElements`), not stored in React Flow state. Their look is what they carry (`utils/wireLook.ts`): an analog cable dashes, a digital one dashes and dots like Morse code, sound in the air waves moving to the microphone (`SoundWaves.tsx`: SVG `animateMotion`, about 1 ms of main thread a second per moving wave — at most 20 a wire).
 - Every prop of `<ReactFlow>` is stable between renders: no inline arrow functions, arrays or objects — `useStableHandlers`, hoisted constants.
 - **`nodeOrigin` is `[0, 0]`**: a node's `position` is its top-left corner. All layout helpers assume this.
 - What must escape the transformed viewport (`ConfirmDialog`, menus) is a `createPortal` to `document.body` — the viewport's `transform` breaks `position: fixed`. Overlays that must not start a wire or a waypoint carry `lsc-overlay`.

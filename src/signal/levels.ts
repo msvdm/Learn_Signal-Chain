@@ -274,7 +274,7 @@ export function formatDb(db: number, domain: SignalDomain = 'analog'): string {
 // ── Sound in the air (dB SPL) ──────────────────────────────────────────────────
 
 /**
- * A Sound wire (dotted: sound in the air, from a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar
+ * A Sound wire (waves: sound in the air, from a Vocal, a Drum Kit, an Acoustic Guitar or a Guitar
  * Amp to a microphone — D21) carries the sound as a level: that level plus this is how loud it is
  * in dB SPL where the microphone stands (process.ts SOUND_SPL: a voice speaking 86, −30 on the wire).
  */

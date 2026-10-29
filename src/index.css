@@ -385,6 +385,15 @@ kbd {
   animation: signal-flow 0.6s linear infinite;
 }
 
+/* A digital wire's dashes and dots (utils/wireLook.ts: their periods divide 240 px), as fast as the above */
+@keyframes signal-flow-digital {
+  to { stroke-dashoffset: -240; }
+}
+
+.signal-line-digital {
+  animation: signal-flow-digital 6s linear infinite;
+}
+
 /* Valid target port while drawing a wire */
 @keyframes lsc-ping {
   0%, 100% { box-shadow: 0 0 0 4px var(--lsc-accent-bg); }

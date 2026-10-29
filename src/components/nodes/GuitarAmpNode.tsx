@@ -12,7 +12,7 @@ const Icon = NODE_LOOK['guitar-amp'].icon
  * Guitar Amp: fed a guitar (an Instrument, or a DI Box's Direct Out), it plays it in the room. Like
  * the Active Speaker: a big icon and its Volume knob, at every zoom (its meter in dB SPL — D13); fed a
  * digital signal, a note says so (conditions.tsx). Its Sound reaches only a microphone placed in
- * front of it (a dotted wire).
+ * front of it (a wire of sound waves).
  */
 export function GuitarAmpNode({ id }: CardProps) {
   const condition = useStage(id)?.condition
