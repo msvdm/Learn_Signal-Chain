@@ -1,9 +1,10 @@
 import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, AMP_DI_PORT, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY, AMP_B_PORT, AMP_DI_PORT, DI_DIRECT_PORT, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
 import type { CardPath, Graph } from '../graph/graph'
 import { graphOf, drivingWire, fedBy, flowPaths, outputKey, pathSends, wiresInto } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
-import { getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, phantomPowered, preampSourceOf } from '../graph/queries'
+import { ampSplit, getPorts, groundLoop, matrixSendKey, mixBusOf, needsDi, outputKind, phantomPowered, preampSourceOf } from '../graph/queries'
+import { switchedOff } from '../graph/reach'
 import type { SideLevels, SignalDomain, SignalHealth } from './levels'
 import { CLIP_DBU, HUM_DBU, SILENT, TAPER_UNITY, eachReading, getHealth, louder, shifted, sumNoiseToDb, sumSides, taperToDb } from './levels'
 import type { SideContext, SideResult, StageCondition } from './process'
@@ -111,9 +112,10 @@ export interface CardPlan {
   mode: CardMode
   /**
    * The wires it adds up: the output each comes from (its `key` — what `wires` are keyed by — and
-   * the plan sending it, `from`: its key), with a Matrix Bus's send knob on it (dB)
+   * the plan sending it, `from`: its key), with a Matrix Bus's send knob on it (dB). An Amplifier's
+   * input plays on its own `channel` (D27: A on the left, B on the right — what arrives folded into one)
    */
-  used: { key: string; from: string; sendDb: number }[]
+  used: { key: string; from: string; sendDb: number; channel?: Exclude<Side, null> }[]
   /**
    * The wires whose domain decides its own (their keys): every wire plugged in (a bus cannot mix
    * analog and digital), a Relay only the one on its selected input
@@ -214,7 +216,10 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
     const fed    = incoming.length > 0
     // Stereo: a stereo source or bus (always, or set to Stereo), or a follow node fed a stereo wire.
     // Mono: everything else — one channel; a stereo wire arriving here is folded into one.
-    const isStereo = node.typeKey !== 'pan' && (isNodeStereo(node) || (def.stereo === 'follow' && followKind === 'stereo'))
+    // An Amplifier is always two channels (D27): one stereo wire into both, or each input its own
+    const amp      = node.typeKey === 'amp'
+    const isStereo = amp || (node.typeKey !== 'pan' && (isNodeStereo(node) || (def.stereo === 'follow' && followKind === 'stereo')))
+    const channels = amp && !ampSplit(node.id, graph)
 
     /** A Matrix Bus turns each bus up or down by its send knob before adding them up. */
     const sendDb = (e: SignalEdge) => node.typeKey === 'matrix-bus'
@@ -250,13 +255,17 @@ export function planChain(nodes: SignalNode[], edges: SignalEdge[]): CardPlan[] 
 
     plans.push({
       node, key, route, job, mode, followKind, fed, preamp, outputs,
-      used:        used.map((e) => ({ key: keyOf(e), from: sentBy.get(keyOf(e)) ?? e.source, sendDb: sendDb(e) })),
+      used:        used.map((e) => ({
+        key: keyOf(e), from: sentBy.get(keyOf(e)) ?? e.source, sendDb: sendDb(e),
+        ...(channels ? { channel: e.targetHandle === AMP_B_PORT ? 'r' as const : 'l' as const } : {}),
+      })),
       domainFrom:  relay ? (driving ? [keyOf(driving)] : []) : incoming.map(keyOf),
       plays:       source,
       amped,
       needsDi:     node.typeKey === 'instrument' && needsDi(node.id, graph),
       unpowered:   node.typeKey === 'mic' && fed && param(node, 'micType') === 'condenser' && !phantomPowered(node.id, graph),
-      groundLoop:  (node.typeKey === 'di-box' || node.typeKey === 'guitar-amp') && groundLoop(node.id, graph),
+      // (A Guitar Amp switched off sends nothing, not even a hum)
+      groundLoop:  (node.typeKey === 'di-box' || node.typeKey === 'guitar-amp') && !switchedOff(node) && groundLoop(node.id, graph),
       role: preamp ? 'preamp'
         : node.typeKey === 'fader' && mixBusOf(node.id, graph) !== null ? 'main-fader'
         : node.typeKey === 'pan' && followKind === 'stereo' ? 'balance'
@@ -296,17 +305,22 @@ function contextOf(card: CardPlan, domain: SignalDomain, mixedDomains: boolean, 
 /**
  * The levels arriving at a card, all its wires added up. side = 'l' / 'r': that side of every wire
  * (a mono wire counts on both sides, a left wire only on the left). null: every wire folded into one.
+ * A wire on an Amplifier's channel (D27) counts on its side only, folded into one.
  */
 function arrivingAt(card: CardPlan, wires: Map<string, WireSignal>, side: Side): SideLevels {
   const { used } = card
   // One plain wire (most cards): what it carries, nothing to add up
-  if (used.length === 1 && used[0].sendDb === 0) {
+  if (used.length === 1 && used[0].sendDb === 0 && !used[0].channel) {
     const w = wires.get(used[0].key) ?? SILENT_WIRE
     return side ? w[side] : foldToMono(w)
   }
   const parts: SideLevels[] = []
   for (const u of used) {
     const w = wires.get(u.key) ?? SILENT_WIRE
+    if (u.channel) {
+      if (side === null || side === u.channel) parts.push(foldToMono(w))
+      continue
+    }
     parts.push(shifted(side ? w[side] : foldToMono(w), u.sendDb))
   }
   return sumSides(parts)

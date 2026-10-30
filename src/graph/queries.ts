@@ -1,7 +1,7 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import {
-  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT, AMP_DI_PORT,
+  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT, AMP_DI_PORT, AMP_B_PORT,
   canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
@@ -53,12 +53,40 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
 export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: GraphView): boolean {
   if (!canSplit(node.typeKey)) return false
   if (splitsOnlyMix(node.typeKey)) return mixBusOf(node.id, view) !== null
+  if (node.typeKey === 'amp') return ampSplit(node.id, view) !== null
   const graph = graphOf(view)
   const wire  = graph.into(node.id)[0]
   if (!wire) {
     return graph.from(node.id).some((e) => portSide(e.sourceHandle) !== null || e.sourceHandle === MIX_PORT)
   }
   return outputKind(wire.source, wire.sourceHandle, graph) === 'stereo'
+}
+
+/**
+ * An Amplifier fed one stereo wire (D27): that wire, which goes into both its inputs — its left side
+ * into A, its right into B (drawn split at the inputs). Null when it has no wire, a mono one, or two
+ * (each then plays on its own channel, a stereo one folded into it).
+ */
+export function ampSplit(nodeId: string, view: GraphView): SignalEdge | null {
+  const graph = graphOf(view)
+  if (graph.node(nodeId)?.typeKey !== 'amp') return null
+  const into  = graph.into(nodeId)
+  return into.length === 1 && outputKind(into[0].source, into[0].sourceHandle, graph) === 'stereo' ? into[0] : null
+}
+
+/** An Amplifier's other input: B for A, A for B. */
+export const otherAmpInput = (portId: string) => (portId === AMP_B_PORT ? 'in' : AMP_B_PORT)
+
+/**
+ * The wires on a card's input: those plugged into it — and on an Amplifier's other input the stereo
+ * wire split into both (ampSplit), which holds it too.
+ */
+export function wiresIntoPort(nodeId: string, portId: string, view: GraphView): SignalEdge[] {
+  const graph   = graphOf(view)
+  const plugged = graph.into(nodeId).filter((e) => e.targetHandle === portId)
+  if (plugged.length > 0 || graph.node(nodeId)?.typeKey !== 'amp') return plugged
+  const split = ampSplit(nodeId, view)
+  return split && split.targetHandle === otherAmpInput(portId) ? [split] : plugged
 }
 
 const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT }]
@@ -101,6 +129,9 @@ export function getPorts(
     const passing = out.some((e) => e.sourceHandle === MIX_PORT)
     if (isStereoBus(node) && passing) {
       outputs = MIX_OUTPUTS
+    } else if (node.typeKey === 'amp') {
+      // Always L and R, on its inputs' lines (D27)
+      outputs = passing ? MIX_OUTPUTS : def.outputs
     } else if (splitsStereo({ id: node.id, typeKey: node.typeKey }, view)) {
       outputs = passing ? MIX_OUTPUTS : SIDE_OUTPUTS
     }

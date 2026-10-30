@@ -79,8 +79,8 @@ describe('gain staging, the classic mistake: Preamp +20, made up later (Gain +20
 })
 
 describe('where the gain is made, on a real desk (D18)', () => {
-  // One after another (a Master Bus through its L, a Vocal through its Sound)
-  const outOf = (c: SignalNode) => (c.typeKey === 'master-bus' ? `${c.id}:out-l` : c.typeKey === 'vocal' ? `${c.id}:sound` : c.id)
+  // One after another (a Master Bus and an Amplifier through their L, a Vocal through its Sound)
+  const outOf = (c: SignalNode) => (c.typeKey === 'master-bus' || c.typeKey === 'amp' ? `${c.id}:out-l` : c.typeKey === 'vocal' ? `${c.id}:sound` : c.id)
   const chain = (...cards: SignalNode[]) => signalOf(cards, cards.slice(1).map((c, i) => wire(outOf(cards[i]), c.id)))
   const speakerSnr = (result: GraphSignalResult, id = 'spk') => snrOf(leaving(result, id))
 

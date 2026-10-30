@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import {
   Drum, Mic, KeyboardMusic, Plug,
-  Activity, ToggleLeft, Radio, Sliders,
+  Activity, ToggleLeft, Sliders,
   AudioWaveform, Minus, Zap,
   Merge, Volume2, Ear,
   SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower, Usb,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
-import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, TrumpetIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
+import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, AmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, TrumpetIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -103,7 +103,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Output
   'active-speaker':  { icon: Volume2,           group: 'output' },
   speaker:           { icon: Volume2,           group: 'output' },
-  amp:               { icon: Radio,             group: 'output' },
+  amp:               { icon: AmpIcon,           group: 'output' },
   headphones:        { icon: Headphones,        group: 'output' },
   'studio-monitor':  { icon: Speaker,           group: 'output' },
   recorder:          { icon: CassetteTape,      group: 'output' },

@@ -30,6 +30,7 @@ export type StageCondition =
   | 'noPhantom'           // a condenser microphone with no 48V phantom power: silent
   | 'encoderNeedsDigital' // an Encoder fed an analog signal: it packs numbers only, so it sends nothing
   | 'dawNeedsDigital'     // a DAW fed an analog signal: a computer records numbers only
+  | 'switchedOff'         // an amplifier (or a guitar amp) whose power switch is off: silent, no hiss (D27)
 
 /** Whether a card in each condition sends nothing — every condition says (a new one does not compile without). */
 export const SILENCES: Record<StageCondition, boolean> = {
@@ -45,6 +46,7 @@ export const SILENCES: Record<StageCondition, boolean> = {
   noPhantom:           true,
   encoderNeedsDigital: true,
   dawNeedsDigital:     true,
+  switchedOff:         true,
 }
 
 /** One channel through a card. */
@@ -382,6 +384,10 @@ const summing = (process: Process): Process => (node, input, ctx) =>
 const analogOnly = (condition: StageCondition, process: Process): Process => (node, input, ctx) =>
   ctx.domain === 'digital' ? blocked(condition, ctx.domain) : process(node, input, ctx)
 
+/** An amplifier with a power switch (D27): switched off, it sends nothing. */
+const switchedOn = (process: Process): Process => (node, input, ctx) =>
+  param(node, 'on') === false ? blocked('switchedOff', ctx.domain) : process(node, input, ctx)
+
 /** A card whose job is a gain (signal/gains.ts): every reading moved by it. */
 const gained: Process = (node, input, ctx) => pass(shifted(input, gainDbOf(node, ctx)!), ctx)
 
@@ -411,7 +417,7 @@ const PROCESS: Record<TypeKey, Process> = {
   generator:    (node) => source(node, 'generator'),
   // XLR Out: down to mic level. The Direct Out passes on what arrives (the engine sends it there).
   'di-box':     (node, input, ctx) => ({ out: shifted(input, gainDbOf(node, ctx)!), domain: 'analog' }),
-  'guitar-amp': analogOnly('digitalToSpeaker', gained),
+  'guitar-amp': switchedOn(analogOnly('digitalToSpeaker', gained)),
   // Passes the signal on as it is: its 48V powers a condenser microphone before it (the engine checks)
   phantom: (_, input, ctx) => pass(input, ctx),
   // A gain that stops at the clip level — after an ADC, at 0 dBFS
@@ -419,7 +425,7 @@ const PROCESS: Record<TypeKey, Process> = {
     const gainDb = gainDbOf(node, ctx)!
     return pass(eachReading((k) => Math.min(input[k] + gainDb, ceilingOf(ctx.domain))), ctx)
   },
-  amp: analogOnly('digitalToAmp', gained),
+  amp: switchedOn(analogOnly('digitalToAmp', gained)),
   hpf: (node, input, ctx) =>
     pass(shifted(input, levelChange(node, 'hpf', () => hpfLevelChange(param(node, 'cutoffHz')))), ctx),
   eq: (node, input, ctx) =>

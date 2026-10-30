@@ -30,11 +30,11 @@ export const EXAMPLES: Record<ComplexityLevel, ExampleKey[]> = {
 const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: number]>>> = {
   beginner: {
     'vocal': [320, 328], 'drum-kit': [320, 328], 'mic': [160, 164], 'instrument': [320, 328], 'keyboard': [320, 350],
-    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [412, 361],
+    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [372, 230],
     'speaker': [320, 328], 'active-speaker': [320, 328], 'studio-monitor': [320, 328],
   },
   intermediate: {
-    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [412, 328], 'di-box': [432, 309], 'guitar-amp': [412, 328],
+    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [412, 328], 'di-box': [432, 309], 'guitar-amp': [352, 419],
     'gain': [217, 285], 'hpf': [196, 216], 'eq': [603, 318], 'comp': [273, 325], 'fader': [198, 582], 'pan': [232, 308],
     'master-bus': [398, 361], 'aux-bus': [398, 397], 'active-speaker': [412, 328],
   },
@@ -163,8 +163,9 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     s.chain('drums', 'drumMic', 'box')
     s.wire('guitar', 'box')
     s.wire('keys', 'box')
+    // The Mixer's Main is one stereo wire into the Amplifier (both its inputs — D27): L and R out
     s.chain('box', 'desk', 'amp', 'left')
-    s.wire('amp', 'right')
+    s.wire('amp', 'right', 'out-r')
     s.wire('desk', 'wedge', 'monitor')
     return s.file(name)
   },

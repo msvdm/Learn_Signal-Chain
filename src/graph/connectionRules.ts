@@ -1,14 +1,22 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, isBus } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, isBus, portSide } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { GraphView, WireSource } from './graph'
-import { drawnPorts, getPorts, instrumentAt, isMatrixSource, micLevelAt } from './queries'
+import { drawnPorts, getPorts, instrumentAt, isMatrixSource, micLevelAt, otherAmpInput, outputKind } from './queries'
 
 type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
 
 /** A Mixer's outputs: into a DAW, a USB wire (graph/usbLink.ts) */
 const MIXER_OUTPUTS: ReadonlySet<string> = new Set([MIXER_MAIN_PORT, MIXER_MONITOR_PORT])
+
+/**
+ * A wire from `source` that goes into an Amplifier as one stereo wire: a stereo one, or a mix's L / R
+ * (the Amplifier takes the mix over — graph/mainFader.ts).
+ */
+function stereoInto(source: WireSource, view: GraphView): boolean {
+  return portSide(source.handleId) !== null || outputKind(source.nodeId, source.handleId, view) === 'stereo'
+}
 
 /**
  * True when this input port can take one more wire.
@@ -18,15 +26,24 @@ const MIXER_OUTPUTS: ReadonlySet<string> = new Set([MIXER_MAIN_PORT, MIXER_MONIT
  * sound both ways (graph/usbLink.ts) — and below Advanced a DAW takes nothing else but a Mixer's
  * output (Beginner: a desk with USB; nodeAcceptsWire). One computer per Interface. A hidden port takes no wire (the USB wire's way
  * back is the store's).
+ * An Amplifier (D27; with `nodes`, to read what the wires carry): one stereo wire goes into both its
+ * inputs, so it needs the other free — and while one is in, the other input holds it too.
  */
 export function portAcceptsWire(
   node: TargetNode,
   handleId: string,
   edges: SignalEdge[],
   source?: WireSource,
+  nodes?: SignalNode[],
 ): boolean {
   if (source && node.id === source.nodeId) return false
   if (NODE_REGISTRY[node.typeKey].inputs.some((p) => p.id === handleId && p.hidden)) return false
+  if (node.typeKey === 'amp' && nodes) {
+    const view  = { nodes, edges }
+    const other = edges.filter((e) => e.target === node.id && e.targetHandle === otherAmpInput(handleId))
+    if (other.some((e) => stereoInto({ nodeId: e.source, handleId: e.sourceHandle }, view))) return false
+    if (other.length > 0 && source && stereoInto(source, view)) return false
+  }
   // To computer goes only into a DAW (a port of its own: the rule needs no card lookup)
   if (source && node.typeKey !== 'daw' && source.handleId === TO_PC_PORT) return false
   // One computer per Interface
@@ -82,7 +99,7 @@ export function nodeAcceptsWire(
   const toMatrix = targetNode.typeKey === 'matrix-bus'
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
   if (!TAKES_WHOLE_MIX.has(targetNode.typeKey) && source.handleId === MATRIX_PORT) return false
-  return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source))
+  return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source, nodes))
 }
 
 /** Id of the card being dropped while its wires are checked (it is not on the canvas yet). */
@@ -106,12 +123,12 @@ export function wireTakesCard(typeKey: TypeKey, wire: SignalEdge, view: GraphVie
   // The wire's source into the card …
   const rest = view.edges.filter((e) => e.id !== wire.id)
   const fromSource: WireSource = { nodeId: wire.source, handleId: wire.sourceHandle }
-  if (!nodeAcceptsWire(card, fromSource, rest, nodes, level) || !portAcceptsWire(card, inputs[0].id, rest, fromSource)) return false
+  if (!nodeAcceptsWire(card, fromSource, rest, nodes, level) || !portAcceptsWire(card, inputs[0].id, rest, fromSource, nodes)) return false
 
   // … then the card into the wire's target
   const withIn: SignalEdge[] = [...rest, {
     id: `${DROPPED}-in`, source: wire.source, sourceHandle: wire.sourceHandle, target: DROPPED, targetHandle: inputs[0].id,
   }]
   const fromCard: WireSource = { nodeId: DROPPED, handleId: outputs[0].id }
-  return nodeAcceptsWire(target, fromCard, withIn, nodes, level) && portAcceptsWire(target, wire.targetHandle, withIn, fromCard)
+  return nodeAcceptsWire(target, fromCard, withIn, nodes, level) && portAcceptsWire(target, wire.targetHandle, withIn, fromCard, nodes)
 }

@@ -11,7 +11,7 @@ import { SIGNAL_LEVEL, atLeast } from '../../data/levels'
 import { graphOf, outputKey } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../graph/connectionRules'
-import { outputKind } from '../../graph/queries'
+import { outputKind, wiresIntoPort } from '../../graph/queries'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
 import { UnplugMenu } from '../UnplugMenu'
@@ -19,11 +19,11 @@ import { MATRIX_PORT, portFacing } from '../../data/nodeRegistry'
 import type { Facing, PortLabel, SignalEdge } from '../../data/nodeRegistry'
 import { useTranslation } from '../../i18n/useTranslation'
 
-/** The wires plugged into this port. */
+/** The wires on this port: plugged into it — on an Amplifier's other input, the stereo wire split into both (D27). */
 function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source' | 'target'): SignalEdge[] {
   return type === 'source'
     ? graphOf(graph).from(nodeId).filter((e) => e.sourceHandle === portId)
-    : graphOf(graph).into(nodeId).filter((e) => e.targetHandle === portId)
+    : wiresIntoPort(nodeId, portId, graph)
 }
 
 /** React Flow's side for each way a port faces */
@@ -121,7 +121,7 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
   const isValidTarget = useSignalStore((s) => {
     const node = graphOf(s).node(nodeId)
     return type === 'target' && s.wire !== null && node !== undefined &&
-      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) && portAcceptsWire(node, portId, s.edges, s.wire.source)
+      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) && portAcceptsWire(node, portId, s.edges, s.wire.source, s.nodes)
   })
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0

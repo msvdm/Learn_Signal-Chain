@@ -1,7 +1,8 @@
-import type { SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY } from '../data/nodeRegistry'
+import type { SignalEdge, SignalNode } from '../data/nodeRegistry'
+import { AMP_B_PORT, MIX_PORT, NODE_REGISTRY, param } from '../data/nodeRegistry'
 import type { Graph, GraphView } from './graph'
 import { graphOf } from './graph'
+import { ampSplit } from './queries'
 
 // Where the sound goes at Beginner (D20): no number engine and no render there — only the wiring
 // says which cards a sound reaches and which end points play it. Pure and level-free; the cards
@@ -10,9 +11,9 @@ import { graphOf } from './graph'
 /**
  * What an end point (a speaker, Headphones, a Recorder, Stream / Broadcast) gets: a sound; nothing
  * plugged in; wires, but nothing that makes sound before it; a passive speaker's sound with no
- * Amplifier before it (it cannot play it).
+ * Amplifier before it (it cannot play it); a sound that stops at an amplifier switched off (D27).
  */
-export type Verdict = 'sound' | 'not-connected' | 'no-source' | 'needs-amp'
+export type Verdict = 'sound' | 'not-connected' | 'no-source' | 'needs-amp' | 'switched-off'
 
 export interface Reach {
   /** Each card input a sound arrives at (`<card id>:<port>`) */
@@ -32,12 +33,26 @@ export function soundAt(reach: Reach, nodeId: string, port?: string): boolean {
   return false
 }
 
+/** An Amplifier or a Guitar Amp whose power switch is off (D27): no sound goes on from it. */
+export function switchedOff(node: SignalNode | undefined): boolean {
+  return (node?.typeKey === 'amp' || node?.typeKey === 'guitar-amp') && param(node, 'on') === false
+}
+
+const NO_WIRES: readonly SignalEdge[] = []
+
 /**
  * The wires leaving a card that carry what arrives on its input `port` (a card of several paths:
- * that path's — an Audio Interface's line input goes to the computer, not to its line output).
+ * that path's — an Audio Interface's line input goes to the computer, not to its line output; an
+ * Amplifier's input A goes out of L, B out of R, one stereo wire out of both). None from an amplifier
+ * switched off, unless `powered` is false (to find what it stops).
  */
-function onward(graph: Graph, id: string, port: string): readonly SignalEdge[] {
-  const node   = graph.node(id)
+function onward(graph: Graph, id: string, port: string, powered = true): readonly SignalEdge[] {
+  const node = graph.node(id)
+  if (powered && switchedOff(node)) return NO_WIRES
+  if (node?.typeKey === 'amp' && !ampSplit(id, graph)) {
+    const out = port === AMP_B_PORT ? 'out-r' : 'out-l'
+    return graph.from(id).filter((e) => e.sourceHandle === out || e.sourceHandle === MIX_PORT)
+  }
   const routes = node && NODE_REGISTRY[node.typeKey].routes
   if (!routes) return graph.from(id)
   const to = new Set(routes.filter((r) => r.from === port).flatMap((r) => r.to))
@@ -56,9 +71,8 @@ function ownSound(graph: Graph, id: string): readonly SignalEdge[] {
   return def.category === 'source' ? graph.from(id) : []
 }
 
-/** Where the sound goes: every card it reaches, each end point's verdict, the wires that flow. */
-export function reachOf(view: GraphView): Reach {
-  const graph    = graphOf(view)
+/** The sound along the wires: the inputs it arrives at, the wires carrying it, those amplified. */
+function spread(graph: Graph, powered: boolean) {
   const arriving = new Set<string>()
   const carrying = new Set<string>()
   /** Wires carrying a sound that went through an Amplifier: what a passive speaker plays */
@@ -66,7 +80,7 @@ export function reachOf(view: GraphView): Reach {
 
   // From every sound, along the wires (each wire once, and once more if it turns out amplified)
   const seen  = new Set<string>()
-  const queue: { wire: SignalEdge; amped: boolean }[] = view.nodes.flatMap((n) => ownSound(graph, n.id).map((wire) => ({ wire, amped: false })))
+  const queue: { wire: SignalEdge; amped: boolean }[] = graph.nodes.flatMap((n) => ownSound(graph, n.id).map((wire) => ({ wire, amped: false })))
   while (queue.length > 0) {
     const { wire, amped } = queue.pop()!
     const key = amped ? `${wire.id}+` : wire.id
@@ -76,8 +90,17 @@ export function reachOf(view: GraphView): Reach {
     if (amped) amplified.add(wire.id)
     arriving.add(`${wire.target}:${wire.targetHandle}`)
     const ampsIt = amped || graph.node(wire.target)?.typeKey === 'amp'
-    for (const next of onward(graph, wire.target, wire.targetHandle)) queue.push({ wire: next, amped: ampsIt })
+    for (const next of onward(graph, wire.target, wire.targetHandle, powered)) queue.push({ wire: next, amped: ampsIt })
   }
+  return { arriving, carrying, amplified }
+}
+
+/** Where the sound goes: every card it reaches, each end point's verdict, the wires that flow. */
+export function reachOf(view: GraphView): Reach {
+  const graph = graphOf(view)
+  const { arriving, carrying, amplified } = spread(graph, true)
+  // What would arrive with every amplifier on: an end point a switched-off one stops it at is told so
+  const unpowered = view.nodes.some(switchedOff) ? spread(graph, false).carrying : carrying
 
   const verdicts = new Map<string, Verdict>()
   for (const node of view.nodes) {
@@ -86,7 +109,7 @@ export function reachOf(view: GraphView): Reach {
     const fed  = into.filter((e) => carrying.has(e.id))
     verdicts.set(node.id,
       into.length === 0 ? 'not-connected'
-      : fed.length === 0 ? 'no-source'
+      : fed.length === 0 ? (into.some((e) => unpowered.has(e.id)) ? 'switched-off' : 'no-source')
       // A passive speaker plays only what an Amplifier sends it
       : node.typeKey === 'speaker' && !fed.some((e) => amplified.has(e.id)) ? 'needs-amp'
       : 'sound')

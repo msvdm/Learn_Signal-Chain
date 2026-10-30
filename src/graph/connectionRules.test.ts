@@ -19,6 +19,7 @@ const nodes = [
   node('fad', 'fader'), node('pfl', 'pfl-bus'), node('mtx', 'matrix-bus'),
   node('mic', 'mic'), node('p48', 'phantom'), node('pre', 'gain'), node('gtr', 'instrument'),
   node('eq', 'eq'), node('bus', 'master-bus'), node('mon', 'studio-monitor'), node('rec', 'recorder'),
+  node('pa', 'amp'), node('gen', 'generator'), node('gen2', 'generator'),
 ]
 const byId = (id: string) => nodes.find((n) => n.id === id)!
 /** Could a wire from `from` (card:port) be drawn into `to` (card:port), with `edges` already there? */
@@ -26,7 +27,7 @@ const takes = (from: string, to: string, edges: SignalEdge[] = [], level?: Compl
   const [nodeId, handleId = 'out'] = from.split(':')
   const [target, port = 'in'] = to.split(':')
   const source = { nodeId, handleId }
-  return nodeAcceptsWire(byId(target), source, edges, nodes, level) && portAcceptsWire(byId(target), port, edges, source)
+  return nodeAcceptsWire(byId(target), source, edges, nodes, level) && portAcceptsWire(byId(target), port, edges, source, nodes)
 }
 
 describe('the USB link between an Audio Interface and a DAW', () => {
@@ -80,6 +81,31 @@ describe('what an Audio Interface records: line-level signals, as many as you li
     expect(wireTakesCard('interface', view.edges[0], view, 'intermediate')).toBe(false)
     expect(wireTakesCard('daw', view.edges[0], view, 'intermediate')).toBe(false)
     expect(wireTakesCard('eq', view.edges[0], view, 'intermediate')).toBe(true)
+  })
+})
+
+// An Amplifier (D27): one wire per input — but one stereo wire goes into both, so it takes both
+describe('the Amplifier: two inputs, one stereo wire into both', () => {
+  const amp = [wire('keys', 'pa', 'out', 'in')]
+  const gen = [wire('gen', 'pa', 'out', 'in')]
+
+  it('empty, either input takes a mono or a stereo wire', () => {
+    for (const port of ['in', 'in-b']) {
+      expect(takes('keys', `pa:${port}`)).toBe(true)
+      expect(takes('gen', `pa:${port}`)).toBe(true)
+    }
+  })
+
+  it('a stereo wire in one: the other takes nothing (it holds the wire too)', () => {
+    expect(takes('gen', 'pa:in-b', amp)).toBe(false)
+    expect(takes('gen2', 'pa:in-b', amp)).toBe(false)
+  })
+
+  it('a mono wire in one: the other takes a mono wire, not a stereo one (it would go into both)', () => {
+    expect(takes('gen2', 'pa:in-b', gen)).toBe(true)
+    expect(takes('keys', 'pa:in-b', gen)).toBe(false)
+    // A mix's L or R is the whole mix to it (it takes the L / R over)
+    expect(takes('bus:out-l', 'pa:in-b', gen)).toBe(false)
   })
 })
 

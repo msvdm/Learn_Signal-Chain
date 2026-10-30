@@ -90,13 +90,16 @@ const VERDICT_TONE: Record<Verdict, string> = {
   'not-connected': 'var(--lsc-fg-muted)',
   'no-source':     'var(--lsc-fg-muted)',
   'needs-amp':     'var(--signal-hot-text)',
+  'switched-off':  'var(--signal-hot-text)',
 }
 
 /** What an end point says it gets: zoomed in why there is no sound, zoomed out only whether there is. */
 function verdictText(t: Translations, typeKey: TypeKey, verdict: Verdict, far: boolean): string {
   if (verdict === 'sound') return typeKey === 'recorder' ? t.beginner.recording : typeKey === 'broadcast' ? t.beginner.onAir : t.beginner.sound
   if (far) return t.beginner.noSound
-  return verdict === 'needs-amp' ? t.nodes.speaker.needsAmp : verdict === 'no-source' ? t.beginner.noSource : t.beginner.notConnected
+  return verdict === 'needs-amp' ? t.nodes.speaker.needsAmp
+    : verdict === 'switched-off' ? t.beginner.switchedOff
+    : verdict === 'no-source' ? t.beginner.noSource : t.beginner.notConnected
 }
 
 /**

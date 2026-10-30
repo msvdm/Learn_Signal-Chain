@@ -388,7 +388,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
 }
 
 /** Where a still meter sits while a sound reaches its card: 6 dB under unity, in the green */
-const STILL_DB = -6
+export const STILL_DB = -6
 
 /**
  * A meter that only shows a fixed picture (Beginner's Mixer, Audio Interface and DAW — D20: no

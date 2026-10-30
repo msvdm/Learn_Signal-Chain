@@ -7,8 +7,8 @@ import { withUsbReturns } from './usbLink'
 // Beginner (D20): no engine — the wiring alone says where the sound goes, what each end point gets
 // and which wires flow.
 
-const node = (id: string, typeKey: TypeKey): SignalNode =>
-  ({ id, typeKey, position: { x: 0, y: 0 }, params: {}, bypassed: false })
+const node = (id: string, typeKey: TypeKey, params: SignalNode['params'] = {}): SignalNode =>
+  ({ id, typeKey, position: { x: 0, y: 0 }, params, bypassed: false })
 /** A wire from `card:output` to `card:input` (`out` / `in` when left out), its id both in full. */
 const wire = (from: string, to: string): SignalEdge => {
   const [source, sourceHandle = 'out'] = from.split(':')
@@ -96,6 +96,35 @@ describe('the stage plan', () => {
   it('a loop does not hang it', () => {
     const r = reach(nodes, [...edges, wire('mix:monitor', 'box')])
     expect(r.verdicts.get('left')).toBe('sound')
+  })
+})
+
+describe('the Amplifier (D27): two channels and a power switch', () => {
+  const speakers = [node('left', 'speaker'), node('right', 'speaker')]
+  const out      = [wire('amp:out-l', 'left'), wire('amp:out-r', 'right')]
+
+  it('input A plays out of L, B out of R', () => {
+    const r = reach([node('gen', 'generator'), node('amp', 'amp'), ...speakers], [wire('gen', 'amp:in-b'), ...out])
+    expect(Object.fromEntries(r.verdicts)).toEqual({ left: 'no-source', right: 'sound' })
+    expect(soundAt(r, 'amp', 'in')).toBe(false)
+  })
+
+  it('one stereo wire goes into both, whichever input it is plugged into', () => {
+    const r = reach([node('keys', 'keyboard'), node('amp', 'amp'), ...speakers], [wire('keys', 'amp:in-b'), ...out])
+    expect(Object.fromEntries(r.verdicts)).toEqual({ left: 'sound', right: 'sound' })
+  })
+
+  it('switched off: no sound past it, and its speakers say why', () => {
+    const r = reach([node('keys', 'keyboard'), node('amp', 'amp', { on: false }), ...speakers], [wire('keys', 'amp'), ...out])
+    expect(Object.fromEntries(r.verdicts)).toEqual({ left: 'switched-off', right: 'switched-off' })
+    expect(flowing(r)).toEqual([])
+  })
+
+  it('a Guitar Amp switched off: its microphone hears nothing', () => {
+    const nodes = [node('gtr', 'instrument'), node('gamp', 'guitar-amp', { on: false }), node('mic', 'mic'), node('spk', 'active-speaker')]
+    const r = reach(nodes, [wire('gtr', 'gamp'), wire(`gamp:${SOUND_PORT}`, 'mic'), wire('mic', 'spk')])
+    expect(r.verdicts.get('spk')).toBe('switched-off')
+    expect(soundAt(r, 'mic')).toBe(false)
   })
 })
 

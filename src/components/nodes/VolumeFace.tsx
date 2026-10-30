@@ -4,25 +4,23 @@ import { OverviewIcon } from './OverviewFace'
 import { useTranslation } from '../../i18n/useTranslation'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { widestFormat } from '../../utils/readout'
-import { GUITAR_AMP_MAX } from '../../signal/gains'
 
 const GAP = 16
 // Value, then label, under the knob
 const READOUT_H = 38
 
-/** The Volume knob: a speaker's in dB; a Guitar Amp's goes to 11 (process.ts guitarAmpGainDb). */
+/** The Volume knob, in dB. */
 interface VolumeKnob {
-  param: 'volumeDb' | 'volume'
+  param: 'volumeDb'
   min: number
   max: number
   step: number
   format: (v: number) => string
 }
 const SPEAKER_KNOB: VolumeKnob = { param: 'volumeDb', min: -20, max: 10, step: 0.5, format: (v) => `${v >= 0 ? '+' : ''}${v} dB` }
-const KNOBS: Record<'active-speaker' | 'studio-monitor' | 'guitar-amp', VolumeKnob> = {
+const KNOBS: Record<'active-speaker' | 'studio-monitor', VolumeKnob> = {
   'active-speaker': SPEAKER_KNOB,
   'studio-monitor': SPEAKER_KNOB,
-  'guitar-amp':     { param: 'volume', min: 0, max: GUITAR_AMP_MAX, step: 0.5, format: (v) => `${v}` },
 }
 
 /** The knob's width with its value and, under that, its name (KnobControl `labelBelow`: as `.lsc-knob-label` draws it). */
@@ -33,14 +31,14 @@ function knobBlockWidth(size: number, label: string, k: VolumeKnob): number {
 }
 
 /**
- * A face-only card's icon with its Volume knob beside it — the Active Speaker, Studio Monitor, the Guitar Amp — in the
+ * A face-only card's icon with its Volume knob beside it — the Active Speaker, the Studio Monitor — in the
  * box they are given: the knob as big as the height allows, its value and then its name under it (one
  * above the other: a long name — Bulgarian's — leaves the icon its room), and the icon as big as the
  * room that leaves.
  */
 export function VolumeFace({ nodeId, typeKey, icon, box }: {
   nodeId: string
-  typeKey: 'active-speaker' | 'studio-monitor' | 'guitar-amp'
+  typeKey: 'active-speaker' | 'studio-monitor'
   icon: ReactNode
   box: { w: number; h: number }
 }) {

@@ -29,7 +29,7 @@ describe('example chains', () => {
           const target = nodes.find((n) => n.id === e.target)!
           const source = { nodeId: e.source, handleId: e.sourceHandle }
           expect(`${e.id}: ${nodeAcceptsWire(target, source, before, nodes, level)}`).toBe(`${e.id}: true`)
-          expect(`${e.id}: ${portAcceptsWire(target, e.targetHandle, before, source)}`).toBe(`${e.id}: true`)
+          expect(`${e.id}: ${portAcceptsWire(target, e.targetHandle, before, source, nodes)}`).toBe(`${e.id}: true`)
         })
 
         // As the store settles it (commitGraph): L / R takeovers, the USB wire's way back

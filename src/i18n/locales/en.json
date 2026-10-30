@@ -124,7 +124,8 @@
     "adcExpectsAnalog": "Silent — the signal is already digital.",
     "dacExpectsDigital": "Silent — the signal is analog. Put an Analog to Digital Converter before this one.",
     "encoderNeedsDigital": "Silent — an Encoder works only on a digital signal. Put an Analog to Digital Converter before it.",
-    "dawNeedsDigital": "Silent — a computer records only numbers. Put an Analog to Digital Converter before it."
+    "dawNeedsDigital": "Silent — a computer records only numbers. Put an Analog to Digital Converter before it.",
+    "switchedOff": "Switched off"
   },
   "hum": {
     "tag": "Hum"
@@ -144,9 +145,11 @@
       "label": "Preamp"
     },
     "amp": {
-      "level": "Volume",
+      "power": "Power",
       "levelA": "Channel A volume",
-      "levelB": "Channel B volume"
+      "levelB": "Channel B volume",
+      "channelA": "A",
+      "channelB": "B"
     },
     "hpf": {
       "label": "HPF",
@@ -221,7 +224,8 @@
       "hum": "Hum! The guitar amp and the desk are both grounded through this box. Turn Ground Lift on."
     },
     "guitar-amp": {
-      "volume": "Volume"
+      "volume": "Volume",
+      "power": "Power"
     },
     "instrument": {
       "needsDi": "No DI Box: the high notes get lost"
@@ -364,6 +368,7 @@
     "noSound": "No sound",
     "notConnected": "No sound — not connected",
     "noSource": "No sound — nothing that makes sound is connected before it",
+    "switchedOff": "No sound — an amplifier before it is switched off",
     "inputs": "Inputs",
     "main": "Main",
     "monitor": "Monitor"

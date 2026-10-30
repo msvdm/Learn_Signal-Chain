@@ -44,6 +44,8 @@ const CONDITIONS: Record<StageCondition, ConditionText> = {
   noPhantom:           { look: 'note',  tone: 'clipping', text: (t) => t.nodes.mic.noPhantom },
   encoderNeedsDigital: { look: 'caps',  tone: 'clipping', text: (t) => t.warnings.encoderNeedsDigital },
   dawNeedsDigital:     { look: 'note',  tone: 'clipping', text: (t) => t.warnings.dawNeedsDigital },
+  // (An amp's own face shows it by its switch and dark light: this is for a card that says it in words)
+  switchedOff:         { look: 'note',  tone: 'hot',      text: (t) => t.warnings.switchedOff },
 }
 
 /**

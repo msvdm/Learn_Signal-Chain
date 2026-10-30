@@ -62,9 +62,10 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   generator:         GeneratorNode,
   decoder:           InstrumentNode,
   'di-box':          DIBoxNode,
-  'guitar-amp':      atBeginner(BeginnerInput, GuitarAmpNode),
+  // Both amps: the same picture at every level, the power switch working at Beginner too (D27)
+  'guitar-amp':      GuitarAmpNode,
   gain:              GainNode,
-  amp:               atBeginner(BeginnerDevice, AmpNode),
+  amp:               AmpNode,
   fader:             FaderNode,
   'noise-gate':      NoiseGateNode,
   limiter:           LimiterNode,

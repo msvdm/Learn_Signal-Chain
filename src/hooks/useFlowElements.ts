@@ -3,7 +3,7 @@ import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
 import { graphOf, outputKey } from '../graph/graph'
-import { drawnPorts, outputKind } from '../graph/queries'
+import { ampSplit, drawnPorts, otherAmpInput, outputKind } from '../graph/queries'
 import { isUsbReturn, isUsbWire } from '../graph/usbLink'
 import { wireFlows } from '../graph/wireFlow'
 import type { WireFlow } from '../graph/wireFlow'
@@ -13,8 +13,9 @@ import { wireLook } from '../utils/wireLook'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { ComplexityLevel } from '../data/levels'
 import type { NodePort } from '../data/nodeRegistry'
+import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { healthOf, levelOf, outDomainOf } from '../signal/engine'
-import { nodeDims, recordMeasuredSize, wireRoute } from '../utils/layoutHelpers'
+import { PORT_GAP, nodeDims, recordMeasuredSize, wireRoute } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
 import { routeCrossesCards } from '../utils/wireValidation'
 import { chainOfEdge } from '../graph/chainColors'
@@ -24,6 +25,15 @@ import { keepSame } from '../utils/sameShape'
 
 // Wire width in overview (normal: 3), so wires stay visible when the whole chain fits on screen
 const OVERVIEW_WIRE_WIDTH = 8
+
+/** An Amplifier's input's line (its row) */
+const ampRow = (portId: string) => NODE_REGISTRY.amp.inputs.find((p) => p.id === portId)?.row ?? 0
+
+/** One stereo wire into an Amplifier (D27): how far below the input it is plugged into its other input is (px; above: less than 0) — it is drawn split into both */
+function ampSplitDy(edge: SignalEdge, graph: { nodes: SignalNode[]; edges: SignalEdge[] }): number | undefined {
+  if (ampSplit(edge.target, graph)?.id !== edge.id) return undefined
+  return (ampRow(otherAmpInput(edge.targetHandle)) - ampRow(edge.targetHandle)) * PORT_GAP
+}
 
 /** A wire's colour by where its sound goes (D24) */
 const FLOW_COLOR: Record<WireFlow, string> = {
@@ -163,6 +173,7 @@ export function useFlowElements() {
         hum: humDb === undefined ? undefined : humStrength(humDb),
         twoWay: usb,
         still: reach !== null && !reach.flowing.has(edge.id),
+        split: ampSplitDy(edge, graph),
       }
       return {
         id:           edge.id,

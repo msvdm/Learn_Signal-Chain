@@ -25,7 +25,15 @@ export interface ChainEdgeData extends Record<string, unknown> {
   twoWay?: boolean
   /** No flow: at Beginner its sound reaches no end point that plays it (D20) — a plain line */
   still?: boolean
+  /**
+   * One stereo wire into an Amplifier (D27): split just before its inputs, one line into each — into
+   * the input it is plugged into and the other one, this far below it (px; above: less than 0)
+   */
+  split?: number
 }
+
+/** How far before an Amplifier's inputs a stereo wire splits (px; zoomed out twice that) */
+const FORK_DX = 26
 
 /** The point halfway along a route of straight runs. */
 function halfway(route: Pt[]): Pt {
@@ -68,10 +76,15 @@ export function ChainEdge({
   const twin        = (d.stereo ?? false) && !routingWarn
 
   // Build the path using the same algorithm as the live wire preview: out of its output's side and
-  // into its input's (a flipped card's ports face another way — portFacing)
-  const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }]
+  // into its input's (a flipped card's ports face another way — portFacing). Split into an
+  // Amplifier's two inputs, it ends at the fork, halfway between them
+  const fork: Pt | null = d.split === undefined ? null
+    : { x: targetX - FORK_DX * (thick ? 2 : 1), y: targetY + d.split / 2 }
+  const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, fork ?? { x: targetX, y: targetY }]
   const ends: RouteEnds = { from: sourcePosition as Facing, to: targetPosition as Facing }
   const edgePath = buildWirePath(points, ends)
+  // From the fork one line into each input: its left side into A, its right into B
+  const branches = fork && `M${fork.x} ${fork.y}V${targetY}H${targetX}M${fork.x} ${fork.y}V${targetY + d.split!}H${targetX}`
   const digital  = d.look === 'digital'
 
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
@@ -117,6 +130,13 @@ export function ChainEdge({
           className={flow}
           style={{ stroke: 'var(--lsc-canvas)', strokeWidth: (width * 2) / 3, ...dash, opacity: style?.opacity, transition: style?.transition, pointerEvents: 'none' }}
         />
+      )}
+      {/* Split into an Amplifier's inputs: a dot at the fork, a single line into each */}
+      {fork && branches && (
+        <>
+          <path d={branches} fill="none" className={flow} style={{ ...style, ...dash, pointerEvents: 'none' }} />
+          <circle cx={fork.x} cy={fork.y} r={width * 1.3} style={{ fill: style?.stroke, opacity: style?.opacity, transition: style?.transition }} />
+        </>
       )}
       {/* Both ways: two arrows in a ring halfway along */}
       {mid && (

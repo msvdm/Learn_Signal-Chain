@@ -110,9 +110,9 @@ export type NodeTypeDef = {
   bus?: 'mix' | 'matrix' | 'pfl'
   /**
    * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
-   * separately: the Graphic EQ and the Amplifier (a two-channel amp) for any stereo wire (`true`;
-   * fed one channel they stay single-channel); the Fader (Main Fader) and the Limiter only for a
-   * bus's mix (`'mix'`: a stereo channel through them stays one wire).
+   * separately: the Graphic EQ for any stereo wire (`true`; fed one channel it stays single-channel),
+   * the Amplifier too (its outputs are always L and R — D27); the Fader (Main Fader) and the Limiter
+   * only for a bus's mix (`'mix'`: a stereo channel through them stays one wire).
    */
   splits?: true | 'mix'
   /**
@@ -192,6 +192,11 @@ export const DI_DIRECT_PORT = 'direct'
  * the same level whatever its Volume (signal/gains.ts AMP_DI_DB, D26).
  */
 export const AMP_DI_PORT = 'di-out'
+
+/**
+ * An Amplifier's input B (its input A is 'in'): a mono wire here plays on channel B, out of R (D27).
+ */
+export const AMP_B_PORT = 'in-b'
 
 /**
  * Sound in the air — a Vocal's, a Drum Kit's, an Acoustic Instrument's, a Guitar Amp's: a wire of waves
@@ -393,15 +398,24 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Fed a guitar (instrument level), it plays it out loud: its Sound reaches only a microphone.
     // Its DI Out sends it to the desk at mic level, on the first port line (D26)
     category: 'processor', inputs: IN, stereo: 'never',
-    outputs: [SOUND_OUT[0], { id: AMP_DI_PORT, row: 0, label: 'diOut' }],
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
-    // Its Volume knob goes to 11 (signal/gains.ts guitarAmpGainDb); Ground Lift on its DI Out (D26)
-    defaultParams: { volume: 5, groundLift: false },
+    // (Its DI Out's name is printed on its panel — GuitarAmpNode)
+    outputs: [SOUND_OUT[0], { id: AMP_DI_PORT, row: 0 }],
+    // Drawn as a combo amp, no card (GuitarAmpNode): its usual size, for drop previews
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 352, h: 419 },
+    // Its Volume knob goes to 11 (signal/gains.ts guitarAmpGainDb); Ground Lift on its DI Out (D26);
+    // its power switch (D27: off, it sends nothing — not its DI Out either)
+    defaultParams: { volume: 5, groundLift: false, on: true },
   },
   amp: {
-    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: EVERY_LEVEL, bypass: false, minSize: { w: 412, h: 361 }, splits: true,
-    defaultParams: { gainDb: 0 },
+    // A two-channel power amp in a rack (D27): input A ('in') feeds output L, input B feeds R, each
+    // channel its own Volume. A mono wire plays on the channel it is plugged into; one stereo wire
+    // goes into both (its left side into A, its right into B — drawn split at the inputs). Its
+    // outputs are always L and R, on the inputs' lines. Drawn as the rack, no card (AmpNode)
+    category: 'processor', stereo: 'follow',
+    inputs: [{ id: 'in', row: 0 }, { id: AMP_B_PORT, row: 2 }],
+    outputs: [{ id: 'out-l', row: 0 }, { id: 'out-r', row: 2 }],
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 372, h: 230 }, splits: true,
+    defaultParams: { gainDb: 0, on: true },
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',

@@ -205,7 +205,11 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       if (!feed) continue
       // A Matrix Bus's send knob
       const sent: Feed = u.sendDb === 0 ? feed : { ...gain(u.sendDb, feed), kind: feed.kind }
-      if (channels === 1 && sent.channels === 2) {
+      if (u.channel) {
+        // An Amplifier's input (D27): one channel (a stereo wire folded in), on its own side
+        const one = sent.channels === 2 ? gain(20 * Math.log10(2), sent, 1) : sent
+        all.push(channels === 1 ? one : u.channel === 'l' ? twoSides(one, silence(1)) : twoSides(silence(1), one))
+      } else if (channels === 1 && sent.channels === 2) {
         // Folded into one: L + R (the speakers' down-mix is half of that)
         all.push(gain(20 * Math.log10(2), sent, 1))
       } else if (channels === 2 && (sent.kind === 'left' || sent.kind === 'right')) {
@@ -223,7 +227,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
 
   /** What arrives at a card is the one wire before it as it is: measured there already. */
   const sameAsWire = (card: CardPlan, channels: 1 | 2) => {
-    if (card.used.length !== 1 || card.used[0].sendDb !== 0) return false
+    if (card.used.length !== 1 || card.used[0].sendDb !== 0 || card.used[0].channel) return false
     const feed = wires.get(card.used[0].key)
     return !feed || (feed.channels === channels && (channels === 1 || feed.kind === 'stereo'))
   }

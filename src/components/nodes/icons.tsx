@@ -65,6 +65,26 @@ export function GuitarAmpIcon({ size = 24 }: { size?: number }) {
   )
 }
 
+/**
+ * A power amplifier (the Amplifier): a wide box, two knobs at its left, a display beside them and a
+ * small light at the bottom right.
+ */
+export function AmpIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="6" width="22" height="12" rx="2" />
+      <g strokeWidth="1.6">
+        <circle cx="5.6" cy="12" r="2.4" />
+        <path d="M5.6 12L4.3 10.7" />
+        <circle cx="11.2" cy="12" r="2.4" />
+        <path d="M11.2 12L12.5 10.7" />
+        <rect x="15.2" y="8.6" width="5.4" height="3.8" rx="0.7" />
+      </g>
+      <path d="M19.8 15.4h.01" strokeWidth="2.4" />
+    </svg>
+  )
+}
+
 const GRILLE = Array.from({ length: 15 }, (_, i) => {
   const x = i * 2 - 9
   return `M${x} 21L${x + 13} 8M${x + 13} 21L${x} 8`

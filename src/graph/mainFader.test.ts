@@ -64,6 +64,28 @@ describe('a Limiter after a stereo bus', () => {
   })
 })
 
+// An Amplifier (D27) on a bus's L takes the whole mix — one stereo wire, split into both its inputs —
+// and both speakers move onto its L and R; its outputs are always L and R
+describe('an Amplifier after a stereo bus', () => {
+  const line = node('line', 'keyboard')
+  const bus  = node('bus', 'master-bus')
+  const amp  = node('amp', 'amp')
+
+  it("wired to the bus's L: the whole mix in, both speakers on its L and R", () => {
+    const g = settle([line, bus, amp, node('spkL', 'speaker'), node('spkR', 'speaker')], [
+      wire('line', 'bus'), wire('bus', 'spkL', 'out-l'), wire('bus', 'spkR', 'out-r'), wire('bus', 'amp', 'out-l'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'amp.out-l → spkL', 'amp.out-r → spkR', 'bus.mix → amp'])
+    expect(g.outputs('amp')).toEqual(['out-l', 'out-r'])
+  })
+
+  it('fed one channel, its outputs are still L and R; in an older file its one output is its L', () => {
+    const g = settle([node('gen', 'generator'), amp, node('spk', 'speaker')], [wire('gen', 'amp'), wire('amp', 'spk')])
+    expect(g.wires).toEqual(['gen.out → amp', 'amp.out-l → spk'])
+    expect(g.outputs('amp')).toEqual(['out-l', 'out-r'])
+  })
+})
+
 // What goes out to listeners is the whole mix: a bus's L or R into Stream / Broadcast or an Encoder
 // is its send — one stereo wire, after the fader — as into a Matrix Bus (the user's call, 2026-10-11)
 describe('Stream / Broadcast and an Encoder take the whole mix', () => {

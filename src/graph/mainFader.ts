@@ -131,7 +131,9 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
         if (!src || !canSplit(src.typeKey)) return e
         const splits = splitsStereo(src, graph)
         let handle   = e.sourceHandle
-        if (!splits && (isSideOutput(handle) || handle === MIX_PORT)) handle = 'out'
+        // An Amplifier's outputs are always L and R (D27): an older file's one output is its L
+        if (src.typeKey === 'amp') handle = handle === 'out' ? 'out-l' : handle
+        else if (!splits && (isSideOutput(handle) || handle === MIX_PORT)) handle = 'out'
         else if (splits && handle === 'out') handle = 'out-l'
         if (handle === e.sourceHandle) return e
         changed = tidied = true

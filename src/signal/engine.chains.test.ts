@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { EQBand, NodeParamValue } from '../data/nodeRegistry'
 import type { Expected } from '../../test/chains'
-import { S, VOICE, average, card, expectCards, expectDb, expectWire, heard, line, signalOf, voiceInto, wire } from '../../test/chains'
+import { S, VOICE, average, card, expectCards, expectDb, expectWire, heard, leaving, line, signalOf, voiceInto, wire } from '../../test/chains'
 
 
 // Reference chains: the level, health, domain and condition at every card. Every wire carries a
@@ -286,6 +286,61 @@ describe("a Guitar Amp's DI Out", () => {
     ])
     expect(result.hums.size).toBe(0)
   })
+
+  it('switched off (D27): nothing out of its Sound or its DI Out — not even the hum, Ground Lift or not', () => {
+    const result = ampDi({ on: false })
+    expect(result.stages.amp.condition).toBe('switchedOff')
+    expectWire(result, 'amp:sound', 'mono', S, S)
+    expectWire(result, 'amp:di-out', 'mono', S, S)
+    expect(result.wires.get('amp:di-out')!.l.noise).toBe(-Infinity)
+    expect(result.hums.size).toBe(0)
+  })
+})
+
+/**
+ * The Amplifier (D27): two channels, input A out of L and B out of R, each with its own Volume (B
+ * follows A until it is turned); one stereo wire goes into both; switched off it sends nothing.
+ */
+describe('the Amplifier: two channels, one stereo wire into both, a power switch', () => {
+  const result = signalOf([
+    line('a'), line('b', { levelDb: -20 }), card('keys', 'keyboard'),
+    card('amp', 'amp', { gainDb: -6 }), card('spkL', 'speaker'), card('spkR', 'speaker'),
+    card('amp2', 'amp', { gainDb: -6, gainDbR: 0 }), card('spk2L', 'speaker'), card('spk2R', 'speaker'),
+    card('off', 'amp', { on: false }), card('spkOff', 'speaker'),
+  ], [
+    // Two mono wires: each plays on its own channel
+    wire('a', 'amp'), wire('b', 'amp:in-b'), wire('amp:out-l', 'spkL'), wire('amp:out-r', 'spkR'),
+    // One stereo wire, plugged into B: its left side out of L, its right out of R
+    wire('keys', 'amp2:in-b'), wire('amp2:out-l', 'spk2L'), wire('amp2:out-r', 'spk2R'),
+    wire('keys', 'off'), wire('off:out-l', 'spkOff'),
+  ])
+  expectCards(result, {
+    a:      { out: -10, health: 'good' },
+    b:      { out: -20, health: 'good' },
+    keys:   { out: [-10, -10], health: 'good' },
+    // B's Volume follows A's (−6)
+    amp:    { in: [-10, -20], out: [-16, -26], health: 'good' },
+    spkL:   { in: -16, out: -16, health: 'good' },
+    spkR:   { in: -26, out: -26, health: 'good' },
+    amp2:   { in: [-10, -10], out: [-16, -10], health: 'good' },
+    spk2L:  { in: -16, out: -16, health: 'good' },
+    spk2R:  { in: -10, out: -10, health: 'good' },
+    off:    { in: [-10, -10], out: [S, S], health: 'too-quiet', condition: 'switchedOff' },
+    spkOff: { in: S, out: S, health: 'too-quiet' },
+  })
+
+  it('one mono wire leaves the other channel silent', () => {
+    const one = signalOf([line('a'), card('amp', 'amp'), card('spkL', 'speaker'), card('spkR', 'speaker')], [
+      wire('a', 'amp:in-b'), wire('amp:out-l', 'spkL'), wire('amp:out-r', 'spkR'),
+    ])
+    expectDb(one.stages.spkR.out.l.rms, -10)
+    expectDb(one.stages.spkL.out.l.rms, S)
+  })
+
+  it('switched off, not even its hiss', () => {
+    expect(leaving(result, 'off').noise).toBe(-Infinity)
+    expect(leaving(result, 'spkOff').noise).toBe(-Infinity)
+  })
 })
 
 describe('a hum through an ADC moves to the digital scale', () => {
@@ -395,7 +450,8 @@ describe('analog and digital in the wrong place', () => {
     adc2: { in: -28, out: S, health: 'too-quiet', domain: 'digital', inDomain: 'digital', condition: 'adcExpectsAnalog' },
     dac:  { in: -10, out: S, health: 'too-quiet', condition: 'dacExpectsDigital' },
     spk:  { in: -28, out: S, health: 'too-quiet', domain: 'digital', inDomain: 'digital', condition: 'digitalToSpeaker' },
-    amp:  { in: -28, out: S, health: 'too-quiet', domain: 'digital', inDomain: 'digital', condition: 'digitalToAmp' },
+    // (An Amplifier is two channels — D27: a mono wire on A arrives on its left only)
+    amp:  { in: [-28, S], out: [S, S], health: 'too-quiet', domain: 'digital', inDomain: 'digital', condition: 'digitalToAmp' },
     // −10 dBu and −28 dBFS arrive: a bus cannot add them up
     aux:  { in: -8.97, out: S, health: 'too-quiet', condition: 'domainMixedBus' },
   })
@@ -621,12 +677,12 @@ describe('speakers: a passive one needs an amplifier, an active one (or headphon
   ], [
     wire('line', 'passive'), wire('line', 'knob'), wire('knob', 'phones'), wire('line', 'phones3'),
     // The app draws an Amplifier only into a passive speaker (connectionRules); the other two wires
-    // come from one taking a bus's L / R over, or from an older file
-    wire('line', 'amp'), wire('amp', 'passive2'), wire('amp', 'active'), wire('amp', 'phones2'),
+    // come from one taking a bus's L / R over, or from an older file. Its input A plays out of L (D27)
+    wire('line', 'amp'), wire('amp:out-l', 'passive2'), wire('amp:out-l', 'active'), wire('amp:out-l', 'phones2'),
   ]), {
     line:     { out: -10, health: 'good' },
     passive:  { in: -10, out: S, health: 'too-quiet', condition: 'needsAmp' },
-    amp:      { in: -10, out: -16, health: 'good' },
+    amp:      { in: [-10, S], out: [-16, S], health: 'good' },
     passive2: { in: -16, out: -16, health: 'good' },
     // Speaker level, 40 dB over the line level it expects
     active:   { in: -16, out: 24, health: 'clipping', condition: 'blown' },

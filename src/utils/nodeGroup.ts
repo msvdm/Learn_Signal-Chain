@@ -151,7 +151,7 @@ export function cloneGroup(
     const source = { nodeId: ids.get(e.source)!, handleId: e.sourceHandle }
     const all    = [...graph.edges, ...edges]
     if (!target || !nodeAcceptsWire(target, source, all, allNodes, level) ||
-        !portAcceptsWire(target, e.targetHandle, all, source)) continue
+        !portAcceptsWire(target, e.targetHandle, all, source, allNodes)) continue
     edges.push(newEdge({
       source: source.nodeId, sourceHandle: e.sourceHandle,
       target: e.target, targetHandle: e.targetHandle,
