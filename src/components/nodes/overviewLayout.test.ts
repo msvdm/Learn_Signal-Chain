@@ -83,25 +83,25 @@ describe('overviewLayout', () => {
 })
 
 describe('fitNameRows (a face with meters at its sides)', () => {
-  it('two words: one on each row, even where one row would fit', () => {
+  it('a word on each row, even where one row would fit', () => {
     expect(fitNameRows('Noise Gate', 254, 243, 'sans', width)).toEqual({ fontSize: 88, lines: ['Noise', 'Gate'] })
   })
 
-  it('three words on two rows: broken where the font comes out largest', () => {
-    expect(fitNameRows('Analog to Digital', 254, 243, 'sans', width).lines).toEqual(['Analog to', 'Digital'])
+  it('three or four words: three or four rows (the Bulgarian Master and Aux Bus)', () => {
+    expect(fitNameRows('Главна смесителна шина', 190, 243, 'sans', width).lines).toEqual(['Главна', 'смесителна', 'шина'])
+    expect(fitNameRows('Допълнителна смесителна шина (Aux)', 190, 243, 'sans', width).lines)
+      .toEqual(['Допълнителна', 'смесителна', 'шина', '(Aux)'])
+  })
+
+  it('as big as the longest word allows, and the rows the height', () => {
+    // 'смесителна': 10 letters in 190 px; three rows of 1.1 in 243 px allow more
+    expect(fitNameRows('Главна смесителна шина', 190, 243, 'sans', width).fontSize).toBe(Math.floor((190 * 0.96) / (10 * 0.55)))
+    // Four rows in a low box: the height decides
+    expect(fitNameRows('Допълнителна смесителна шина (Aux)', 400, 100, 'sans', width).fontSize).toBe(Math.floor(100 / 4.4))
   })
 
   it('one word (Bulgarian Гейт): one row, never above the largest size', () => {
     expect(fitNameRows('Гейт', 254, 243, 'sans', width)).toEqual({ fontSize: 96, lines: ['Гейт'] })
     expect(fitNameRows('Гейт', 254, 243, 'sans', width, 70).fontSize).toBe(70)
-  })
-
-  it('up to four rows where allowed and larger (the Bulgarian Aux Bus); never more rows than words', () => {
-    const aux = 'Допълнителна смесителна шина (Aux)'
-    expect(fitNameRows(aux, 190, 243, 'sans', width).lines.length).toBe(2)
-    const four = fitNameRows(aux, 190, 243, 'sans', width, 96, 4)
-    expect(four.lines.length).toBeGreaterThan(2)
-    expect(four.fontSize).toBeGreaterThan(fitNameRows(aux, 190, 243, 'sans', width).fontSize)
-    expect(fitNameRows('Aux Bus', 190, 243, 'sans', width, 96, 4).lines).toEqual(['Aux', 'Bus'])
   })
 })

@@ -80,30 +80,18 @@ export interface OverviewLayout {
 }
 
 /**
- * The name on a face with meters at its sides (SidesFace): as big as it fits the box, broken at
- * its spaces onto two rows — up to `maxRows` where that gives a larger font (the Bulgarian Aux Bus's
- * four words) —, one row when it is one word. Of equal sizes, the fewer rows.
+ * The name on a face with meters at its sides (SidesFace): a word on each row — every name in
+ * one style, however many words ("Noise / Gate", "Главна / смесителна / шина") —, as big as the
+ * longest word and the rows fit the box.
  */
-export function fitNameRows(label: string, w: number, h: number, sans: string, width: TextWidth, maxSize = NAME_MAX, maxRows = 2): FitResult {
-  const words = label.split(' ')
-  const sizeOf = (lines: string[]) => Math.max(1, Math.floor(Math.min(
+export function fitNameRows(label: string, w: number, h: number, sans: string, width: TextWidth, maxSize = NAME_MAX): FitResult {
+  const lines = label.split(' ')
+  const fontSize = Math.max(1, Math.floor(Math.min(
     (w * 0.96) / Math.max(...lines.map((l) => width(l, sans, 600, -0.02))),
     h / (lines.length * 1.1),
     maxSize,
   )))
-  /** Every way to put the words on `rows` rows, in order. */
-  const splits = (from: number, rows: number): string[][] => rows === 1
-    ? [[words.slice(from).join(' ')]]
-    : words.slice(from + 1, words.length - rows + 2).flatMap((_, i) =>
-        splits(from + 1 + i, rows - 1).map((rest) => [words.slice(from, from + 1 + i).join(' '), ...rest]))
-  let best: FitResult = { fontSize: 0, lines: [label] }
-  for (let rows = Math.min(2, words.length); rows <= Math.min(maxRows, words.length); rows++) {
-    for (const lines of splits(0, rows)) {
-      const fontSize = sizeOf(lines)
-      if (fontSize > best.fontSize) best = { fontSize, lines }
-    }
-  }
-  return best
+  return { fontSize, lines }
 }
 
 /** The face of a card this big: the level block at most half of it, the name in the rest. */

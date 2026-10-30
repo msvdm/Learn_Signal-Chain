@@ -22,13 +22,29 @@ import { nodeName } from '../../utils/nodeName'
 
 /**
  * Master Bus and Matrix Bus (always stereo), Aux Bus (mono or stereo), PFL Bus (stereo on one wire).
+ * The Master, Aux and PFL Bus are only their face (SidesFace), at every zoom — the Aux Bus with its
+ * Mono | Stereo switch on it (D31); the Matrix Bus's card holds its send knobs.
  * One input that accepts any number of wires; they are added together.
  * Master / Matrix / stereo Aux send the mix out on two wires, Left and Right; a mono Aux and the PFL on one.
  * The Matrix Bus takes finished mixes only and shows one send knob per bus feeding it.
  */
 const NO_GRAPH: GraphView = { nodes: [], edges: [] }
 
-export function MasterBusNode({ id, type }: CardProps) {
+export function MasterBusNode(props: CardProps) {
+  return props.type === 'matrix-bus' ? <MatrixBusCard {...props} /> : <BusFace {...props} />
+}
+
+/**
+ * The Master, Aux and PFL Bus: their face alone, at every zoom — the Aux Bus with its Mono | Stereo
+ * switch (the user's calls, D31: "They tell us nothing"); the Matrix Bus keeps its send knobs.
+ */
+function BusFace({ id, type }: CardProps) {
+  const typeKey = type as TypeKey
+  return <NodeWrapper nodeId={id} typeKey={typeKey} label={useNodeName(id, typeKey)} overviewSides="output" faceOnly />
+}
+
+/** The Matrix Bus's card: one send knob per bus feeding it. */
+function MatrixBusCard({ id, type }: CardProps) {
   const typeKey  = type as TypeKey
   const isMatrix = typeKey === 'matrix-bus'
 
@@ -38,7 +54,7 @@ export function MasterBusNode({ id, type }: CardProps) {
   const { nodes, edges: allEdges } = useSignalStore(useShallow((s): GraphView => isMatrix ? { nodes: s.nodes, edges: s.edges } : NO_GRAPH))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
-  const { t, fmt }    = useTranslation()
+  const { t }         = useTranslation()
   const p        = useParams(id, typeKey)
   // Analog and digital signals arriving at once (domainMixedBus)
   const condition = result?.condition
@@ -67,7 +83,7 @@ export function MasterBusNode({ id, type }: CardProps) {
       {/* The mix leaving it, on its right; what feeds it on the left */}
       <MeterSides nodeId={id} input={false}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {isMatrix && (n > 0 ? (
+        {n > 0 ? (
           // One row per bus plugged in: its name, and its send knob
           <div className="nodrag nopan" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {sends.map(({ key, wiresIn }) => {
@@ -104,14 +120,6 @@ export function MasterBusNode({ id, type }: CardProps) {
         ) : (
           <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)', maxWidth: 200 }}>
             {tm.empty}
-          </span>
-        ))}
-
-        {!isMatrix && (
-          <span className="lsc-wrap-text" style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--lsc-fg-muted)' }}>
-            {n > 0
-              ? n === 1 ? t.nodes['aux-bus'].channelsOne : fmt(t.nodes['aux-bus'].channels, { n: String(n) })
-              : t.nodes['aux-bus'].noChannels}
           </span>
         )}
 

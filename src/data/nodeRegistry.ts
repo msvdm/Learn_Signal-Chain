@@ -268,8 +268,9 @@ const SIDES: NodePort[] = [
 ]
 // The cards' sizes (minSize): what they were with the readings under them at Intermediate, now the
 // same at every level, their content grown into the room (2026-10-08). The mixing buses are big
-// enough that their long names stay big in overview.
-const BUS_SIZE: Size  = { w: 398, h: 361 }
+// enough that their long names stay big in overview — wide enough for the Peak, RMS and Noise beside
+// their meter (D31).
+const BUS_SIZE: Size  = { w: 618, h: 361 }
 const FACE_SIZE: Size = { w: 320, h: 328 }
 // The Keyboard's
 const SOURCE_SIZE: Size = { w: 320, h: 350 }
@@ -523,7 +524,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // Its input takes up to 8 wires, one port each; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
     category: 'merge', inputs: MANY_IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 618, h: 397 },
     defaultParams: { faderDb: 0, stereo: false },
   },
   'matrix-bus': {
@@ -541,7 +542,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // level (no Pan); one stereo output and no fader: the Gain before the headphones sets how loud.
     // Never a Main Fader's or a Matrix Bus's
     category: 'merge', inputs: MANY_IN, outputs: OUT, stereo: 'always', bus: 'pfl',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 618, h: 397 },
     defaultParams: {},
   },
   speaker: {

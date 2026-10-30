@@ -170,7 +170,6 @@
     },
     "graphic-eq": {
       "label": "Graphic equalizer",
-      "hint": "Drag a slider up to boost that frequency, down to cut it. Double-click = 0 dB.",
       "flat": "Flat"
     },
     "comp": {
@@ -297,10 +296,7 @@
       }
     },
     "aux-bus": {
-      "label": "Aux Bus",
-      "channels": "{n} connections in",
-      "channelsOne": "1 connection in",
-      "noChannels": "Nothing connected yet"
+      "label": "Aux Bus"
     },
     "matrix-bus": {
       "label": "Matrix Bus",

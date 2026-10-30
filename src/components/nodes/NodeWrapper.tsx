@@ -11,6 +11,7 @@ import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
 import { SidesFace } from './SidesFace'
+import { StereoToggle } from './StereoToggle'
 import { SPL_DB } from '../../signal/levels'
 import { cssVar, textWidth } from '../../utils/fitText'
 
@@ -53,6 +54,8 @@ interface NodeWrapperProps {
   overviewBare?: boolean
   /** Zoomed out: its In and Out meters at its sides, its name between them (SidesFace, D31) — 'output': its Output alone (a bus) */
   overviewSides?: boolean | 'output'
+  /** Its zoomed-out face (SidesFace) at every zoom, its Mono | Stereo switch on it — no header, no body (the Aux Bus, D31) */
+  faceOnly?: boolean
   /** Overview: false = its name alone, no level (the HPF, the converters: the level after it shows on the next card) */
   showLevel?: boolean
 }
@@ -75,6 +78,7 @@ export function NodeWrapper({
   overviewArt,
   overviewBare = false,
   overviewSides = false,
+  faceOnly = false,
   showLevel = true,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
@@ -92,6 +96,27 @@ export function NodeWrapper({
 
   // In overview the controls stay in place, invisible, so the card keeps its exact size
   const hideInOverview: CSSProperties = overview ? { visibility: 'hidden', opacity: 0 } : {}
+
+  const stereoSwitch = (big: boolean) => node && (
+    <StereoToggle
+      stereo={isNodeStereo(node)}
+      onChange={(on) => setNodeStereo(nodeId, on)}
+      labels={[t.stereo.mono, t.stereo.stereo]}
+      big={big}
+    />
+  )
+
+  // Its face alone, at every zoom: On / Off is in its right-click menu, the face shows Bypassed
+  if (faceOnly) {
+    return (
+      <CardFrame nodeId={nodeId} label={label} chrome={chrome} size={{ w: minSize.w, h: cardHeight(typeKey, ports) }}>
+        <SidesFace
+          nodeId={nodeId} typeKey={typeKey} label={label} input={overviewSides !== 'output'} shown bypassed={isBypassed}
+          top={canStereo ? stereoSwitch(true) : undefined}
+        />
+      </CardFrame>
+    )
+  }
 
   return (
     <CardFrame
@@ -169,11 +194,7 @@ export function NodeWrapper({
       {/* Mono | Stereo switch — not dimmed by bypass, it changes the wiring */}
       {canStereo && node && (
         <div className="lsc-fade" style={{ padding: `10px ${BODY_PAD_X}px 0`, ...hideInOverview }}>
-          <StereoToggle
-            stereo={isNodeStereo(node)}
-            onChange={(on) => setNodeStereo(nodeId, on)}
-            labels={[t.stereo.mono, t.stereo.stereo]}
-          />
+          {stereoSwitch(false)}
         </div>
       )}
 
@@ -210,47 +231,6 @@ export function NodeWrapper({
         />
       )}
     </CardFrame>
-  )
-}
-
-/** Two-part switch: Mono | Stereo. */
-function StereoToggle({ stereo, onChange, labels }: {
-  stereo: boolean
-  onChange: (stereo: boolean) => void
-  labels: [string, string]
-}) {
-  return (
-    <div
-      className="nodrag nopan"
-      role="radiogroup"
-      style={{
-        display: 'flex', padding: 2, gap: 2,
-        borderRadius: 9999, background: 'var(--lsc-sunken)',
-        border: '1px solid var(--lsc-border-soft)',
-      }}
-    >
-      {labels.map((text, i) => {
-        const active = (i === 1) === stereo
-        return (
-          <button
-            key={text}
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(i === 1)}
-            style={{
-              flex: 1, padding: '2px 10px', borderRadius: 9999, border: 'none',
-              fontSize: 11, fontWeight: 700, lineHeight: 1.5, letterSpacing: '0.02em',
-              background: active ? 'var(--lsc-accent)' : 'transparent',
-              color: active ? '#fff' : 'var(--lsc-fg-muted)',
-              cursor: active ? 'default' : 'pointer',
-              transition: 'background 0.1s, color 0.1s',
-            }}
-          >
-            {text}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 

@@ -51,8 +51,6 @@ export interface NodeLook {
   headerSize?: number
   /** Overview (zoomed out): the biggest its name may grow, when the usual 96px looks too big */
   nameMax?: number
-  /** Overview with its meters at its sides (SidesFace, D31): the most rows its name may take (2 when unset) */
-  nameRows?: number
 }
 
 /** Every type's look, in palette order: by what each does, in the order a signal meets them (two columns, row by row). */
@@ -93,8 +91,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   relay:             { icon: RelayIcon,         group: 'routing' },
   pan:               { icon: MoveHorizontal,    group: 'routing' },
   'master-bus':      { icon: Merge,             group: 'routing' },
-  // Bulgarian: Допълнителна смесителна шина (Aux) — on up to four rows (the user's call, D31)
-  'aux-bus':         { icon: Merge,             group: 'routing', nameRows: 4 },
+  'aux-bus':         { icon: Merge,             group: 'routing' },
   'matrix-bus':      { icon: Merge,             group: 'routing' },
   'pfl-bus':         { icon: Ear,               group: 'routing' },
   // Record and play back: the box between the desk and the computer, and the computer's recording program

@@ -93,15 +93,15 @@ export function GraphicEQNode({ id }: CardProps) {
     >
       <MeterSides nodeId={id}>
         <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* The band being touched, or how to use it — fixed height, so the card never resizes */}
+          {/* The band being touched (nothing while none is) — fixed height, so the card never resizes */}
           <div style={{ height: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span
               style={{
                 flex: 1, minWidth: 0, fontSize: 12, lineHeight: '16px', maxHeight: 32, overflow: 'hidden',
-                color: active === null ? 'var(--lsc-fg-dim)' : 'var(--lsc-fg)',
+                color: 'var(--lsc-fg)',
               }}
             >
-              {active === null ? t.nodes['graphic-eq'].hint : (
+              {active !== null && (
                 <>
                   <span style={{ fontWeight: 700 }}>{geqLongLabel(GEQ_CENTERS[active.band])}</span>
                   {stereo && <span style={{ fontWeight: 700, marginLeft: 10, color: 'var(--lsc-fg-muted)' }}>{active.side.toUpperCase()}</span>}
