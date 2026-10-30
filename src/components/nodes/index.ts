@@ -14,6 +14,7 @@ import { MasterBusNode }      from './MasterBusNode'
 import { AmpNode }            from './AmpNode'
 import { SpeakerNode }        from './SpeakerNode'
 import { ActiveSpeakerNode }  from './ActiveSpeakerNode'
+import { HeadphonesNode }     from './HeadphonesNode'
 import { GuitarAmpNode }      from './GuitarAmpNode'
 import { SwitchNode }         from './SwitchNode'
 import { CompressorNode }     from './CompressorNode'
@@ -83,10 +84,11 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   relay:             RelayNode,
   pan:               PanNode,
   'graphic-eq':      GraphicEQNode,
-  speaker:           atBeginner(BeginnerOutput, SpeakerNode),
-  'active-speaker':  atBeginner(BeginnerOutput, ActiveSpeakerNode),
-  'studio-monitor':  atBeginner(BeginnerOutput, ActiveSpeakerNode),
-  headphones:        atBeginner(BeginnerOutput, ActiveSpeakerNode),
+  // No card around them, the same at every level (D28): at Beginner they say what they get
+  speaker:           SpeakerNode,
+  'active-speaker':  ActiveSpeakerNode,
+  'studio-monitor':  ActiveSpeakerNode,
+  headphones:        HeadphonesNode,
   recorder:          atBeginner(BeginnerOutput, RecorderNode),
   broadcast:         atBeginner(BeginnerOutput, RecorderNode),
   interface:         atBeginner(BeginnerInterface, InterfaceNode),

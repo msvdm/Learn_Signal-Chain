@@ -6,7 +6,7 @@ import { EdgeTags, PortStack, WireTargetBadge } from './NodeChrome'
 /**
  * What every card has, whatever it shows (NodeWrapper: a full card; FaceCard: only its face; the
  * Relay Switch its own): its box — border, background, the selection ring and glow, at least `size`
- * —, the chain colour stripe, its ports, the tags on its bottom edge, and while a wire is being
+ * —, its ports, the tags on its bottom edge, and while a wire is being
  * drawn the badge saying it can take it. Zoomed out a `bare` card has no box: only a selection
  * still draws its ring.
  */
@@ -20,7 +20,7 @@ export function CardFrame({ nodeId, label, chrome, size, bare = false, notConnec
   notConnectedTag?: boolean
   children: ReactNode
 }) {
-  const { node, ports, chains, selected, overview, wireTarget } = chrome
+  const { node, ports, selected, overview, wireTarget } = chrome
   const isBypassed  = node?.bypassed ?? false
   const borderColor = bare && !selected ? 'transparent' : isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-card-edge)'
   // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
@@ -50,20 +50,6 @@ export function CardFrame({ nodeId, label, chrome, size, bare = false, notConnec
       }}
     >
       {wireTarget && <WireTargetBadge label={label} />}
-
-      {/* Chain colour stripe — one segment per source feeding this card */}
-      {chains.length > 0 && !bare && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: 0, left: 10, right: 10, height: 3,
-            display: 'flex', borderRadius: '0 0 3px 3px', overflow: 'hidden',
-            pointerEvents: 'none',
-          }}
-        >
-          {chains.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
-        </div>
-      )}
 
       <PortStack nodeId={nodeId} ports={ports} />
       <EdgeTags nodeId={nodeId} overview={overview} notConnected={notConnectedTag} />

@@ -7,8 +7,15 @@ import { LEVELS } from './levels'
 /** A connection point. */
 export type NodePort = {
   id: string
-  /** Takes any number of wires, added together (an Audio Interface's line input; a bus's input takes them anyway) */
+  /**
+   * Takes several wires, added together (a bus's input, the Mixer's, an Audio Interface's line
+   * input …): drawn as one port per wire and an empty one for the next, up to MAX_SLOTS (graph/slots.ts)
+   */
   many?: true
+  /** Port lines its extra ports leave free (the Interface's playback line, 1) */
+  skipRows?: readonly number[]
+  /** Which of a `many` input's ports it is (graph/slots.ts: 0 is the input's own id) */
+  slot?: number
   /**
    * Its port line (0 = the first, PORT_TOP; one PORT_GAP apart), when not its place in the
    * stack: the Relay Switch's inputs on lines 0 and 2, its output centred between them on 1
@@ -154,7 +161,6 @@ export type SignalNode = {
   params: Record<string, NodeParamValue>
   bypassed: boolean
   label?: string
-  color?: string
 }
 
 // Graph edge — connects an output port of one node to an input port of another.
@@ -164,6 +170,9 @@ export type SignalEdge = {
   sourceHandle: string // port id, e.g. 'out' | 'out-l' | 'mix'
   target: string
   targetHandle: string // port id, e.g. 'in' | 'in-a'
+  // Into an input that takes several wires (`many`): which of its ports it is drawn on, 0 … — the
+  // signal is the same on each (graph/slots.ts)
+  slot?: number
   // Optional intermediate corner points in flow coordinates.
   // When present, the wire follows these waypoints instead of a plain two-point elbow.
   waypoints?: { x: number; y: number }[]
@@ -238,6 +247,8 @@ export function isGeneratorSound(kind: string): kind is GeneratorSound {
 }
 
 const IN: NodePort[]    = [{ id: 'in' }]
+// A bus's input: several wires, one port each (graph/slots.ts)
+const MANY_IN: NodePort[] = [{ id: 'in', many: true }]
 const OUT: NodePort[]   = [{ id: 'out' }]
 const SIDES: NodePort[] = [
   { id: 'out-l' },
@@ -253,6 +264,11 @@ const SOURCE_SIZE: Size = { w: 320, h: 350 }
 // The Microphone's: half a face's each way (the user's call, 2026-10-11) — a small thing on a stand
 const MIC_SIZE: Size = { w: 160, h: 164 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
+// The speakers' and the Headphones' with no card around them (D28: BareOutput), at Intermediate
+// (taller with a note under the icon) — the Active Speaker's and Studio Monitor's with their Volume
+// knob beside the icon
+const BARE_OUTPUT_SIZE: Size = { w: 292, h: 412 }
+const BARE_VOLUME_SIZE: Size = { w: 458, h: 412 }
 
 // The levels whose palette shows a type (`levels`)
 const EVERY_LEVEL: readonly ComplexityLevel[]       = LEVELS
@@ -319,12 +335,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // 48V phantom power: a bare button like the Pad (D21). It passes the signal on unchanged; a
     // condenser microphone before it, ahead of the Preamp, gets its power (graph/queries.ts phantomPowered)
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 197, h: 188 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 197, h: 178 },
     defaultParams: { on: true },
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 217, h: 285 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 217, h: 275 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
@@ -332,13 +348,13 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   hpf: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     // Below Advanced one button at 80 Hz (its On / Off: bypass); zoomed out that button at Advanced too
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 }, bareSize: { w: 196, h: 216 }, bareZoomedOut: true,
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 320, h: 268 }, bareSize: { w: 196, h: 206 }, bareZoomedOut: true,
     defaultParams: { cutoffHz: 80 },
   },
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     // Below Advanced three bare knobs, Low · Mid · High (see initialParams)
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 603, h: 318 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 603, h: 308 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -356,7 +372,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, bareSize: { w: 273, h: 325 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, bareSize: { w: 273, h: 315 },
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
@@ -380,7 +396,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   pad: {
     // A bare button like the On Off Switch (D11), with its name under it
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 188 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 178 },
     defaultParams: { engaged: true },
   },
   'di-box': {
@@ -401,7 +417,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // (Its DI Out's name is printed on its panel — GuitarAmpNode)
     outputs: [SOUND_OUT[0], { id: AMP_DI_PORT, row: 0 }],
     // Drawn as a combo amp, no card (GuitarAmpNode): its usual size, for drop previews
-    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 352, h: 419 },
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 352, h: 413 },
     // Its Volume knob goes to 11 (signal/gains.ts guitarAmpGainDb); Ground Lift on its DI Out (D26);
     // its power switch (D27: off, it sends nothing — not its DI Out either)
     defaultParams: { volume: 5, groundLift: false, on: true },
@@ -415,17 +431,17 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in', row: 0 }, { id: AMP_B_PORT, row: 4 }],
     outputs: [{ id: 'out-l', row: 0 }, { id: 'out-r', row: 4 }],
-    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 348 }, splits: true,
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 342 }, splits: true,
     defaultParams: { gainDb: 0, on: true },
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 198, h: 582 },
+    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 198, h: 572 },
     defaultParams: { faderDb: 0 },
   },
   switch: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 167 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 161 },
     defaultParams: { on: true },
   },
   relay: {
@@ -444,7 +460,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   pan: {
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 232, h: 308 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 232, h: 298 },
     defaultParams: { panPosition: 50 },
   },
   adc: {
@@ -473,16 +489,16 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { format: 'mp3' },
   },
   'master-bus': {
-    // Always stereo. The input accepts any number of wires; they are added together.
+    // Always stereo. Its input takes up to 8 wires, one port each; they are added together.
     // The mix leaves on two wires: Left and Right.
-    category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'mix',
+    category: 'merge', inputs: MANY_IN, outputs: SIDES, stereo: 'always', bus: 'mix',
     levels: FROM_INTERMEDIATE, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
   'aux-bus': {
-    // The input accepts any number of wires; they are added together.
+    // Its input takes up to 8 wires, one port each; they are added together.
     // Mono: one output. Stereo: Left and Right outputs.
-    category: 'merge', inputs: IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
+    category: 'merge', inputs: MANY_IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
     levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
     defaultParams: { faderDb: 0, stereo: false },
   },
@@ -491,7 +507,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // through its Matrix send (one stereo wire), a mono Aux Bus through its output or its fader.
     // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
     // A mono bus lands on both sides at full level.
-    category: 'merge', inputs: IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
+    category: 'merge', inputs: MANY_IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
     levels: ADVANCED_ONLY, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
@@ -500,34 +516,37 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // button is down (a Switch wired into it). Always stereo, a mono wire on both sides at full
     // level (no Pan); one stereo output and no fader: the Gain before the headphones sets how loud.
     // Never a Main Fader's or a Matrix Bus's
-    category: 'merge', inputs: IN, outputs: OUT, stereo: 'always', bus: 'pfl',
+    category: 'merge', inputs: MANY_IN, outputs: OUT, stereo: 'always', bus: 'pfl',
     levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 398, h: 397 },
     defaultParams: {},
   },
   speaker: {
-    // Passive speaker — requires a power amplifier (amp node) upstream to produce sound
+    // Passive speaker — requires a power amplifier (amp node) upstream to produce sound. No card
+    // around it (D28): its size is its drawing's (SpeakerNode)
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, freeSize: BARE_OUTPUT_SIZE,
     defaultParams: { outputTrimDb: 0 },
   },
   'active-speaker': {
-    // Active/powered speaker — has built-in amplification, works directly from line level
+    // Active/powered speaker — has built-in amplification, works directly from line level. No card
+    // around it (D28): its size is its drawing's (ActiveSpeakerNode)
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, freeSize: BARE_VOLUME_SIZE,
     defaultParams: { volumeDb: 0 },
   },
   'studio-monitor': {
     // Works as an Active Speaker does (amplifier built in): the speakers a studio mixes on. Advanced
     // has the Active Speaker for both
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
+    levels: ['beginner', 'intermediate'], bypass: false, freeSize: BARE_VOLUME_SIZE,
     defaultParams: { volumeDb: 0 },
   },
   headphones: {
     // There to show where a listener plugs in: no knob of their own — a Gain right before them sets
-    // how loud (the desk's Phones knob); fed by anything else they are silent
+    // how loud (the desk's Phones knob); fed by anything else they are silent. No card around them
+    // (D28): their size is their drawing's (HeadphonesNode)
     category: 'sink', inputs: IN, outputs: [], stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, freeSize: BARE_OUTPUT_SIZE,
     defaultParams: {},
   },
   recorder: {
@@ -553,7 +572,8 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // comes back along it and out of its line output (one stereo wire, From computer: into the
     // desk, or the monitors). The two never meet
     category: 'processor', stereo: 'always',
-    inputs: [{ id: 'in', many: true }, { id: FROM_PC_PORT, hidden: true }],
+    // (its extra input ports below its playback line)
+    inputs: [{ id: 'in', many: true, skipRows: [1] }, { id: FROM_PC_PORT, hidden: true }],
     outputs: [{ id: TO_PC_PORT }, { id: 'out' }],
     routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out'], as: 'dac' }],
     // Advanced has its parts instead: the converters, the Encoder and the Decoder

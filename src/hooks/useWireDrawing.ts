@@ -8,6 +8,7 @@ import type { Facing } from '../data/nodeRegistry'
 import { SOUND_PORT } from '../data/nodeRegistry'
 import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
+import { slotFree, slotOfHandle, wireInto } from '../graph/slots'
 import { useCanvasLayout } from './useCanvasLayout'
 
 /** The loose end of the wire being drawn: the cursor, the input it would land on, and whether it crosses a card. */
@@ -167,7 +168,8 @@ export function useWireDrawing(
 
         const allowed = targetNode !== undefined &&
           nodeAcceptsWire(targetNode, source, edges, nodes, store.complexityLevel) &&
-          portAcceptsWire(targetNode, targetHandleId, edges, source, nodes)
+          portAcceptsWire(targetNode, slotOfHandle(targetHandleId).port, edges, source, nodes) &&
+          slotFree({ nodes, edges }, targetNode, targetHandleId)
 
         if (!allowed) {
           if (targetNodeId !== source.nodeId) {
@@ -181,7 +183,8 @@ export function useWireDrawing(
           source:       source.nodeId,
           sourceHandle: source.handleId,
           target:       targetNodeId,
-          targetHandle: targetHandleId,
+          // An input taking several wires: its port, and which of its ports this one is (slots.ts)
+          ...wireInto(targetNode, targetHandleId),
           waypoints:    wire.waypoints.length > 0 ? wire.waypoints : undefined,
         }))
         store.cancelWire()

@@ -3,20 +3,19 @@ import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
 import { FreeControl } from './FreeControl'
 import { ConditionLabel } from './conditions'
-import { MeterBar, MeterScaleRow } from '../SignalMeter'
 import { useStage, useWire } from '../../hooks/useGraphSignal'
 import { useParams } from '../../hooks/useParams'
 import { useDetailShown } from '../../hooks/useDetailShown'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
 import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
-import { humOf, SILENT_WIRE } from '../../signal/engine'
-import { SPL_DB, SPL_SCALE_DB, getHealth } from '../../signal/levels'
+import { humOf } from '../../signal/engine'
 import { GUITAR_AMP_MAX } from '../../signal/gains'
 import { outputKey } from '../../graph/graph'
 import { AMP_DI_PORT } from '../../data/nodeRegistry'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { AmpKnob, SelectedEdge } from './ampParts'
+import { SplMeter } from './SplMeter'
 import { PANEL_TEXT, dialPoint } from './ampDial'
 
 /** The cabinet: a square combo (px, drawn 1:1) */
@@ -34,16 +33,11 @@ const JEWEL_X = 198
 /** The DI Out jack with its Ground Lift under it, across; the room its words may take */
 const DI_X = 250
 const DI_ROOM = 2 * (CAB - 10 - DI_X)
-/** The meter under the cabinet: its bar's height, its scale's numbers (px) */
-const BAR_H = 12
-const SCALE = 12
 /** The name plate on the grille: its words' size (px), its most width */
 const PLATE_FONT = 15
 const PLATE_MAX = 240
 /** A drag up or down this far turns the knob from 0 to 11 */
 const DRAG_PX = 150
-
-const SPL = SPL_DB['guitar-amp']!
 
 /** A word printed on the panel, shrunk to fit `room` (px) */
 function fitted(text: string, room: number, size: number): number {
@@ -71,7 +65,6 @@ export function GuitarAmpNode({ id }: CardProps) {
   const volume    = p('volume')
   const lift      = p('groundLift')
   const condition = stage?.condition
-  const out       = (stage?.out ?? SILENT_WIRE).l
 
   const drag = usePointerDrag<{ y: number; value: number }>((e, from) => {
     const raw = from.value + ((from.y - e.clientY) / DRAG_PX) * GUITAR_AMP_MAX
@@ -97,18 +90,7 @@ export function GuitarAmpNode({ id }: CardProps) {
   const toggle = () => updateNodeParams(id, { on: !on })
   const ink    = 'var(--lsc-fg)'
 
-  const meter = (
-    // From Intermediate (D3); its room kept at Beginner, so the amp keeps one size at every level
-    <div style={{ width: CAB, margin: '0 auto', visibility: detailed ? 'visible' : 'hidden' }}>
-      <MeterBar
-        db={out.rms} height={BAR_H} domain="analog" shift={SPL - SPL_SCALE_DB}
-        peak={detailed ? out.peak : undefined} noise={detailed ? out.noise : undefined}
-        clipping={getHealth(out.rms, 'analog', out.peak) === 'clipping'}
-        source={detailed ? { nodeId: id, at: 'out', side: 'louder' } : undefined}
-      />
-      <div style={{ marginTop: 4 }}><MeterScaleRow domain="analog" spl={SPL} size={SCALE} /></div>
-    </div>
-  )
+  const meter = <SplMeter nodeId={id} typeKey="guitar-amp" width={CAB} />
 
   return (
     <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} footer={meter} outline={false}>

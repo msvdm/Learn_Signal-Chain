@@ -7,6 +7,7 @@ import type { Facing, NodeParamValue, SignalNode, SignalEdge } from '../data/nod
 import type { GraphView, WireSource } from '../graph/graph'
 import { reconcileMainFaders } from '../graph/mainFader'
 import { withUsbReturns } from '../graph/usbLink'
+import { settleSlots } from '../graph/slots'
 import {
   withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,
 } from '../graph/edits'
@@ -115,7 +116,7 @@ export interface SignalChainStore {
   future: GraphSnapshot[]
   /** The wire being drawn (null when idle); cards read its `source` to highlight the inputs that take it */
   wire: WireDraft | null
-  /** Wires whose chains are highlighted (hovered in the unplug list or a Matrix Bus row); everything else is dimmed. */
+  /** Wires whose chains are highlighted (a Matrix Bus row hovered); everything else is dimmed. */
   highlightEdgeIds: string[]
   /** Zoomed out far enough that cards show only their name and output level (set by SignalChain, not persisted). */
   overview: boolean
@@ -380,14 +381,16 @@ const NO_WIRE = { toolMode: 'select', wire: null } as const
 
 /** The wires as `graph` leaves them, after `prev`: its L / R takeovers settled, every USB wire with its way back. */
 function settle(prev: GraphView, graph: GraphView): SignalEdge[] {
-  return withUsbReturns({ nodes: graph.nodes, edges: reconcileMainFaders(prev, graph) })
+  const edges = withUsbReturns({ nodes: graph.nodes, edges: reconcileMainFaders(prev, graph) })
+  return settleSlots({ nodes: graph.nodes, edges })
 }
 
 /**
  * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
  * plugging or unplugging a wire, removing an element, switching a bus to Mono or a Relay to its
  * other input can each change it (graph/mainFader.ts) —, keeps every USB wire's way back
- * (graph/usbLink.ts) and drops what pointed at elements or wires that are gone. A new canvas
+ * (graph/usbLink.ts), puts each wire into an input taking several on a port of its own
+ * (graph/slots.ts) and drops what pointed at elements or wires that are gone. A new canvas
  * (New, a level change, an opened chain) comes from nothing: nothing is handed back to it, and
  * nothing that pointed at the old canvas is kept, even where the new one reuses its ids.
  */

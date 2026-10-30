@@ -157,6 +157,14 @@ export function upstreamOf(nodeId: string, edges: SignalEdge[], nodes?: SignalNo
   return { nodeIds, edgeIds }
 }
 
+/** The chain one wire belongs to: the wire itself plus everything feeding it (graph/graph.ts upstreamOf). */
+export function chainOfEdge(edge: SignalEdge, edges: SignalEdge[], nodes: SignalNode[]): { nodeIds: Set<string>; edgeIds: Set<string> } {
+  const up = upstreamOf(edge.source, edges, nodes)
+  up.edgeIds.add(edge.id)
+  up.nodeIds.add(edge.target)
+  return up
+}
+
 /** True when a card of type `typeKey` is anywhere before this one (an amplifier before a speaker). */
 export function fedBy(nodeId: string, typeKey: TypeKey, view: GraphView): boolean {
   const graph = graphOf(view)

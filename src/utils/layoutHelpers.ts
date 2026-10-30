@@ -4,6 +4,7 @@ import type { ComplexityLevel } from '../data/levels'
 import { graphOf, upstreamOf } from '../graph/graph'
 import type { GraphView } from '../graph/graph'
 import { drawnPorts } from '../graph/queries'
+import { drawnTarget } from '../graph/slots'
 import { orthogonalRoute } from './wirePath'
 import { HEADER_H, PORT_GAP, PORT_TOP } from './cardGeometry'
 import type { Box, Pt, Size } from './geometry'
@@ -70,7 +71,7 @@ export function wireRoute(edge: SignalEdge, cards: Box[], view: GraphView, level
   // Each port on its own line (a port's row, else its place)
   const outAt = outs.findIndex((p) => p.id === edge.sourceHandle)
   const out  = portRows(outs)[outAt] ?? 0
-  const inp  = portRows(ins)[ins.findIndex((p) => p.id === edge.targetHandle)] ?? 0
+  const inp  = portRows(ins)[ins.findIndex((p) => p.id === drawnTarget(edge))] ?? 0
   const from = portFacing(srcNode, 'source')
   const to   = portFacing(tgtNode, 'target')
   const start = portPoint(src, 'source', out, from, outs[outAt]?.middle)

@@ -2,7 +2,6 @@ import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { getPorts } from './queries'
-import { pickChainColor } from './chainColors'
 
 // Pure edits of the graph: each takes a graph and gives the new one. The store runs the result
 // through commitGraph (signalStore.ts), which settles the L / R takeovers (graph/mainFader.ts).
@@ -15,14 +14,12 @@ export function newEdge(wire: Omit<SignalEdge, 'id'>): SignalEdge {
   return { ...wire, id: `e-${wire.source}-${wire.target}-${lastStamp}` }
 }
 
-/** The graph with these elements (and wires) added; a source without a colour starts a chain of its own colour. */
+/** The graph with these elements (and wires) added. */
 export function withNodes(graph: GraphView, added: SignalNode[], addedEdges: SignalEdge[] = []): GraphView {
-  let nodes = graph.nodes
-  for (const n of added) {
-    const isSource = NODE_REGISTRY[n.typeKey].category === 'source'
-    nodes = [...nodes, isSource && !n.color ? { ...n, color: pickChainColor(nodes) } : n]
+  return {
+    nodes: added.length > 0 ? [...graph.nodes, ...added] : graph.nodes,
+    edges: addedEdges.length > 0 ? [...graph.edges, ...addedEdges] : graph.edges,
   }
-  return { nodes, edges: addedEdges.length > 0 ? [...graph.edges, ...addedEdges] : graph.edges }
 }
 
 /** The graph without these elements and their wires. */
@@ -49,6 +46,7 @@ export function withoutNode(graph: GraphView, nodeId: string): GraphView {
   const bridge = newEdge({
     source: into[0].source, sourceHandle: into[0].sourceHandle,
     target: out[0].target,  targetHandle: out[0].targetHandle,
+    ...(out[0].slot !== undefined ? { slot: out[0].slot } : {}),
   })
   return { nodes: next.nodes, edges: [...next.edges, bridge] }
 }
@@ -67,7 +65,10 @@ export function withNodeOnWire(graph: GraphView, node: SignalNode, edgeId: strin
     edges: [
       ...graph.edges.filter((e) => e.id !== edgeId),
       newEdge({ source: wire.source, sourceHandle: wire.sourceHandle, target: node.id, targetHandle: ports.inputs[0].id }),
-      newEdge({ source: node.id, sourceHandle: ports.outputs[0].id, target: wire.target, targetHandle: wire.targetHandle }),
+      newEdge({
+        source: node.id, sourceHandle: ports.outputs[0].id, target: wire.target, targetHandle: wire.targetHandle,
+        ...(wire.slot !== undefined ? { slot: wire.slot } : {}),
+      }),
     ],
   }
 }

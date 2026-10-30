@@ -30,18 +30,18 @@ export const EXAMPLES: Record<ComplexityLevel, ExampleKey[]> = {
 const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: number]>>> = {
   beginner: {
     'vocal': [320, 328], 'drum-kit': [320, 328], 'mic': [160, 164], 'instrument': [320, 328], 'keyboard': [320, 350],
-    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [692, 348],
-    'speaker': [320, 328], 'active-speaker': [320, 328], 'studio-monitor': [320, 328],
+    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [692, 342],
+    'speaker': [292, 340], 'active-speaker': [292, 340], 'studio-monitor': [292, 340],
   },
   intermediate: {
-    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [412, 328], 'di-box': [432, 309], 'guitar-amp': [352, 419],
-    'gain': [217, 285], 'hpf': [196, 216], 'eq': [603, 318], 'comp': [273, 325], 'fader': [198, 582], 'pan': [232, 308],
-    'master-bus': [398, 361], 'aux-bus': [398, 397], 'active-speaker': [412, 328],
+    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [412, 328], 'di-box': [432, 309], 'guitar-amp': [352, 413],
+    'gain': [217, 275], 'hpf': [196, 206], 'eq': [603, 308], 'comp': [273, 315], 'fader': [198, 572], 'pan': [232, 298],
+    'master-bus': [398, 361], 'aux-bus': [398, 397], 'active-speaker': [458, 412],
   },
   advanced: {
-    'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 285], 'adc': [320, 218], 'eq': [682, 466], 'comp': [618, 366],
-    'dac': [320, 259], 'fader': [198, 582], 'master-bus': [398, 361], 'encoder': [320, 259], 'broadcast': [412, 328],
-    'active-speaker': [412, 328],
+    'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 275], 'adc': [320, 218], 'eq': [682, 466], 'comp': [618, 366],
+    'dac': [320, 259], 'fader': [198, 572], 'master-bus': [398, 361], 'encoder': [320, 259], 'broadcast': [412, 328],
+    'active-speaker': [458, 412],
   },
 }
 

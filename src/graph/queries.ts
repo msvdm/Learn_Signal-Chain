@@ -6,6 +6,7 @@ import {
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
+import { slottedInputs } from './slots'
 
 // What the wiring makes of a card: what its outputs carry, the ports it shows, the mix or the
 // microphone it belongs to. Read from the wires on every change — nothing here is stored.
@@ -161,8 +162,8 @@ function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
 
 /**
  * The ports a card draws at `level`: getPorts without the hidden ones (the USB link's way back —
- * usbLink.ts) and those of other levels (the DAW's, the Recorder's — D23). The same arrays for the
- * same layout, as getPorts.
+ * usbLink.ts) and those of other levels (the DAW's, the Recorder's — D23); an input taking several
+ * wires as one port per wire and an empty one (slots.ts). The same arrays for the same layout, as getPorts.
  */
 export function drawnPorts(
   node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
@@ -170,7 +171,7 @@ export function drawnPorts(
   view?: GraphView,
 ): { inputs: NodePort[]; outputs: NodePort[] } {
   const { inputs, outputs } = getPorts(node, view)
-  return { inputs: drawn(inputs, level), outputs: drawn(outputs, level) }
+  return { inputs: slottedInputs(drawn(inputs, level), node.id, view), outputs: drawn(outputs, level) }
 }
 
 /**

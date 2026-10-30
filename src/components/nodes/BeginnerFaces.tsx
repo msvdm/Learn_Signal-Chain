@@ -7,12 +7,9 @@ import { useSignalStore } from '../../store/signalStore'
 import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { useNodeName } from '../../hooks/useNodeName'
 import { useTranslation } from '../../i18n/useTranslation'
-import type { Translations } from '../../i18n/translations'
 import { reachIn, soundAt } from '../../graph/reach'
-import type { Verdict } from '../../graph/reach'
 import { HEADER_H, cardHeight, cardMinSize } from '../../utils/layoutHelpers'
 import type { Size } from '../../utils/geometry'
-import { cssVar, textWidth } from '../../utils/fitText'
 import { STRIP_W, StillMeter } from '../SignalMeter'
 import { CardFrame } from './CardFrame'
 import { FACE_METER_ROOM } from './FaceCard'
@@ -24,6 +21,7 @@ import { PAD } from './overviewLayout'
 import { PortLine } from './InterfaceNode'
 import { LINE_H, lineTop } from './portLines'
 import { InterfaceDrawing, MixerDrawing } from './BeginnerArt'
+import { VERDICT_FAR, VERDICT_TONE, fitFont, verdictText } from './verdicts'
 
 // Beginner's faces (D20): devices, not their parts — no number engine, no render, no real meters.
 // The inputs are their icon and name, with no card around them; the outputs their icon and what
@@ -36,8 +34,6 @@ import { InterfaceDrawing, MixerDrawing } from './BeginnerArt'
 const NAME_NEAR = 26
 const NAME_FAR  = 72
 const NAME_GAP  = 8
-/** An output's verdict zoomed out: "Sound" or "No sound", this big */
-const VERDICT_FAR = 44
 /** The Mixer's meter, this many times its usual size, as its drawing (its card's size: the registry) */
 const MIXER_SCALE = 3
 // A drawn device's name across its top, when it has no port lines (times its scale)
@@ -46,12 +42,6 @@ const TITLE_SIZE = 22
 /** A face's size: its type's card (minSize, tall enough for its ports), and a still meter's room on the right if it has one. */
 function faceSize(typeKey: TypeKey, ports: { inputs: NodePort[]; outputs: NodePort[] }, meter: boolean): Size {
   return { w: cardMinSize(typeKey).w + (meter ? FACE_METER_ROOM : 0), h: cardHeight(typeKey, ports) }
-}
-
-/** The biggest font size (at most `max`) at which `text` fits `width` on one line. */
-function fitFont(text: string, width: number, max: number, weight = 600): number {
-  const w = textWidth(text, cssVar('--lsc-font-sans'), weight)
-  return Math.max(10, Math.min(max, Math.floor((width * 0.97) / w)))
 }
 
 /** The layer a face is drawn in: the card less PAD all round (`right`: more room kept there). */
@@ -84,28 +74,10 @@ export function BeginnerInput({ id, type }: CardProps) {
   )
 }
 
-/** The colour of what an end point gets. */
-const VERDICT_TONE: Record<Verdict, string> = {
-  sound:           'var(--signal-good-text)',
-  'not-connected': 'var(--lsc-fg-muted)',
-  'no-source':     'var(--lsc-fg-muted)',
-  'needs-amp':     'var(--signal-hot-text)',
-  'switched-off':  'var(--signal-hot-text)',
-}
-
-/** What an end point says it gets: zoomed in why there is no sound, zoomed out only whether there is. */
-function verdictText(t: Translations, typeKey: TypeKey, verdict: Verdict, far: boolean): string {
-  if (verdict === 'sound') return typeKey === 'recorder' ? t.beginner.recording : typeKey === 'broadcast' ? t.beginner.onAir : t.beginner.sound
-  if (far) return t.beginner.noSound
-  return verdict === 'needs-amp' ? t.nodes.speaker.needsAmp
-    : verdict === 'switched-off' ? t.beginner.switchedOff
-    : verdict === 'no-source' ? t.beginner.noSource : t.beginner.notConnected
-}
-
 /**
- * An output (a speaker, Headphones, a Recorder, Stream / Broadcast): its icon and, under it, what
- * it gets — sound, or why not (graph/reach.ts). A passive speaker with no Amplifier before it is
- * crossed out. No meter.
+ * An output (a Recorder, Stream / Broadcast): its icon and, under it, what it gets — sound, or why
+ * not (graph/reach.ts). No meter. (The speakers and the Headphones say it with no card around
+ * them: BareOutput — D28.)
  */
 export function BeginnerOutput({ id, type }: CardProps) {
   const typeKey = type as TypeKey

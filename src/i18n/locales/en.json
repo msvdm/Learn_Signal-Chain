@@ -409,13 +409,6 @@
     "speech": "Speech",
     "singing": "Singing"
   },
-  "unplugMenu": {
-    "title": "Connections to this input",
-    "via": "via {node}",
-    "unplugOne": "Unplug this connection",
-    "unplugAll": "Unplug all",
-    "hint": "Point at a connection to light up its chain"
-  },
   "palette": {
     "search": "Search elements",
     "all": "All",

@@ -12,17 +12,22 @@ import { graphOf, outputKey } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { nodeAcceptsWire, portAcceptsWire } from '../../graph/connectionRules'
 import { outputKind, wiresIntoPort } from '../../graph/queries'
+import { slotFree, slotOfHandle, takesMany, wiresIntoSlot } from '../../graph/slots'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
-import { UnplugMenu } from '../UnplugMenu'
 import { MATRIX_PORT, portFacing } from '../../data/nodeRegistry'
 import type { Facing, PortLabel, SignalEdge } from '../../data/nodeRegistry'
 import { useTranslation } from '../../i18n/useTranslation'
 
-/** The wires on this port: plugged into it — on an Amplifier's other input, the stereo wire split into both (D27). */
+/**
+ * The wires on this port: plugged into it — on an Amplifier's other input, the stereo wire split
+ * into both (D27); on an input taking several wires, the one on this port of it (slots.ts).
+ */
 function wiresOn(graph: GraphView, nodeId: string, portId: string, type: 'source' | 'target'): SignalEdge[] {
-  return type === 'source'
-    ? graphOf(graph).from(nodeId).filter((e) => e.sourceHandle === portId)
+  if (type === 'source') return graphOf(graph).from(nodeId).filter((e) => e.sourceHandle === portId)
+  const node = graphOf(graph).node(nodeId)
+  return node && takesMany(node.typeKey, slotOfHandle(portId).port)
+    ? wiresIntoSlot(graph, nodeId, portId)
     : wiresIntoPort(nodeId, portId, graph)
 }
 
@@ -72,7 +77,7 @@ interface NodePortProps {
  *   the wires' one colour when plugged — D20).
  * - While a wire is being drawn, free inputs that can take it pulse in the accent colour.
  * - Hovering a connected input turns it into a × — click it to unplug the wire (not while drawing one).
- *   A bus input holding several wires opens a list instead, so you pick which wire to unplug.
+ *   An input that takes several wires has one port for each (graph/slots.ts), so each holds one.
  *   Outputs never do: clicking an output always starts a new wire, so one signal can feed several inputs.
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
@@ -81,7 +86,6 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
   const { t } = useTranslation()
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
-  const [menuAt, setMenuAt]     = useState<DOMRect | null>(null)
   const updateNodeInternals     = useUpdateNodeInternals()
 
   // Each piece is read on its own, so the port is redrawn only when one of them changes
@@ -121,11 +125,12 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
   const isValidTarget = useSignalStore((s) => {
     const node = graphOf(s).node(nodeId)
     return type === 'target' && s.wire !== null && node !== undefined &&
-      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) && portAcceptsWire(node, portId, s.edges, s.wire.source, s.nodes)
+      nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) &&
+      portAcceptsWire(node, slotOfHandle(portId).port, s.edges, s.wire.source, s.nodes) && slotFree(s, node, portId)
   })
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0
-  const showUnplug = canUnplug && (hovered || menuAt !== null)
+  const showUnplug = canUnplug && hovered
   // L / R on an output carrying one side; "L+R" on a send (both sides on one wire), in the Matrix's
   // colour while it feeds a Matrix Bus
   const isSend     = type === 'source' && portId === MATRIX_PORT
@@ -148,12 +153,8 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
     '--lsc-port-down':  `${near.below ? shared : PORT_REACH}px`,
   } as CSSProperties
 
-  function unplug(e: React.MouseEvent) {
-    if (connected.length > 1) {
-      setMenuAt((e.currentTarget as HTMLElement).getBoundingClientRect())
-    } else {
-      connected.forEach((edge) => removeEdge(edge.id))
-    }
+  function unplug() {
+    connected.forEach((edge) => removeEdge(edge.id))
   }
 
   const className = ['lsc-port', isValidTarget && 'lsc-port-target', canUnplug && 'lsc-port-unplug', showUnplug && 'lsc-port-remove']
@@ -204,7 +205,6 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
           {t.ports[label]}
         </span>
       )}
-      {menuAt && <UnplugMenu wires={connected} anchor={menuAt} onClose={() => setMenuAt(null)} />}
     </>
   )
 }

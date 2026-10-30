@@ -132,7 +132,6 @@ export function parseChainFile(data: unknown): ParsedChain | null {
       params: readParams(typeKey, level, n.params),
       bypassed: n.bypassed === true,
       ...(isStr(n.label) ? { label: n.label } : {}),
-      ...(isStr(n.color) ? { color: n.color } : {}),
     })
   }
 
@@ -144,6 +143,8 @@ export function parseChainFile(data: unknown): ParsedChain | null {
         !ids.has(e.source) || !ids.has(e.target) || e.source === e.target) continue
     edges.push({
       id: e.id, source: e.source, sourceHandle: e.sourceHandle, target: e.target, targetHandle: e.targetHandle,
+      // Which port of an input taking several wires (graph/slots.ts; settled when the chain is opened)
+      ...(isNum(e.slot) && Number.isInteger(e.slot) && e.slot >= 0 ? { slot: e.slot } : {}),
       ...(Array.isArray(e.waypoints) && e.waypoints.every(isPoint)
         ? { waypoints: e.waypoints.map((p) => ({ x: p.x, y: p.y })) }
         : {}),
@@ -169,7 +170,7 @@ const SOUND_GAP = 80
 /**
  * Before version 2 a Microphone was the sound too (D21). Each that heard nothing (not a Guitar Amp
  * in front of it) gets what it picked up — a Vocal speaking or singing, a Drum Kit — to its left,
- * wired into it, with its chain's colour. Its readings stay what they were (a dynamic microphone).
+ * wired into it. Its readings stay what they were (a dynamic microphone).
  */
 function soundsForMics(heard: Map<string, unknown>, nodes: SignalNode[], edges: SignalEdge[], level: ComplexityLevel) {
   for (const [micId, character] of heard) {
@@ -184,9 +185,7 @@ function soundsForMics(heard: Map<string, unknown>, nodes: SignalNode[], edges: 
       position: { x: mic.position.x - nodeDims(type).w - SOUND_GAP, y: mic.position.y },
       params: { ...initialParams(type, level), ...(character === 'singing' ? { character } : {}) },
       bypassed: false,
-      ...(mic.color ? { color: mic.color } : {}),
     })
-    delete mic.color
     edges.push({ id: `${id}-${micId}`, source: id, sourceHandle: SOUND_PORT, target: micId, targetHandle: 'in' })
   }
 }

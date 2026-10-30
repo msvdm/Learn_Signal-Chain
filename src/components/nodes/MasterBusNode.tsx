@@ -18,7 +18,6 @@ import { stillPicture } from '../../signal/engine'
 import { graphOf } from '../../graph/graph'
 import type { GraphView } from '../../graph/graph'
 import { TAPER_UNITY } from '../../signal/levels'
-import { chainSourcesOfEdge } from '../../graph/chainColors'
 import { nodeName } from '../../utils/nodeName'
 
 /**
@@ -35,7 +34,7 @@ export function MasterBusNode({ id, type }: CardProps) {
 
   const result        = useStage(id)
   const incomingEdges = useSignalStore(useShallow((s) => graphOf(s).into(id)))
-  // Only the Matrix Bus needs the whole graph (the buses feeding it, their names and chains)
+  // Only the Matrix Bus needs the whole graph (the buses feeding it and their names)
   const { nodes, edges: allEdges } = useSignalStore(useShallow((s): GraphView => isMatrix ? { nodes: s.nodes, edges: s.edges } : NO_GRAPH))
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
   const setHighlight  = useSignalStore((s) => s.setHighlightEdges)
@@ -72,9 +71,6 @@ export function MasterBusNode({ id, type }: CardProps) {
           <div className="nodrag nopan" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {sends.map(({ key, wiresIn }) => {
               const from    = nodes.find((x) => x.id === key)
-              const sources = [...new Map(wiresIn
-                .flatMap((e) => chainSourcesOfEdge(e, nodes, allEdges))
-                .map((s) => [s.id, s])).values()]
               const param   = matrixSendParam(key)
               return (
                 <div
@@ -84,15 +80,7 @@ export function MasterBusNode({ id, type }: CardProps) {
                   style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                 >
                   {/* Fixed width: a long name never resizes the card */}
-                  <span style={{ width: 132, display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1.25 }}>
-                    <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                      {(sources.length > 0 ? sources : [undefined]).map((s, i) => (
-                        <span
-                          key={s?.id ?? i}
-                          style={{ width: 8, height: 8, borderRadius: 9999, background: s?.color ?? 'var(--lsc-border)' }}
-                        />
-                      ))}
-                    </span>
+                  <span style={{ width: 132, display: 'flex', alignItems: 'center', lineHeight: 1.25 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' }}>
                       {nodeName(t, from, from && stillPicture(nodes, allEdges).result.stages[from.id])}
                     </span>

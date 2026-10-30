@@ -13,7 +13,7 @@ import { usePaletteWidth } from './usePaletteWidth'
 
 /**
  * What the right-click menus and the keys do with elements — cut, copy, paste, duplicate, remove —
- * and a saved chain added to the canvas. A copy gets new ids (and a source its own chain colour),
+ * and a saved chain added to the canvas. A copy gets new ids,
  * lands clear of the other cards, is selected and brought on screen.
  */
 export function useGroupActions() {
@@ -81,7 +81,7 @@ export function useGroupActions() {
     placeCopy(clip, pasteOffset(clip, layout.snap(at ?? { x: box.left + 2 * GRID, y: box.top + 2 * GRID }), layout.layoutSnapshot()))
   }
 
-  /** An opened chain's elements join the canvas with new ids and chain colours, moved by `offsetOf`. */
+  /** An opened chain's elements join the canvas with new ids, moved by `offsetOf`. */
   function addChain(read: ParsedChain, offsetOf: (group: NodeGroup) => Pt, showAll = false) {
     const { offerChain, raiseLevel } = useSignalStore.getState()
     offerChain(null)

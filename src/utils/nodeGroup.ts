@@ -1,6 +1,6 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
-import { NODE_REGISTRY, matrixSendParam } from '../data/nodeRegistry'
+import { matrixSendParam } from '../data/nodeRegistry'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { newEdge } from '../graph/edits'
 import { GRID, MIN_NODE_GAP } from './layoutHelpers'
@@ -134,8 +134,6 @@ export function cloneGroup(
       const bus = [...ids].find(([oldId]) => k === matrixSendParam(oldId))
       return [bus ? matrixSendParam(bus[1]) : k, v]
     })),
-    // A copied source starts a chain of its own: it gets its own colour when added
-    color:    NODE_REGISTRY[n.typeKey].category === 'source' ? undefined : n.color,
   }))
 
   const edges: SignalEdge[] = group.edges.map((e) => newEdge({

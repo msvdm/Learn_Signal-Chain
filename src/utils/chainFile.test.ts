@@ -39,11 +39,11 @@ describe('a file from version 1', () => {
     expect(keys.params).toEqual({ levelDb: -20 })
   })
 
-  it('a Microphone gets what it picked up to its left, wired into it, with its chain’s colour', () => {
-    const chain = old([{ id: 'm', typeKey: 'mic', position: { x: 500, y: 100 }, params: { sensitivityDb: -60, character: 'singing' }, color: '#ec4899' }])
+  it('a Microphone gets what it picked up to its left, wired into it', () => {
+    const chain = old([{ id: 'm', typeKey: 'mic', position: { x: 500, y: 100 }, params: { sensitivityDb: -60, character: 'singing' } }])
     const [mic, voice] = chain.nodes
     expect(mic).toEqual({ id: 'm', typeKey: 'mic', position: { x: 500, y: 100 }, params: { micType: 'dynamic' }, bypassed: false })
-    expect([voice.typeKey, voice.params.character, voice.color, voice.position.y]).toEqual(['vocal', 'singing', '#ec4899', 100])
+    expect([voice.typeKey, voice.params.character, voice.position.y]).toEqual(['vocal', 'singing', 100])
     expect(voice.position.x).toBeLessThan(500)
     expect(chain.edges).toEqual([{ id: `${voice.id}-m`, source: voice.id, sourceHandle: SOUND_PORT, target: 'm', targetHandle: 'in' }])
   })

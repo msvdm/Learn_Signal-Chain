@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import type { Edge, Node as FlowNode, NodeChange } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { SignalNode, SignalEdge } from '../store/signalStore'
-import { graphOf, outputKey } from '../graph/graph'
+import { chainOfEdge, graphOf, outputKey } from '../graph/graph'
+import { drawnTarget } from '../graph/slots'
 import { ampSplit, drawnPorts, otherAmpInput, outputKind } from '../graph/queries'
 import { isUsbReturn, isUsbWire } from '../graph/usbLink'
 import { wireFlows } from '../graph/wireFlow'
@@ -18,7 +19,6 @@ import { healthOf, levelOf, outDomainOf } from '../signal/engine'
 import { PORT_GAP, nodeDims, recordMeasuredSize, wireRoute } from '../utils/layoutHelpers'
 import type { Box } from '../utils/geometry'
 import { routeCrossesCards } from '../utils/wireValidation'
-import { chainOfEdge } from '../graph/chainColors'
 import type { ChainEdgeData } from '../components/ChainEdge'
 import { useGraphSignal } from './useGraphSignal'
 import { keepSame } from '../utils/sameShape'
@@ -93,7 +93,7 @@ export function useFlowElements() {
     if (Object.keys(sizes).length > 0) setMeasuredSizes((prev) => ({ ...prev, ...sizes }))
   }
 
-  // While wires are pointed at (unplug list, Matrix Bus row), their chains stay lit and the rest dims
+  // While wires are pointed at (a Matrix Bus row), their chains stay lit and the rest dims
   const highlight = useMemo(() => {
     const chains = graphEdges.filter((e) => highlightEdgeIds.includes(e.id)).map((e) => chainOfEdge(e, graphEdges, graphNodes))
     if (chains.length === 0) return null
@@ -180,7 +180,8 @@ export function useFlowElements() {
         source:       edge.source,
         sourceHandle: edge.sourceHandle,
         target:       edge.target,
-        targetHandle: edge.targetHandle,
+        // An input taking several wires: the port its slot is drawn as (graph/slots.ts)
+        targetHandle: drawnTarget(edge),
         type:         'chain',
         animated:     false,
         style:        {

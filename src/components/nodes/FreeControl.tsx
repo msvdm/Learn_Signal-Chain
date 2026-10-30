@@ -38,7 +38,7 @@ interface FreeControlProps {
  * Grab the name or the space around the control to move it.
  */
 export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1, outline = true }: FreeControlProps) {
-  const { ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
+  const { ports, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
   // Room above the control so its port line sits at PORT_TOP. A control whose port line is lower
   // than that (a 165px knob: 82.5) reaches above the box instead — a negative padding would void
   // the whole padding rule, its side room for the port rings with it
@@ -97,10 +97,6 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
             {value}
           </span>
         )}
-        {/* Which sources (chains) pass through it — the space is kept when there are none */}
-        <div aria-hidden style={{ display: 'flex', width: 40, height: 4, borderRadius: 9999, overflow: 'hidden', marginTop: 2 }}>
-          {chains.map((c) => <span key={c} style={{ flex: 1, background: c }} />)}
-        </div>
       </div>
 
       {footer && <div style={{ marginTop: 10, alignSelf: 'stretch' }}>{footer}</div>}

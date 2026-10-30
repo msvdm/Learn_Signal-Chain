@@ -1,9 +1,10 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, isBus, portSide } from '../data/nodeRegistry'
+import { MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, portSide } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { GraphView, WireSource } from './graph'
 import { drawnPorts, getPorts, instrumentAt, isMatrixSource, micLevelAt, otherAmpInput, outputKind } from './queries'
+import { MAX_SLOTS, takesMany } from './slots'
 
 type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
 
@@ -20,8 +21,9 @@ function stereoInto(source: WireSource, view: GraphView): boolean {
 
 /**
  * True when this input port can take one more wire.
- * Bus inputs (Master, Aux, Matrix) and an Audio Interface's line input accept any number of wires —
- * just not the same wire twice. Every other input takes one wire.
+ * An input that takes several wires (`many`: a bus's, the Mixer's, an Audio Interface's line input …)
+ * takes up to MAX_SLOTS — just not the same wire twice; which of its ports a wire goes on is
+ * slots.ts's (slotFree). Every other input takes one wire.
  * The USB link (D22): an Interface's To computer goes only into a DAW — one wire, which carries the
  * sound both ways (graph/usbLink.ts) — and below Advanced a DAW takes nothing else but a Mixer's
  * output (Beginner: a desk with USB; nodeAcceptsWire). One computer per Interface. A hidden port takes no wire (the USB wire's way
@@ -49,8 +51,8 @@ export function portAcceptsWire(
   // One computer per Interface
   if (source?.handleId === TO_PC_PORT && edges.some((e) => e.source === source.nodeId && e.sourceHandle === TO_PC_PORT)) return false
   const onPort = edges.filter((e) => e.target === node.id && e.targetHandle === handleId)
-  if (isBus(node.typeKey) || NODE_REGISTRY[node.typeKey].inputs.some((p) => p.id === handleId && p.many)) {
-    return !source || !onPort.some((e) => e.source === source.nodeId && e.sourceHandle === source.handleId)
+  if (takesMany(node.typeKey, handleId)) {
+    return onPort.length < MAX_SLOTS && (!source || !onPort.some((e) => e.source === source.nodeId && e.sourceHandle === source.handleId))
   }
   return onPort.length === 0
 }
