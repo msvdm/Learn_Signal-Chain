@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
-import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, SaxIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
+import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, GeneratorIcon, AdcIcon, DacIcon, RelayIcon, VocalIcon, TrumpetIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -58,7 +58,7 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Sources: sounds in the air and the microphone that hears them, lines, guitars
   vocal:             { icon: VocalIcon,         group: 'source' },
   'drum-kit':        { icon: Drum,              group: 'source' },
-  acoustic:          { icon: SaxIcon,           group: 'source' },
+  acoustic:          { icon: TrumpetIcon,       group: 'source' },
   mic:               { icon: Mic,               group: 'source' },
   keyboard:          { icon: KeyboardMusic,     group: 'source' },
   pc:                { icon: LaptopIcon,        group: 'source' },

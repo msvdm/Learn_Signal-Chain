@@ -268,7 +268,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: {},
   },
   acoustic: {
-    // An acoustic instrument (a saxophone on its icon; it plays the guitar loop): at Beginner too
+    // An acoustic instrument (a trumpet on its icon; it plays the guitar loop): at Beginner too
     category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
     levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
     defaultParams: {},

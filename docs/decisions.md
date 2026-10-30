@@ -67,7 +67,8 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **The inputs** (2026-10-29, the user's list): the Vocal a low to mid level acoustic source, its
   peaks and character Speech or Singing; the Drum Kit a loud, percussive acoustic source; the
   Acoustic Guitar became the **Acoustic Instrument** — a quiet, melodic acoustic source, a saxophone
-  on its icon (after the user's picture), at every level (Beginner too); it still plays the guitar
+  on its icon (after the user's picture; since 2026-10-30 a trumpet in simple thin lines, after their
+  second picture: "simplify the acoustic instrument symbol"), at every level (Beginner too); it still plays the guitar
   loop at 90 dB SPL. The Instrument became the **Hi-Z Instrument** (its icon kept): a weak signal
   from a high-impedance output. The Keyboard (a stereo line) and the Computer (a stereo line,
   compressed music) as they were. The Guitar Amp a loud acoustic source, or a mono mic-level one from its DI Out (D26).
