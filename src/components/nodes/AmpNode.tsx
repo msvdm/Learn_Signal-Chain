@@ -20,17 +20,19 @@ import { ampSplit } from '../../graph/queries'
 import { AMP_B_PORT } from '../../data/nodeRegistry'
 import { SIGNAL_LEVEL, atLeast } from '../../data/levels'
 import { cssVar, textWidth } from '../../utils/fitText'
-import { PORT_GAP } from '../../utils/layoutHelpers'
+import { PORT_GAP, PORT_TOP } from '../../utils/layoutHelpers'
 import { AmpKnob } from './ampParts'
 import { PANEL_TEXT } from './ampDial'
 
-/** The rack panel, drawn 1:1 (px): 2U, its ears at both ends */
+/** The rack is drawn at this many times the size of its drawing (the user's call: twice as large) */
+const S = 2
+/** The rack panel in drawing units (px before `S`): 2U, its ears at both ends */
 const W = 320
-const H = 164
+const H = 158
 const EAR = 22
-/** Channel A's line — level with the port rings (FreeControl `portLine`); B's two port lines below */
-const ROW_A = 46
-const ROW_B = ROW_A + 2 * PORT_GAP
+/** Channel A's line, level with the port rings: drawn at `S`, it is the first port line (FreeControl `portLine`); B's line four port lines below */
+const ROW_A = PORT_TOP / S
+const ROW_B = ROW_A + (4 * PORT_GAP) / S
 /** The power rocker and its light, across */
 const POWER_X = 52
 /** A channel's letter, its knob (centre, radius) */
@@ -47,13 +49,14 @@ const SCALE = 11
 /** The name printed on the panel: its size, the room it has */
 const NAME_FONT = 12
 const NAME_ROOM = W - 2 * EAR - 90
-/** A drag up or down this far turns a knob through its whole range */
+/** A drag up or down this far (screen px) turns a knob through its whole range */
 const DRAG_PX = 150
 
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
 
 /**
- * Amplifier (D27): no card — a two-channel power amp in a rack, the same at every zoom. Input A plays
+ * Amplifier (D27): no card — a two-channel power amp in a rack, the same at every zoom, drawn twice
+ * the size of its drawing (`S`: the SVG through its viewBox, the meters through one CSS scale). Input A plays
  * out of L, B out of R, each channel with its own Volume knob and its meter window in the panel (the
  * scale between them); one stereo wire goes into both (drawn split at the inputs — ChainEdge). Its
  * I / O rocker switches it off: it sends nothing and goes dark. At Beginner the rocker works; the
@@ -131,9 +134,9 @@ export function AmpNode({ id }: CardProps) {
   )
 
   return (
-    <FreeControl nodeId={id} typeKey="amp" label={name} showName={false} portLine={ROW_A}>
-      <div style={{ position: 'relative', width: W, height: H }}>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+    <FreeControl nodeId={id} typeKey="amp" label={name} showName={false} portLine={ROW_A * S}>
+      <div style={{ position: 'relative', width: W * S, height: H * S }}>
+        <svg width={W * S} height={H * S} viewBox={`0 0 ${W} ${H}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
           <g stroke={ink} style={dim}>
             <rect x="1.5" y="1.5" width={W - 3} height={H - 3} rx="6" strokeWidth="3" fill="var(--lsc-node-bg)" />
             {/* The rack ears, with their slots */}
@@ -166,19 +169,22 @@ export function AmpNode({ id }: CardProps) {
           </g>
         </svg>
 
-        {bar(ROW_A, out.l, 'l', soundA)}
-        {bar(ROW_B, out.r, 'r', soundB)}
-        {/* The scale, between the two windows */}
-        <div style={{ position: 'absolute', left: WIN_X + 3, top: ROW_A + WIN_H / 2 + 2, width: WIN_W - 6, ...dim }}>
-          <MeterScaleRow domain="analog" size={SCALE} />
-        </div>
-
-        {/* Fed a digital signal: said across the panel (switched off, the rack shows it itself) */}
-        {condition && condition !== 'switchedOff' && (
-          <div style={{ position: 'absolute', left: WIN_X - 20, right: EAR + 4, top: (ROW_A + ROW_B) / 2 - 16, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-            <ConditionLabel condition={condition} typeKey="amp" />
+        {/* What is drawn over the panel, in its units: scaled as the SVG is */}
+        <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${S})`, transformOrigin: '0 0' }}>
+          {bar(ROW_A, out.l, 'l', soundA)}
+          {bar(ROW_B, out.r, 'r', soundB)}
+          {/* The scale, between the two windows */}
+          <div style={{ position: 'absolute', left: WIN_X + 3, top: ROW_A + WIN_H / 2 + 2, width: WIN_W - 6, ...dim }}>
+            <MeterScaleRow domain="analog" size={SCALE} />
           </div>
-        )}
+
+          {/* Fed a digital signal: said across the panel (switched off, the rack shows it itself) */}
+          {condition && condition !== 'switchedOff' && (
+            <div style={{ position: 'absolute', left: WIN_X - 20, right: EAR + 4, top: (ROW_A + ROW_B) / 2 - 16, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+              <ConditionLabel condition={condition} typeKey="amp" />
+            </div>
+          )}
+        </div>
       </div>
     </FreeControl>
   )

@@ -30,7 +30,7 @@ export const EXAMPLES: Record<ComplexityLevel, ExampleKey[]> = {
 const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: number]>>> = {
   beginner: {
     'vocal': [320, 328], 'drum-kit': [320, 328], 'mic': [160, 164], 'instrument': [320, 328], 'keyboard': [320, 350],
-    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [372, 230],
+    'stage-box': [320, 328], 'mixer': [1230, 728], 'interface': [412, 328], 'daw': [412, 328], 'amp': [692, 348],
     'speaker': [320, 328], 'active-speaker': [320, 328], 'studio-monitor': [320, 328],
   },
   intermediate: {
@@ -155,7 +155,8 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     const top = s.y('voiceMic')
     s.put(['box', 'stage-box'], s.right('voiceMic'), top)
     s.put(['desk', 'mixer'], s.right('box'), top)
-    s.put(['amp', 'amp'], s.right('desk'), top)
+    // A gap more before the rack: the Main's split into A and B stays clear of the monitor wire's drop
+    s.put(['amp', 'amp'], s.right('desk') + GAP, top)
     s.put(['left', 'speaker'], s.right('amp'), top)
     s.put(['right', 'speaker'], s.right('amp'), s.below('left'))
     s.put(['wedge', 'active-speaker', FLIPPED], s.right('amp'), s.below('right'))

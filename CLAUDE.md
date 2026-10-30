@@ -219,7 +219,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D24** — Wires are coloured by where their sound goes: green Master, blue Aux, magenta Matrix, yellow PFL, black / white Interface and Stream; red only for clipping and problems.
 - **D25** — The app explains no element (no help texts): the teacher does; the chain it shows must never be wrong. The **?** button opens a tutorial on the app and example chains.
 - **D26** — The Guitar Amp's DI Out: mic level for a Preamp, taken before its Volume; a Ground Lift, off by default — wired, the DI Out hums until it is on.
-- **D27** — The Guitar Amp (a combo) and the Amplifier (a 2U rack) are drawings with their controls, no card; both switch off (`switchedOff`: silent, no hiss — at Beginner too). The Amplifier's inputs A → L, B → R; one stereo wire into both, drawn split.
+- **D27** — The Guitar Amp (a combo) and the Amplifier (a 2U rack, drawn at twice its drawing's size) are drawings with their controls, no card; both switch off (`switchedOff`: silent, no hiss — at Beginner too). The Amplifier's inputs A → L, B → R; one stereo wire into both, drawn split.
 
 (D2 and D6 were replaced by D8 and D9.)
 

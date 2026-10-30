@@ -410,11 +410,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // A two-channel power amp in a rack (D27): input A ('in') feeds output L, input B feeds R, each
     // channel its own Volume. A mono wire plays on the channel it is plugged into; one stereo wire
     // goes into both (its left side into A, its right into B — drawn split at the inputs). Its
-    // outputs are always L and R, on the inputs' lines. Drawn as the rack, no card (AmpNode)
+    // outputs are always L and R, on the inputs' lines. Drawn as the rack, no card (AmpNode), twice
+    // its drawing's size: B's line four port lines below A's
     category: 'processor', stereo: 'follow',
-    inputs: [{ id: 'in', row: 0 }, { id: AMP_B_PORT, row: 2 }],
-    outputs: [{ id: 'out-l', row: 0 }, { id: 'out-r', row: 2 }],
-    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 372, h: 230 }, splits: true,
+    inputs: [{ id: 'in', row: 0 }, { id: AMP_B_PORT, row: 4 }],
+    outputs: [{ id: 'out-l', row: 0 }, { id: 'out-r', row: 4 }],
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 348 }, splits: true,
     defaultParams: { gainDb: 0, on: true },
   },
   fader: {
