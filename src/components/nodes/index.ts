@@ -6,7 +6,8 @@ import { useSignalStore } from '../../store/signalStore'
 import type { CardProps } from './cardProps'
 import { SoundSourceNode }    from './SoundSourceNode'
 import { MicNode }            from './MicNode'
-import { LineSourceNode }     from './LineSourceNode'
+import { BareSource, ComputerNode } from './BareSource'
+import { BroadcastNode }      from './BroadcastNode'
 import { InstrumentNode }     from './InstrumentNode'
 import { GainNode }           from './GainNode'
 import { FaderNode }          from './FaderNode'
@@ -54,12 +55,13 @@ function atBeginner(beginner: Card, card: Card): Card {
  */
 export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   vocal:             atBeginner(BeginnerInput, SoundSourceNode),
-  'drum-kit':        atBeginner(BeginnerInput, SoundSourceNode),
-  acoustic:          atBeginner(BeginnerInput, SoundSourceNode),
+  // No card around them from Intermediate, as the Passive Speaker (BareSource.tsx)
+  'drum-kit':        atBeginner(BeginnerInput, BareSource),
+  acoustic:          atBeginner(BeginnerInput, BareSource),
   mic:               atBeginner(BeginnerInput, MicNode),
-  keyboard:          atBeginner(BeginnerInput, LineSourceNode),
-  pc:                atBeginner(BeginnerInput, InstrumentNode),
-  instrument:        atBeginner(BeginnerInput, InstrumentNode),
+  keyboard:          atBeginner(BeginnerInput, BareSource),
+  pc:                atBeginner(BeginnerInput, ComputerNode),
+  instrument:        atBeginner(BeginnerInput, BareSource),
   generator:         GeneratorNode,
   decoder:           InstrumentNode,
   'di-box':          DIBoxNode,
@@ -90,7 +92,7 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'studio-monitor':  ActiveSpeakerNode,
   headphones:        HeadphonesNode,
   recorder:          atBeginner(BeginnerOutput, RecorderNode),
-  broadcast:         atBeginner(BeginnerOutput, RecorderNode),
+  broadcast:         atBeginner(BeginnerOutput, BroadcastNode),
   interface:         atBeginner(BeginnerInterface, InterfaceNode),
   daw:               atBeginner(BeginnerDevice, DawNode),
   adc:               AdcDacNode,

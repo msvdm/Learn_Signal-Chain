@@ -319,27 +319,6 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
       />
     </div>
   )
-  /** One side's bar, its letter under it. */
-  const bar = (letter: string, side: SideLevels, which: MeterSide) => (
-    <div key={which} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-      <MeterTrack
-        side={side}
-        domain={domain} detailed={detailed} direction="up" thickness={r ? STEREO_BAR_W : MONO_BAR_W}
-        source={shown ? { nodeId, at, side: which } : undefined} shift={spl === undefined ? 0 : spl - SPL_SCALE_DB}
-        clipping={clipsOn(side, domain)}
-        style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
-      />
-      <SideLetter letter={letter} />
-    </div>
-  )
-  /** The numbers beside the bar(s), as tall as them (a letter's room kept under it too). */
-  const scale = (
-    <div key="scale" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <MeterScale domain={domain} spl={spl} ticks={r ? 'both' : 'right'} />
-      <SideLetter letter="" />
-    </div>
-  )
-
   return (
     <div
       className="lsc-meter-strip"
@@ -347,10 +326,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
     >
       <span style={{ fontSize: 'var(--node-text-sm)', color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }}>{label}</span>
 
-      {/* The bars, the scale beside them: [scale][bar] in mono, [L][scale][R] in stereo */}
-      <div style={{ flex: 1, minHeight: 110, display: 'flex', gap: BAR_GAP }}>
-        {r ? [bar('L', l, 'l'), scale, bar('R', r, 'r')] : [scale, bar('', l, 'l')]}
-      </div>
+      <MeterBars l={l} r={r} domain={domain} nodeId={nodeId} at={at} spl={spl} moving={shown} style={{ flex: 1, minHeight: 110 }} />
 
       {detailed ? (
         // Peak and RMS, moving with the sound, then their unit: the same height mono or stereo
@@ -383,6 +359,49 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
 
       {/* The health word: as tall as the tallest of them (a long one wraps), so a new one never resizes the card */}
       <Reserved words={words} style={{ fontSize: 11, lineHeight: '14px', fontWeight: 700, color }}>{t.health[health]}</Reserved>
+    </div>
+  )
+}
+
+/**
+ * A meter's upright bars, the scale beside them: [scale][bar] in mono, [L][scale][R] in stereo,
+ * each bar's letter under it. As tall as its box (`style`). `moving`: it plays the chain's
+ * movement (not where it is hidden).
+ */
+export function MeterBars({ l, r, domain = 'analog', nodeId, at, spl, moving, style }: {
+  l: SideLevels
+  r?: SideLevels
+  domain?: SignalDomain
+  nodeId: string
+  at: MeterAt
+  spl?: number
+  moving: boolean
+  style?: CSSProperties
+}) {
+  const detailed = useDetailShown()
+  /** One side's bar, its letter under it. */
+  const bar = (letter: string, side: SideLevels, which: MeterSide) => (
+    <div key={which} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <MeterTrack
+        side={side}
+        domain={domain} detailed={detailed} direction="up" thickness={r ? STEREO_BAR_W : MONO_BAR_W}
+        source={moving ? { nodeId, at, side: which } : undefined} shift={spl === undefined ? 0 : spl - SPL_SCALE_DB}
+        clipping={clipsOn(side, domain)}
+        style={{ flex: '1 1 auto', height: 'auto', minHeight: 0 }}
+      />
+      <SideLetter letter={letter} />
+    </div>
+  )
+  /** The numbers beside the bar(s), as tall as them (a letter's room kept under it too). */
+  const scale = (
+    <div key="scale" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <MeterScale domain={domain} spl={spl} ticks={r ? 'both' : 'right'} />
+      <SideLetter letter="" />
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', gap: BAR_GAP, ...style }}>
+      {r ? [bar('L', l, 'l'), scale, bar('R', r, 'r')] : [scale, bar('', l, 'l')]}
     </div>
   )
 }

@@ -149,12 +149,22 @@ const DRAWN: Record<ComplexityLevel, WeakMap<NodePort[], NodePort[]>> =
 /** A port not drawn at `level`: a hidden one, or one of another level's (NodePort `levels`). */
 const unseenAt = (level: ComplexityLevel) => (p: NodePort) => p.hidden === true || (p.levels !== undefined && !p.levels.includes(level))
 
-/** A stack of ports without those not drawn at `level` (the same array for the same stack). */
+/** Halfway down its card at `level` (NodePort `middle`, `middleLevels`). */
+export const middleAt = (p: NodePort, level: ComplexityLevel) =>
+  p.middle === true && (p.middleLevels === undefined || p.middleLevels.includes(level))
+
+/**
+ * A stack of ports without those not drawn at `level`, each halfway down its card or not as it is
+ * drawn there (`middleLevels` settled) — the same array for the same stack.
+ */
 function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
   let shown = DRAWN[level].get(ports)
   if (!shown) {
     const unseen = unseenAt(level)
     shown = ports.some(unseen) ? ports.filter((p) => !unseen(p)) : ports
+    if (shown.some((p) => p.middleLevels !== undefined)) {
+      shown = shown.map((p) => p.middleLevels === undefined ? p : { ...p, middle: middleAt(p, level) || undefined, middleLevels: undefined })
+    }
     DRAWN[level].set(ports, shown)
   }
   return shown

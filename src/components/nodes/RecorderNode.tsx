@@ -17,20 +17,21 @@ import { outputKey } from '../../graph/graph'
 import { levelOf } from '../../signal/engine'
 
 /**
- * The Recorder and Stream / Broadcast: end points that take the signal in as it arrives — a card with
- * a big icon and its meter, in dBu (what it records or sends: no sound in the air here). A signal
+ * The Recorder: an end point that takes the signal in as it arrives — a card with a big icon and its
+ * meter, in dBu (what it records: no sound in the air here). (Stream / Broadcast has no card:
+ * BroadcastNode.) A signal
  * clipped on its way here says "Bad sound" (`distorted`: the recording keeps the distortion, however
  * green its meter); a hum from a DI Box ground loop shows too. At Advanced the Recorder is a
  * Recorder Track (D23): a line across its face names what it records and its Monitor out, and on an
  * analog signal its meter is a VU meter in its face (VuMeter) — on a digital one dBFS, as any meter.
  */
 export function RecorderNode({ id, type }: CardProps) {
-  const typeKey = type as 'recorder' | 'broadcast'
+  const typeKey = type as 'recorder'
   const Icon    = NODE_LOOK[typeKey].icon
   const stage   = useStage(id)
   const levels  = useStereoLevels(id)
   const { t }   = useTranslation()
-  const track   = useSignalStore((s) => typeKey === 'recorder' && s.complexityLevel === 'advanced')
+  const track   = useSignalStore((s) => s.complexityLevel === 'advanced')
   const zoomed  = useSignalStore((s) => s.overview)
   const sending = isFinite(levelOf(useWire(outputKey(id, 'out'))))
   const vu      = track && stage?.inDomain !== 'digital'

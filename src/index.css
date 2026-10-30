@@ -758,6 +758,14 @@ kbd {
   border-color: var(--lsc-border);
 }
 
+/* A frameless element's icon selected (Frameless.tsx): its glow, the icon's own lines thickened */
+.lsc-icon-glow svg {
+  overflow: visible;
+}
+.lsc-icon-glow svg * {
+  stroke-width: var(--lsc-glow);
+}
+
 /* Header buttons: on/off (and the unplug list's ×) */
 .lsc-node-btn:hover {
   border-color: var(--lsc-accent) !important;

@@ -26,6 +26,12 @@ export type NodePort = {
    * instrument itself, not a socket (the user's call, 2026-10-29)
    */
   middle?: true
+  /**
+   * With `middle`: halfway down only at these levels (the Drum Kit's and the Acoustic's: on their
+   * Beginner face; from Intermediate they have no card, their Sound leaves the icon on its port
+   * line — BareSource). drawnPorts settles it: a port drawn at a level has `middle` or not.
+   */
+  middleLevels?: readonly ComplexityLevel[]
   /** Its name, beside its ring (the locales' `ports`): the Guitar Amp's DI Out among its outputs */
   label?: PortLabel
   /** Never drawn, and no hand-drawn wire ends on it: the USB link's way back (graph/usbLink.ts) */
@@ -127,7 +133,11 @@ export type NodeTypeDef = {
    * down. In stereo it runs linked: the louder side decides, both sides get the same change.
    */
   dynamics?: true
-  /** Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. */
+  /**
+   * Drawn as a bare control, not a card (FreeControl): its usual size, for drop previews. With a
+   * `minSize` too (the sources with no card from Intermediate — BareSource), that is its Beginner
+   * face's size.
+   */
   freeSize?: Size
   /**
    * Below Advanced drawn as a bare control, not a card, as on a small desk: the Compressor's one
@@ -215,6 +225,8 @@ export const SOUND_PORT = 'sound'
 
 /** Their output: Sound, halfway down the card's side */
 const SOUND_OUT: NodePort[] = [{ id: SOUND_PORT, middle: true }]
+/** The Drum Kit's and the Acoustic's: halfway down their Beginner face, on their icon's port line from Intermediate (no card) */
+const SOUND_OUT_BARE: NodePort[] = [{ id: SOUND_PORT, middle: true, middleLevels: ['beginner'] }]
 
 /**
  * What a Vocal does (param `character`): speak or sing. Chosen from Intermediate up; at Beginner it
@@ -269,6 +281,15 @@ const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
 // knob beside the icon
 const BARE_OUTPUT_SIZE: Size = { w: 292, h: 412 }
 const BARE_VOLUME_SIZE: Size = { w: 458, h: 412 }
+// The sources with no card around them from Intermediate (BareSource), like the Passive Speaker
+// (taller with a note under the icon): the Acoustic Instrument's long name wider, the Keyboard with
+// a bar for each side, the Computer with its upright meter beside its icon
+const BARE_SOURCE_SIZE: Size   = { w: 292, h: 412 }
+const BARE_ACOUSTIC_SIZE: Size = { w: 336, h: 412 }
+const BARE_KEYBOARD_SIZE: Size = { w: 292, h: 430 }
+const BARE_COMPUTER_SIZE: Size = { w: 384, h: 380 }
+// Stream / Broadcast, drawn as the Computer (its meter before the icon)
+const BARE_BROADCAST_SIZE: Size = { w: 384, h: 380 }
 
 // The levels whose palette shows a type (`levels`)
 const EVERY_LEVEL: readonly ComplexityLevel[]       = LEVELS
@@ -284,14 +305,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     defaultParams: { character: 'speech' },
   },
   'drum-kit': {
-    category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    category: 'source', inputs: [], outputs: SOUND_OUT_BARE, stereo: 'never',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_SOURCE_SIZE,
     defaultParams: {},
   },
   acoustic: {
     // An acoustic instrument (a trumpet on its icon; it plays the guitar loop): at Beginner too
-    category: 'source', inputs: [], outputs: SOUND_OUT, stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    category: 'source', inputs: [], outputs: SOUND_OUT_BARE, stereo: 'never',
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_ACOUSTIC_SIZE,
     defaultParams: {},
   },
   mic: {
@@ -301,20 +322,21 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: EVERY_LEVEL, bypass: false, minSize: MIC_SIZE,
     defaultParams: { micType: 'dynamic' },
   },
-  // Line-level sources, always stereo (Left and Right on one wire): their level is their own
+  // Line-level sources, always stereo (Left and Right on one wire): their level is their own.
+  // minSize: their Beginner face's (BeginnerInput); freeSize: from Intermediate, no card (BareSource)
   keyboard: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'always',
-    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: SOURCE_SIZE, freeSize: BARE_KEYBOARD_SIZE,
     defaultParams: { levelDb: -10 },
   },
   pc: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'always',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_COMPUTER_SIZE,
     defaultParams: { levelDb: 0 },
   },
   instrument: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'never',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_SOURCE_SIZE,
     defaultParams: { levelDb: -30 },
   },
   generator: {
@@ -559,9 +581,10 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   broadcast: {
     // Stream / Broadcast: the mix sent out to listeners far away, always in stereo (a mono wire goes
-    // out on both sides). At Advanced it takes only an Encoder's output (graph/connectionRules.ts)
+    // out on both sides). At Advanced it takes only an Encoder's output (graph/connectionRules.ts).
+    // No card from Intermediate (BroadcastNode, as the Computer): minSize is its Beginner face's
     category: 'sink', inputs: IN, outputs: [], stereo: 'always',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_BROADCAST_SIZE,
     defaultParams: {},
   },
   // Record and play back (D22). Each path from its own port line, left to right: the top one

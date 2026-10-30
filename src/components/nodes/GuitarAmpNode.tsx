@@ -15,7 +15,7 @@ import { outputKey } from '../../graph/graph'
 import { AMP_DI_PORT } from '../../data/nodeRegistry'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { AmpKnob, SelectedEdge } from './ampParts'
-import { SplMeter } from './SplMeter'
+import { BareMeter } from './BareMeter'
 import { PANEL_TEXT, dialPoint } from './ampDial'
 
 /** The cabinet: a square combo (px, drawn 1:1) */
@@ -90,7 +90,7 @@ export function GuitarAmpNode({ id }: CardProps) {
   const toggle = () => updateNodeParams(id, { on: !on })
   const ink    = 'var(--lsc-fg)'
 
-  const meter = <SplMeter nodeId={id} typeKey="guitar-amp" width={CAB} />
+  const meter = <BareMeter nodeId={id} typeKey="guitar-amp" width={CAB} />
 
   return (
     <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} footer={meter} outline={false}>

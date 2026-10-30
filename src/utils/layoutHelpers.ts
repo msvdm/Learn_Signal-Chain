@@ -118,11 +118,15 @@ export const HIT_THRESHOLD = 48
 
 // ── Dimension helpers ──────────────────────────────────────────────────────────
 
-/** A type never measured: a free-standing control's usual size (a card's below Advanced: bareSize), else a card's minimum. */
+/**
+ * A type never measured: a free-standing control's usual size (a card's below Advanced: bareSize;
+ * a source with no card from Intermediate: its Beginner face's at Beginner), else a card's minimum.
+ */
 function unmeasuredSize(typeKey: string, level?: ComplexityLevel, overview?: boolean): Size {
   if (!isTypeKey(typeKey)) return { w: CARD_MIN_W, h: CARD_MIN_H }
   const def  = NODE_REGISTRY[typeKey]
   const bare = level && isBareAt(typeKey, level, overview) ? def.bareSize : undefined
+  if (level === 'beginner' && def.minSize) return bare ?? def.minSize
   return bare ?? def.freeSize ?? cardMinSize(typeKey)
 }
 

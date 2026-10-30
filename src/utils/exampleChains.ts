@@ -3,6 +3,7 @@ import { NODE_REGISTRY, initialParams } from '../data/nodeRegistry'
 import type { NodeParamValue, SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import type { Size } from './geometry'
 import { withNodes } from '../graph/edits'
+import { middleAt } from '../graph/queries'
 import { CHAIN_APP, CHAIN_VERSION } from './chainFile'
 import type { ChainFile } from './chainFile'
 import { GRID, PORT_TOP } from './layoutHelpers'
@@ -24,8 +25,9 @@ export const EXAMPLES: Record<ComplexityLevel, ExampleKey[]> = {
 }
 
 /**
- * Each card's size as the app draws it (measured in the app, 2026-10-25): the registry's minimum
- * leaves out a face's meter, and some cards grow past it. Only the spacing depends on it.
+ * Each card's size as the app draws it (measured in the app, 2026-10-25; the Hi-Z Instrument and
+ * Stream / Broadcast with no card, 2026-10-31): the registry's minimum leaves out a face's meter,
+ * and some cards grow past it. Only the spacing depends on it.
  */
 const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: number]>>> = {
   beginner: {
@@ -34,13 +36,13 @@ const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: numb
     'speaker': [292, 340], 'active-speaker': [292, 340], 'studio-monitor': [292, 340],
   },
   intermediate: {
-    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [412, 328], 'di-box': [432, 309], 'guitar-amp': [352, 413],
+    'vocal': [412, 328], 'mic': [160, 164], 'instrument': [292, 412], 'di-box': [432, 309], 'guitar-amp': [352, 413],
     'gain': [217, 275], 'hpf': [196, 206], 'eq': [603, 308], 'comp': [273, 315], 'fader': [198, 572], 'pan': [232, 298],
     'master-bus': [398, 361], 'aux-bus': [398, 397], 'active-speaker': [458, 412],
   },
   advanced: {
     'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 275], 'adc': [320, 218], 'eq': [682, 466], 'comp': [618, 366],
-    'dac': [320, 259], 'fader': [198, 572], 'master-bus': [398, 361], 'encoder': [320, 259], 'broadcast': [412, 328],
+    'dac': [320, 259], 'fader': [198, 572], 'master-bus': [398, 361], 'encoder': [320, 259], 'broadcast': [384, 380],
     'active-speaker': [458, 412],
   },
 }
@@ -53,7 +55,8 @@ function sizeOf(typeKey: TypeKey, level: ComplexityLevel): Size {
 
 /** How far below a card's top its wires leave or arrive: its first port line, or halfway down (a Sound output). */
 function portLineOf(typeKey: TypeKey, level: ComplexityLevel): number {
-  return NODE_REGISTRY[typeKey].outputs[0]?.middle ? sizeOf(typeKey, level).h / 2 : PORT_TOP
+  const out = NODE_REGISTRY[typeKey].outputs[0]
+  return out && middleAt(out, level) ? sizeOf(typeKey, level).h / 2 : PORT_TOP
 }
 
 /** Room between two cards (px). */
