@@ -22,7 +22,7 @@ export function CardFrame({ nodeId, label, chrome, size, bare = false, notConnec
 }) {
   const { node, ports, chains, selected, overview, wireTarget } = chrome
   const isBypassed  = node?.bypassed ?? false
-  const borderColor = bare && !selected ? 'transparent' : isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-border)'
+  const borderColor = bare && !selected ? 'transparent' : isBypassed ? 'var(--signal-hot)' : selected ? 'var(--lsc-accent)' : 'var(--lsc-card-edge)'
   // Selected: a solid ring, a soft glow and a tinted face — thicker zoomed out, so it still shows
   const ring = overview ? 12 : 4
 

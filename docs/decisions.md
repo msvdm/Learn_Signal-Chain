@@ -71,6 +71,10 @@ the descriptions). Each is what the user asked for; change one only when they as
   loop at 90 dB SPL. The Instrument became the **Hi-Z Instrument** (its icon kept): a weak signal
   from a high-impedance output. The Keyboard (a stereo line) and the Computer (a stereo line,
   compressed music) as they were. The Guitar Amp a loud acoustic source, or a mono mic-level one from its DI Out (D26).
+- **Card outlines and empty port rings stand out from the canvas** (2026-10-30, the user's call:
+  they "blend in with the canvas in both light and dark themes"): their own colour, `--lsc-card-edge`
+  — a warm grey on the light theme, near white on the dark one ("closer to white", after a cool grey
+  was too dark). The other borders (knobs, menus, the header) keep `--lsc-border`.
 - **Zoomed out, the Microphone, Line Input and Instrument are bare** (`overviewBare`): their icon
   over a horizontal level bar and its scale, no numbers, no card around them (a selection still
   draws its ring) — like the Gain knob. Since D21 the Keyboard, the PC, the sounds in the air and

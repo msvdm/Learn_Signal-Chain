@@ -191,6 +191,8 @@
   --lsc-border:      #2e3341;
   --lsc-border-soft: #262a34;
   --lsc-border-mute: #20232b;
+  /* A card's outline and an empty port's ring: near white, so they stand out on the dark canvas */
+  --lsc-card-edge:   #d4d6db;
 
   /* Text */
   --lsc-fg:          #e8eaef;
@@ -275,6 +277,7 @@
   --lsc-border:      #e6e2d8;
   --lsc-border-soft: #eeeae0;
   --lsc-border-mute: #f4f1e8;
+  --lsc-card-edge:   #968d80;
 
   /* Text */
   --lsc-fg:          #3a3532;
@@ -507,7 +510,7 @@ kbd {
   min-width: 0;
   min-height: 0;
   border-radius: 9999px;
-  border: 6px solid var(--lsc-border);
+  border: 6px solid var(--lsc-card-edge);
   background: var(--lsc-node-bg);
   cursor: crosshair;
   transition: width 0.1s, height 0.1s, background 0.1s;

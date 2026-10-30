@@ -102,7 +102,7 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
 
   const ringColor = useSignalStore((s) => {
     const plugged = wiresOn(s, nodeId, portId, type)
-    if (plugged.length === 0) return 'var(--lsc-border)'
+    if (plugged.length === 0) return 'var(--lsc-card-edge)'
     // Beginner judges no signal (D20): a plugged port is the wires' one colour
     if (!atLeast(s.complexityLevel, SIGNAL_LEVEL)) return 'var(--lsc-wire-neutral)'
     const { wires, stages } = signalIn(s)
