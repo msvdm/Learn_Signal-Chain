@@ -1,4 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { useSignalStore } from '../../store/signalStore'
 import { dialPoint } from './ampDial'
 
 // What the two amps' faces share (GuitarAmpNode, AmpNode — D27): drawn 1:1 in an SVG of their own.
@@ -7,6 +8,41 @@ import { dialPoint } from './ampDial'
  * A knob printed on an amp's panel: its cap, a pointer at `value` (0 … 1) and `ticks` marks around it.
  * Turned by a drag from `onPointerDown`; without it, part of the picture (Beginner).
  */
+/**
+ * Selected, an amp shows it on its own outline, not in a box around it (D27): its edge (a rounded
+ * rect `w` × `h` from 0, 0 with `rx` corners, `edge` thick) drawn in the accent colour, the soft glow
+ * outside it — as thick as a free control's selection ring and glow, and thicker zoomed out, the same
+ * on screen however many times its drawing is scaled up (`scale`). Draw it last in the amp's SVG
+ * (`overflow: visible`, for the glow); it redraws on its own when the selection changes.
+ */
+export function SelectedEdge({ nodeId, w, h, rx, edge, scale = 1 }: {
+  nodeId: string
+  w: number
+  h: number
+  rx: number
+  edge: number
+  scale?: number
+}) {
+  const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))
+  const overview = useSignalStore((s) => s.overview)
+  if (!selected) return null
+  // FreeControl's ring and glow (px on the canvas), in the drawing's units
+  const ring = Math.max(edge, (overview ? 12 : 4) / scale)
+  const glow = (overview ? 36 : 12) / scale
+  return (
+    <g aria-hidden pointerEvents="none">
+      <rect
+        x={-glow / 2} y={-glow / 2} width={w + glow} height={h + glow} rx={rx + glow / 2}
+        stroke="var(--lsc-select-halo)" strokeWidth={glow} fill="none"
+      />
+      <rect
+        x={ring / 2} y={ring / 2} width={w - ring} height={h - ring} rx={Math.max(0, rx - ring / 2)}
+        stroke="var(--lsc-accent)" strokeWidth={ring} fill="none"
+      />
+    </g>
+  )
+}
+
 export function AmpKnob({ cx, cy, r, value, ticks, label, onPointerDown }: {
   cx: number
   cy: number

@@ -27,6 +27,8 @@ interface FreeControlProps {
   footer?: ReactNode
   /** The name and reading this many times their usual size (the Gain and Pan knobs: 2, read zoomed out) */
   textScale?: number
+  /** false = no box around it, hovered or selected: the control shows its selection itself (the amps — D27) */
+  outline?: boolean
 }
 
 /**
@@ -35,7 +37,7 @@ interface FreeControlProps {
  * enough to read zoomed out. Remove is in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.
  */
-export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1 }: FreeControlProps) {
+export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1, outline = true }: FreeControlProps) {
   const { ports, chains, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
   // Room above the control so its port line sits at PORT_TOP. A control whose port line is lower
   // than that (a 165px knob: 82.5) reaches above the box instead — a negative padding would void
@@ -56,7 +58,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
     >
       {/* Outline: faint dashes on hover; selected = a solid ring, a soft glow and a tinted
           background (thicker zoomed out, so it still shows) */}
-      <div
+      {outline && <div
         aria-hidden
         className="lsc-free-outline"
         style={{
@@ -67,7 +69,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
             boxShadow: `0 0 0 ${overview ? 36 : 12}px var(--lsc-select-halo)`,
           } : {}),
         }}
-      />
+      />}
 
       {wireTarget && <WireTargetBadge label={label} />}
 

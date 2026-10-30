@@ -21,7 +21,7 @@ import { AMP_B_PORT } from '../../data/nodeRegistry'
 import { SIGNAL_LEVEL, atLeast } from '../../data/levels'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { PORT_GAP, PORT_TOP } from '../../utils/layoutHelpers'
-import { AmpKnob } from './ampParts'
+import { AmpKnob, SelectedEdge } from './ampParts'
 import { PANEL_TEXT } from './ampDial'
 
 /** The rack is drawn at this many times the size of its drawing (the user's call: twice as large) */
@@ -134,9 +134,9 @@ export function AmpNode({ id }: CardProps) {
   )
 
   return (
-    <FreeControl nodeId={id} typeKey="amp" label={name} showName={false} portLine={ROW_A * S}>
+    <FreeControl nodeId={id} typeKey="amp" label={name} showName={false} portLine={ROW_A * S} outline={false}>
       <div style={{ position: 'relative', width: W * S, height: H * S }}>
-        <svg width={W * S} height={H * S} viewBox={`0 0 ${W} ${H}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <svg width={W * S} height={H * S} viewBox={`0 0 ${W} ${H}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', overflow: 'visible' }}>
           <g stroke={ink} style={dim}>
             <rect x="1.5" y="1.5" width={W - 3} height={H - 3} rx="6" strokeWidth="3" fill="var(--lsc-node-bg)" />
             {/* The rack ears, with their slots */}
@@ -167,10 +167,13 @@ export function AmpNode({ id }: CardProps) {
             <path d={`M${POWER_X} ${ROW_A + 12}V${ROW_A + 22}`} stroke={ink} strokeWidth="2.2" />
             <circle cx={POWER_X} cy={ROW_A + 43} r="5" stroke={ink} strokeWidth="2" />
           </g>
+
+          {/* Selected: the panel's edge (its outer edge: 0 … W, its corners 6 + half its line) */}
+          <SelectedEdge nodeId={id} w={W} h={H} rx={7.5} edge={3} scale={S} />
         </svg>
 
-        {/* What is drawn over the panel, in its units: scaled as the SVG is */}
-        <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${S})`, transformOrigin: '0 0' }}>
+        {/* What is drawn over the panel, in its units: scaled as the SVG is (the clicks go through to the knobs and the rocker) */}
+        <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${S})`, transformOrigin: '0 0', pointerEvents: 'none' }}>
           {bar(ROW_A, out.l, 'l', soundA)}
           {bar(ROW_B, out.r, 'r', soundB)}
           {/* The scale, between the two windows */}

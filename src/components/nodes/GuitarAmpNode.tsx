@@ -16,7 +16,7 @@ import { GUITAR_AMP_MAX } from '../../signal/gains'
 import { outputKey } from '../../graph/graph'
 import { AMP_DI_PORT } from '../../data/nodeRegistry'
 import { cssVar, textWidth } from '../../utils/fitText'
-import { AmpKnob } from './ampParts'
+import { AmpKnob, SelectedEdge } from './ampParts'
 import { PANEL_TEXT, dialPoint } from './ampDial'
 
 /** The cabinet: a square combo (px, drawn 1:1) */
@@ -111,9 +111,9 @@ export function GuitarAmpNode({ id }: CardProps) {
   )
 
   return (
-    <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} footer={meter}>
+    <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} footer={meter} outline={false}>
       <div style={{ position: 'relative', width: CAB, height: CAB }}>
-        <svg width={CAB} height={CAB} viewBox={`0 0 ${CAB} ${CAB}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <svg width={CAB} height={CAB} viewBox={`0 0 ${CAB} ${CAB}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', overflow: 'visible' }}>
           <defs>
             <pattern id={`grille-${id}`} width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <path d="M0 0V7M0 0H7" stroke={ink} strokeWidth="0.7" opacity="0.45" />
@@ -190,6 +190,9 @@ export function GuitarAmpNode({ id }: CardProps) {
               {liftWord}
             </text>
           </g>
+
+          {/* Selected: its cabinet's edge (the cabinet's outer edge: 0 … CAB, its corners 14 + half its line) */}
+          <SelectedEdge nodeId={id} w={CAB} h={CAB} rx={15.5} edge={3} />
         </svg>
 
         {/* Fed a digital signal: said on the grille (switched off, the amp shows it itself) */}
