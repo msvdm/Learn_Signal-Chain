@@ -10,6 +10,7 @@ import { CardFrame } from './CardFrame'
 import { NODE_LOOK } from './nodeLook'
 import { OverviewFace } from './OverviewFace'
 import type { OverviewArt } from './OverviewFace'
+import { SidesFace } from './SidesFace'
 import { SPL_DB } from '../../signal/levels'
 import { cssVar, textWidth } from '../../utils/fitText'
 
@@ -50,6 +51,8 @@ interface NodeWrapperProps {
    * meter bar alone, no numbers (Keyboard, PC)
    */
   overviewBare?: boolean
+  /** Zoomed out: its In and Out meters at its sides, its name between them (SidesFace, D31) — 'output': its Output alone (a bus) */
+  overviewSides?: boolean | 'output'
   /** Overview: false = its name alone, no level (the HPF, the converters: the level after it shows on the next card) */
   showLevel?: boolean
 }
@@ -59,7 +62,8 @@ interface NodeWrapperProps {
  * body, in the frame every card shares (CardFrame). Width follows the content (controls, graphs);
  * text wraps to fit. The 56px header keeps the first port line at the same height on every card,
  * so wires between cards stay straight no matter how tall each card is. Zoomed out its name (or
- * art) and the level leaving it are drawn over the hidden controls (OverviewFace). A card that is
+ * art) and the level leaving it are drawn over the hidden controls (OverviewFace) — or its In and Out
+ * meters at its sides, its name between them (SidesFace, `overviewSides`). A card that is
  * only its face: FaceCard.
  */
 export function NodeWrapper({
@@ -70,6 +74,7 @@ export function NodeWrapper({
   align = 'stretch',
   overviewArt,
   overviewBare = false,
+  overviewSides = false,
   showLevel = true,
 }: NodeWrapperProps) {
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
@@ -188,18 +193,22 @@ export function NodeWrapper({
       </div>
 
       {/* Overview (zoomed out): name + output level, drawn over the hidden controls, under the ports */}
-      <OverviewFace
-        nodeId={nodeId}
-        typeKey={typeKey}
-        label={label}
-        art={overviewArt}
-        showLevel={showLevel}
-        barOnly={overviewBare}
-        status={notConnected ? t.status.notConnected : undefined}
-        shown={overview}
-        bypassed={isBypassed}
-        spl={SPL_DB[typeKey]}
-      />
+      {overviewSides ? (
+        <SidesFace nodeId={nodeId} typeKey={typeKey} label={label} input={overviewSides !== 'output'} shown={overview} bypassed={isBypassed} />
+      ) : (
+        <OverviewFace
+          nodeId={nodeId}
+          typeKey={typeKey}
+          label={label}
+          art={overviewArt}
+          showLevel={showLevel}
+          barOnly={overviewBare}
+          status={notConnected ? t.status.notConnected : undefined}
+          shown={overview}
+          bypassed={isBypassed}
+          spl={SPL_DB[typeKey]}
+        />
+      )}
     </CardFrame>
   )
 }

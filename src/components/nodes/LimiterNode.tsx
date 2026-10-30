@@ -35,6 +35,7 @@ export function LimiterNode({ id }: CardProps) {
       nodeId={id}
       typeKey="limiter"
       label={useNodeName(id, 'limiter')}
+      overviewSides
     >
       <MeterSides nodeId={id}>
         <div style={twoColumns}>

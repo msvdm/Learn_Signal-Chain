@@ -85,7 +85,7 @@ Each level shows the sound system at its own scale, from the room down to the pa
 |---|---|
 | Beginner — the room | The devices and how they connect: vocal, drum kit, acoustic instrument, microphone, keyboard, computer, Hi-Z instrument (an electric guitar), guitar amp; stage box, mixer, audio interface, DAW; active and passive speakers, amplifier, headphones, studio monitor, recorder, stream / broadcast. No numbers: each output says whether sound reaches it |
 | Intermediate — a small desk | You build the desk's channel strip yourself (the mixer and stage box leave): + DI box, phantom power (48V), gain (the preamp after a microphone), high-pass filter, pad, equalizer (three knobs), compressor (one knob), fader, on / off switch, relay switch, pan / balance, master bus, aux bus, PFL bus; the audio interface and DAW record and play back. On every meter the peaks, the noise and the Peak / RMS / Noise numbers, moving with the sound |
-| Advanced — the parts and the digital picture | + signal generator, decoder, parametric equalizer, the full compressor, noise gate, limiter, de-esser, graphic EQ, ADC / DAC, encoder, matrix bus; the recorder becomes a Recorder Track, fed by the DAW (a digital summing bus). The audio interface and studio monitor leave: the converters, the encoder and the decoder take their place |
+| Advanced — the parts and the digital picture | + signal generator, decoder, parametric equalizer, the full compressor, noise gate, limiter, de-esser, graphic equalizer, ADC / DAC, encoder, matrix bus; the recorder becomes a Recorder Track, fed by the DAW (a digital summing bus). The audio interface and studio monitor leave: the converters, the encoder and the decoder take their place |
 
 Switch levels from the header at any time.
 

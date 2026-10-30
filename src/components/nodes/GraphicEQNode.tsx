@@ -89,6 +89,7 @@ export function GraphicEQNode({ id }: CardProps) {
       nodeId={id}
       typeKey="graphic-eq"
       label={useNodeName(id, 'graphic-eq')}
+      overviewSides
     >
       <MeterSides nodeId={id}>
         <div style={{ width: BODY_W, display: 'flex', flexDirection: 'column', gap: 10 }}>

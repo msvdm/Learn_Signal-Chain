@@ -82,6 +82,7 @@ function CompressorCard({ id }: { id: string }) {
       nodeId={id}
       typeKey="comp"
       label={useNodeName(id, 'comp')}
+      overviewSides
     >
       <MeterSides nodeId={id}>
         <div style={twoColumns}>

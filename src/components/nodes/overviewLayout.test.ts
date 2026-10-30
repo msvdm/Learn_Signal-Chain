@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { OverviewInput } from './overviewLayout'
-import { NAME_GAP, PAD, overviewLayout } from './overviewLayout'
+import { NAME_GAP, PAD, overviewLayout, fitNameRows } from './overviewLayout'
 
 // The zoomed-out face's layout, with text measured by a stand-in (no canvas here): every letter
 // 0.55 em wide in the sans font, 0.6 in the mono one — close to the page's.
@@ -79,5 +79,29 @@ describe('overviewLayout', () => {
 
   it('no level block (a face card zoomed in): the art takes the whole face', () => {
     expect(overviewLayout(card({ showLevel: false }), width).nameH).toBe(faceH(361))
+  })
+})
+
+describe('fitNameRows (a face with meters at its sides)', () => {
+  it('two words: one on each row, even where one row would fit', () => {
+    expect(fitNameRows('Noise Gate', 254, 243, 'sans', width)).toEqual({ fontSize: 88, lines: ['Noise', 'Gate'] })
+  })
+
+  it('three words on two rows: broken where the font comes out largest', () => {
+    expect(fitNameRows('Analog to Digital', 254, 243, 'sans', width).lines).toEqual(['Analog to', 'Digital'])
+  })
+
+  it('one word (Bulgarian Гейт): one row, never above the largest size', () => {
+    expect(fitNameRows('Гейт', 254, 243, 'sans', width)).toEqual({ fontSize: 96, lines: ['Гейт'] })
+    expect(fitNameRows('Гейт', 254, 243, 'sans', width, 70).fontSize).toBe(70)
+  })
+
+  it('up to four rows where allowed and larger (the Bulgarian Aux Bus); never more rows than words', () => {
+    const aux = 'Допълнителна смесителна шина (Aux)'
+    expect(fitNameRows(aux, 190, 243, 'sans', width).lines.length).toBe(2)
+    const four = fitNameRows(aux, 190, 243, 'sans', width, 96, 4)
+    expect(four.lines.length).toBeGreaterThan(2)
+    expect(four.fontSize).toBeGreaterThan(fitNameRows(aux, 190, 243, 'sans', width).fontSize)
+    expect(fitNameRows('Aux Bus', 190, 243, 'sans', width, 96, 4).lines).toEqual(['Aux', 'Bus'])
   })
 })

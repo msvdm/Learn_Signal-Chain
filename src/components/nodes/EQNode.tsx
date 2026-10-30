@@ -26,12 +26,14 @@ const DEFAULT_BANDS = NODE_REGISTRY.eq.defaultParams.bands as EQBand[]
  * a value never resizes the card. Its meters stand at its sides; the curve and the bands' knobs
  * take what is left between them.
  */
-const BODY_W   = 640
+// The card is the Graphic equalizer's size (EQ_SIZE, D31): its width less the border and the body's padding
+const BODY_W   = 820
 const MIDDLE_W = BODY_W - 2 * (STRIP_W + METER_GAP)
 const GRAPH_H  = 160
 /** The bands' table: the row names on the left, a column per band */
 const ROW_NAMES_W = 72
-const KNOB = 28
+// The bands' knobs: room for them where a hint used to stand (the user's call, D31)
+const KNOB = 36
 
 /** One band as shown on this level. */
 interface BandSpec {
@@ -263,6 +265,7 @@ function ParametricEQ({ id }: { id: string }) {
       nodeId={id}
       typeKey="eq"
       label={useNodeName(id, 'eq')}
+      overviewSides
     >
       {/* As wide as it always was: its meters at its sides, the curve and the bands between them */}
       <div style={{ width: BODY_W }}>
@@ -275,10 +278,6 @@ function ParametricEQ({ id }: { id: string }) {
               height={GRAPH_H}
               adjustableWidth
             />
-            <p style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--lsc-fg-dim)' }}>
-              {t.nodes.eq.graphHint}
-              {t.nodes.eq.graphHintWidth && ` ${t.nodes.eq.graphHintWidth}`}
-            </p>
             <BandTable specs={specs} bands={bands} onChange={updateBand} />
           </div>
         </MeterSides>

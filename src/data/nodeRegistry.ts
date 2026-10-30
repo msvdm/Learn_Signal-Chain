@@ -276,6 +276,8 @@ const SOURCE_SIZE: Size = { w: 320, h: 350 }
 // The Microphone's: half a face's each way (the user's call, 2026-10-11) — a small thing on a stand
 const MIC_SIZE: Size = { w: 160, h: 164 }
 const DYNAMICS_SIZE: Size = { w: 618, h: 366 }
+// The Graphic and the Parametric equalizer: one size, room for their names zoomed out (D31)
+const EQ_SIZE: Size = { w: 862, h: 471 }
 // The speakers' and the Headphones' with no card around them (D28: BareOutput), at Intermediate
 // (taller with a note under the icon) — the Active Speaker's and Studio Monitor's with their Volume
 // knob beside the icon
@@ -376,7 +378,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     // Below Advanced three bare knobs, Low · Mid · High (see initialParams)
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 410, h: 361 }, bareSize: { w: 603, h: 308 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: EQ_SIZE, bareSize: { w: 603, h: 308 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -388,7 +390,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'graphic-eq': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: ADVANCED_ONLY, bypass: true, splits: true,
+    levels: ADVANCED_ONLY, bypass: true, splits: true, minSize: EQ_SIZE,
     // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
     defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
   },

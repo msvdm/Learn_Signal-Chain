@@ -36,6 +36,7 @@ export function NoiseGateNode({ id }: CardProps) {
       nodeId={id}
       typeKey="noise-gate"
       label={useNodeName(id, 'noise-gate')}
+      overviewSides
     >
       <MeterSides nodeId={id}>
         <div style={twoColumns}>

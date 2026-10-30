@@ -24,6 +24,7 @@ export function DeesserNode({ id }: CardProps) {
       nodeId={id}
       typeKey="deesser"
       label={useNodeName(id, 'deesser')}
+      overviewSides
     >
       <MeterSides nodeId={id}>
         {/* Its knobs, then how far it turns the "s" down */}

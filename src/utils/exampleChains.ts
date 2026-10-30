@@ -41,7 +41,7 @@ const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: numb
     'master-bus': [398, 361], 'aux-bus': [398, 397], 'active-speaker': [458, 412],
   },
   advanced: {
-    'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 275], 'adc': [320, 218], 'eq': [682, 466], 'comp': [618, 366],
+    'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 275], 'adc': [320, 218], 'eq': [862, 471], 'comp': [618, 366],
     'dac': [320, 259], 'fader': [198, 572], 'master-bus': [398, 361], 'encoder': [320, 259], 'broadcast': [384, 380],
     'active-speaker': [458, 412],
   },

@@ -62,6 +62,7 @@ export function MasterBusNode({ id, type }: CardProps) {
       nodeId={id}
       typeKey={typeKey}
       label={useNodeName(id, typeKey)}
+      overviewSides="output"
     >
       {/* The mix leaving it, on its right; what feeds it on the left */}
       <MeterSides nodeId={id} input={false}>

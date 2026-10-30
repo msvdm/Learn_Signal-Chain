@@ -158,7 +158,7 @@
       "cutoff": "Cutoff frequency"
     },
     "eq": {
-      "label": "Parametric Equalizer",
+      "label": "Parametric equalizer",
       "bandLow": "Low",
       "bandMid": "Mid",
       "bandHigh": "High",
@@ -166,12 +166,10 @@
       "gain": "Gain",
       "freq": "Freq",
       "widthQ": "Width (Q)",
-      "shelf": "Shelf",
-      "graphHint": "Drag a coloured dot up to make that range louder, down to make it quieter, or sideways to move it to lower or higher sounds. Double-click a dot to set it back to 0 dB (no change).",
-      "graphHintWidth": "Scroll over a dot to make its band wider or narrower."
+      "shelf": "Shelf"
     },
     "graphic-eq": {
-      "label": "Graphic EQ",
+      "label": "Graphic equalizer",
       "hint": "Drag a slider up to boost that frequency, down to cut it. Double-click = 0 dB.",
       "flat": "Flat"
     },
@@ -441,14 +439,14 @@
       "decoder": "Decoder",
       "gain": "Gain",
       "hpf": "High-Pass Filter",
-      "eq": "Parametric Equalizer",
+      "eq": "Parametric equalizer",
       "comp": "Compressor",
       "deesser": "De-esser",
       "noise-gate": "Noise Gate",
       "limiter": "Limiter",
       "pad": "Pad (−20 dB)",
       "amp": "Amplifier",
-      "graphic-eq": "Graphic EQ",
+      "graphic-eq": "Graphic equalizer",
       "fader": "Fader",
       "switch": "On Off Switch",
       "relay": "Relay Switch",

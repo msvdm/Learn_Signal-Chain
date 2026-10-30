@@ -48,6 +48,9 @@ const SCALE_LABEL_H = 10
 /** Between the bars and the scale (px) */
 const BAR_GAP = 2
 
+/** How wide a stereo MeterBars is (px): [L][scale][R] — a mono one, [scale][bar], is narrower */
+export const STEREO_BARS_W = STEREO_BAR_W * 2 + SCALE_W + BAR_GAP * 2
+
 /** The colours along a bar: each zone where its levels sit, hard edges (meterZones; `noise`: the blue part). */
 function zonesBackground(domain: SignalDomain, shift: number, up: boolean, noise?: number): string {
   const stops = meterZones(domain, shift, noise).map((z) => `${healthColor(ZONE_HEALTH[z.kind])} ${z.from}% ${z.to}%`)
