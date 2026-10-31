@@ -9,7 +9,8 @@ export const DB_MAX = 12
 export const Q_MIN = 0.3
 export const Q_MAX = 10
 
-export const BAND_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444']
+// Low a milky blue, Mid a bright green, High a pure red (the user's calls, 2026-10-31: "more milky", #3CDC1B, #FA0F0F)
+export const BAND_COLORS = ['#7c98d6', '#f59e0b', '#3cdc1b', '#fa0f0f']
 
 export function bellGain(freq: number, centerHz: number, gainDb: number, Q = 1.4): number {
   if (gainDb === 0) return 0

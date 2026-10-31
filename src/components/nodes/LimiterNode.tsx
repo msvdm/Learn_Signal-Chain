@@ -79,7 +79,7 @@ export function LimiterNode({ id }: CardProps) {
               domain={levels.inDomain}
               ceilingDb={ceiling + makeupGain}
               state={{
-                on:  { text: t.nodes.limiter.limiting, color: 'var(--signal-hot)', opacity: 1, ring: 'var(--signal-hot)' },
+                on:  { text: t.nodes.limiter.limiting, color: 'var(--signal-hot-text)', opacity: 1, ring: 'var(--signal-hot)' },
                 off: { text: t.nodes.limiter.pass, color: 'var(--lsc-fg)', opacity: 0.4, ring: 'var(--lsc-accent)' },
                 active: limiting,
                 // Limiting at a moment: a peak caught, that moment turned down

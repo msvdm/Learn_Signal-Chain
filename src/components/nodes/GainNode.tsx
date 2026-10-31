@@ -54,7 +54,7 @@ export function GainNode({ id }: CardProps) {
         label={label}
         formatValue={knob.format}
         onChange={(v) => updateNodeParams(id, { [knob.param]: v })}
-        color="var(--signal-good)"
+        color="var(--lsc-accent)"
         size={KNOB}
         showReadout={false}
       />

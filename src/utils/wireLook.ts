@@ -5,7 +5,7 @@ import type { SignalDomain } from '../signal/levels'
 // How a wire is drawn, by what it carries (the user's call, 2026-10-29): an analog cable an unbroken
 // line, swells of light travelling along it (since 2026-10-31; components/AnalogWire.tsx), a digital one in dashes and dots like Morse code, and sound in
 // the air as waves spreading straight to the microphone (components/SoundWaves.tsx). Its colour says
-// where the sound goes (D24); its look, what kind of connection it is. A digital wire is all right
+// its signal's health (D33); its look, what kind of connection it is. A digital wire is all right
 // angles — square dots, rectangular dashes, sharp corners —, a stereo one two such lines side by side
 // (the user's call, 2026-10-31).
 

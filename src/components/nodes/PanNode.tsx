@@ -53,12 +53,11 @@ export function PanNode({ id }: CardProps) {
         param="panPosition"
         min={0}
         max={100}
-        origin={50}
         step={STEP}
         dragPx={DRAG_PX}
         label="L ← → R"
         formatValue={positionLabel}
-        color="var(--lsc-accent)"
+        color="var(--lsc-knob-gray)"
         size={KNOB}
         showReadout={false}
       />

@@ -169,6 +169,11 @@
   --lsc-eq-low:   #9a7fd4;
   --lsc-eq-mid:   #d89548;
   --lsc-eq-high:  #4fa876;
+
+  /* Knobs, drawn as the logo's (KnobFace, D32): the same in both themes */
+  --lsc-knob-outline: #24232b;
+  --lsc-knob-notch:   #fbfaf7;
+  --lsc-knob-gray:    #4d4a55;  /* Pan / Balance, the amps' knobs */
 }
 
 /* ── Dark theme ─────────────────────────────────────────────────────────── */
@@ -234,13 +239,7 @@
   --lsc-pfl-text: #422006;
   --lsc-select-halo: rgba(154,127,212,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(154,127,212,0.10);  /* fill of a selected element */
-  /* Wires, by where their sound goes (D24): the Master Bus, an Aux, a Matrix, the PFL, what records or sends it out */
-  --lsc-wire-main:   var(--signal-good);
-  --lsc-wire-aux:    #5b9cf5;
-  --lsc-wire-matrix: #f050d8;
-  --lsc-wire-pfl:    #facc15;
-  --lsc-wire-record: #f4f4f5;
-  /* Beginner's wires: one colour, whatever they carry (D20, D24) */
+  /* Beginner's wires: one colour, whatever they carry (D20; from Intermediate their health — D33) */
   --lsc-wire-neutral: #8d95a6;
 
   /* Pro tip */
@@ -289,14 +288,15 @@
   /* Signal health */
   --signal-too-quiet:        #5b8de8;
   --signal-good:             #4fa876;
-  --signal-hot:              #d89548;
+  /* The logo's bright yellow, as the dark theme's (the user's call, 2026-10-31); words in it: -text */
+  --signal-hot:              #facc15;
   --signal-clipping:         #d86b6b;
   --signal-too-quiet-bg:     rgba(91,141,232,0.08);
   --signal-too-quiet-border: rgba(91,141,232,0.22);
   --signal-good-bg:          rgba(79,168,118,0.08);
   --signal-good-border:      rgba(79,168,118,0.22);
-  --signal-hot-bg:           rgba(216,149,72,0.10);
-  --signal-hot-border:       rgba(216,149,72,0.24);
+  --signal-hot-bg:           rgba(250,204,21,0.12);
+  --signal-hot-border:       rgba(234,179,8,0.45);
   --signal-clipping-bg:      rgba(216,107,107,0.08);
   --signal-clipping-border:  rgba(216,107,107,0.24);
   /* Health words as text (overview cards): darker shades, at least 4.5:1 on --lsc-node-bg */
@@ -318,11 +318,6 @@
   --lsc-pfl-text: #713f12;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
-  --lsc-wire-main:   var(--signal-good);
-  --lsc-wire-aux:    #2f6fd6;
-  --lsc-wire-matrix: #d63bbd;
-  --lsc-wire-pfl:    #d4a106;
-  --lsc-wire-record: #25262a;
   --lsc-wire-neutral: #8a817a;
 
   /* Pro tip */

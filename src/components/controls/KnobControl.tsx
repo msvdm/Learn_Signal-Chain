@@ -1,6 +1,8 @@
 import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import { StableText } from './StableText'
 import { widestFormat } from '../../utils/readout'
+import { KnobFace } from './KnobFace'
+import { capRadius } from './knobShape'
 
 interface KnobControlProps {
   value: number
@@ -21,17 +23,8 @@ interface KnobControlProps {
   labelBelow?: boolean
   /** How far (px on screen, up / down) a drag takes it through its whole range */
   dragPx?: number
-  /** Where its coloured arc starts (default: min) — a Pan knob's centre, so it fills toward L or R */
-  origin?: number
 }
 
-const START_CLOCK = 225
-const SWEEP = 270
-
-function polarPoint(cx: number, cy: number, r: number, clockDeg: number) {
-  const rad = ((clockDeg - 90) * Math.PI) / 180
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
-}
 
 export function KnobControl({
   value,
@@ -48,31 +41,9 @@ export function KnobControl({
   layout = 'below',
   labelBelow = false,
   dragPx = 150,
-  origin,
 }: KnobControlProps) {
   const range = max - min
   const normalizedValue = Math.max(0, Math.min(1, (value - min) / range))
-  const currentClock = START_CLOCK + normalizedValue * SWEEP
-  const normalizedOrigin = origin === undefined ? 0 : Math.max(0, Math.min(1, (origin - min) / range))
-
-  const cx = size / 2
-  const cy = size / 2
-  // Strokes grow with a big knob (free-standing Gain / Pan); at card sizes they stay 4px
-  const stroke = Math.max(4, size * 0.075)
-  const trackR = size / 2 - stroke * 1.5
-
-  const trackStart = polarPoint(cx, cy, trackR, START_CLOCK)
-  const trackEnd = polarPoint(cx, cy, trackR, START_CLOCK + SWEEP - 0.01)
-
-  // The coloured arc: from its origin to the value, clockwise
-  const [fillFrom, fillTo] = normalizedValue >= normalizedOrigin
-    ? [normalizedOrigin, normalizedValue] : [normalizedValue, normalizedOrigin]
-  const fillStart = polarPoint(cx, cy, trackR, START_CLOCK + fillFrom * SWEEP)
-  const fillEnd = polarPoint(cx, cy, trackR, START_CLOCK + fillTo * SWEEP)
-  const fillLargeArc = (fillTo - fillFrom) * SWEEP >= 180 ? 1 : 0
-
-  const indicatorTip = polarPoint(cx, cy, trackR - stroke * 2, currentClock)
-
   const format  = formatValue ?? ((v: number) => String(v))
   const display = format(value)
 
@@ -106,36 +77,8 @@ export function KnobControl({
         onPointerDown={onPointerDown}
         style={{ cursor: 'ns-resize', touchAction: 'none', flexShrink: 0 }}
       >
-        {/* Knob body */}
-        <circle cx={cx} cy={cy} r={size / 2 - 1} fill="var(--lsc-node-bg-2)" stroke="var(--lsc-border)" strokeWidth="1" />
-
-        {/* Track arc — full sweep */}
-        <path
-          d={`M ${trackStart.x.toFixed(2)},${trackStart.y.toFixed(2)} A ${trackR} ${trackR} 0 1 1 ${trackEnd.x.toFixed(2)},${trackEnd.y.toFixed(2)}`}
-          fill="none"
-          stroke="var(--lsc-border)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-        />
-
-        {/* Fill arc */}
-        {fillTo - fillFrom > 0.005 && (
-          <path
-            d={`M ${fillStart.x.toFixed(2)},${fillStart.y.toFixed(2)} A ${trackR} ${trackR} 0 ${fillLargeArc} 1 ${fillEnd.x.toFixed(2)},${fillEnd.y.toFixed(2)}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-          />
-        )}
-
-        {/* Indicator dot — a plain circle, exactly on the value (eased, it trailed behind) */}
-        <circle
-          cx={indicatorTip.x}
-          cy={indicatorTip.y}
-          r={Math.max(3, size * 0.05)}
-          fill="var(--lsc-fg)"
-        />
+        {/* The logo's knob: its cap, the notch pointing at the value */}
+        <KnobFace cx={size / 2} cy={size / 2} r={capRadius(size)} value={normalizedValue} color={color} />
       </svg>
       {showReadout && side && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, lineHeight: 1.1 }}>

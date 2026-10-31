@@ -131,11 +131,8 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0
   const showUnplug = canUnplug && hovered
-  // L / R on an output carrying one side; "L+R" on a send (both sides on one wire), in the Matrix's
-  // colour while it feeds a Matrix Bus
+  // L / R on an output carrying one side; "L+R" on a send (both sides on one wire)
   const isSend     = type === 'source' && portId === MATRIX_PORT
-  const toMatrix   = useSignalStore((s) => isSend && s.edges.some((e) =>
-    e.source === nodeId && e.sourceHandle === MATRIX_PORT && graphOf(s).node(e.target)?.typeKey === 'matrix-bus'))
   // (At Beginner, where no signal is worked out, what the wiring makes of the output)
   const sideKind   = useSignalStore((s) => type !== 'source' ? undefined
     : atLeast(s.complexityLevel, SIGNAL_LEVEL) ? signalIn(s).wires.get(outputKey(nodeId, portId))?.kind
@@ -187,7 +184,7 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
             // Beside the ring, just above the wire leaving it (beside it, on a top or bottom edge)
             position: 'absolute', ...letterPlace(facing, top, isSend),
             fontSize: 10, fontWeight: 800, lineHeight: 1,
-            color: toMatrix ? 'var(--lsc-wire-matrix)' : 'var(--lsc-fg-muted)', pointerEvents: 'none',
+            color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}
         >
           {side}

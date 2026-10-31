@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useSignalStore } from '../../store/signalStore'
 import { dialPoint } from './ampDial'
+import { KnobFace } from '../controls/KnobFace'
 
 // What the two amps' faces share (GuitarAmpNode, AmpNode — D27): drawn 1:1 in an SVG of their own.
 
@@ -52,7 +53,6 @@ export function AmpKnob({ cx, cy, r, value, ticks, label, onPointerDown }: {
   label: string
   onPointerDown?: (e: ReactPointerEvent<SVGGElement>) => void
 }) {
-  const tip  = dialPoint(cx, cy, r - 4, value)
   const live = onPointerDown !== undefined
   return (
     <g stroke="var(--lsc-fg)">
@@ -68,8 +68,7 @@ export function AmpKnob({ cx, cy, r, value, ticks, label, onPointerDown }: {
         style={{ cursor: live ? 'ns-resize' : undefined, touchAction: 'none' }}
       >
         <circle cx={cx} cy={cy} r={r + 8} fill="transparent" stroke="none" />
-        <circle cx={cx} cy={cy} r={r} strokeWidth="2.5" fill="var(--lsc-node-bg-2)" />
-        <path d={`M${cx} ${cy}L${tip.x.toFixed(1)} ${tip.y.toFixed(1)}`} strokeWidth="3" />
+        <KnobFace cx={cx} cy={cy} r={r} value={value} color="var(--lsc-knob-gray)" />
       </g>
     </g>
   )

@@ -6,10 +6,8 @@ import { chainOfEdge, graphOf, outputKey } from '../graph/graph'
 import { drawnTarget } from '../graph/slots'
 import { ampSplit, drawnPorts, otherAmpInput, outputKind } from '../graph/queries'
 import { isUsbReturn, isUsbWire } from '../graph/usbLink'
-import { wireFlows } from '../graph/wireFlow'
-import type { WireFlow } from '../graph/wireFlow'
 import { reachIn } from '../graph/reach'
-import { humStrength } from '../signal/levels'
+import { healthColor, humStrength } from '../signal/levels'
 import { wireLook } from '../utils/wireLook'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { ComplexityLevel } from '../data/levels'
@@ -35,15 +33,6 @@ function ampSplitDy(edge: SignalEdge, graph: { nodes: SignalNode[]; edges: Signa
   return (ampRow(otherAmpInput(edge.targetHandle)) - ampRow(edge.targetHandle)) * PORT_GAP
 }
 
-/** A wire's colour by where its sound goes (D24) */
-const FLOW_COLOR: Record<WireFlow, string> = {
-  main:   'var(--lsc-wire-main)',
-  aux:    'var(--lsc-wire-aux)',
-  matrix: 'var(--lsc-wire-matrix)',
-  pfl:    'var(--lsc-wire-pfl)',
-  record: 'var(--lsc-wire-record)',
-}
-
 /** A card's size as React Flow measured it, and the outputs it had then */
 type MeasuredSize = { width: number; height: number; outputs: NodePort[] }
 
@@ -63,7 +52,7 @@ function outputsOf(node: SignalNode, nodes: SignalNode[], edges: SignalEdge[], l
 
 /**
  * The store's graph as React Flow draws it: nodes (selected, dimmed, with their measured size)
- * and wires (coloured by where their sound goes, red where it clips; at Beginner one colour,
+ * and wires (coloured by their signal's health, as the meters — D33; at Beginner one colour,
  * flowing where their sound reaches an end point — D20). `keepSizes` takes the sizes React Flow measures.
  */
 export function useFlowElements() {
@@ -141,7 +130,6 @@ export function useFlowElements() {
       return route !== null && routeCrossesCards(route, cards, [edge.source, edge.target])
     }
 
-    const flows = beginner ? null : wireFlows(graph)
     const reach = beginner ? reachIn(graph) : null
     const wiring = graphOf(graph)
     // A USB wire's way back is not drawn: the USB wire carries both ways (graph/usbLink.ts)
@@ -150,14 +138,13 @@ export function useFlowElements() {
       const key         = outputKey(edge.source, edge.sourceHandle)
       const signal      = sourceStage && (wires.get(key) ?? sourceStage.out)
       const domain      = outDomainOf(sourceStage, edge.sourceHandle)
-      // Its colour is where its sound goes (D24) — sound in the air too; red where it clips (from
-      // the peaks, as the card it leaves — red is kept for problems); grey while it carries nothing.
-      // At Beginner one colour.
+      // Its colour is its signal's health, as the card it leaves judges it (D33) — too quiet, good,
+      // hot, clipping (from the peaks) —, sound in the air too; grey while it carries nothing. At
+      // Beginner, where no signal is worked out (D20), one colour.
       const health      = signal ? healthOf(signal, domain) : null
       const color       = reach ? 'var(--lsc-wire-neutral)'
-        : health === 'clipping' ? 'var(--signal-clipping)'
-        : !signal || !isFinite(levelOf(signal)) ? 'var(--lsc-border)'
-        : FLOW_COLOR[flows?.get(edge.id) ?? 'main']
+        : !signal || !health || !isFinite(levelOf(signal)) ? 'var(--lsc-border)'
+        : healthColor(health)
 
       // Its look is what it carries: a cable analog or digital, or sound in the air into a microphone —
       // which travels through the air, so crossing a card is fine. A USB wire is digital at Beginner too

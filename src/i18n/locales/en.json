@@ -534,20 +534,14 @@
     "wires": {
       "intro": "A single connection carries the whole signal, stereo included. Stereo connections are drawn as a double line, and an output that carries only the left or the right side is marked **L** or **R**.",
       "points": [
-        "From Intermediate on, a connection's colour shows where its sound goes:",
-        "**Red** means the signal is clipping, or that something there needs your attention. A **grey** connection isn't carrying any signal.",
-        "Dashes are a cable carrying the sound as electricity (an analog signal).",
+        "From Intermediate on, a connection's colour shows the health of its signal, in the meters' colours:",
+        "**Red** can also mean that something there needs your attention.",
+        "An unbroken line with soft swells of light moving along it is a cable carrying the sound as electricity (an analog signal).",
         "Dashes and dots, like Morse code, are a digital connection: the sound travels as numbers, after a converter or along a USB cable.",
         "Waves spreading straight from a singer, a drum kit, an acoustic instrument or a guitar amp to a microphone are sound travelling through the air (no cable).",
         "At Beginner, all connections are the same colour."
       ],
-      "colours": {
-        "main": "Master Bus (the main mix)",
-        "aux": "Aux Bus",
-        "matrix": "Matrix Bus",
-        "pfl": "PFL Bus",
-        "record": "Audio Interface or stream"
-      }
+      "none": "No signal"
     },
     "save": {
       "intro": "Your canvas is saved in this browser as you work. Close the app, and it'll be waiting for you next time you open it in the same browser.",

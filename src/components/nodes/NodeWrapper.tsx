@@ -161,7 +161,7 @@ export function NodeWrapper({
               fontSize: 11, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap',
               padding: '0 6px', borderRadius: 9999,
               background: 'linear-gradient(var(--signal-hot-bg), var(--signal-hot-bg)), var(--lsc-node-bg)',
-              color: 'var(--signal-hot)',
+              color: 'var(--signal-hot-text)',
               border: '1px solid var(--signal-hot-border)',
               pointerEvents: 'none',
             }}
@@ -182,7 +182,7 @@ export function NodeWrapper({
                 ...headerBtn,
                 borderColor: isBypassed ? 'var(--signal-hot-border)' : 'var(--signal-good-border)',
                 background: isBypassed ? 'var(--signal-hot-bg)' : 'var(--signal-good-bg)',
-                color: isBypassed ? 'var(--signal-hot)' : 'var(--signal-good)',
+                color: isBypassed ? 'var(--signal-hot-text)' : 'var(--signal-good)',
               }}
             >
               <Power size={12} strokeWidth={2.5} />

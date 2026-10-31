@@ -26,14 +26,6 @@ const HEALTH = [
   ['clipping',  'var(--signal-clipping)'],
 ] as const
 
-/** The wires' colours (D24), as the canvas draws them */
-const WIRES = [
-  ['main',   'var(--lsc-wire-main)'],
-  ['aux',    'var(--lsc-wire-aux)'],
-  ['matrix', 'var(--lsc-wire-matrix)'],
-  ['pfl',    'var(--lsc-wire-pfl)'],
-  ['record', 'var(--lsc-wire-record)'],
-] as const
 
 /** The ? button; the tutorial remembers its page until the app is closed. */
 export function TutorialButton({ style }: { style: CSSProperties }) {
@@ -169,7 +161,11 @@ function TextPage({ section }: { section: TextSection }) {
               <ColourKey rows={HEALTH.map(([h, colour]) => [colour, t.health[h], t.tutorial.meters.health[h]])} />
             )}
             {i === keyAt && section === 'wires' && (
-              <ColourKey rows={WIRES.map(([w, colour]) => [colour, t.tutorial.wires.colours[w]])} line />
+              // The wires' colours (D33): the meters' health colours, grey with no signal
+              <ColourKey
+                rows={[...HEALTH.map(([h, colour]) => [colour, t.health[h]] as const), ['var(--lsc-border)', t.tutorial.wires.none] as const]}
+                line
+              />
             )}
           </li>
         ))}
