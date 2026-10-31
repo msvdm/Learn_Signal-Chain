@@ -6,7 +6,7 @@ import { ParamKnob } from '../controls/ParamKnob'
 import { StableText } from '../controls/StableText'
 
 // A free-standing knob, big enough to read zoomed out — the Gain's size
-const KNOB = 165
+const KNOB = 110
 // The direction indicator under it
 const TRACK_W = 180
 const DOT     = 16
@@ -57,7 +57,7 @@ export function PanNode({ id }: CardProps) {
         dragPx={DRAG_PX}
         label="L ← → R"
         formatValue={positionLabel}
-        color="var(--lsc-knob-gray)"
+        color="var(--lsc-knob-pan)"
         size={KNOB}
         showReadout={false}
       />

@@ -40,7 +40,7 @@ interface FreeControlProps {
 export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1, outline = true }: FreeControlProps) {
   const { ports, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
   // Room above the control so its port line sits at PORT_TOP. A control whose port line is lower
-  // than that (a 165px knob: 82.5) reaches above the box instead — a negative padding would void
+  // than that (a 110px knob: 55) reaches above the box instead — a negative padding would void
   // the whole padding rule, its side room for the port rings with it
   const lift = PORT_TOP - portLine
 

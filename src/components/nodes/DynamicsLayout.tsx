@@ -40,13 +40,14 @@ const formatMs = (v: number) => `${v} ms`
 
 /**
  * How fast a Compressor or a Noise Gate acts (Attack) and lets go again (Release): two knobs, each
- * a cell of the card's grid. Their ranges differ by card.
+ * a cell of the card's grid. Their ranges differ by card; `color` their caps' (the accent by default).
  */
-export function AttackRelease({ nodeId, typeKey, attack, release }: {
+export function AttackRelease({ nodeId, typeKey, attack, release, color = 'var(--lsc-accent)' }: {
   nodeId: string
   typeKey: 'comp' | 'noise-gate'
   attack: KnobRange
   release: KnobRange
+  color?: string
 }) {
   const { t } = useTranslation()
   return (
@@ -54,12 +55,12 @@ export function AttackRelease({ nodeId, typeKey, attack, release }: {
       <ParamKnob
         nodeId={nodeId} typeKey={typeKey} param="attackMs" {...attack}
         label={t.nodes.comp.attack} formatValue={formatMs}
-        color="var(--lsc-accent)" size={DYNAMICS_KNOB} layout="side"
+        color={color} size={DYNAMICS_KNOB} layout="side"
       />
       <ParamKnob
         nodeId={nodeId} typeKey={typeKey} param="releaseMs" {...release}
         label={t.nodes.comp.release} formatValue={formatMs}
-        color="var(--lsc-accent)" size={DYNAMICS_KNOB} layout="side"
+        color={color} size={DYNAMICS_KNOB} layout="side"
       />
     </>
   )

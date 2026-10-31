@@ -37,12 +37,12 @@ const SIZES: Record<ComplexityLevel, Partial<Record<TypeKey, [w: number, h: numb
   },
   intermediate: {
     'vocal': [412, 328], 'mic': [160, 164], 'instrument': [292, 412], 'di-box': [432, 309], 'guitar-amp': [352, 413],
-    'gain': [217, 275], 'hpf': [196, 206], 'eq': [603, 308], 'comp': [273, 315], 'fader': [198, 572], 'pan': [232, 298],
+    'gain': [210, 248], 'hpf': [196, 206], 'eq': [540, 280], 'comp': [273, 288], 'fader': [249, 718], 'pan': [232, 271],
     'master-bus': [618, 361], 'aux-bus': [618, 397], 'active-speaker': [458, 412],
   },
   advanced: {
-    'vocal': [412, 328], 'mic': [160, 164], 'gain': [217, 275], 'adc': [320, 218], 'eq': [862, 471], 'comp': [618, 366],
-    'dac': [320, 259], 'fader': [198, 572], 'master-bus': [618, 361], 'encoder': [320, 259], 'broadcast': [384, 380],
+    'vocal': [412, 328], 'mic': [160, 164], 'gain': [210, 248], 'adc': [320, 218], 'eq': [862, 471], 'comp': [618, 366],
+    'dac': [320, 259], 'fader': [249, 718], 'master-bus': [618, 361], 'encoder': [320, 259], 'broadcast': [384, 380],
     'active-speaker': [458, 412],
   },
 }

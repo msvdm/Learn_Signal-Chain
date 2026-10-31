@@ -10,11 +10,14 @@ import { useParams } from '../../hooks/useParams'
 import { faderBusOf } from '../../graph/queries'
 import { FADER_MIN_DB, FADER_MAX_DB, FADER_MARKS, faderPosition, faderDbAt } from '../../utils/faderTaper'
 
-// A free-standing fader, big enough to read zoomed out
-const FADER_H     = 440
-const FADER_SCALE = 2.4
+// A free-standing fader, its cap as tall as a free-standing knob is wide and the On Off Switch's button
+// (GainNode's KNOB, SwitchNode's BUTTON: 110 px — the user's calls, 2026-10-31: the same shape, only its
+// size): every part scaled alike
+const SIZE        = 110 / 34 / 2.4
+const FADER_H     = Math.round(440 * SIZE)
+const FADER_SCALE = 2.4 * SIZE
 // The track starts this far above the port line, so the wires meet it near the top, like a desk
-const PORT_LINE   = 60
+const PORT_LINE   = Math.round(60 * SIZE)
 
 // A desk fader's uneven scale: fine steps around unity, the quiet end squeezed together
 const TAPER: FaderTaper = { toPosition: faderPosition, fromPosition: faderDbAt }

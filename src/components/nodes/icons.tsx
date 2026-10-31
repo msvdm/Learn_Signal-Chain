@@ -1,6 +1,55 @@
 // Icons lucide does not have (24 × 24). See nodeLook.ts.
 import { useId } from 'react'
 
+/** The black keys of an octave: after the 1st, 2nd, 4th, 5th and 6th white key (C# D# F# G# A#) */
+const BLACK_AFTER = [1, 2, 4, 5, 6]
+
+/**
+ * A digital piano of one octave, seen from the front and above (the user's calls, 2026-10-31: "wider
+ * and more realistic … one octave, 5 black keys and 8 white", "use thinner lines", "keep some knobs
+ * and buttons so it looks like a digital keyboard piano"): a panel along the top with two knobs, a
+ * small display and a row of buttons; under it 8 white keys between the two end blocks (the case's
+ * sides), the 5 black keys filled. Only the canvas element draws it (BareSource); the small icons keep
+ * KeyboardMusic ("don't change the icon"). Twice as wide as tall: `size` is its height (as the icons'
+ * 24 units), its width 2 ×.
+ */
+export function KeyboardOctaveIcon({ size = 24 }: { size?: number }) {
+  // The keys run between the end blocks, from under the panel to the case's front
+  const left = 5, right = 43, top = 9.5, bottom = 22
+  const white = (right - left) / 8
+  return (
+    <svg viewBox="0 0 48 24" width={size * 2} height={size} fill="none" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="46" height="20" rx="2" />
+      {/* The panel: two knobs, a display, four buttons */}
+      <path d={`M1 ${top}H47`} />
+      {/* Both knobs turned to the right */}
+      {[7, 12].map((cx) => (
+        <g key={cx}>
+          <circle cx={cx} cy="5.75" r="2" />
+          <path d={`M${cx} 5.75L${cx + 1.2} 4.6`} strokeWidth="0.6" />
+        </g>
+      ))}
+      <rect x="16.5" y="4.25" width="10" height="3" rx="0.5" />
+      {[29.5, 33, 36.5, 40].map((x, i) => (
+        <rect key={x} x={x} y="4.75" width="2.5" height="2" rx="0.4" strokeWidth="0.6" {...(i === 0 ? { fill: 'currentColor' } : {})} />
+      ))}
+      {/* The end blocks: the case's sides, either side of the keys */}
+      <path d={`M${left} ${top}V${bottom}M${right} ${top}V${bottom}`} />
+      {/* The white keys, side by side */}
+      {Array.from({ length: 7 }, (_, i) => {
+        const x = left + white * (i + 1)
+        return <path key={i} d={`M${x.toFixed(2)} ${top}V${bottom}`} strokeWidth="0.5" />
+      })}
+      {/* The black keys, over the gaps between them */}
+      {BLACK_AFTER.map((k) => {
+        const w = white * 0.6
+        const x = left + white * k - w / 2
+        return <rect key={k} x={x.toFixed(2)} y={top} width={w.toFixed(2)} height="7.5" rx="0.5" fill="currentColor" strokeWidth="0.5" />
+      })}
+    </svg>
+  )
+}
+
 /** A high-pass filter's response: flat, rolling off at the low end. Wider than tall. */
 export function HighPassIcon({ size = 24 }: { size?: number }) {
   return (

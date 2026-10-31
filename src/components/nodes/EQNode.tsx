@@ -216,7 +216,7 @@ function useBands(id: string) {
 }
 
 // The three knobs below Advanced: the Gain's, Pan's and Compressor's size, read zoomed out
-const DESK_KNOB = 165
+const DESK_KNOB = 110
 const DESK_GAP  = 28
 
 /** Low · Mid · High: each turns its range up or down at its fixed frequency (Low and High are shelves). */

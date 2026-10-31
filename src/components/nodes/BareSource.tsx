@@ -10,6 +10,7 @@ import type { StageCondition } from '../../signal/process'
 import { BareMeter } from './BareMeter'
 import { UprightFace } from './UprightFace'
 import { FACE, Frameless } from './Frameless'
+import { KeyboardOctaveIcon } from './icons'
 import type { FramelessNote } from './Frameless'
 import { conditionNote } from './conditionText'
 import { noteSize } from './noteLayout'
@@ -44,7 +45,9 @@ export function BareSource({ id, type }: CardProps) {
   const condition    = useStage(id)?.condition
   return (
     <Frameless
-      id={id} typeKey={typeKey} Icon={NODE_LOOK[typeKey].icon}
+      // The Keyboard: a whole octave, twice as wide as the others' pictures
+      id={id} typeKey={typeKey}
+      {...(typeKey === 'keyboard' ? { Icon: KeyboardOctaveIcon, faceWidth: 2 * FACE } : { Icon: NODE_LOOK[typeKey].icon })}
       note={sourceNote(t, typeKey, notConnected, condition)}
       footer={(width) => <BareMeter nodeId={id} typeKey={typeKey} width={width} readings hidden={notConnected} />}
     />

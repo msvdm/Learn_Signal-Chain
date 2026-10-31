@@ -289,7 +289,7 @@ const BARE_VOLUME_SIZE: Size = { w: 458, h: 412 }
 // a bar for each side, the Computer with its upright meter beside its icon
 const BARE_SOURCE_SIZE: Size   = { w: 292, h: 412 }
 const BARE_ACOUSTIC_SIZE: Size = { w: 336, h: 412 }
-const BARE_KEYBOARD_SIZE: Size = { w: 292, h: 430 }
+const BARE_KEYBOARD_SIZE: Size = { w: 532, h: 430 }
 const BARE_COMPUTER_SIZE: Size = { w: 384, h: 380 }
 // Stream / Broadcast, drawn as the Computer (its meter before the icon)
 const BARE_BROADCAST_SIZE: Size = { w: 384, h: 380 }
@@ -365,7 +365,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 217, h: 275 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 210, h: 248 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
@@ -379,7 +379,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   eq: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     // Below Advanced three bare knobs, Low · Mid · High (see initialParams)
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: EQ_SIZE, bareSize: { w: 603, h: 308 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: EQ_SIZE, bareSize: { w: 540, h: 280 },
     defaultParams: {
       bands: [
         { freqHz: 200,  gainDb: 0, Q: 1.4, type: 'bell' },
@@ -397,7 +397,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   comp: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, bareSize: { w: 273, h: 315 },
+    levels: FROM_INTERMEDIATE, bypass: true, minSize: DYNAMICS_SIZE, dynamics: true, bareSize: { w: 273, h: 288 },
     // Attack / Release: how fast it turns down and lets go (audio/processors.ts)
     defaultParams: { thresholdDb: -20, ratio: 2, makeupGainDb: 0, attackMs: 10, releaseMs: 100 },
   },
@@ -461,7 +461,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 198, h: 572 },
+    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 249, h: 718 },
     defaultParams: { faderDb: 0 },
   },
   switch: {
@@ -485,7 +485,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   pan: {
     // Always a stereo wire out. A mono wire in = Pan knob; a stereo wire in = Balance knob.
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 232, h: 298 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 232, h: 271 },
     defaultParams: { panPosition: 50 },
   },
   adc: {

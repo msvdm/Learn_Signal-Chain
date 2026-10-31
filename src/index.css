@@ -173,7 +173,8 @@
   /* Knobs, drawn as the logo's (KnobFace, D32): the same in both themes */
   --lsc-knob-outline: #24232b;
   --lsc-knob-notch:   #fbfaf7;
-  --lsc-knob-gray:    #4d4a55;  /* Pan / Balance, the amps' knobs */
+  --lsc-knob-gray:    #4d4a55;  /* the amps' knobs */
+  --lsc-knob-pan:     #ffa83c;  /* Pan / Balance */
 }
 
 /* ── Dark theme ─────────────────────────────────────────────────────────── */

@@ -4,6 +4,7 @@ import { widestFormat } from '../../utils/readout'
 import { useLatestRef } from '../../hooks/useLatestRef'
 import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
 import type { FaderMark } from '../../utils/faderTaper'
+import { BAND_COLORS } from '../../signal/eqMath'
 
 const DEFAULT_MARKS = [
   { db: 10,  label: '+10' },
@@ -221,15 +222,21 @@ export function VerticalFader({
 // Solid cap colours: a lit top edge, the body, the dark underside, the ridge across the middle
 // and the value line on it. The plain cap follows the theme (index.css); the others never change.
 export type CapColor = 'plain' | 'red' | 'blue' | 'magenta'
+/** A cap's shades from its colour: lit above, darker below, a white value line */
+const shadedCap = (base: string) => ({
+  hi: `color-mix(in srgb, ${base}, white 35%)`, base, lo: `color-mix(in srgb, ${base}, black 45%)`,
+  ridge: `color-mix(in srgb, ${base}, white 15%)`, line: '#f4f4f4',
+})
 const CAP_COLORS: Record<CapColor, { hi: string; base: string; lo: string; ridge: string; line: string }> = {
   plain: {
     hi: 'var(--lsc-fader-cap-hi)', base: 'var(--lsc-fader-cap-base)', lo: 'var(--lsc-fader-cap-lo)',
     ridge: 'var(--lsc-fader-cap-ridge)', line: 'var(--lsc-fader-cap-line)',
   },
-  red:  { hi: '#f36b62', base: '#c62828', lo: '#7a1212', ridge: '#e2463d', line: '#f4f4f4' },
-  blue: { hi: '#6ea6f7', base: '#1f5fc4', lo: '#0e2d63', ridge: '#3d7fe3', line: '#f4f4f4' },
-  // A bright magenta: light enough that its value line is dark, like the white cap's
-  magenta: { hi: '#ffb3f2', base: '#f050d8', lo: '#a3238f', ridge: '#f77be6', line: '#3b0a33' },
+  // The Equalizer's High red and Low blue (the user's call, 2026-10-31), shaded from them
+  red:  shadedCap(BAND_COLORS[3]),
+  blue: shadedCap(BAND_COLORS[0]),
+  // A light pink (the user's call, 2026-10-31): light enough that its value line is dark, like the white cap's
+  magenta: { ...shadedCap('#ff8adc'), line: '#3b0a33' },
 }
 
 /** A desk fader's cap: sloped upper face, a ridge with a line across the middle, sloped lower face. */

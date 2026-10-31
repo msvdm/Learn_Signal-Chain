@@ -48,10 +48,12 @@ interface Beside {
  * meter), its name, and its `footer` under them (its meter). A `note` under the icon grows the
  * element downward; the icon keeps its size. The same at every zoom.
  */
-export function Frameless({ id, typeKey, Icon, color, flipped = false, note, before, after, footer }: {
+export function Frameless({ id, typeKey, Icon, faceWidth = FACE, color, flipped = false, note, before, after, footer }: {
   id: string
   typeKey: TypeKey
   Icon: FramelessIcon
+  /** Its icon's box across (px): FACE, or wider for a wide picture (the Keyboard's octave) */
+  faceWidth?: number
   /** The icon's colour (a condition's), else the text colour */
   color?: string
   /** Flipped horizontally: its picture faces the other way, what is beside it swaps sides */
@@ -63,7 +65,7 @@ export function Frameless({ id, typeKey, Icon, color, flipped = false, note, bef
 }) {
   const label = useNodeName(id, typeKey)
   // The icon and what is beside it: the note and the footer as wide as them
-  const width = FACE + (before ? BESIDE_GAP + before.width : 0) + (after ? BESIDE_GAP + after.width : 0)
+  const width = faceWidth + (before ? BESIDE_GAP + before.width : 0) + (after ? BESIDE_GAP + after.width : 0)
   const side  = (b: Beside) => (
     <div className="nodrag nopan" style={{ width: b.width, height: FACE, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
       {b.node}
@@ -81,7 +83,7 @@ export function Frameless({ id, typeKey, Icon, color, flipped = false, note, bef
               is on the right, and so is it) */}
           <div style={{ display: 'flex', flexDirection: flipped ? 'row-reverse' : 'row', alignItems: 'center', gap: BESIDE_GAP }}>
             {before && side(before)}
-            <SelectableIcon nodeId={id} Icon={Icon} size={FACE} color={color} />
+            <SelectableIcon nodeId={id} Icon={Icon} size={FACE} width={faceWidth} color={color} />
             {after && side(after)}
           </div>
           {note && (
@@ -101,13 +103,14 @@ export function Frameless({ id, typeKey, Icon, color, flipped = false, note, bef
 }
 
 /**
- * The icon, `size` px square. Selected, its lines turn the accent colour with the soft glow around
+ * The icon, `size` px tall (`width` across: square unless given). Selected, its lines turn the accent colour with the soft glow around
  * them (the same icon drawn under it, its lines thicker) — its own outline, as the amps' (D27).
  */
-function SelectableIcon({ nodeId, Icon, size, color = 'var(--lsc-fg)' }: {
+function SelectableIcon({ nodeId, Icon, size, width = size, color = 'var(--lsc-fg)' }: {
   nodeId: string
   Icon: FramelessIcon
   size: number
+  width?: number
   color?: string
 }) {
   const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))
@@ -117,7 +120,7 @@ function SelectableIcon({ nodeId, Icon, size, color = 'var(--lsc-fg)' }: {
   const glow = (2 * (overview ? GLOW_FAR : GLOW)) / (size / 24)
   const layer: CSSProperties = { position: 'absolute', inset: 0, display: 'block', lineHeight: 0 }
   return (
-    <span aria-hidden style={{ position: 'relative', width: size, height: size, flexShrink: 0, display: 'block', ...(mirrored ? { transform: 'scaleX(-1)' } : {}) }}>
+    <span aria-hidden style={{ position: 'relative', width, height: size, flexShrink: 0, display: 'block', ...(mirrored ? { transform: 'scaleX(-1)' } : {}) }}>
       {selected && (
         // One translucent layer (opacity on the whole picture: where its lines cross it is no
         // darker); its lines thickened by CSS (lsc-icon-glow), whatever icon it is

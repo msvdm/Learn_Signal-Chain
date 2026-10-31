@@ -21,7 +21,9 @@ import { MeterSides } from './MeterSides'
 import { compressor } from '../../signal/process'
 
 // The one knob below Advanced: the Gain's and Pan's size, big enough to read zoomed out
-const KNOB = 165
+const KNOB = 110
+/** Every knob on the card the Threshold's yellow, as the one knob below Advanced (the user's call, 2026-10-31) */
+const KNOBS = 'var(--signal-hot)'
 
 const formatAmount = (v: number) => `${v}`
 
@@ -96,7 +98,7 @@ function CompressorCard({ id }: { id: string }) {
               step={0.5}
               label={t.nodes.comp.threshold}
               formatValue={(v) => `${v} dB`}
-              color="var(--signal-hot)"
+              color={KNOBS}
               size={DYNAMICS_KNOB}
               layout="side"
             />
@@ -109,7 +111,7 @@ function CompressorCard({ id }: { id: string }) {
               step={0.5}
               label={t.nodes.comp.ratio}
               formatValue={(v) => `${v}:1`}
-              color="var(--lsc-accent)"
+              color={KNOBS}
               size={DYNAMICS_KNOB}
               layout="side"
             />
@@ -122,7 +124,7 @@ function CompressorCard({ id }: { id: string }) {
               step={0.5}
               label={t.nodes.comp.makeupGain}
               formatValue={(v) => `+${v} dB`}
-              color="var(--signal-good)"
+              color={KNOBS}
               size={DYNAMICS_KNOB}
               layout="side"
             />
@@ -141,7 +143,7 @@ function CompressorCard({ id }: { id: string }) {
           </div>
 
           {/* How fast it starts turning down (Attack) and lets go again (Release) */}
-          <AttackRelease nodeId={id} typeKey="comp" attack={{ min: 1, max: 100, step: 1 }} release={{ min: 10, max: 1000, step: 10 }} />
+          <AttackRelease nodeId={id} typeKey="comp" attack={{ min: 1, max: 100, step: 1 }} release={{ min: 10, max: 1000, step: 10 }} color={KNOBS} />
         </div>
       </MeterSides>
     </NodeWrapper>

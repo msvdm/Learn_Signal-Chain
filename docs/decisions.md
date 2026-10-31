@@ -60,10 +60,15 @@ the descriptions). Each is what the user asked for; change one only when they as
 - **Knobs as the logo's** (2026-10-31, "Use the logo for the style of all knobs in the app. Full with a
   notch that shows the position instead of an outer line"): every knob (`KnobFace` — the cards', the
   bare controls', the amps') a filled disc with a thin dark outline and a white notch at its value (on
-  every knob — "white on all knobs, not black"). Gain the app's purple, Pan / Balance and the amps' knobs dark gray
-  (`--lsc-knob-gray`). The light theme's yellow (`--signal-hot`: the Compressor's knobs, the meters'
+  every knob — "white on all knobs, not black"). Gain the app's purple, Pan / Balance orange `#ffa83c` (`--lsc-knob-pan`; dark gray until
+  "use #FFA83C for the pan knob"), the amps' knobs dark gray (`--lsc-knob-gray`). The light theme's yellow (`--signal-hot`: the Compressor's knobs, the meters'
   yellow, the Bypassed edge) is the logo's bright `#facc15`, as the dark theme's
   ("a brighter yellow … all the places that color appears"); words in it use `--signal-hot-text`.
+  The Compressor card's knobs (Advanced) are all that yellow, as its Threshold ("the compressor knobs
+  in advanced must be all the threshold color").
+  The Main Fader's red cap and an Aux Bus's blue one take the Equalizer's red and blue (`BAND_COLORS`;
+  "use the blue and red from the intermediate EQ for the blue and red faders"); a Matrix Bus's, pink
+  `#ff8adc` ("this for the matrix fader").
   The equalizers' Low and Mid bands (`BAND_COLORS`) a milky blue `#7c98d6` and a bright green `#3cdc1b` ("the blue is a bit
   too strong. Make it more....milky"; the green "too dark and grassy … more like #82EF24", then #3CDC1B); High
   `#fa0f0f`.
@@ -74,6 +79,18 @@ the descriptions). Each is what the user asked for; change one only when they as
   the cards", "more graffitty gray not milk chocolate"): the palette (open and folded) has its own
   panel colour (`--lsc-palette-bg`): a graphite grey `#c5c5c5` under white tiles in the light theme, a
   lighter grey `#2b303b` under darker tiles `#1a1d24` in the dark one; the tiles' edges `--lsc-palette-edge`.
+- **A fader's cap as big as a knob** (2026-10-31, "make the faders larger so that the fader handles are
+  the same size as the potentiometers", "don't change the shape! only the size"): the free-standing
+  Fader scaled evenly (`FaderNode`'s `SIZE`) until its cap is as tall as a free knob is wide; then
+  both shrunk to the On Off Switch's button ("shrink them both to match the size of the on/off button"):
+  the desk knobs — Gain, Pan, the Equalizer's three, the one-knob Compressor — 110 px, the Fader's cap
+  110 px tall (the Fader 249 × 718).
+- **The Keyboard, an octave** (2026-10-31, "the keyboard can be wider and more realistic … one octave
+  size 5 black keys and 8 white", "use thinner lines", "don't change the icon - only the canvas
+  element", "keep some knobs and buttons so it looks like a digital keyboard piano"): from Intermediate
+  the canvas element draws `KeyboardOctaveIcon` — a digital piano in thin lines: a panel with two knobs,
+  a display and buttons; 8 white keys between the case's end blocks, 5 filled black ones, twice as wide as the other pictures (480 × 240; the element 532 × 430);
+  the palette, header and Beginner keep their icon.
 - **The palette's order** (2026-10-06): the user's layout, row by row, in the order a signal meets
   them (`NODE_LOOK`) — Processing runs Gain, Analog to Digital Converter, HPF, Pad, Gate, EQ,
   Compressor, Limiter, De-esser, Graphic EQ, Digital to Analog Converter.
