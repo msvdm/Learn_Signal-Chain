@@ -1,6 +1,6 @@
 import type { LiveStage, MeterReading } from '../signal/moving'
 import { readingAt } from '../signal/moving'
-import { ZONE_HEALTH, dbToPercent, zoneAt } from '../signal/levels'
+import { dbToPercent, zoneAt, zoneColor } from '../signal/levels'
 import type { SignalDomain } from '../signal/levels'
 
 // Writing the moving values into the meters (hooks/useLiveMeter.ts calls the painters 30 times a
@@ -78,13 +78,13 @@ export function paintText(el: HTMLElement | null | undefined, text: string | nul
 }
 
 /**
- * A number's colour (D17): the colour of where it sits on its meter's scale — blue at the noise,
+ * A number's colour (D17): the colour of where it sits on its meter's scale — grey at the noise,
  * green, yellow hot, red in the top 2 dB (signal/levels.ts zoneAt; the text shades, readable on the
  * card). In the cable's units; muted for silence.
  */
 export function zoneTextColor(db: number, domain: SignalDomain, noise?: number): string {
   const zone = zoneAt(db, domain, noise)
-  return zone ? `var(--signal-${ZONE_HEALTH[zone]}-text)` : 'var(--lsc-fg-muted)'
+  return zone ? zoneColor(zone, true) : 'var(--lsc-fg-muted)'
 }
 
 /**

@@ -111,7 +111,7 @@ export function Readings({ nodeId, at = 'out', domain, spl, out, health }: {
       }}>
         {moving(t.meters.peak, 'hold')}
         {moving(t.meters.rms, 'rms')}
-        {/* The noise, measured with the music stopped: still, blue (the blue part of the bar) */}
+        {/* The noise, measured with the music stopped: still, grey (the grey part of the bar) */}
         <div style={cell}>
           <span style={name}>{t.meters.noise}</span>
           <StableText reserve={[LEVEL_SAMPLE]} align="center" style={{ color: zoneTextColor(out.noise, domain, out.noise) }}>

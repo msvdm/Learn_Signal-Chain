@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation'
-import { ALIGNMENT_DB, healthColor, getHealth, louder, shifted, SPL_SCALE_DB, ZONE_HEALTH, meterZones, scaleMarks, fitScaleMarks } from '../signal/levels'
+import { ALIGNMENT_DB, healthColor, getHealth, louder, shifted, SPL_SCALE_DB, meterZones, scaleMarks, fitScaleMarks, zoneColor } from '../signal/levels'
 import type { SideLevels, SignalHealth, SignalDomain } from '../signal/levels'
 import { useDetailShown } from '../hooks/useDetailShown'
 import { useLiveMeter } from '../hooks/useLiveMeter'
@@ -15,7 +15,7 @@ import { SCALE_ROW } from './nodes/overviewLayout'
 
 // The meters, as a DAW draws them (D16, after Sound Forge's): one bar per side, coloured along its
 // scale (meterZones) — from Intermediate up (useDetailShown) blue from the bottom up to the noise
-// measured with the music stopped (D17: the blue part is the noise), green above it up to unity,
+// measured with the music stopped (D17: the grey part is the noise), green above it up to unity,
 // yellow hot, red in the top 2 dB; at Beginner green from the bottom — with the dB numbers beside it
 // (scaleMarks), down to −∞ at the bottom. The solid bar is the average (RMS); from Intermediate a
 // thin line shows the peaks. A red line across the top lights up while that side clips. React draws
@@ -51,16 +51,16 @@ const BAR_GAP = 2
 /** How wide a stereo MeterBars is (px): [L][scale][R] — a mono one, [scale][bar], is narrower */
 export const STEREO_BARS_W = STEREO_BAR_W * 2 + SCALE_W + BAR_GAP * 2
 
-/** The colours along a bar: each zone where its levels sit, hard edges (meterZones; `noise`: the blue part). */
+/** The colours along a bar: each zone where its levels sit, hard edges (meterZones; `noise`: the grey part). */
 function zonesBackground(domain: SignalDomain, shift: number, up: boolean, noise?: number): string {
-  const stops = meterZones(domain, shift, noise).map((z) => `${healthColor(ZONE_HEALTH[z.kind])} ${z.from}% ${z.to}%`)
+  const stops = meterZones(domain, shift, noise).map((z) => `${zoneColor(z.kind)} ${z.from}% ${z.to}%`)
   return `linear-gradient(to ${up ? 'top' : 'right'}, ${stops.join(', ')})`
 }
 
 /**
  * One meter bar on its domain's scale (−∞, then −60 … +20 dBu, −80 … 0 dBFS): `up` from the bottom
  * (a desk's or a DAW's meter) or `right` from the left — the same look either way. The still
- * picture: lit up to `side.rms`, its peak line and its noise (the blue part) when `detailed`. With a `source` it moves
+ * picture: lit up to `side.rms`, its peak line and its noise (the grey part) when `detailed`. With a `source` it moves
  * while the chain plays. `shift`: every reading moved by this on the bar (a dB SPL meter's scale);
  * `clipping`: this side's peaks reach the clip level — the red line across its end.
  */
@@ -88,7 +88,7 @@ function MeterTrack({ side: levels, domain, detailed, direction, thickness, leng
     const r = source ? readingOf(live, source.at, source.side, i) : null
     if (source) paintBar({ pale: pale.current, dark: dark.current, hold: hold.current }, up, r && shift ? { rms: r.rms + shift, peak: r.peak + shift, hold: r.hold + shift } : r, domain)
   })
-  // The blue part: its noise, in tenths of a dB (a render that moved it less leaves the colours alone)
+  // The grey part: its noise, in tenths of a dB (a render that moved it less leaves the colours alone)
   const noise = detailed && isFinite(levels.noise) ? Math.round(levels.noise * 10) / 10 : undefined
   const zones = useMemo(() => zonesBackground(domain, shift, up, noise), [domain, shift, up, noise])
   // The mark widens with a thick bar (the overview meter), so it stays visible zoomed out
@@ -232,7 +232,7 @@ export function LiveLevel({ db, reading, source, domain, spl, noise, reserve = L
   domain: SignalDomain
   /** dB SPL (its card's SPL_DB) */
   spl?: number
-  /** Its meter's noise (the blue part; none at Beginner) */
+  /** Its meter's noise (the grey part; none at Beginner) */
   noise?: number
   /** As wide as the widest value it can show */
   reserve?: string
@@ -336,7 +336,7 @@ export function MeterStrip({ l, r, health, domain = 'analog', label, nodeId, at,
         <div style={{ fontSize: 'var(--node-text-sm)', lineHeight: '15px', fontFamily: 'var(--lsc-font-mono)', fontWeight: 600, whiteSpace: 'nowrap', width: '100%' }}>
           {reading(t.meters.peak, 'hold')}
           {reading(t.meters.rms, 'rms')}
-          {/* The noise, measured with the music stopped: still, blue (the blue part of the bar) */}
+          {/* The noise, measured with the music stopped: still, grey (the grey part of the bar) */}
           <div style={line}>
             {name(t.meters.noise)}
             <StableText reserve={[LEVEL_SAMPLE]} align="end" style={{ color: zoneTextColor(whole.noise, domain, whole.noise) }}>

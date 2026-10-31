@@ -48,6 +48,7 @@ The app does not explain what each element is — that is the teacher's part. It
 - **A port for every connection into a bus.** A Master, Aux, Matrix or PFL Bus (and the Mixer, the Stage Box, the Audio Interface and the DAW) shows one input for each wire plugged in and an empty one under them for the next, up to 8. To unplug one, click its input: the list of connections is gone.
 - **No more chain colours.** The coloured stripes that tagged each source are gone.
 - **Wires show the health of their signal.** From Intermediate on, a connection has the meters' colours: blue too quiet, green good, yellow hot, red clipping, grey with no signal — on every chain, whatever bus it goes to. The colours by bus (green Master, blue Aux …) are gone.
+- **The noise on the meters is light grey.** The part at the bottom of a meter that shows the noise, and its Noise number, are grey instead of blue, which was hard to see.
 - **A new logo.** A sound wave, a knob and a fader: the signal chain in three steps — the sound arrives, a hand sets its level, and it leaves through a fader.
 
 ## What's New in 2.0

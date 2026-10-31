@@ -185,7 +185,7 @@ The level is `complexityLevel` in the store (persisted). **Levels are scales** (
 
 The first three zones come from the average; **clipping comes from the peaks** (D4, at every level — D5; the engine takes no level): `getHealth(db, domain, peakDb)`, `healthOf(wire, domain)`. Everything that judges a signal — a stage's `health`, port rings, the meters' health words and clip lines, the overview face, a wire's colour — gives the loop's verdict, not the moment's. A wire is its signal's health colour, as the card it leaves judges it (D33; grey with no signal, one colour at Beginner). Digital levels (dBFS, after an ADC) use the same zones moved down by `ALIGNMENT_DB` (18: 0 dBu ↔ −18 dBFS) and clip at 0 dBFS (`ceilingOf(domain)`); meters, ports, wires and `formatDb` take the stage's domain (`stage.domain`, `stage.inDomain`).
 
-**Meters** (`SignalMeter.tsx`; D16, D17): one bar per side — solid RMS, pale peaks, a thin hold line. Their **colours belong to the scale** (`meterZones`: blue up to the measured noise, green to unity, yellow, red in the top 2 dB), not to the verdict; the health word says the verdict. The scale runs evenly over 80 dB up to the ceiling, then a tail down to −∞ (`dbToPercent`). From Intermediate the Peak / RMS / Noise numbers, each in the colour of its place on the scale (`zoneAt`), and the movement (D10, D15); Beginner sees the bar and the loop's average (D3).
+**Meters** (`SignalMeter.tsx`; D16, D17): one bar per side — solid RMS, pale peaks, a thin hold line. Their **colours belong to the scale** (`meterZones`: light grey up to the measured noise — `zoneColor`, green to unity, yellow, red in the top 2 dB), not to the verdict; the health word says the verdict. The scale runs evenly over 80 dB up to the ceiling, then a tail down to −∞ (`dbToPercent`). From Intermediate the Peak / RMS / Noise numbers, each in the colour of its place on the scale (`zoneAt`), and the movement (D10, D15); Beginner sees the bar and the loop's average (D3).
 
 ### The number engine and real sound
 
@@ -209,7 +209,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D14** — A clip is heard at the end ("Bad sound"), however green the meters after it.
 - **D15** — A meter's numbers are its Peak and RMS, and they move (twice a second).
 - **D16** — Meters in Sound Forge's style: the colours belong to the scale.
-- **D17** — The meter measures the noise (the blue part, a Noise number); one size per card.
+- **D17** — The meter measures the noise (the grey part — blue until 2026-10-31 —, a Noise number); one size per card.
 - **D18** — Noise as on a real analogue desk.
 - **D19** — No hover messages.
 - **D20** — Levels are scales: Beginner devices and connections only (no engine, no render, no real meters — D3 / D5 hold from Intermediate), Intermediate the analogue desk, Advanced the digital picture; some elements leave at harder levels.

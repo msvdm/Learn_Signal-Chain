@@ -85,7 +85,7 @@ export function ElementPalette() {
       <aside
         style={{
           width: PALETTE_RAIL_WIDTH, flexShrink: 0, height: '100%',
-          background: 'var(--lsc-header)', borderRight: '1px solid var(--lsc-border)',
+          background: 'var(--lsc-palette-bg)', borderRight: '1px solid var(--lsc-palette-edge)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
           padding: '12px 0', overflowY: 'auto', userSelect: 'none',
         }}
@@ -102,8 +102,8 @@ export function ElementPalette() {
               className="lsc-palette-tile"
               style={{
                 width: 44, height: 44, flexShrink: 0, borderRadius: 10,
-                background: 'var(--lsc-node-bg)',
-                border: `1px solid ${start ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                background: 'var(--lsc-palette-tile)',
+                border: `1px solid ${start ? 'var(--lsc-accent)' : 'var(--lsc-palette-edge)'}`,
                 color: start ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'grab',
@@ -134,7 +134,7 @@ export function ElementPalette() {
     <aside
       style={{
         width: PALETTE_WIDTH, flexShrink: 0, height: '100%',
-        background: 'var(--lsc-header)', borderRight: '1px solid var(--lsc-border)',
+        background: 'var(--lsc-palette-bg)', borderRight: '1px solid var(--lsc-palette-edge)',
         display: 'flex', flexDirection: 'column', gap: 12,
         padding: `14px ${PAD_X}px`, overflowY: 'auto', overflowX: 'hidden',
         userSelect: 'none',
@@ -217,8 +217,8 @@ export function ElementPalette() {
                       position: 'relative',
                       display: 'flex', flexDirection: 'column', gap: 6,
                       height: TILE_H, padding: TILE_PAD, borderRadius: 8,
-                      background: 'var(--lsc-node-bg)',
-                      border: `1px solid ${start ? 'var(--lsc-accent)' : 'var(--lsc-border)'}`,
+                      background: 'var(--lsc-palette-tile)',
+                      border: `1px solid ${start ? 'var(--lsc-accent)' : 'var(--lsc-palette-edge)'}`,
                       color: 'var(--lsc-fg)', cursor: 'grab',
                     }}
                   >

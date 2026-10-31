@@ -85,7 +85,7 @@ export function OverviewFace({ nodeId, typeKey, label, art, showLevel = true, ba
   const db     = side.rms
   const state  = levels.health
   const unitText = levelParts(db, levels.domain, spl)[1]
-  // From Intermediate the bar's blue part is its noise (D17); every number takes the colour of its place
+  // From Intermediate the bar's grey part is its noise (D17); every number takes the colour of its place
   const noise  = detailed ? side.noise : undefined
   const numberFont: CSSProperties = { fontFamily: 'var(--lsc-font-mono)', fontSize: layout.number, fontWeight: 700 }
   /** A row's name (from Intermediate): Peak, RMS or Noise. */

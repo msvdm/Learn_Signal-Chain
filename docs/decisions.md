@@ -67,6 +67,13 @@ the descriptions). Each is what the user asked for; change one only when they as
   The equalizers' Low and Mid bands (`BAND_COLORS`) a milky blue `#7c98d6` and a bright green `#3cdc1b` ("the blue is a bit
   too strong. Make it more....milky"; the green "too dark and grassy … more like #82EF24", then #3CDC1B); High
   `#fa0f0f`.
+- **The noise on a meter is light grey** (2026-10-31, "make the noise level on the meters light gray.
+  The blue is not visible enough"): D17's blue part and its Noise number (`zoneColor`,
+  `--lsc-meter-noise`, a readable grey for the number); *too quiet* stays blue everywhere else.
+- **The palette's tiles on a shelf** (2026-10-31, "darker (or lighter in dark theme) background around
+  the cards", "more graffitty gray not milk chocolate"): the palette (open and folded) has its own
+  panel colour (`--lsc-palette-bg`): a graphite grey `#c5c5c5` under white tiles in the light theme, a
+  lighter grey `#2b303b` under darker tiles `#1a1d24` in the dark one; the tiles' edges `--lsc-palette-edge`.
 - **The palette's order** (2026-10-06): the user's layout, row by row, in the order a signal meets
   them (`NODE_LOOK`) — Processing runs Gain, Analog to Digital Converter, HPF, Pad, Gate, EQ,
   Compressor, Limiter, De-esser, Graphic EQ, Digital to Analog Converter.

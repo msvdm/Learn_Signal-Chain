@@ -516,7 +516,7 @@
     "meters": {
       "intro": "From Intermediate on, the app plays a short piece of real sound through your chain, such as a voice, a drum beat or some music. It does this silently, inside the browser, and measures the result at every piece of equipment. The meters replay what it measured, so they move the way the sound does.\n\nLevels are given in decibels (dB). On most meters, 0 dB marks the top of the green zone, the normal working level.",
       "points": [
-        "The solid part of the bar is the average level, which is close to how loud the sound seems. The pale part above it shows the peaks, the short loudest moments. The blue part at the bottom is the noise. This lets you show the signal-to-noise ratio, and why setting the right level at every step (gain staging) matters so much.",
+        "The solid part of the bar is the average level, which is close to how loud the sound seems. The pale part above it shows the peaks, the short loudest moments. The light grey part at the bottom is the noise. This lets you show the signal-to-noise ratio, and why setting the right level at every step (gain staging) matters so much.",
         "The word under each meter sums up the whole piece of sound:",
         "The ring around each input and output uses the same colours, so you can spot a problem along the chain at a glance. A grey ring means nothing is connected.",
         "Clipping is judged on the peaks, not on the average. A drum can clip even when its average level looks fine.",

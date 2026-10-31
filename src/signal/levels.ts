@@ -161,8 +161,17 @@ export const CLIP_ZONE_DB = 2
  */
 export type MeterZoneKind = 'noise' | 'good' | 'hot' | 'clipping'
 
-/** Each zone's colour, by the health it shares it with (the noise: the too-quiet blue). */
+/** Each zone's health: what a reading there says (the noise: too quiet). */
 export const ZONE_HEALTH: Record<MeterZoneKind, SignalHealth> = { noise: 'too-quiet', good: 'good', hot: 'hot', clipping: 'clipping' }
+
+/**
+ * Each zone's colour on a meter: its health's, but the noise light grey (the user's call, 2026-10-31:
+ * the blue was not visible enough); `text`: the shade for a number in it, readable on the card.
+ */
+export function zoneColor(kind: MeterZoneKind, text = false): string {
+  if (kind === 'noise') return text ? 'var(--lsc-meter-noise-text)' : 'var(--lsc-meter-noise)'
+  return text ? `var(--signal-${ZONE_HEALTH[kind]}-text)` : healthColor(ZONE_HEALTH[kind])
+}
 
 /** One colour along a meter's bar: where its zone runs (%, bottom to top). */
 export interface MeterZone {
@@ -172,8 +181,8 @@ export interface MeterZone {
 }
 
 /**
- * A meter's colours along its bar (D17, after D16): blue from the bottom up to its `noise` — the
- * blue part is the noise, and it moves with it —, green above that up to unity, yellow hot, red in
+ * A meter's colours along its bar (D17, after D16): light grey from the bottom up to its `noise` — the
+ * grey part is the noise, and it moves with it —, green above that up to unity, yellow hot, red in
  * the top CLIP_ZONE_DB under the ceiling (and anything above). No `noise` (Beginner — D3): green
  * from the bottom. `shift`: every reading is moved by this on the bar (a dB SPL meter); `noise` is
  * in the cable's units, like the zones' edges, so the colours still judge the signal in the cable.
