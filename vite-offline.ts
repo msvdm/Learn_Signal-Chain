@@ -121,8 +121,12 @@ export function offline(): Plugin {
         ...Object.keys(bundle).filter((f) => f !== OFFLINE_FILE),
         ...publicFiles(config.publicDir),
       ].sort()
-      // A new build has new file names (they carry a hash of their content): a new copy is kept
-      const version = createHash('sha256').update(files.join('\n')).digest('hex').slice(0, 12)
+      // A new build has new file names (they carry a hash of their content): a new copy is kept.
+      // The public files keep their names (icon.svg, the PNGs): their content goes into it too,
+      // so a new icon alone still reaches an installed app.
+      const hash = createHash('sha256').update(files.join('\n'))
+      for (const f of publicFiles(config.publicDir)) hash.update(readFileSync(join(config.publicDir, f)))
+      const version = hash.digest('hex').slice(0, 12)
       this.emitFile({ type: 'asset', fileName: 'sw.js', source: serviceWorker(config.base, files, version) })
     },
   }

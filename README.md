@@ -1,4 +1,13 @@
-# Learn Signal Chain
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/icon-dark.svg">
+    <img src="docs/brand/icon-light.svg" width="128" height="128" alt="Learn Signal Chain logo: a sound wave, a knob and a fader">
+  </picture>
+</p>
+
+<h1 align="center">Learn Signal Chain</h1>
+
+<p align="center"><b>From microphone to speaker.</b> A free web app for teachers and students to build an audio signal chain and watch the level at every step.</p>
 
 An interactive, free, open-source web app for teachers and students to explore and understand audio signal chains — from microphone to speaker. Built for people who have never touched a mixing desk.
 
@@ -38,6 +47,7 @@ The app does not explain what each element is — that is the teacher's part. It
 - **The instruments lose their box too.** From Intermediate the Drum Kit, the Acoustic Instrument, the Hi-Z Instrument and the Keyboard look like the speakers: the instrument, its name and a meter under it with its Peak, RMS and Noise, the same however far you zoom. The Computer keeps its upright meter beside the laptop, with no box, at every zoom — and so does Stream / Broadcast, its meter beside the tower.
 - **A port for every connection into a bus.** A Master, Aux, Matrix or PFL Bus (and the Mixer, the Stage Box, the Audio Interface and the DAW) shows one input for each wire plugged in and an empty one under them for the next, up to 8. To unplug one, click its input: the list of connections is gone.
 - **No more chain colours.** The coloured stripes that tagged each source are gone: the wires show where the sound goes.
+- **A new logo.** A sound wave, a knob and a fader: the signal chain in three steps — the sound arrives, a hand sets its level, and it leaves through a fader.
 
 ## What's New in 2.0
 

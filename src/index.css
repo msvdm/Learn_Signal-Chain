@@ -220,9 +220,10 @@
   --signal-clipping-text:    var(--signal-clipping);
 
   /* Accent */
-  --lsc-accent:      #6366f1;
-  --lsc-accent-soft: #a5b4fc;
-  --lsc-accent-bg:   rgba(99,102,241,0.14);
+  /* The light theme's purple too (the user's call, 2026-10-31) */
+  --lsc-accent:      #9a7fd4;
+  --lsc-accent-soft: #b8a3de;
+  --lsc-accent-bg:   rgba(154,127,212,0.14);
   /* A button lit in the accent (the HPF): its rim, its fill, its word */
   --lsc-accent-lit:    var(--lsc-accent);
   --lsc-accent-lit-bg: var(--lsc-accent-bg);
@@ -231,8 +232,8 @@
   --lsc-pfl:      #fde047;
   --lsc-pfl-bg:   #facc15;
   --lsc-pfl-text: #422006;
-  --lsc-select-halo: rgba(99,102,241,0.35);  /* glow around a selected element */
-  --lsc-select-tint: rgba(99,102,241,0.10);  /* fill of a selected element */
+  --lsc-select-halo: rgba(154,127,212,0.35);  /* glow around a selected element */
+  --lsc-select-tint: rgba(154,127,212,0.10);  /* fill of a selected element */
   /* Wires, by where their sound goes (D24): the Master Bus, an Aux, a Matrix, the PFL, what records or sends it out */
   --lsc-wire-main:   var(--signal-good);
   --lsc-wire-aux:    #5b9cf5;

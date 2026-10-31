@@ -11,7 +11,8 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { FileMenu } from './components/FileMenu'
 import { TutorialButton } from './components/Tutorial'
 import { NoticeToast } from './components/NoticeToast'
-import { Radio, Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { AppLogo } from './components/AppLogo'
+import { Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
 import { useMediaQuery, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
@@ -95,16 +96,7 @@ function App() {
             >
               {paletteOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
-            <div
-              style={{
-                flexShrink: 0,
-                width: 32, height: 32, borderRadius: 8,
-                background: 'var(--signal-good-bg)', color: 'var(--signal-good)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <Radio size={17} />
-            </div>
+            <AppLogo size={32} />
             <div>
               <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.1 }}>
                 {t.app.title}
