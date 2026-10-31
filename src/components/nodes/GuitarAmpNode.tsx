@@ -15,7 +15,6 @@ import { outputKey } from '../../graph/graph'
 import { AMP_DI_PORT } from '../../data/nodeRegistry'
 import { cssVar, textWidth } from '../../utils/fitText'
 import { AmpKnob, SelectedEdge } from './ampParts'
-import { BareMeter } from './BareMeter'
 import { PANEL_TEXT, dialPoint } from './ampDial'
 
 /** The cabinet: a square combo (px, drawn 1:1) */
@@ -48,7 +47,7 @@ function fitted(text: string, room: number, size: number): number {
  * Guitar Amp (D27): no card — a square combo amp, the same at every zoom. Its top panel, on the port
  * line: the input jack, the Volume knob (0 … 11 — the 11 lit red at the top), the power switch with
  * its pilot light, the DI Out jack (D26) with its Ground Lift under it (red while the DI Out hums).
- * Its name on a plate on the grille; under the cabinet its meter in dB SPL (D13), from Intermediate.
+ * Its name on a plate on the grille; no meter (D34: its level is read at the Preamp after its mic).
  * Switched off it sends nothing (its DI Out neither) and goes dark. At Beginner the power switch
  * works; the knob is part of the picture (no value shown) and does not turn.
  */
@@ -90,10 +89,8 @@ export function GuitarAmpNode({ id }: CardProps) {
   const toggle = () => updateNodeParams(id, { on: !on })
   const ink    = 'var(--lsc-fg)'
 
-  const meter = <BareMeter nodeId={id} typeKey="guitar-amp" width={CAB} />
-
   return (
-    <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} footer={meter} outline={false}>
+    <FreeControl nodeId={id} typeKey="guitar-amp" label={name} showName={false} portLine={LINE} outline={false}>
       <div style={{ position: 'relative', width: CAB, height: CAB }}>
         <svg width={CAB} height={CAB} viewBox={`0 0 ${CAB} ${CAB}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', overflow: 'visible' }}>
           <defs>

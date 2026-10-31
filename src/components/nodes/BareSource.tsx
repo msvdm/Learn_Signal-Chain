@@ -7,8 +7,6 @@ import { useTranslation } from '../../i18n/useTranslation'
 import type { Translations } from '../../i18n/translations'
 import { unwiredSource } from '../../graph/queries'
 import type { StageCondition } from '../../signal/process'
-import { BareMeter } from './BareMeter'
-import { UprightFace } from './UprightFace'
 import { FACE, Frameless } from './Frameless'
 import { KeyboardOctaveIcon } from './icons'
 import type { FramelessNote } from './Frameless'
@@ -30,13 +28,14 @@ function sourceNote(t: Translations, typeKey: TypeKey, notConnected: boolean, co
   return undefined
 }
 
+/** Under a source's name: nothing — a source has no meter (D34: its level is read at the Preamp) */
+const NO_FOOTER = () => null
+
 /**
  * The Drum Kit, the Acoustic Instrument, the Hi-Z Instrument and the Keyboard, from Intermediate
  * (their Beginner face: BeginnerInput): no card around them, as the Passive Speaker (D28) — their
- * icon, their name, and under it their meter: a horizontal bar in dB SPL for a sound in the air
- * (D13), in dBu for a guitar or a keyboard (a bar for each side: the Keyboard is always stereo),
- * with its Peak, RMS, Noise and health word (BareMeter). The same at every zoom. Nothing wired to
- * it, its meter keeps its room, unseen (D11), and "Not connected" is said under its icon.
+ * icon and their name, no meter (D34). The same at every zoom. Nothing wired to it, "Not connected"
+ * is said under its icon (D11).
  */
 export function BareSource({ id, type }: CardProps) {
   const typeKey      = type as BareSourceType
@@ -49,15 +48,15 @@ export function BareSource({ id, type }: CardProps) {
       id={id} typeKey={typeKey}
       {...(typeKey === 'keyboard' ? { Icon: KeyboardOctaveIcon, faceWidth: 2 * FACE } : { Icon: NODE_LOOK[typeKey].icon })}
       note={sourceNote(t, typeKey, notConnected, condition)}
-      footer={(width) => <BareMeter nodeId={id} typeKey={typeKey} width={width} readings hidden={notConnected} />}
+      footer={NO_FOOTER}
     />
   )
 }
 
-/** The Computer, from Intermediate (its Beginner face: BeginnerInput): its icon with its upright meter after it (UprightFace, D30). */
+/** The Computer, from Intermediate (its Beginner face: BeginnerInput): its icon and name, no meter (D34). */
 export function ComputerNode({ id }: CardProps) {
   const { t }        = useTranslation()
   const notConnected = useSignalStore((s) => unwiredSource(id, s))
   const condition    = useStage(id)?.condition
-  return <UprightFace id={id} typeKey="pc" at="out" hidden={notConnected} note={sourceNote(t, 'pc', notConnected, condition)} />
+  return <Frameless id={id} typeKey="pc" Icon={NODE_LOOK.pc.icon} note={sourceNote(t, 'pc', notConnected, condition)} footer={NO_FOOTER} />
 }

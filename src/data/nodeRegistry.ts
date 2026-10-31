@@ -284,14 +284,13 @@ const EQ_SIZE: Size = { w: 862, h: 471 }
 // knob beside the icon
 const BARE_OUTPUT_SIZE: Size = { w: 292, h: 412 }
 const BARE_VOLUME_SIZE: Size = { w: 458, h: 412 }
-// The sources with no card around them from Intermediate (BareSource), like the Passive Speaker
-// (taller with a note under the icon): the Acoustic Instrument's long name wider, the Keyboard with
-// a bar for each side, the Computer with its upright meter beside its icon
-const BARE_SOURCE_SIZE: Size   = { w: 292, h: 412 }
-const BARE_ACOUSTIC_SIZE: Size = { w: 336, h: 412 }
-const BARE_KEYBOARD_SIZE: Size = { w: 532, h: 430 }
-const BARE_COMPUTER_SIZE: Size = { w: 384, h: 380 }
-// Stream / Broadcast, drawn as the Computer (its meter before the icon)
+// The sources with no card around them from Intermediate (BareSource, the Computer): their icon and
+// name, no meter (D34) — taller with a note under the icon; the Acoustic Instrument's long name
+// wider, the Keyboard's octave twice as wide
+const BARE_SOURCE_SIZE: Size   = { w: 292, h: 272 }
+const BARE_ACOUSTIC_SIZE: Size = { w: 336, h: 272 }
+const BARE_KEYBOARD_SIZE: Size = { w: 532, h: 272 }
+// Stream / Broadcast: its icon with its upright meter before it (UprightFace)
 const BARE_BROADCAST_SIZE: Size = { w: 384, h: 380 }
 
 // The levels whose palette shows a type (`levels`)
@@ -334,7 +333,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   pc: {
     category: 'source', inputs: [], outputs: OUT, stereo: 'always',
-    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_COMPUTER_SIZE,
+    levels: EVERY_LEVEL, bypass: false, minSize: FACE_SIZE, freeSize: BARE_SOURCE_SIZE,
     defaultParams: { levelDb: 0 },
   },
   instrument: {
@@ -365,7 +364,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   gain: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 210, h: 248 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 302, h: 367 },
     // The first Gain after a microphone is its Preamp (preampDb, 0…+60 dB);
     // anywhere else it is a plain gain stage (gainDb, −∞…+20 dB). Each mode keeps its own setting.
     defaultParams: { preampDb: 40, gainDb: 0 },
@@ -442,7 +441,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // (Its DI Out's name is printed on its panel — GuitarAmpNode)
     outputs: [SOUND_OUT[0], { id: AMP_DI_PORT, row: 0 }],
     // Drawn as a combo amp, no card (GuitarAmpNode): its usual size, for drop previews
-    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 352, h: 413 },
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 352, h: 371 },
     // Its Volume knob goes to 11 (signal/gains.ts guitarAmpGainDb); Ground Lift on its DI Out (D26);
     // its power switch (D27: off, it sends nothing — not its DI Out either)
     defaultParams: { volume: 5, groundLift: false, on: true },

@@ -20,8 +20,8 @@ export const FACE_METER_ROOM = STRIP_W + 16
 /**
  * A card that is only its face, at every zoom (the Vocal, the Microphone, the Decoder, Recorder,
  * Audio Interface, DAW): no header, no body. Zoomed in its
- * face (`art`) with its upright meter on the right — dB SPL where the card's sound is in the air
- * (SPL_DB, D13) —, zoomed out its face with the level under it. Not connected, its face says so
+ * face (`art`) with its upright meter on the right (none on the Vocal and the Microphone — D34,
+ * D21) —, zoomed out its face with the level under it. Not connected, its face says so
  * (and its meter keeps its place, unseen).
  */
 export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = true, meterInFace = false, meterAt = 'out' }: {
@@ -31,7 +31,7 @@ export function FaceCard({ nodeId, typeKey, label, art, bare = false, meter = tr
   art: OverviewArt
   /** Zoomed out no card around it, the art over the meter bar alone (the Vocal, the Decoder) */
   bare?: boolean
-  /** false: no meter at any zoom, its face alone (the Microphone: the sound before it has one — D21) */
+  /** false: no meter at any zoom, its face alone (the Vocal and the Microphone: the Preamp after them has it — D34) */
   meter?: boolean
   /**
    * Its face draws its meter (a Recorder Track's VU dials — D23): the meter's room is the face's,

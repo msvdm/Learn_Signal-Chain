@@ -8,8 +8,8 @@ import { conditionNote } from './conditionText'
 import { noteSize } from './noteLayout'
 
 /**
- * Stream / Broadcast, from Intermediate (its Beginner face: BeginnerOutput): no card around it, as
- * the Computer (D30) — its icon with its upright meter of what arrives before it, on its input's
+ * Stream / Broadcast, from Intermediate (its Beginner face: BeginnerOutput): no card around it (D30)
+ * — its icon with its upright meter of what arrives before it, on its input's
  * side, in dBu (dBFS after an Encoder, at Advanced), its name, and the Peak, RMS, Noise and health
  * word under it. The same at every zoom. Under the icon what is wrong with what it sends: a
  * condition's words, a signal clipped on its way here ("Bad sound": the listeners hear the

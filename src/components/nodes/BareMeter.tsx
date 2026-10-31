@@ -29,9 +29,8 @@ const HEALTH_PX = 17
 
 /**
  * A frameless element's meter (D27, D28): a horizontal bar under its drawing, its scale under it —
- * in dB SPL where its sound is in the air (D13: the Guitar Amp, the speakers, the Headphones, the
- * Drum Kit, the Acoustic Instrument), else in dBu (the Hi-Z Instrument; the Keyboard, always
- * stereo: a bar for each side, L over R). From Intermediate, with its peaks, noise and movement
+ * in dB SPL where its sound is in the air (D13: the speakers, the Headphones), else in dBu (a bar
+ * for each side of a type always stereo, L over R; the sources have no meter — D34). From Intermediate, with its peaks, noise and movement
  * (D3); at Beginner its room is kept, unseen, so the element keeps one size. With `readings`, from
  * Intermediate its Peak, RMS and Noise under it — moving with the sound — and the health word
  * (Readings). `hidden`: its room kept, unseen (a source with nothing wired to it — D11).

@@ -520,7 +520,7 @@
         "The word under each meter sums up the whole piece of sound:",
         "The ring around each input and output uses the same colours, so you can spot a problem along the chain at a glance. A grey ring means nothing is connected.",
         "Clipping is judged on the peaks, not on the average. A drum can clip even when its average level looks fine.",
-        "Where the sound travels through the air, as with a singer or a speaker, the meter shows loudness in dB SPL, the scale used for what our ears hear.",
+        "Where the sound travels through the air, as from a speaker, the meter shows loudness in dB SPL, the scale used for what our ears hear.",
         "After a converter the signal is digital, and the meters read dBFS. There, 0 is the absolute top: anything louder is lost.",
         "When something is wrong, the equipment says so in a short note, for example when a condenser microphone isn't getting the power it needs."
       ],

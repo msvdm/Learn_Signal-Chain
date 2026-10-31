@@ -174,7 +174,7 @@
   --lsc-knob-outline: #24232b;
   --lsc-knob-notch:   #fbfaf7;
   --lsc-knob-gray:    #4d4a55;  /* the amps' knobs */
-  --lsc-knob-pan:     #ffa83c;  /* Pan / Balance */
+  --lsc-knob-pan:     #c0bfbc;  /* Pan / Balance: a light grey */
 }
 
 /* ── Dark theme ─────────────────────────────────────────────────────────── */
