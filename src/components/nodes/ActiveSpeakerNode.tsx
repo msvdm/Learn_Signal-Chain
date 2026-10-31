@@ -7,11 +7,12 @@ import { StableText } from '../controls/StableText'
 import { useParams } from '../../hooks/useParams'
 import { useTranslation } from '../../i18n/useTranslation'
 import { widestFormat } from '../../utils/readout'
+import { GAIN_OFF_DB } from '../../signal/gains'
 
-/** Its Volume knob (px), big enough to read zoomed out, and its range (dB) */
+/** Its Volume knob (px), big enough to read zoomed out, and its range (dB): off at the bottom, as a real one */
 const KNOB = 110
-const VOLUME = { min: -20, max: 10, step: 0.5 }
-const formatVolume = (v: number) => `${v >= 0 ? '+' : ''}${v} dB`
+const VOLUME = { min: GAIN_OFF_DB, max: 10, step: 0.5 }
+const formatVolume = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v >= 0 ? '+' : ''}${v} dB`)
 
 /** A blown speaker: a crack through it and smoke where the sound should be (lucide style). */
 function BlownSpeakerIcon({ size = 24, color = 'currentColor', strokeWidth = 2, style }: {

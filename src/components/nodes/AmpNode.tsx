@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import { useShallow } from 'zustand/shallow'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
@@ -53,6 +54,19 @@ const NAME_ROOM = W - 2 * EAR - 90
 const DRAG_PX = 150
 
 const formatLevel = (v: number) => (v <= GAIN_OFF_DB ? '−∞' : `${v} dB`)
+
+/**
+ * Its front panel a dark grey in both themes, as a real rack amp's, the print on it light: the
+ * theme's colours redefined inside it, so its lines, words, meter windows and scale follow
+ */
+const RACK_COLOURS = {
+  '--lsc-node-bg':   'var(--lsc-rack-panel)',
+  '--lsc-node-bg-2': 'var(--lsc-rack-window)',
+  '--lsc-fg':        'var(--lsc-rack-ink)',
+  '--lsc-fg-muted':  'var(--lsc-rack-muted)',
+  '--lsc-fg-dim':    'var(--lsc-rack-muted)',
+  '--lsc-fg-fainter': 'var(--lsc-rack-muted)',
+} as CSSProperties
 
 /**
  * Amplifier (D27): no card — a two-channel power amp in a rack, the same at every zoom, drawn twice
@@ -135,7 +149,7 @@ export function AmpNode({ id }: CardProps) {
 
   return (
     <FreeControl nodeId={id} typeKey="amp" label={name} showName={false} portLine={ROW_A * S} outline={false}>
-      <div style={{ position: 'relative', width: W * S, height: H * S }}>
+      <div style={{ position: 'relative', width: W * S, height: H * S, ...RACK_COLOURS }}>
         <svg width={W * S} height={H * S} viewBox={`0 0 ${W} ${H}`} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', overflow: 'visible' }}>
           <g stroke={ink} style={dim}>
             <rect x="1.5" y="1.5" width={W - 3} height={H - 3} rx="6" strokeWidth="3" fill="var(--lsc-node-bg)" />

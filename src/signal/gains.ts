@@ -61,7 +61,7 @@ export interface GainContext {
   side: Side
 }
 
-/** Off at the bottom of a Gain's or an Amplifier's knob. */
+/** Off at the bottom of a Gain's, an Amplifier's or an active speaker's knob. */
 const offBelow = (db: number) => (db <= GAIN_OFF_DB ? -Infinity : db)
 
 /**
@@ -104,8 +104,9 @@ const GAINS = {
   // No fader: it only adds its wires up
   'pfl-bus':        () => 0,
   speaker:          (node) => param(node, 'outputTrimDb'),
-  'active-speaker': (node) => param(node, 'volumeDb'),
-  'studio-monitor': (node) => param(node, 'volumeDb'),
+  // Their Volume knob turns them off at the bottom, as a real one
+  'active-speaker': (node) => offBelow(param(node, 'volumeDb')),
+  'studio-monitor': (node) => offBelow(param(node, 'volumeDb')),
   // No knob: the Gain right before them sets their level (signal/chain.ts: needs-gain)
   headphones:       () => 0,
   // What it plays: the guitar turned up by its Volume (0 … 11)

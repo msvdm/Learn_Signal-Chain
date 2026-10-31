@@ -167,6 +167,10 @@ describe('amplifiers and speakers', () => {
     expect(out('active-speaker', -10)).toBe(-10)
     expect(out('active-speaker', -10, { volumeDb: -4 })).toBe(-14)
     expect(out('speaker', -10, { outputTrimDb: -2 })).toBe(-12)
+    // An active speaker's Volume, as a real one, turns it off at the bottom (−60: −∞)
+    expect(out('active-speaker', -10, { volumeDb: -59.5 })).toBe(-69.5)
+    expect(out('active-speaker', -10, { volumeDb: -60 })).toBe(S)
+    expect(out('studio-monitor', -10, { volumeDb: -60 })).toBe(S)
   })
 
   it('none of them takes a digital signal', () => {

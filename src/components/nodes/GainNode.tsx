@@ -12,6 +12,8 @@ import { useStereoLevels } from '../../hooks/useStereoLevels'
 import { louder } from '../../signal/levels'
 import { MeterBars, STRIP_W } from '../SignalMeter'
 import { Readings } from './BareMeter'
+import { graphOf } from '../../graph/graph'
+import { useTranslation } from '../../i18n/useTranslation'
 
 // A free-standing knob, big enough to read zoomed out
 const KNOB = 110
@@ -86,8 +88,28 @@ function GainMeter({ id }: { id: string }) {
   )
 }
 
-/** Its Peak, RMS, Noise and health word, under its name (a stereo signal's louder side) */
+/**
+ * Its Peak, RMS, Noise and health word, under its name (a stereo signal's louder side). While no
+ * sound arrives they keep their room, unseen — "Too quiet" would judge a sound that is not there
+ * (D11) — and with no wire into it "Not connected" is said there.
+ */
 function GainReadings({ id }: { id: string }) {
-  const m = useStereoLevels(id).output
-  return <Readings nodeId={id} domain={m.domain} out={m.r ? louder(m.l, m.r) : m.l} health={m.health} />
+  const { t }    = useTranslation()
+  const levels   = useStereoLevels(id)
+  const unwired  = useSignalStore((s) => graphOf(s).into(id).length === 0)
+  const m        = levels.output
+  const arriving = levels.input
+  const silent   = arriving.l.rms === -Infinity && (arriving.r?.rms ?? -Infinity) === -Infinity
+  return (
+    <div style={{ display: 'grid' }}>
+      <div style={{ gridArea: '1 / 1', visibility: silent ? 'hidden' : 'visible' }}>
+        <Readings nodeId={id} domain={m.domain} out={m.r ? louder(m.l, m.r) : m.l} health={m.health} />
+      </div>
+      {unwired && (
+        <span style={{ gridArea: '1 / 1', alignSelf: 'center', textAlign: 'center', fontSize: 17, fontWeight: 700, color: 'var(--lsc-fg-muted)' }}>
+          {t.status.notConnected}
+        </span>
+      )}
+    </div>
+  )
 }

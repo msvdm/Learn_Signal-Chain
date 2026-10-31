@@ -175,6 +175,12 @@
   --lsc-knob-notch:   #fbfaf7;
   --lsc-knob-gray:    #4d4a55;  /* the amps' knobs */
   --lsc-knob-pan:     #c0bfbc;  /* Pan / Balance: a light grey */
+
+  /* The Amplifier's front panel (AmpNode): a dark grey rack in both themes, light print on it */
+  --lsc-rack-panel:   #5c5f66;
+  --lsc-rack-window:  #3d4046;
+  --lsc-rack-ink:     #e6e7ea;
+  --lsc-rack-muted:   #c4c7cd;
 }
 
 /* ── Dark theme ─────────────────────────────────────────────────────────── */
