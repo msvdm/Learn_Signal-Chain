@@ -179,8 +179,17 @@ the descriptions). Each is what the user asked for; change one only when they as
   user's call: "place the handle of all acoustic instruments in the middle of their respective
   cards" — the Guitar Amp's too), not its first port line. `utils/soundRipples.ts`. Digital — an output the engine says sends numbers,
   or a USB wire (at Beginner too): dashes and dots like Morse code (option C, "it looks like a morse
-  code to me"; tweaked from bunched and spread dots to a dash, two dots, a dash, a dot), drawn as
-  outlines on a stereo wire. `utils/wireLook.ts`, `components/SoundWaves.tsx`.
+  code to me"; tweaked from bunched and spread dots to a dash, two dots, a dash, a dot). Since
+  2026-10-31 (the user's call: "sharp angles to illustrate the digital nature better. Squares and
+  rectangles"; the stereo one had looked "a single fat chain with rounded elements"): square dots,
+  rectangular dashes and right-angled corners, and a stereo digital wire two rows of the mono one, a
+  line's width apart (`besideRoute` in `utils/wirePath.ts`; past a corner the two rows fall a little
+  out of step — the outer one is longer). Since 2026-10-31 too, an analog wire is no longer dashed:
+  one unbroken line, long soft swells of light (its own colour, darker and lighter) travelling along
+  it, stereo two such lines — option P of mock-ups that went through sine waves, standing waves and
+  cable looks ("cleaner is always better"). Every wire's movement is 80 px a second (the user's
+  calls: P "at 80px/s", then "consistent" — the digital dashes and the ripples were 40).
+  `utils/wireLook.ts`, `components/AnalogWire.tsx`, `components/SoundWaves.tsx`.
 - **No feedback maths** (2026-10-11): a loop of wires is left out by the engine, as before — "teachers
   can explain that".
 - **Stereo music later** (the user's plan): `music.mp3` may be replaced by a stereo file, and users

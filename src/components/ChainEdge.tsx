@@ -2,21 +2,22 @@ import type { EdgeProps } from '@xyflow/react'
 import { BaseEdge } from '@xyflow/react'
 import { buildWirePath, orthogonalRoute } from '../utils/wirePath'
 import type { RouteEnds } from '../utils/wirePath'
-import { morseDash } from '../utils/wireLook'
+import { DIGITAL_CORNER, morseDash } from '../utils/wireLook'
 import type { WireLook } from '../utils/wireLook'
 import type { Facing } from '../data/nodeRegistry'
 import type { Pt } from '../utils/geometry'
 import { SoundWaves } from './SoundWaves'
+import { AnalogWire } from './AnalogWire'
 
 export interface ChainEdgeData extends Record<string, unknown> {
   waypoints?: Pt[]
   routingWarning?: boolean
-  /** Carries Left and Right together — drawn as a twin line. */
+  /** Carries Left and Right together — drawn as a twin line (digital: two lines side by side). */
   stereo?: boolean
   /** Zoomed out: drawn thicker, with longer dashes */
   overview?: boolean
-  /** What it carries (utils/wireLook.ts): an analog signal (dashes), a digital one (dashes and dots
-      like Morse code) or sound in the air into a microphone (ripples, straight to it — its corners
+  /** What it carries (utils/wireLook.ts): an analog signal (an unbroken line, swells of light
+      travelling along it — AnalogWire), a digital one (dashes and dots like Morse code) or sound in the air into a microphone (ripples, straight to it — its corners
       are not drawn). Analog when not given */
   look?: WireLook
   /** Carries a DI Box ground-loop hum, this strong (0 … 1, humStrength): a red glow under it, wider as it grows */
@@ -82,25 +83,34 @@ export function ChainEdge({
     : { x: targetX - FORK_DX * (thick ? 2 : 1), y: targetY + d.split / 2 }
   const points: Pt[] = [{ x: sourceX, y: sourceY }, ...waypoints, fork ?? { x: targetX, y: targetY }]
   const ends: RouteEnds = { from: sourcePosition as Facing, to: targetPosition as Facing }
-  const edgePath = buildWirePath(points, ends)
+  const digital  = d.look === 'digital'
+  // A digital wire's corners are right angles (utils/wireLook.ts)
+  const corner   = digital ? DIGITAL_CORNER : undefined
+  const edgePath = buildWirePath(points, ends, corner)
   // From the fork one line into each input: its left side into A, its right into B
   const branches = fork && `M${fork.x} ${fork.y}V${targetY}H${targetX}M${fork.x} ${fork.y}V${targetY + d.split!}H${targetX}`
-  const digital  = d.look === 'digital'
 
   // Thicker in overview (zoomed out): the twin line and the dashes grow with it.
   // The dash period stays a divisor of the flow animation (24 px; a digital wire's 240), so it loops smoothly.
   const width = Number(style?.strokeWidth ?? 3)
   // The flow shows which way the sound goes: none on a two-way wire, nor on a still one (solid —
   // a digital wire keeps its dashes and dots, which say what it is)
-  const flow  = routingWarn || d.twoWay || d.still ? undefined
-    : digital ? 'signal-line-digital' : 'signal-line-animated'
-  const dash  = digital ? { strokeDasharray: morseDash((thick ? 2 : 1) * (twin ? 2 : 1)), strokeLinecap: 'round' as const }
-    : thick && !d.still ? { strokeDasharray: '16 8' } : {}
+  const flow  = routingWarn || d.twoWay || d.still || !digital ? undefined : 'signal-line-digital'
+  // An analog wire draws itself (AnalogWire); React Flow's own path stays, unseen, over it — the
+  // Remove tool's hover turns it red
+  const analog = !digital && !routingWarn
+  const dash  = digital ? { strokeDasharray: morseDash(thick ? 2 : 1, width), strokeLinecap: 'butt' as const, strokeLinejoin: 'miter' as const }
+    : {}
+  // Stereo digital: two of the mono line, a line's width apart (each side of the route, its own path)
+  const rows  = twin && digital
+    ? [buildWirePath(points, ends, corner, -width), buildWirePath(points, ends, corner, width)] as const
+    : null
   const mid  = d.twoWay ? halfway(orthogonalRoute(points, ends)) : null
 
   const edgeStyle = routingWarn
     ? { ...style, stroke: 'var(--signal-clipping)', strokeDasharray: thick ? '16 8' : '6 4' }
-    : twin ? { ...style, ...dash, strokeWidth: width * 2 } : { ...style, ...dash }
+    : analog ? { ...style, stroke: 'transparent', strokeWidth: twin ? width * 2.5 : width }
+    : { ...style, ...dash }
 
   return (
     <>
@@ -114,22 +124,25 @@ export function ChainEdge({
           }}
         />
       )}
+      {analog && (
+        <g style={{ opacity: style?.opacity, transition: style?.transition, pointerEvents: 'none' }}>
+          <AnalogWire
+            id={id} points={points} ends={ends} width={width} color={String(style?.stroke ?? 'var(--lsc-border)')}
+            stereo={twin} thick={thick} still={(d.still ?? false) || (d.twoWay ?? false)}
+          />
+        </g>
+      )}
       <BaseEdge
         id={id}
-        path={edgePath}
+        path={rows ? rows[0] : edgePath}
         style={edgeStyle}
         markerEnd={markerEnd}
         className={flow}
+        // Two rows: the hover / click area reaches over both
+        interactionWidth={rows ? 20 + 4 * width : undefined}
       />
-      {/* Stereo: a canvas-coloured line down the middle splits the wire into two.
-          Same dash animation, so both move together. */}
-      {twin && (
-        <path
-          d={edgePath}
-          fill="none"
-          className={flow}
-          style={{ stroke: 'var(--lsc-canvas)', strokeWidth: (width * 2) / 3, ...dash, opacity: style?.opacity, transition: style?.transition, pointerEvents: 'none' }}
-        />
+      {rows && (
+        <path d={rows[1]} fill="none" className={flow} style={{ ...edgeStyle, pointerEvents: 'none' }} />
       )}
       {/* Split into an Amplifier's inputs: a dot at the fork, a single line into each */}
       {fork && branches && (

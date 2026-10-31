@@ -378,23 +378,14 @@ kbd {
 
 /* ── Animations ─────────────────────────────────────────────────────────── */
 
-/* Animated dashed signal flow line: it shows the direction, so it runs with reduced motion too (D12) */
-@keyframes signal-flow {
-  to { stroke-dashoffset: -24; }
-}
-
-.signal-line-animated {
-  stroke-dasharray: 8 4;
-  animation: signal-flow 0.6s linear infinite;
-}
-
-/* A digital wire's dashes and dots (utils/wireLook.ts: their periods divide 240 px), as fast as the above */
+/* A digital wire's dashes and dots (utils/wireLook.ts: their periods divide 240 px), FLOW_SPEED: 80 px a second.
+   The flow shows the direction, so it runs with reduced motion too (D12) */
 @keyframes signal-flow-digital {
   to { stroke-dashoffset: -240; }
 }
 
 .signal-line-digital {
-  animation: signal-flow-digital 6s linear infinite;
+  animation: signal-flow-digital 3s linear infinite;
 }
 
 /* Valid target port while drawing a wire */

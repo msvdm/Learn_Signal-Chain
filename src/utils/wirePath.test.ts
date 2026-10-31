@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { orthogonalRoute } from './wirePath'
+import { besideRoute, buildWirePath, orthogonalRoute, wireRuns } from './wirePath'
 import { findEdgeAtPoint, PORT_TOP } from './layoutHelpers'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { SOUND_PORT, portFacing } from '../data/nodeRegistry'
@@ -13,6 +13,60 @@ describe('a wire between two ordinary cards', () => {
     expect(orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }])).toEqual([
       { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 200, y: 100 },
     ])
+  })
+})
+
+// A stereo digital wire is two lines, one each side of its route (the user's call, 2026-10-31)
+describe('a line beside a route', () => {
+  const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }])
+
+  it('every run moved the same distance sideways, parallel to its own', () => {
+    expect(besideRoute(route, 3)).toEqual([
+      { x: 0, y: 3 }, { x: 97, y: 3 }, { x: 97, y: 103 }, { x: 200, y: 103 },
+    ])
+    expect(besideRoute(route, -3)).toEqual([
+      { x: 0, y: -3 }, { x: 103, y: -3 }, { x: 103, y: 97 }, { x: 200, y: 97 },
+    ])
+  })
+
+  it('a straight wire: two straight lines', () => {
+    expect(buildWirePath([{ x: 0, y: 0 }, { x: 200, y: 0 }], {}, 0, 3)).toBe('M 0 3 L 100 3 L 200 3')
+  })
+
+  it('sharp corners (radius 0): right angles, no curves', () => {
+    expect(buildWirePath([{ x: 0, y: 0 }, { x: 200, y: 100 }], {}, 0)).toBe('M 0 0 L 100 0 L 100 100 L 200 100')
+  })
+
+  it('rounded, both lines turn about the same point: the inside line tighter', () => {
+    // Right then down: the side below (+) is the inside of the turn
+    expect(buildWirePath([{ x: 0, y: 0 }, { x: 200, y: 100 }], {}, 8, 3).includes('L 92 3 Q 97 3 97 8')).toBe(true)
+    expect(buildWirePath([{ x: 0, y: 0 }, { x: 200, y: 100 }], {}, 8, -3).includes('L 92 -3 Q 103 -3 103 8')).toBe(true)
+  })
+})
+
+// An analog wire's shades travel along it as a gradient per straight run (the user's call, 2026-10-31)
+describe('a wire as its straight runs', () => {
+  const runs = wireRuns([{ x: 0, y: 0 }, { x: 200, y: 100 }])
+
+  it('one per run, each starting where the last corner ended and rounding its own end corner', () => {
+    expect(runs.map((r) => r.d)).toEqual([
+      'M 0 0 L 92 0 Q 100 0 100 8',
+      'M 100 8 L 100 92 Q 100 100 108 100',
+      'M 108 100 L 200 100',
+    ])
+  })
+
+  it('which way each goes, and how far along the route it starts — the shades carry on round a corner', () => {
+    expect(runs.map((r) => [r.from, r.dir, r.at])).toEqual([
+      [{ x: 0, y: 0 }, { x: 1, y: 0 }, 0],
+      [{ x: 100, y: 0 }, { x: 0, y: 1 }, 100],
+      [{ x: 100, y: 100 }, { x: 1, y: 0 }, 200],
+    ])
+  })
+
+  it('drawn beside the route as buildWirePath draws it', () => {
+    const side = wireRuns([{ x: 0, y: 0 }, { x: 200, y: 100 }], {}, 8, 3)
+    expect(side.map((r) => r.d).join(' ').replace(/ M \S+ \S+/g, '')).toBe(buildWirePath([{ x: 0, y: 0 }, { x: 200, y: 100 }], {}, 8, 3))
   })
 })
 

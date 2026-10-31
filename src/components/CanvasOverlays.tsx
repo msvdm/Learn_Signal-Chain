@@ -6,7 +6,7 @@ import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
 import type { Ghost } from '../hooks/useNodeDrag'
 import { buildWirePath } from '../utils/wirePath'
-import { morseDash } from '../utils/wireLook'
+import { DIGITAL_CORNER, morseDash } from '../utils/wireLook'
 import { SOUND_PORT } from '../data/nodeRegistry'
 import { outputKind } from '../graph/queries'
 import { outDomainOf } from '../signal/engine'
@@ -129,7 +129,8 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   // Out of the side its output faces, into the side of the input it snaps to (a flipped card's)
   const points = [wire.start, ...wire.waypoints, cursor.snap ?? cursor.pos]
   const ends   = { from: wire.facing, to: cursor.snapFacing ?? undefined }
-  const path   = buildWirePath(points, ends)
+  const corner = digital ? DIGITAL_CORNER : undefined
+  const path   = buildWirePath(points, ends, corner)
   const color  = cursor.warning ? 'var(--signal-hot)' : 'var(--lsc-accent)'
 
   // Sound in the air: ripples straight to the cursor (no corners), standing still while it is drawn
@@ -150,27 +151,24 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
     <ViewportLayer zIndex={100}>
       {(zoom) => {
         const sw   = 2.5 / zoom
-        const dash = digital ? morseDash((stereo ? 2 : 1) / zoom) : `${6 / zoom} ${4 / zoom}`
+        // Digital: square dots, rectangular dashes; analog an unbroken line (AnalogWire, standing still
+        // while it is drawn). Stereo: two such lines side by side, as the wire will be
+        const dash = digital ? morseDash(1 / zoom, sw) : undefined
+        const rows = !stereo ? [0] : digital ? [-sw, sw] : [-0.85 * sw, 0.85 * sw]
+        const w    = stereo && !digital ? sw * 0.8 : sw
         return (
           <>
-            <path
-              d={path}
-              fill="none"
-              stroke={color}
-              strokeWidth={stereo ? sw * 2.2 : sw}
-              strokeDasharray={dash}
-              strokeLinecap="round"
-            />
-            {stereo && (
+            {rows.map((side) => (
               <path
-                d={path}
+                key={side}
+                d={side ? buildWirePath(points, ends, corner, side) : path}
                 fill="none"
-                stroke="var(--lsc-canvas)"
-                strokeWidth={sw * 0.8}
+                stroke={color}
+                strokeWidth={w}
                 strokeDasharray={dash}
-                strokeLinecap="round"
+                strokeLinecap={digital ? 'butt' : 'round'}
               />
-            )}
+            ))}
             {cursor.snap && (
               <circle
                 cx={cursor.snap.x} cy={cursor.snap.y}

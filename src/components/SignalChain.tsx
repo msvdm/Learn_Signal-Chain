@@ -17,6 +17,7 @@ import { ConnectingToast }      from './ConnectingToast'
 import { NodeMenu, CanvasMenu } from './NodeMenu'
 import { CanvasTools }          from './CanvasTools'
 import { CanvasOverlays }       from './CanvasOverlays'
+import { SwellClock }           from './AnalogWire'
 import { ChainOpener }          from './ChainOpener'
 
 import { useSignalStore }       from '../store/signalStore'
@@ -205,6 +206,7 @@ export function SignalChain() {
       </ReactFlow>
 
       <CanvasOverlays cursor={cursor} ghosts={ghosts} />
+      <SwellClock />
 
       {nodeMenu && (
         <NodeMenu

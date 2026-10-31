@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Pt } from '../utils/geometry'
 import { rippleArc, rippleGrowth, ripplesBetween } from '../utils/soundRipples'
+import { FLOW_SPEED } from '../utils/wireLook'
 
 // Sound in the air, from a Vocal, a Drum Kit, an Acoustic Instrument or a Guitar Amp into a microphone:
 // ripples spread from the source and travel straight to the microphone, with no line
@@ -17,8 +18,8 @@ const GAP = 44
 const MAX_RIPPLES = 8
 /** At least this many (a microphone close to its source: ")))", like the waves on the sources' icons) */
 const MIN_RIPPLES = 3
-/** px a second: as fast as the cables' dashes (index.css signal-flow: 24 px in 0.6 s) */
-const SPEED = 40
+/** px a second: as fast as every wire's movement */
+const SPEED = FLOW_SPEED
 /** A ripple's line (px at 100%) */
 const WIDTH = 2.4
 /** Its opacity along the way: it fades in, and a little out at the microphone */
