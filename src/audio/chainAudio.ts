@@ -1,0 +1,448 @@
+import type { GeneratorSound, TypeKey } from '../data/nodeRegistry'
+import { isDynamics, isGeneratorSound, isNodeStereo, param } from '../data/nodeRegistry'
+import type { WireKind } from '../graph/queries'
+import type { CardPlan, ChainLevels, OutputTap } from '../signal/chain'
+import { peakOf } from '../signal/chain'
+import type { SignalDomain } from '../signal/levels'
+import { ALIGNMENT_DB, HUM_DBU, ceilingOf } from '../signal/levels'
+import { NOISE_BELOW, SILENCES, balanceSides, ownNoiseOf, panSides, soundKindOf, sourceLevelOf } from '../signal/process'
+import type { GainType } from '../signal/gains'
+import { AMP_DI_DB, gainDbOf, geqBandDb } from '../signal/gains'
+import { GEQ_CENTERS, GEQ_Q } from '../signal/eqMath'
+import type { DynamicsSettings } from './processors'
+import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
+import { DYNAMICS } from './dynamics'
+import type { Loop, LoopKind } from './loops'
+import { LOOP_S } from './sounds'
+import { K_WEIGHTING_48K } from './loudness'
+
+// A chain as Web Audio nodes, to be measured (audio/measure.ts): every card does to real sound what
+// the number engine does to its readings (signal/chain.ts runChain, from the same plan) — gains,
+// faders and converters are gains, the filters biquads, Pan / Balance a gain per side, a bus adds up
+// what is plugged in, the dynamics are our processors (audio/processors.ts). Every powered card adds
+// its own noise as a real desk does — a Gain before its gain, every card after its job (D18) —; a DI
+// Box in a ground loop a 50 Hz hum. Whatever would pass the clip level (+20 dBu, 0 dBFS digital) is
+// cut off there.
+//
+// Lean on purpose — a render's time is mostly nodes: a signal is the sum of a few node outputs
+// (a node's input adds up whatever is connected, so joining two signals costs nothing), and only
+// cards whose peaks could come near their ceiling get a clipper.
+
+/** The frequency of a ground loop's hum (the mains: 50 Hz in Europe). */
+export const HUM_HZ = 50
+
+/** What a chain plays. */
+export interface ChainSounds {
+  /** The loops of real sound, by what they play */
+  loops: Map<LoopKind, Loop>
+  /** The Generator's sounds, an RMS of 1 */
+  generator: Map<GeneratorSound, AudioBuffer>
+  /** White noise, an RMS of 1, a loop long: every hiss plays it from its own point */
+  noise: AudioBuffer
+}
+
+/** One output of a node. */
+interface Part {
+  node: AudioNode
+  output: number
+}
+
+/** A signal: the sum of a few outputs (none: silence), one channel or two (L, R). */
+interface Sig {
+  parts: Part[]
+  channels: 1 | 2
+}
+
+/** What a wire carries: a signal, and what it is (a mono wire, a stereo one, one side of a mix). */
+interface Feed extends Sig {
+  kind: WireKind
+}
+
+/**
+ * Where a signal is measured — what arrives at a card, what leaves it; on a De-esser also the
+ * sibilant band of each, to see how far it turned that down; on a Guitar Amp what its DI Out sends;
+ * on Stream / Broadcast fed numbers what arrives K-weighted, for its loudness (D38) — and what to
+ * measure there.
+ */
+export interface Tap {
+  id: string
+  at: 'in' | 'out' | 'band-in' | 'band-out' | 'di-out' | 'digital' | 'loudness'
+  parts: Part[]
+}
+
+/** How far past its ceiling a clipper reaches (60 dB): the curve's ceiling is 1 / CLIP_REACH of it. */
+const CLIP_REACH = 1000
+
+/** A clipper's curve: 0 up to the ceiling, then how far past it. */
+const PAST_CEILING = Float32Array.from({ length: 2 * CLIP_REACH + 1 }, (_, i) => {
+  const u = (i - CLIP_REACH) / CLIP_REACH
+  return Math.sign(u) * Math.max(0, Math.abs(u) - 1 / CLIP_REACH)
+})
+
+/**
+ * A card whose peaks the number engine puts within this of its ceiling gets a clipper (dB). Where it
+ * knows the sound (gains, faders, buses — the loops' peaks are as it says, to 0.15 dB) a hair;
+ * after a filter or a dynamics card a lot: a boost on just the frequencies a sound has, the peaks a
+ * slow Attack lets through.
+ */
+const CLIP_MARGIN_DB = { sure: 1, guessed: 24 }
+
+/** Web Audio's high- and low-pass take their Q in dB: a 2nd-order Butterworth is −3.01 dB (0.707). */
+const BUTTERWORTH_Q_DB = 20 * Math.log10(Math.SQRT1_2)
+
+/**
+ * Cards the number engine cannot follow closely: a filter or a dynamics card, a stereo file played in
+ * stereo (it puts both sides at the knob's level), and everything after one.
+ */
+function unsure(plans: CardPlan[], sounds: ChainSounds): Set<string> {
+  const ids = new Set<string>()
+  const guess = new Set(['eq', 'graphic-eq', 'hpf'])
+  for (const card of plans) {
+    const own = guess.has(card.job.typeKey) || isDynamics(card.job.typeKey) || stereoFileOf(card, sounds) !== undefined
+    if ((own && !card.node.bypassed) || card.used.some((u) => ids.has(u.from))) ids.add(card.key)
+  }
+  return ids
+}
+
+/** What a stereo source plays (a Keyboard, a PC, a DAW): a stereo file's left and right (none: a mono file, or anything else). */
+function stereoFileOf(card: CardPlan, sounds: ChainSounds): AudioBuffer | undefined {
+  if (card.mode !== 'source' || !card.plays || !isNodeStereo(card.node)) return undefined
+  const kind = soundKindOf(card.node)
+  return isGeneratorSound(kind) ? undefined : sounds.loops.get(kind)?.stereo
+}
+
+/**
+ * The chain built into `ctx`, from the number engine's plan and its still picture (each card's
+ * domain and condition, the kinds of signal, roughly how loud the peaks are). `music` false: the
+ * sources play only their noise — what you hear when the music stops. The taps: what leaves every
+ * card, and what arrives where it is more than the one wire before it.
+ */
+export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: ChainLevels, sounds: ChainSounds, music: boolean): Tap[] {
+  const taps: Tap[] = []
+  const wires = new Map<string, Feed>()
+  const guessed = unsure(plans, sounds)
+  let noises = 0
+
+  const silence = (channels: 1 | 2): Sig => ({ parts: [], channels })
+
+  /** A node with all of `x` connected to its input. */
+  const into = <N extends AudioNode>(x: Sig, node: N): N => {
+    for (const p of x.parts) p.node.connect(node, p.output)
+    return node
+  }
+
+  const one = (node: AudioNode, channels: 1 | 2, output = 0): Sig => ({ parts: [{ node, output }], channels })
+
+  /** `db` louder (−∞: silent), one channel or two (a mono signal arriving fills both). */
+  const gainNode = (db: number, channels: 1 | 2) => new GainNode(ctx, {
+    gain: isFinite(db) ? Math.pow(10, db / 20) : 0,
+    channelCount: channels, channelCountMode: 'explicit', channelInterpretation: 'speakers',
+  })
+  const gain = (db: number, x: Sig, channels = x.channels): Sig =>
+    x.parts.length === 0 || !isFinite(db) ? silence(channels)
+      : db === 0 && channels === x.channels ? x
+      : one(into(x, gainNode(db, channels)), channels)
+
+  /** Signals added together. */
+  const plus = (...xs: Sig[]): Sig => ({ parts: xs.flatMap((x) => x.parts), channels: xs[0].channels })
+
+  /** A buffer (one channel, or a stereo file's two) played over and over from `offset`, between `start` and `end`. */
+  const playing = (buffer: AudioBuffer, start = 0, end = buffer.duration, offset = start): Sig => {
+    const source = new AudioBufferSourceNode(ctx, { buffer, loop: true, loopStart: start, loopEnd: end })
+    source.start(0, offset)
+    return one(source, buffer.numberOfChannels === 2 ? 2 : 1)
+  }
+
+  /** A signal of an RMS of 1 played at the reading `db`. */
+  const atLevel = (db: number, x: Sig) => gain(db - FULL_SCALE_DB, x)
+
+  /** `sig` K-weighted (BS.1770 at 48 kHz, D38): the browser's IIR filters, the standard's coefficients */
+  const kWeighted = (sig: Sig): Sig => ({
+    channels: sig.channels,
+    parts: sig.parts.map((p) => {
+      const [shelf, highPass] = K_WEIGHTING_48K.map((c) => new IIRFilterNode(ctx, { feedforward: [...c.feedforward], feedback: [...c.feedback] }))
+      p.node.connect(shelf, p.output)
+      shelf.connect(highPass)
+      return { node: highPass, output: 0 }
+    }),
+  })
+
+  /** A hiss at `db`, one channel or each side its own — every one from its own point of the noise. */
+  const hiss = (db: number, channels: 1 | 2): Sig => {
+    // Points far apart in the noise do not move together: the hisses add up as powers
+    const once = () => atLevel(db, playing(sounds.noise, 0, sounds.noise.duration, ((noises++ * 0.6180339887) % 1) * LOOP_S))
+    return channels === 1 ? once() : twoSides(once(), once())
+  }
+
+  /** Two channels from a left and a right one. */
+  const twoSides = (left: Sig, right: Sig): Sig => {
+    const merge = new ChannelMergerNode(ctx, { numberOfInputs: 2 })
+    for (const p of left.parts) p.node.connect(merge, p.output, 0)
+    for (const p of right.parts) p.node.connect(merge, p.output, 1)
+    return one(merge, 2)
+  }
+
+  /** Each side of a two-channel signal through its own nodes. */
+  const sideBySide = (x: Sig, left: (l: Sig) => Sig, right: (r: Sig) => Sig): Sig => {
+    const split = into(x, new ChannelSplitterNode(ctx, { numberOfOutputs: 2 }))
+    return twoSides(left(one(split, 1, 0)), right(one(split, 1, 1)))
+  }
+
+  /**
+   * Nothing above the ceiling: `x` less how far it goes past it. A wave shaper gives the past-it
+   * part — exactly 0 up to the ceiling, so what stays under it passes to the last bit (a shaper's
+   * own sums are rounded, which would lose a −128 dBu hiss).
+   */
+  const clipped = (x: Sig, domain: SignalDomain): Sig => {
+    if (x.parts.length === 0) return x
+    const ceiling = ampOf(ceilingOf(domain))
+    const shaper = new WaveShaperNode(ctx, { curve: PAST_CEILING, channelCount: x.channels, channelCountMode: 'explicit' })
+    into(gain(-20 * Math.log10(ceiling * CLIP_REACH), x), shaper)
+    const past = new GainNode(ctx, { gain: -ceiling * CLIP_REACH, channelCount: x.channels, channelCountMode: 'explicit' })
+    shaper.connect(past)
+    return plus(x, one(past, x.channels))
+  }
+
+  /** Clipped where it could come near its ceiling. */
+  const clippedIfNear = (x: Sig, card: CardPlan, domain: SignalDomain): Sig => {
+    const peak = peakOf(still.cards.get(card.key)?.out)
+    const margin = CLIP_MARGIN_DB[guessed.has(card.key) ? 'guessed' : 'sure']
+    return peak >= ceilingOf(domain) - margin ? clipped(x, domain) : x
+  }
+
+  /** Everything plugged into a card added up: one channel (a stereo wire folded in), or two sides. */
+  const arriving = (card: CardPlan, channels: 1 | 2): Sig => {
+    const all: Sig[] = []
+    for (const u of card.used) {
+      const feed = wires.get(u.key)
+      if (!feed) continue
+      // A Matrix Bus's send knob
+      const sent: Feed = u.sendDb === 0 ? feed : { ...gain(u.sendDb, feed), kind: feed.kind }
+      if (u.channel) {
+        // An Amplifier's input (D27): one channel (a stereo wire folded in), on its own side
+        const one = sent.channels === 2 ? gain(20 * Math.log10(2), sent, 1) : sent
+        all.push(channels === 1 ? one : u.channel === 'l' ? twoSides(one, silence(1)) : twoSides(silence(1), one))
+      } else if (channels === 1 && sent.channels === 2) {
+        // Folded into one: L + R (the speakers' down-mix is half of that)
+        all.push(gain(20 * Math.log10(2), sent, 1))
+      } else if (channels === 2 && (sent.kind === 'left' || sent.kind === 'right')) {
+        // One side of a mix lands on its side only
+        all.push(sent.kind === 'left' ? twoSides(sent, silence(1)) : twoSides(silence(1), sent))
+      } else if (channels === 2 && sent.channels === 1) {
+        // A mono wire on two sides lands on both (the speakers' up-mix)
+        all.push(gain(0, sent, 2))
+      } else {
+        all.push(sent)
+      }
+    }
+    return { parts: all.flatMap((x) => x.parts), channels }
+  }
+
+  /** What arrives at a card is the one wire before it as it is: measured there already. */
+  const sameAsWire = (card: CardPlan, channels: 1 | 2) => {
+    if (card.used.length !== 1 || card.used[0].sendDb !== 0 || card.used[0].channel) return false
+    const feed = wires.get(card.used[0].key)
+    return !feed || (feed.channels === channels && (channels === 1 || feed.kind === 'stereo'))
+  }
+
+  /**
+   * What every card whose job is not a gain does to real sound (a new type does not compile until
+   * it is here, or a gain in signal/gains.ts).
+   */
+  const OTHERS: Record<Exclude<TypeKey, GainType>, (card: CardPlan, x: Sig) => Sig> = {
+    // A source's sound is source(), Pan's the 'pan' mode above: nothing reaches here for them
+    vocal: (_, x) => x,
+    'drum-kit': (_, x) => x,
+    acoustic: (_, x) => x,
+    keyboard: (_, x) => x,
+    pc: (_, x) => x,
+    instrument: (_, x) => x,
+    generator: (_, x) => x,
+    pan: (_, x) => x,
+    phantom: (_, x) => x,
+    // The ends that take the sound in: what reaches them is what they record or send (a Recorder
+    // Track's Monitor out passes it on)
+    recorder: (_, x) => x,
+    broadcast: (_, x) => x,
+    // Squeezes the numbers into a stream or unpacks one, its level kept (fed an analog signal it is
+    // silent: SILENCES); as a route's job (a file played) its sound is source()
+    codec: (_, x) => x,
+    // Packs numbers into a cable or unpacks them, unchanged (D40): each channel a path of its own
+    'digital-interface': (_, x) => x,
+    // Their paths do an ADC's and a DAC's job, a Recorder's, a source's (NodeTypeDef `routes`): nothing reaches here
+    interface: (_, x) => x,
+    daw: (_, x) => x,
+    // Beginner's devices (no render runs there, D20): what arrives, added up, as it is
+    mixer: (_, x) => x,
+    'stage-box': (_, x) => x,
+    hpf: ({ node }, x) => filtered(x, [{ type: 'highpass', frequency: param(node, 'cutoffHz'), Q: BUTTERWORTH_Q_DB }]),
+    eq: ({ node }, x) => filtered(x, param(node, 'bands').filter((b) => b.gainDb !== 0).map((b) => ({
+      type: b.type === 'low-shelf' ? 'lowshelf' : b.type === 'high-shelf' ? 'highshelf' : 'peaking',
+      frequency: b.freqHz, gain: b.gainDb, Q: b.Q ?? 1.4,
+    }))),
+    'graphic-eq': ({ node }, x) => {
+      // The sliders of a side (the right copies the left until touched: geqBandDb)
+      const bands = (side: 'l' | 'r'): BiquadFilterOptions[] => GEQ_CENTERS.flatMap((hz, i) => {
+        const db = geqBandDb(node, side, i)
+        return db === 0 ? [] : [{ type: 'peaking', frequency: hz, gain: db, Q: GEQ_Q }]
+      })
+      const sameSides = GEQ_CENTERS.every((_, i) => geqBandDb(node, 'r', i) === geqBandDb(node, 'l', i))
+      if (x.channels === 1 || sameSides) return filtered(x, bands('l'))
+      return sideBySide(x, (l) => filtered(l, bands('l')), (r) => filtered(r, bands('r')))
+    },
+    comp: ({ node }, x) => dynamics(x, DYNAMICS.comp.settings(node)),
+    'noise-gate': ({ node }, x) => dynamics(x, DYNAMICS['noise-gate'].settings(node)),
+    limiter: ({ node }, x) => dynamics(x, DYNAMICS.limiter.settings(node)),
+    deesser: ({ node }, x) => dynamics(x, DYNAMICS.deesser.settings(node)),
+  }
+
+  for (const card of plans) {
+    const { node, job } = card
+    const levels = still.cards.get(card.key)
+    if (!levels) continue
+    let inSig = silence(1)
+    let outSig = silence(1)
+
+    if (card.mode === 'needs-amp' || card.mode === 'needs-gain') {
+      inSig = arriving(card, 1)
+    } else if (card.mode === 'pan') {
+      // Mono in → the Pan knob spreads it over L / R (equal power); stereo in → the Balance knob
+      const balance = card.followKind === 'stereo'
+      const position = param(node, 'panPosition')
+      const sides = node.bypassed && (balance || card.fed) ? { l: 0, r: 0 }
+        : balance ? balanceSides(position, 0, 0) : panSides(position, 0)
+      inSig = arriving(card, balance ? 2 : 1)
+      outSig = balance
+        ? sideBySide(inSig, (l) => gain(sides.l, l), (r) => gain(sides.r, r))
+        : twoSides(gain(sides.l, inSig), gain(sides.r, inSig))
+    } else if (card.mode === 'source') {
+      outSig = clippedIfNear(source(card), card, levels.domain)
+      // A stereo source: one channel the same on both sides (a stereo file is already both)
+      if (isNodeStereo(node)) outSig = gain(0, outSig, 2)
+    } else {
+      // One channel, or both sides: a stereo signal through a follow card, a stereo bus (linked
+      // dynamics hear both and give both the same gain)
+      const channels: 1 | 2 = card.mode === 'mono' ? 1 : 2
+      inSig = arriving(card, channels)
+      if (levels.condition !== undefined && SILENCES[levels.condition]) {
+        outSig = silence(channels)
+      } else if (node.bypassed && card.fed) {
+        // Passed on as it is, with no hiss of its own (a bus still adds its wires up)
+        outSig = clippedIfNear(inSig, card, levels.inDomain)
+      } else {
+        // Its own noise (D18): before its gain (a Gain's), then after its job, in the units it leaves in
+        const own = ownNoiseOf(job, { domain: levels.inDomain, preamp: card.preamp, fed: card.fed })
+        let out = processed(card, isFinite(own.in) ? plus(inSig, hiss(own.in, channels)) : inSig)
+        if (isFinite(own.out)) out = plus(out, hiss(own.out, channels))
+        outSig = clippedIfNear(out, card, levels.domain)
+      }
+    }
+
+    // A Guitar Amp's DI Out: what arrives at mic level, before its Volume (D26)
+    const ampDi = card.outputs.some((o) => o.tap === 'di-out')
+    let diSig = outSig
+    if (ampDi) diSig = levels.condition !== undefined && SILENCES[levels.condition] ? silence(1) : gain(AMP_DI_DB, inSig)
+
+    // A ground loop: a hum on the output to the desk (a DI Box's XLR Out, a Guitar Amp's DI Out) —
+    // from there on it is part of the noise
+    const humming = (sig: Sig): Sig => {
+      if (!card.groundLoop || sig.parts.length === 0) return sig
+      const mains = new OscillatorNode(ctx, { frequency: HUM_HZ })
+      mains.start(0)
+      // An oscillator swings ±1: its RMS is 1/√2
+      return plus(sig, gain(20 * Math.log10(ampOf(HUM_DBU) * Math.SQRT2), one(mains, 1), sig.channels))
+    }
+    if (ampDi) diSig = humming(diSig)
+    else outSig = humming(outSig)
+
+    // A source's input is what it hears, not what it works on: the engine shows none
+    if (card.mode !== 'source' && !sameAsWire(card, inSig.channels)) taps.push({ id: card.key, at: 'in', parts: inSig.parts })
+    taps.push({ id: card.key, at: 'out', parts: outSig.parts })
+    if (ampDi) taps.push({ id: card.key, at: 'di-out', parts: diSig.parts })
+    // The Computer's Digital output (D40): what it plays, as numbers — before its DAC, ALIGNMENT_DB under
+    const digital = card.outputs.some((o) => o.tap === 'digital')
+    const numbers = digital ? gain(-ALIGNMENT_DB, outSig) : outSig
+    if (digital) taps.push({ id: card.key, at: 'digital', parts: numbers.parts })
+    if (node.typeKey === 'deesser' && !node.bypassed) {
+      // Its sibilant band: what arrives less what is below its Frequency — leaving, what leaves
+      // less that same part (it passes untouched)
+      const below = minusBelow(inSig, Math.min(param(node, 'frequencyHz'), 0.45 * ctx.sampleRate))
+      taps.push({ id: card.key, at: 'band-in', parts: plus(inSig, below).parts }, { id: card.key, at: 'band-out', parts: plus(outSig, below).parts })
+    }
+    // Stream / Broadcast fed numbers: what arrives as the ear weighs it, for its loudness (D38 —
+    // in both renders, so their taps line up; only the music's is read)
+    if (node.typeKey === 'broadcast' && levels.inDomain === 'digital') taps.push({ id: card.key, at: 'loudness', parts: kWeighted(inSig).parts })
+
+    // A DI Box's Direct Out passes on what arrives; a Guitar Amp's DI Out sends it at mic level
+    const tapped: Record<OutputTap, Sig> = { out: outSig, in: inSig, 'di-out': diSig, digital: numbers }
+    for (const o of card.outputs) wires.set(o.key, onPort(tapped[o.tap], o.kind))
+  }
+  return taps
+
+  /**
+   * What a source sends: its sound at its level, and its own noise (a sound in the air none: the
+   * microphone hears the room). A Keyboard or a PC plays a stereo file's left and right, its noise on both.
+   */
+  function source(card: CardPlan): Sig {
+    const { node } = card
+    const level = sourceLevelOf(node)
+    const noise = hiss(level - NOISE_BELOW[node.typeKey as keyof typeof NOISE_BELOW], 1)
+    if (!music) return noise
+    const kind = soundKindOf(node)
+    let sound: Sig
+    if (isGeneratorSound(kind)) {
+      sound = playing(sounds.generator.get(kind)!)
+    } else {
+      const loop = sounds.loops.get(kind)!
+      const both = stereoFileOf(card, sounds)
+      if (both) return plus(atLevel(level, playing(both, loop.start, loop.end)), gain(0, noise, 2))
+      sound = playing(loop.mono, loop.start, loop.end)
+    }
+    return plus(atLevel(level, sound), noise)
+  }
+
+  /**
+   * What a card does to what it works on (a Gain's input noise already in): a gain card its gain
+   * (signal/gains.ts — one gain node, or one per side when they differ), every other type its own.
+   */
+  function processed(card: CardPlan, x: Sig): Sig {
+    const { job } = card
+    const left = gainDbOf(job, { preamp: card.preamp, side: x.channels === 1 ? null : 'l' })
+    if (left === undefined) return OTHERS[job.typeKey as Exclude<TypeKey, GainType>]({ ...card, node: job }, x)
+    if (x.channels === 1) return gain(left, x)
+    const right = gainDbOf(job, { preamp: card.preamp, side: 'r' })!
+    return right === left ? gain(left, x) : sideBySide(x, (l) => gain(left, l), (r) => gain(right, r))
+  }
+
+  /** Minus what is below `hz` in a signal: a De-esser's split (audio/processors.ts) — the rest is its sibilant band. */
+  function minusBelow(x: Sig, hz: number): Sig {
+    if (x.parts.length === 0) return x
+    const below = filtered(x, [{ type: 'lowpass', frequency: hz, Q: BUTTERWORTH_Q_DB }])
+    const minus = new GainNode(ctx, { gain: -1, channelCount: x.channels, channelCountMode: 'explicit' })
+    for (const p of below.parts) p.node.connect(minus, p.output)
+    return one(minus, x.channels)
+  }
+
+  function filtered(x: Sig, filters: BiquadFilterOptions[]): Sig {
+    if (x.parts.length === 0) return x
+    return filters.reduce((from, options) => one(into(from, new BiquadFilterNode(ctx, options)), x.channels), x)
+  }
+
+  function dynamics(x: Sig, settings: DynamicsSettings): Sig {
+    // Nothing arriving still runs it: a gate closes, a compressor lets go
+    return one(into(x, new AudioWorkletNode(ctx, DYNAMICS_PROCESSOR, {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [x.channels],
+      channelCount: x.channels, channelCountMode: 'explicit', channelInterpretation: 'discrete',
+      processorOptions: settings,
+    })), x.channels)
+  }
+
+  /** What an output that carries `kind` sends of the card's signal (as signal/chain.ts onPort does). */
+  function onPort(x: Sig, kind: WireKind): Feed {
+    if (kind === 'stereo') return { ...gain(0, x, 2), kind }
+    if (x.channels === 1) return { ...x, kind }
+    // One side of a two-sided signal
+    const split = into(x, new ChannelSplitterNode(ctx, { numberOfOutputs: 2 }))
+    return { ...one(split, 1, kind === 'right' ? 1 : 0), kind }
+  }
+}

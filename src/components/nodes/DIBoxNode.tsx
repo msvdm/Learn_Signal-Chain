@@ -1,0 +1,78 @@
+import type { CardProps } from './cardProps'
+import { useNodeName } from '../../hooks/useNodeName'
+import { NodeWrapper } from './NodeWrapper'
+import { MeterSides } from './MeterSides'
+import { useStage, useWire } from '../../hooks/useGraphSignal'
+import { formatDb } from '../../signal/levels'
+import { useSignalStore } from '../../store/signalStore'
+import { useTranslation } from '../../i18n/useTranslation'
+import { StableText } from '../controls/StableText'
+import { LEVEL_SAMPLE } from '../../utils/readout'
+import { useParams } from '../../hooks/useParams'
+import { levelOf } from '../../signal/engine'
+import { DI_DIRECT_PORT } from '../../data/nodeRegistry'
+import { outputKey } from '../../graph/graph'
+import { GroundLiftButton } from './GroundLiftButton'
+
+/** Its controls and the two outputs' levels and what they are for, between its meter and its outputs */
+const MIDDLE_W = 300
+
+/**
+ * DI Box: its XLR Out brings a guitar down to mic level for a Preamp, its Direct Out passes it on
+ * unchanged for a guitar amp. In a ground loop (Direct Out on a Guitar Amp, XLR Out on the desk,
+ * Ground Lift off) it says "Hum!" where its description was, and the Ground Lift button lights up.
+ */
+export function DIBoxNode({ id }: CardProps) {
+  const p                 = useParams(id, 'di-box')
+  const updateNodeParams  = useSignalStore((s) => s.updateNodeParams)
+  const { t }             = useTranslation()
+
+  const text       = t.nodes['di-box']
+  const groundLift = p('groundLift')
+  const hum        = useStage(id)?.hum !== undefined
+  const xlr        = levelOf(useWire(outputKey(id, 'out')))
+  const direct     = levelOf(useWire(outputKey(id, DI_DIRECT_PORT)))
+
+  const output = (name: string, db: number, what: string, main: boolean) => (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ textTransform: 'uppercase', letterSpacing: '0.025em', color: main ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)', fontWeight: 700 }}>
+          {name}
+        </span>
+        <StableText reserve={[`${LEVEL_SAMPLE} dBu`]} align="end" style={{ fontFamily: 'var(--lsc-font-mono)', color: 'var(--lsc-fg)' }}>
+          {formatDb(db, 'analog')}
+        </StableText>
+      </div>
+      <div style={{ color: 'var(--lsc-fg-muted)' }}>{what}</div>
+    </div>
+  )
+
+  return (
+    <NodeWrapper
+      nodeId={id}
+      typeKey="di-box"
+      label={useNodeName(id, 'di-box')}
+    >
+      {/* What arrives on the left; its two outputs, at their own levels, in the middle */}
+      <MeterSides nodeId={id} output={false}>
+        <div style={{ width: MIDDLE_W, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Ground lift: lights up while there is a hum to fix */}
+          <GroundLiftButton on={groundLift} hum={hum} onToggle={() => updateNodeParams(id, { groundLift: !groundLift })} />
+
+          {output(text.xlrOut, xlr, text.micLevel, true)}
+          {output(text.directOut, direct, text.instrumentLevel, false)}
+
+          {/* The hum note keeps its space when hidden, so the card never resizes */}
+          <div style={{ borderTop: '1px solid var(--lsc-border)', paddingTop: 4 }}>
+            <div
+              className="lsc-wrap-text"
+              style={{ lineHeight: 1.375, color: 'var(--signal-clipping-text)', fontWeight: 700, visibility: hum ? 'visible' : 'hidden' }}
+            >
+              {text.hum}
+            </div>
+          </div>
+        </div>
+      </MeterSides>
+    </NodeWrapper>
+  )
+}

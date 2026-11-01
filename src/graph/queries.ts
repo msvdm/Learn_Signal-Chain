@@ -1,0 +1,465 @@
+import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
+import type { ComplexityLevel } from '../data/levels'
+import {
+  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT, AMP_DI_PORT, AMP_B_PORT, channelIn as channelInPort,
+  canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
+} from '../data/nodeRegistry'
+import type { GraphView } from './graph'
+import { graphOf, drivingWire, walkPassthrough } from './graph'
+import { slottedInputs } from './slots'
+import { interfacePorts, partnerOf, unpacks, wiredChannels } from './interfaceLink'
+
+// What the wiring makes of a card: what its outputs carry, the ports it shows, the mix or the
+// microphone it belongs to. Read from the wires on every change — nothing here is stored.
+
+/**
+ * What a wire carries:
+ * - mono:   one channel. On a stereo bus it lands on both sides at full level.
+ * - stereo: Left and Right together on one wire.
+ * - left / right: one side of a stereo mix (a bus's L / R output). It keeps its side
+ *   through effects and lands only on that side of a stereo bus.
+ */
+export type WireKind = 'mono' | 'stereo' | 'left' | 'right'
+
+/**
+ * What output `handleId` of a card carries: L / R outputs carry one side, a Mix or Matrix send
+ * both; a Pan, a stereo source or bus sends stereo; an effect passes on what reaches it (the Relay:
+ * its selected input); everything else is one channel. The signal maths takes it from here.
+ */
+export function outputKind(nodeId: string, handleId: string, view: GraphView): WireKind {
+  const graph = graphOf(view)
+  const seen  = new Set<string>()
+  let id     = nodeId
+  let handle = handleId
+  for (;;) {
+    const side = portSide(handle)
+    if (side) return side === 'l' ? 'left' : 'right'
+    if (handle === MIX_PORT || handle === MATRIX_PORT) return 'stereo'
+    const node = graph.node(id)
+    if (!node || seen.has(id)) return 'mono'
+    seen.add(id)
+    if (node.typeKey === 'pan') return 'stereo'
+    const def = NODE_REGISTRY[node.typeKey]
+    if (def.stereo !== 'follow') return isNodeStereo(node) ? 'stereo' : 'mono'
+    // A card of several paths (a Digital Interface's channels): the wire into this output's path
+    const from = def.routes?.find((r) => r.to.includes(handle))?.from
+    const wire = def.routes ? graph.into(id).find((e) => e.targetHandle === from) : drivingWire(node, graph)
+    if (!wire) return 'mono'
+    id     = wire.source
+    handle = wire.sourceHandle
+  }
+}
+
+/**
+ * True when this card splits a stereo signal into Left and Right: a Fader fed a bus's mix (the
+ * Main Fader) or a Limiter fed one, or a Graphic EQ / Amplifier fed a stereo wire. A Graphic EQ / Amplifier with
+ * nothing plugged in keeps the layout its wires show, so plugging it back in restores L and R.
+ */
+export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: GraphView): boolean {
+  if (!canSplit(node.typeKey)) return false
+  if (splitsOnlyMix(node.typeKey)) return mixBusOf(node.id, view) !== null
+  if (node.typeKey === 'amp') return ampSplit(node.id, view) !== null
+  const graph = graphOf(view)
+  const wire  = graph.into(node.id)[0]
+  if (!wire) {
+    return graph.from(node.id).some((e) => portSide(e.sourceHandle) !== null || e.sourceHandle === MIX_PORT)
+  }
+  return outputKind(wire.source, wire.sourceHandle, graph) === 'stereo'
+}
+
+/**
+ * An Amplifier fed one stereo wire (D27): that wire, which goes into both its inputs — its left side
+ * into A, its right into B (drawn split at the inputs). Null when it has no wire, a mono one, or two
+ * (each then plays on its own channel, a stereo one folded into it).
+ */
+export function ampSplit(nodeId: string, view: GraphView): SignalEdge | null {
+  const graph = graphOf(view)
+  if (graph.node(nodeId)?.typeKey !== 'amp') return null
+  const into  = graph.into(nodeId)
+  return into.length === 1 && outputKind(into[0].source, into[0].sourceHandle, graph) === 'stereo' ? into[0] : null
+}
+
+/** An Amplifier's other input: B for A, A for B. */
+export const otherAmpInput = (portId: string) => (portId === AMP_B_PORT ? 'in' : AMP_B_PORT)
+
+/**
+ * The wires on a card's input: those plugged into it — and on an Amplifier's other input the stereo
+ * wire split into both (ampSplit), which holds it too.
+ */
+export function wiresIntoPort(nodeId: string, portId: string, view: GraphView): SignalEdge[] {
+  const graph   = graphOf(view)
+  const plugged = graph.into(nodeId).filter((e) => e.targetHandle === portId)
+  if (plugged.length > 0 || graph.node(nodeId)?.typeKey !== 'amp') return plugged
+  const split = ampSplit(nodeId, view)
+  return split && split.targetHandle === otherAmpInput(portId) ? [split] : plugged
+}
+
+const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT }]
+const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT }
+const SIDE_OUTPUTS: NodePort[] = [
+  { id: 'out-l' },
+  { id: 'out-r' },
+]
+
+/** Outputs with the Matrix send below them — one array per layout, so a layout is always the same arrays. */
+const withMatrixSend = new WeakMap<NodePort[], NodePort[]>()
+function matrixSendAdded(outputs: NodePort[]): NodePort[] {
+  let added = withMatrixSend.get(outputs)
+  if (!added) withMatrixSend.set(outputs, added = [...outputs, MATRIX_SEND_OUTPUT])
+  return added
+}
+
+/**
+ * The ports a node shows right now. Inputs never change. Outputs:
+ * - a bus switched to Stereo splits its output into Left and Right;
+ * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs; a Graphic EQ
+ *   or Amplifier fed a stereo wire has Left and Right outputs too (splitsStereo);
+ * - any of these whose L / R were taken over by the next card (a Main Fader, an EQ, an amp) has
+ *   one Mix output instead;
+ * - a Matrix send output below R while a wire uses it.
+ * Pass the graph so the layout can be read from the wires. The same layout is always the same
+ * arrays, so "did the ports change?" is one comparison per array.
+ */
+export function getPorts(
+  node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
+  view?: GraphView,
+): {
+  inputs: NodePort[]
+  outputs: NodePort[]
+} {
+  if (node.typeKey === 'digital-interface') return interfacePorts(node, view)
+  const def = NODE_REGISTRY[node.typeKey]
+  let outputs = def.stereoOutputs && isNodeStereo(node) ? def.stereoOutputs : def.outputs
+  if (view && node.id) {
+    const out     = graphOf(view).from(node.id)
+    const passing = out.some((e) => e.sourceHandle === MIX_PORT)
+    if (isStereoBus(node) && passing) {
+      outputs = MIX_OUTPUTS
+    } else if (node.typeKey === 'amp') {
+      // Always L and R, on its inputs' lines (D27)
+      outputs = passing ? MIX_OUTPUTS : def.outputs
+    } else if (splitsStereo({ id: node.id, typeKey: node.typeKey }, view)) {
+      outputs = passing ? MIX_OUTPUTS : SIDE_OUTPUTS
+    }
+    if (out.some((e) => e.sourceHandle === MATRIX_PORT)) {
+      outputs = matrixSendAdded(outputs)
+    }
+  }
+  return { inputs: def.inputs, outputs }
+}
+
+const DRAWN: Record<ComplexityLevel, WeakMap<NodePort[], NodePort[]>> =
+  { beginner: new WeakMap(), intermediate: new WeakMap(), advanced: new WeakMap() }
+
+/** A port not drawn at `level`: a hidden one, or one of another level's (NodePort `levels`). */
+const unseenAt = (level: ComplexityLevel) => (p: NodePort) => p.hidden === true || (p.levels !== undefined && !p.levels.includes(level))
+
+/** Halfway down its card at `level` (NodePort `middle`, `middleLevels`). */
+export const middleAt = (p: NodePort, level: ComplexityLevel) =>
+  p.middle === true && (p.middleLevels === undefined || p.middleLevels.includes(level))
+
+/**
+ * A stack of ports without those not drawn at `level`, each halfway down its card or not as it is
+ * drawn there (`middleLevels` settled) — the same array for the same stack.
+ */
+function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
+  let shown = DRAWN[level].get(ports)
+  if (!shown) {
+    const unseen = unseenAt(level)
+    shown = ports.some(unseen) ? ports.filter((p) => !unseen(p)) : ports
+    if (shown.some((p) => p.middleLevels !== undefined)) {
+      shown = shown.map((p) => p.middleLevels === undefined ? p : { ...p, middle: middleAt(p, level) || undefined, middleLevels: undefined })
+    }
+    // A name shown only at some levels (the Computer's Analog and Digital, at Advanced)
+    if (shown.some((p) => p.labelLevels !== undefined)) {
+      shown = shown.map((p) => p.labelLevels === undefined ? p
+        : { ...p, label: p.labelLevels.includes(level) ? p.label : undefined, labelLevels: undefined })
+    }
+    DRAWN[level].set(ports, shown)
+  }
+  return shown
+}
+
+/**
+ * The ports a card draws at `level`: getPorts without the hidden ones (the USB link's way back —
+ * usbLink.ts) and those of other levels (the DAW's, the Recorder's — D23); an input taking several
+ * wires as one port per wire and an empty one (slots.ts). The same arrays for the same layout, as getPorts.
+ */
+export function drawnPorts(
+  node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
+  level: ComplexityLevel,
+  view?: GraphView,
+): { inputs: NodePort[]; outputs: NodePort[] } {
+  const { inputs, outputs } = getPorts(node, view)
+  return { inputs: slottedInputs(drawn(inputs, level), node.id, view), outputs: drawn(outputs, level) }
+}
+
+/**
+ * The card whose Mix output feeds this one — straight in, or through effects on the way.
+ * Null when no mix reaches it: also when one side of it does (an effect on an Amplifier's R output
+ * carries the right side only, so a Fader after it is a plain fader, not a Main Fader).
+ */
+export function mixSourceOf(nodeId: string, view: GraphView): string | null {
+  const own = graphOf(view).node(nodeId)?.typeKey
+  for (const { wire, source } of walkPassthrough(nodeId, view)) {
+    if (wire.sourceHandle === MIX_PORT) return wire.source
+    if (portSide(wire.sourceHandle) !== null) return null
+    // Another card of the same type would take the role itself
+    if (source.typeKey === own) return null
+  }
+  return null
+}
+
+/**
+ * The bus whose mix feeds this card — through effects on the way (a limiter on the master, say)
+ * and through cards that passed it on (a Main Fader, a Graphic EQ). For a Fader: null when it is
+ * not a Main Fader.
+ */
+export function mixBusOf(nodeId: string, view: GraphView): string | null {
+  const graph = graphOf(view)
+  const seen  = new Set<string>()
+  let cur: string | null = nodeId
+  while (cur && !seen.has(cur)) {
+    seen.add(cur)
+    const via = mixSourceOf(cur, graph)
+    const src = via ? graph.node(via) : undefined
+    if (!src) return null
+    if (isStereoBus(src)) return src.id
+    cur = src.id
+  }
+  return null
+}
+
+/**
+ * The Master or Aux Bus whose mix leaves this card: the bus itself, or the bus before
+ * one-input effects (a limiter, an EQ, the Main Fader …). Null when the card carries no mix.
+ */
+export function sourceBusOf(nodeId: string, view: GraphView): string | null {
+  const node = graphOf(view).node(nodeId)
+  if (!node) return null
+  if (isMixBus(node.typeKey)) return node.id
+  if (!passesThrough(node.typeKey)) return null
+  for (const { source } of walkPassthrough(nodeId, view)) {
+    if (isMixBus(source.typeKey)) return source.id
+  }
+  return null
+}
+
+/**
+ * The bus (Master, Aux or Matrix) whose level this Fader sets: the first one back through
+ * one-input effects — mono or stereo, a Main Fader or not. Null when another Fader comes first
+ * (that one sets it) or no bus feeds it.
+ */
+export function faderBusOf(nodeId: string, view: GraphView): SignalNode | null {
+  for (const { source } of walkPassthrough(nodeId, view)) {
+    if (isBus(source.typeKey)) return source
+    if (source.typeKey === 'fader') return null
+  }
+  return null
+}
+
+/**
+ * True when output `handleId` of this card may feed a Matrix Bus. Matrix sends are post-fader:
+ * - the Matrix send, or the L / R of a stereo bus or of its Main Fader (that wire becomes the
+ *   Matrix send);
+ * - a mono Aux Bus's output, straight or through its fader / effects.
+ * Never a bus's Mix output (that is before the Main Fader), a single source, or another Matrix Bus.
+ */
+export function isMatrixSource(nodeId: string, handleId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node || node.typeKey === 'matrix-bus' || handleId === MIX_PORT) return false
+  if (handleId === MATRIX_PORT || portSide(handleId) !== null) {
+    // L / R belong to a stereo bus or its Main Fader — but not a Matrix Bus's own Main Fader
+    const bus = node.typeKey === 'fader' ? mixBusOf(node.id, graph) : node.id
+    const busNode = bus === null ? undefined : graph.node(bus)
+    return busNode !== undefined && isMixBus(busNode.typeKey)
+  }
+  if (isMixBus(node.typeKey)) return handleId === 'out'
+  if (!passesThrough(node.typeKey)) return false
+  for (const { wire, source } of walkPassthrough(nodeId, graph)) {
+    if (isMixBus(source.typeKey)) return wire.sourceHandle === 'out'
+  }
+  return false
+}
+
+/**
+ * Which bus a wire into a Matrix Bus belongs to: one send knob per bus, so a bus's L and R
+ * wires share it. A wire that no longer carries a mix keeps a knob of its own card.
+ */
+export function matrixSendKey(wire: SignalEdge, view: GraphView): string {
+  return sourceBusOf(wire.source, view) ?? wire.source
+}
+
+/**
+ * What this Gain is the Preamp of: a microphone, or a DI Box whose XLR Out brings an instrument down
+ * to mic level — straight after it, or with effects such as a Pad in between. Null when it is a
+ * plain gain stage.
+ */
+export function preampSourceOf(gainId: string, view: GraphView): string | null {
+  for (const { wire, source } of walkPassthrough(gainId, view)) {
+    if (source.typeKey === 'mic' || toMicLevel(source, wire.sourceHandle)) return source.id
+    if (source.typeKey === 'gain') return null
+  }
+  return null
+}
+
+// ── Guitars: instrument level, the DI Box, the Guitar Amp ───────────────────────
+
+/**
+ * Where an instrument's signal goes into a mixing desk or PA: a Gain (the desk's preamp), a Fader,
+ * a bus, an ADC, a power amplifier or a speaker. Everything else in between counts as an effect
+ * pedal, which takes an instrument as it is.
+ */
+const DESK_INPUTS: ReadonlySet<TypeKey> = new Set<TypeKey>([
+  'gain', 'fader', 'master-bus', 'aux-bus', 'matrix-bus', 'pfl-bus', 'adc', 'amp', 'active-speaker', 'studio-monitor', 'headphones', 'speaker',
+])
+
+/** An output that sends an instrument at mic level: a DI Box's XLR Out (unless it is bypassed), a Guitar Amp's DI Out. */
+function toMicLevel(node: SignalNode, handleId: string): boolean {
+  return (node.typeKey === 'di-box' && !node.bypassed && handleId !== DI_DIRECT_PORT)
+    || (node.typeKey === 'guitar-amp' && handleId === AMP_DI_PORT)
+}
+
+/** An effect a guitar's signal goes through as it is (a pedal): one input, and not a desk input. */
+function isPedal(typeKey: TypeKey): boolean {
+  return passesThrough(typeKey) && !DESK_INPUTS.has(typeKey)
+}
+
+/**
+ * The Instrument whose signal leaves this output still at instrument level: the Instrument itself,
+ * or through effect pedals and a DI Box's Direct Out. Null at a DI Box's XLR Out (mic level by then),
+ * a desk input, or anything that is not a guitar (a microphone, a line, a bus). A Guitar Amp takes
+ * only this.
+ */
+export function instrumentAt(nodeId: string, handleId: string, view: GraphView): string | null {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node) return null
+  if (node.typeKey === 'instrument') return node.id
+  if (toMicLevel(node, handleId) || !isPedal(node.typeKey)) return null
+  for (const { wire, source } of walkPassthrough(nodeId, graph)) {
+    if (source.typeKey === 'instrument') return source.id
+    if (toMicLevel(source, wire.sourceHandle) || !isPedal(source.typeKey)) return null
+  }
+  return null
+}
+
+/**
+ * A microphone's signal still at mic level on this output: the microphone's own, a DI Box's XLR
+ * Out, or either through effects (a Pad, the 48V) before a Gain lifts it. An Audio Interface's line
+ * input takes none of them (D22).
+ */
+export function micLevelAt(nodeId: string, handleId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node) return false
+  if (node.typeKey === 'mic' || toMicLevel(node, handleId)) return true
+  if (node.typeKey === 'gain' || !passesThrough(node.typeKey)) return false
+  for (const { wire, source } of walkPassthrough(nodeId, graph)) {
+    if (source.typeKey === 'mic' || toMicLevel(source, wire.sourceHandle)) return true
+    if (source.typeKey === 'gain') return false
+  }
+  return false
+}
+
+/**
+ * Every card reached from these wires, following them on through effect pedals (and whatever
+ * `onward` lets through); `found` stops the walk with true.
+ */
+function reaches(
+  start: readonly SignalEdge[],
+  view: GraphView,
+  found: (node: SignalNode) => boolean,
+  onward: (node: SignalNode) => readonly SignalEdge[] | null,
+): boolean {
+  const graph = graphOf(view)
+  const seen  = new Set<string>()
+  const queue = [...start]
+  while (queue.length > 0) {
+    const node = graph.node(queue.shift()!.target)
+    if (!node || seen.has(node.id)) continue
+    seen.add(node.id)
+    if (found(node)) return true
+    queue.push(...(onward(node) ?? []))
+  }
+  return false
+}
+
+/** How many channels a wire carries: two on a stereo wire, else one. */
+const channelsOn = (e: SignalEdge, view: GraphView) => (outputKind(e.source, e.sourceHandle, view) === 'stereo' ? 2 : 1)
+
+/**
+ * How many channels a Digital Interface's cable carries (D40): the packing interface's wires, two on a
+ * stereo one — on an unpacking one, its partner's (none without a cable). `before`: only those of
+ * the packing interface's inputs before input k (its k-th channel wire's place in the cable).
+ */
+export function linkChannelCount(nodeId: string, view: GraphView, before = Infinity): number {
+  const graph  = graphOf(view)
+  const node   = graph.node(nodeId)
+  if (!node || node.typeKey !== 'digital-interface') return 0
+  const packer = unpacks(node) ? partnerOf(nodeId, view) : node
+  if (!packer) return 0
+  const into = graph.into(packer.id)
+  return wiredChannels(packer.id, graph).filter((k) => k < before)
+    .reduce((n, k) => n + channelsOn(into.find((e) => e.targetHandle === channelInPort(k))!, view), 0)
+}
+
+/**
+ * A source with nothing plugged into its output, or a microphone hearing nothing (no sound wired
+ * into it — D21), or a card of several paths with nothing plugged in anywhere (an Audio Interface,
+ * a DAW: one only playing back is connected, its meter reads what it records — nothing) — decision
+ * D11: no connection, no signal. It shows no level and no readings, and its meters stand still,
+ * until it is wired.
+ */
+export function unwiredSource(nodeId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const node  = graph.node(nodeId)
+  if (!node) return false
+  if (node.typeKey === 'mic') return graph.into(nodeId).length === 0
+  const def = NODE_REGISTRY[node.typeKey]
+  if (def.routes) return graph.into(nodeId).length === 0 && graph.from(nodeId).length === 0
+  return def.category === 'source' && graph.from(nodeId).length === 0
+}
+
+/**
+ * A condenser microphone's power (48V phantom power, D21): it comes from the desk input it plugs
+ * into — a 48V switched on after it and before its Preamp, through effects such as a Pad on the way.
+ * One of its wires finding one is enough (a split mic is powered by either desk).
+ */
+export function phantomPowered(micId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  return reaches(graph.from(micId), graph, (n) => n.typeKey === 'phantom' && param(n, 'on'), (n) =>
+    n.typeKey !== 'gain' && passesThrough(n.typeKey) ? graph.from(n.id) : null)
+}
+
+/**
+ * True when this Instrument's signal goes into a desk or PA input still at instrument level —
+ * straight, through effect pedals, or through a DI Box's Direct Out (a thru, still instrument
+ * level): the high notes get lost on the way. Fine: into a Guitar Amp, or through a DI Box's XLR Out.
+ */
+export function needsDi(instrumentId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  return reaches(graph.from(instrumentId), graph, (n) => DESK_INPUTS.has(n.typeKey), (n) => {
+    if (n.typeKey === 'guitar-amp' || n.typeKey === 'mic') return null
+    // Through a DI Box only its Direct Out stays at instrument level (all of it when bypassed)
+    return graph.from(n.id).filter((e) => !toMicLevel(n, e.sourceHandle))
+  })
+}
+
+/**
+ * A ground loop, and a hum on the desk's input (D1): through a DI Box — its Direct Out feeds a Guitar
+ * Amp (plugged into the mains on stage) while its XLR Out goes to the desk (plugged in too) —, or
+ * through a Guitar Amp's own DI Out to the desk (D26); in both, Ground Lift off: the two grounds meet
+ * through the cable.
+ */
+export function groundLoop(diId: string, view: GraphView): boolean {
+  const graph = graphOf(view)
+  const di    = graph.node(diId)
+  if (di?.typeKey === 'guitar-amp') return !param(di, 'groundLift') && graph.from(diId).some((e) => e.sourceHandle === AMP_DI_PORT)
+  if (!di || di.typeKey !== 'di-box' || di.bypassed || param(di, 'groundLift')) return false
+  const out = graph.from(diId)
+  if (!out.some((e) => e.sourceHandle !== DI_DIRECT_PORT)) return false
+  const direct = out.filter((e) => e.sourceHandle === DI_DIRECT_PORT)
+  return reaches(direct, graph, (n) => n.typeKey === 'guitar-amp', (n) => (isPedal(n.typeKey) ? graph.from(n.id) : null))
+}

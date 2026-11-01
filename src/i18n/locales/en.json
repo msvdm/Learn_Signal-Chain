@@ -1,0 +1,637 @@
+{
+  "app": {
+    "title": "Learn Signal Chain",
+    "tagline": "From microphone to speaker",
+    "language": "Language",
+    "level": "Difficulty level",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "close": "Close"
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "resetTitle": "Start over?",
+    "resetConfirm": "Reset",
+    "resetBody": "This clears the canvas. All elements will be removed.",
+    "switchTitle": "Switch to {title}?",
+    "switchConfirm": "Switch level",
+    "switchBody": "This clears the canvas so you can start fresh at the new level."
+  },
+  "file": {
+    "menu": "File",
+    "new": "New — empty canvas",
+    "open": "Open…",
+    "save": "Save to a file…",
+    "shareLink": "Copy a share link",
+    "picture": "Save as a picture…",
+    "defaultName": "My signal chain",
+    "nameLabel": "Name",
+    "saveTitle": "Save your chain",
+    "saveBody": "Your chain is saved as a file (usually in your Downloads folder). Open it again later with File → Open.",
+    "saveConfirm": "Save",
+    "pictureTitle": "Save a picture of your chain",
+    "pictureBody": "A PNG picture of everything on the canvas — for a worksheet or a chat. The chain is hidden inside the picture too: File → Open turns it back into the chain.",
+    "pictureConfirm": "Save picture",
+    "download": "Download the app…",
+    "downloadTitle": "Use it without internet",
+    "downloadBody": "The whole app in one file. Double-click it and it opens in your web browser — no internet, nothing to install. Copy it to a USB stick or a shared folder for a class; saved chains open in it too. For a newer version later, download it again. (This website also works offline once you have visited it: your browser keeps a copy.)",
+    "downloadConfirm": "Download",
+    "openTitle": "Open “{name}”?",
+    "openTitleUnnamed": "Open this chain?",
+    "openBody": "There are already elements on the canvas. Replace them with this chain, or add it beside them?",
+    "replace": "Replace the canvas",
+    "addBeside": "Or add it beside them:",
+    "addLeft": "Add it on the left",
+    "addRight": "Add it on the right",
+    "addUp": "Add it above",
+    "addDown": "Add it below",
+    "levelReplace": "It was made at the {level} level: replacing the canvas switches the app to {level}.",
+    "levelAdd": "It was made at the {level} level, so the app switches to {level}.",
+    "skipped": "{count} elements were left out: this version of the app does not have them.",
+    "linkCopied": "Link copied. Anyone who opens it gets a copy of this chain.",
+    "linkLong": "Link copied — but it is very long, so some chat apps may cut it short. Saving a file is safer.",
+    "linkFailed": "The link could not be copied. Save the chain to a file instead.",
+    "linkBroken": "This link is broken or cut short, so the chain could not be opened. Ask for the link again.",
+    "pictureSaved": "Picture saved — usually in your Downloads folder.",
+    "pictureFailed": "The picture could not be made. Try again, or save a file instead.",
+    "notChain": "This file isn't a saved signal chain. Open a .json file or a picture saved from this app.",
+    "noChainInPicture": "This picture has no chain inside. Only pictures saved from this app can be opened."
+  },
+  "toolbar": {
+    "snap": "Snap to grid",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomFit": "Show everything on screen"
+  },
+  "tools": {
+    "label": "What a click does",
+    "drag": "Drag",
+    "dragHint": "Drag an element to move it. Drag empty space to look around the canvas.",
+    "select": "Select",
+    "selectHint": "Click elements to pick several (click again to drop one), or drag a box around them. Then right-click one to copy or duplicate them all.",
+    "remove": "Remove",
+    "removeHint": "Click an element or a connection to remove it.",
+    "undo": "Undo",
+    "undoHint": "Take back the last change.",
+    "redo": "Redo",
+    "redoHint": "Bring back the change you just took back."
+  },
+  "connecting": {
+    "from": "Connecting from {node}.",
+    "hint": "Click a highlighted input. Click empty space to add a bend.",
+    "cancel": "cancel",
+    "input": "{node} input"
+  },
+  "levels": {
+    "beginner": {
+      "title": "Beginner"
+    },
+    "intermediate": {
+      "title": "Intermediate"
+    },
+    "advanced": {
+      "title": "Advanced"
+    }
+  },
+  "meters": {
+    "input": "Input",
+    "output": "Output",
+    "sound": "Sound",
+    "analogOut": "Analog out",
+    "digitalOut": "Digital out",
+    "axisIn": "0 dB in",
+    "peak": "Peak",
+    "rms": "RMS",
+    "noise": "Noise",
+    "curve": {
+      "peak": "Peaks",
+      "rms": "Average",
+      "noise": "Noise"
+    }
+  },
+  "formats": {
+    "sampleRate": "Sample rate",
+    "bitDepth": "Bit depth",
+    "bitrate": "Bitrate",
+    "rate": "{n} kHz",
+    "bits": "{n}-bit",
+    "float": "32-bit float",
+    "kbps": "{n} kb/s",
+    "smaller": "{n}× smaller",
+    "loudness": "{n} LUFS (streaming: {target})"
+  },
+  "health": {
+    "too-quiet": "Too Quiet",
+    "good": "Good",
+    "hot": "Hot",
+    "clipping": "Clipping!"
+  },
+  "warnings": {
+    "domainMixedBus": "Silent — analog and digital signals can't be mixed. Pass the digital ones through a Digital to Analog Converter first.",
+    "digitalSignal": "Silent — the signal is digital. Pass it through a Digital to Analog Converter first.",
+    "adcExpectsAnalog": "Silent — the signal is already digital.",
+    "dacExpectsDigital": "Silent — the signal is analog. Put an Analog to Digital Converter before this one.",
+    "codecNeedsDigital": "Silent — a Codec works only on numbers. Put an Analog to Digital Converter before it.",
+    "dawNeedsDigital": "Silent — a computer records only numbers. Put an Analog to Digital Converter before it.",
+    "switchedOff": "Switched off",
+    "interfaceNeedsDigital": "Silent — a Digital Interface works only on numbers. Put an Analog to Digital Converter before it.",
+    "noRoom": "No room: AES/EBU carries 2 channels. The rest are silent.",
+    "mixedRates": "Silent — one cable runs at one sample rate. Set every converter before it to the same rate.",
+    "otherProtocol": "Silent — the two ends of this cable are set to different protocols. Set both to the same.",
+    "twoClocks": "Two clocks: both are set to Internal. Expect clicks and dropouts — set one to External.",
+    "noClock": "No clock: both are set to External. Expect dropouts or no sound — set one to Internal.",
+    "otherCodec": "Silent — this stream is in another codec. Set In to the codec of the stream."
+  },
+  "hum": {
+    "tag": "Hum"
+  },
+  "status": {
+    "notConnected": "Not connected"
+  },
+  "nodes": {
+    "mic": {
+      "label": "Microphone",
+      "type": "Microphone type",
+      "dynamic": "Dynamic",
+      "condenser": "Condenser",
+      "noPhantom": "Needs 48V"
+    },
+    "preamp": {
+      "label": "Preamp"
+    },
+    "amp": {
+      "power": "Power",
+      "levelA": "Channel A volume",
+      "levelB": "Channel B volume",
+      "channelA": "A",
+      "channelB": "B"
+    },
+    "hpf": {
+      "label": "HPF",
+      "button": "HPF",
+      "name": "High-Pass Filter",
+      "cutoff": "Cutoff frequency"
+    },
+    "eq": {
+      "label": "Parametric equalizer",
+      "bandLow": "Low",
+      "bandMid": "Mid",
+      "bandHigh": "High",
+      "bandLoMid": "Lo-Mid",
+      "gain": "Gain",
+      "freq": "Freq",
+      "widthQ": "Width (Q)",
+      "shelf": "Shelf"
+    },
+    "graphic-eq": {
+      "label": "Graphic equalizer",
+      "flat": "Flat"
+    },
+    "comp": {
+      "label": "Compressor",
+      "threshold": "Threshold",
+      "ratio": "Ratio",
+      "makeupGain": "Makeup gain",
+      "turningDown": "Turning down",
+      "attack": "Attack",
+      "release": "Release"
+    },
+    "fader": {
+      "label": "Fader"
+    },
+    "main-fader": {
+      "label": "Main Fader"
+    },
+    "pfl": {
+      "label": "PFL"
+    },
+    "master-bus": {
+      "label": "Master Bus"
+    },
+    "speaker": {
+      "needsAmp": "No sound — a passive speaker needs an amplifier before it",
+      "hum": "You hear a hum",
+      "distorted": "Bad sound — something before it distorts"
+    },
+    "active-speaker": {
+      "label": "Active Speaker",
+      "volume": "Volume",
+      "blown": "Blown! An amplifier's output is far too strong for it."
+    },
+    "studio-monitor": {
+      "volume": "Volume"
+    },
+    "headphones": {
+      "label": "Headphones",
+      "needsGain": "No sound — headphones need a Gain knob right before them",
+      "blown": "Blown! An amplifier's output is far too strong for them."
+    },
+    "di-box": {
+      "label": "DI Box",
+      "groundLift": "Ground Lift",
+      "xlrOut": "XLR Out",
+      "directOut": "Direct Out",
+      "micLevel": "mic level · to the desk's Preamp",
+      "instrumentLevel": "instrument level · to a guitar amp",
+      "hum": "Hum! The guitar amp and the desk are both grounded through this box. Turn Ground Lift on."
+    },
+    "guitar-amp": {
+      "volume": "Volume",
+      "power": "Power"
+    },
+    "instrument": {
+      "needsDi": "No DI Box: the high notes get lost"
+    },
+    "generator": {
+      "label": "Generator",
+      "sound": "Sound",
+      "level": "Level",
+      "sounds": {
+        "sine": "Sine",
+        "noise": "Noise",
+        "click": "Click"
+      }
+    },
+    "noise-gate": {
+      "label": "Noise Gate",
+      "threshold": "Threshold",
+      "range": "Range",
+      "hold": "Hold",
+      "statusOpen": "Open",
+      "statusClosed": "Closed"
+    },
+    "limiter": {
+      "label": "Limiter",
+      "ceiling": "Ceiling",
+      "makeupGain": "Makeup",
+      "limiting": "Limiting",
+      "pass": "Pass"
+    },
+    "pad": {
+      "label": "Pad",
+      "on": "−20 dB",
+      "off": "OFF"
+    },
+    "phantom": {
+      "label": "Phantom power",
+      "button": "48V"
+    },
+    "deesser": {
+      "label": "De-esser",
+      "threshold": "Threshold",
+      "frequency": "Frequency",
+      "gainReduction": "Sibilance reduction"
+    },
+    "relay": {
+      "label": "Relay Switch",
+      "a": "A",
+      "b": "B",
+      "toggle": "Switch to the other input"
+    },
+    "pan": {
+      "label": "Pan"
+    },
+    "adc": {
+      "label": "Analog to Digital Converter"
+    },
+    "dac": {
+      "label": "Digital to Analog Converter"
+    },
+    "codec": {
+      "in": "In",
+      "out": "Out",
+      "codecs": {
+        "pcm": "PCM",
+        "mp3": "MP3",
+        "aac": "AAC",
+        "opus": "Opus"
+      },
+      "goodFor": {
+        "mp3": "Plays everywhere",
+        "aac": "Phones and video sites",
+        "opus": "Live talk, least delay"
+      }
+    },
+    "digital-interface": {
+      "in": "In",
+      "out": "Out",
+      "protocols": {
+        "pcm": "PCM",
+        "aes3": "AES/EBU",
+        "aes50": "AES50"
+      },
+      "clock": "Clock",
+      "clocks": {
+        "internal": "Internal",
+        "external": "External"
+      },
+      "channelsOf": "{n} of {max} channels",
+      "channelOf": "{n} of {max} channel",
+      "channels": "{n} channels",
+      "channel": "{n} channel"
+    },
+    "aux-bus": {
+      "label": "Aux Bus"
+    },
+    "matrix-bus": {
+      "label": "Matrix Bus",
+      "empty": "Plug in a mix: an output of a Master Bus or an Aux Bus"
+    },
+    "balance": {
+      "label": "Balance"
+    },
+    "interface": {
+      "lineIn": "Line in",
+      "toComputer": "To computer",
+      "fromComputer": "From computer",
+      "lineOut": "Line out"
+    },
+    "mixer": {
+      "label": "Mixing desk"
+    },
+    "stage-monitor": {
+      "label": "Stage Monitor"
+    }
+  },
+  "inside": {
+    "button": "Look inside",
+    "close": "Close",
+    "digital": "Digital",
+    "interface": {
+      "title": "Inside the Audio Interface"
+    },
+    "daw": {
+      "title": "Inside the DAW"
+    },
+    "steps": {
+      "preamp": "Preamp",
+      "adc": "A/D converter",
+      "usb": "USB ⇄ computer",
+      "dac": "D/A converter",
+      "lineOut": "Line out",
+      "trim": "Input trim",
+      "hpf": "High-pass filter",
+      "eq": "Equalizer",
+      "comp": "Compressor",
+      "fader": "Fader",
+      "mixBus": "Mix bus",
+      "master": "Master fader"
+    },
+    "does": {
+      "adc": "sound → numbers",
+      "dac": "numbers → sound"
+    }
+  },
+  "beginner": {
+    "sound": "Sound",
+    "recording": "Recording",
+    "onAir": "On air",
+    "noSound": "No sound",
+    "notConnected": "No sound — not connected",
+    "noSource": "No sound — nothing that makes sound is connected before it",
+    "switchedOff": "No sound — an amplifier before it is switched off",
+    "inputs": "Inputs",
+    "main": "Main",
+    "monitor": "Monitor"
+  },
+  "nodeControls": {
+    "turnOff": "On — click to bypass it (the signal then passes through unchanged)",
+    "turnOn": "Bypassed — the signal passes through unchanged. Click to turn it back on",
+    "remove": "Remove from chain",
+    "bypassedShort": "Bypassed",
+    "on": "ON",
+    "off": "OFF"
+  },
+  "nodeMenu": {
+    "bypass": "Bypass — let the signal pass through unchanged",
+    "turnOn": "Turn back on",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste here",
+    "pasteEmpty": "Paste — copy something first",
+    "duplicate": "Duplicate",
+    "duplicateLeft": "Put a copy on the left",
+    "duplicateRight": "Put a copy on the right",
+    "duplicateUp": "Put a copy above",
+    "duplicateDown": "Put a copy below",
+    "selectAll": "Select everything",
+    "insertChain": "Insert a saved chain here…",
+    "selected": "{count} elements selected",
+    "removeMany": "Remove {count} elements",
+    "flipH": "Flip horizontal",
+    "flipV": "Flip vertical"
+  },
+  "stereo": {
+    "mono": "Mono",
+    "stereo": "Stereo"
+  },
+  "character": {
+    "label": "What it does",
+    "speech": "Speech",
+    "singing": "Singing"
+  },
+  "palette": {
+    "search": "Search elements",
+    "all": "All",
+    "startHere": "Start here",
+    "noResults": "No elements match",
+    "rightClickTip": "Tip: right-click an element on the canvas to bypass, flip, copy or remove it.",
+    "hide": "Hide the elements panel (more room for the canvas)",
+    "show": "Show the elements panel",
+    "categories": {
+      "source": "Sources",
+      "processing": "Processing",
+      "routing": "Routing",
+      "output": "Output",
+      "inputs": "Inputs",
+      "devices": "Devices",
+      "outputs": "Outputs"
+    },
+    "items": {
+      "vocal": "Vocal",
+      "drum-kit": "Drum Kit",
+      "acoustic": "Acoustic Instrument",
+      "mic": "Microphone",
+      "phantom": "Phantom Power (48V)",
+      "keyboard": "Keyboard",
+      "pc": "Computer",
+      "instrument": "Hi-Z Instrument",
+      "di-box": "DI Box",
+      "guitar-amp": "Guitar Amp",
+      "generator": "Generator",
+      "gain": "Gain",
+      "hpf": "High-Pass Filter",
+      "eq": "Parametric equalizer",
+      "comp": "Compressor",
+      "deesser": "De-esser",
+      "noise-gate": "Noise Gate",
+      "limiter": "Limiter",
+      "pad": "Pad (−20 dB)",
+      "amp": "Amplifier",
+      "graphic-eq": "Graphic equalizer",
+      "fader": "Fader",
+      "switch": "On Off Switch",
+      "relay": "Relay Switch",
+      "pan": "Pan / Balance",
+      "adc": "Analog to Digital Converter",
+      "dac": "Digital to Analog Converter",
+      "codec": "Codec",
+      "digital-interface": "Digital Interface",
+      "master-bus": "Master Bus",
+      "aux-bus": "Aux Bus",
+      "matrix-bus": "Matrix Bus",
+      "pfl-bus": "PFL Bus",
+      "active-speaker": "Active Speaker",
+      "headphones": "Headphones",
+      "studio-monitor": "Studio Monitor",
+      "recorder": "Recorder",
+      "broadcast": "Stream / Broadcast",
+      "speaker": "Passive Speaker",
+      "interface": "Audio Interface",
+      "daw": "DAW (Recording App)",
+      "mixer": "Mixer",
+      "stage-box": "Stage Box"
+    }
+  },
+  "tutorial": {
+    "button": "How it works",
+    "title": "How it works",
+    "sections": {
+      "welcome": "What it's for",
+      "start": "Your first chain",
+      "build": "Working on the canvas",
+      "levels": "The three levels",
+      "meters": "Reading the meters",
+      "wires": "Connections and colours",
+      "save": "Saving and sharing",
+      "examples": "Examples"
+    },
+    "welcome": {
+      "intro": "Learn Signal Chain lets you build a sound system on screen and watch what happens to the sound as it travels through it. You place the elements and connect them, and the app shows you where the sound gets to, how strong it is and where something goes wrong.\n\nA teacher can build a setup in the browser or on an interactive whiteboard and change it while the class watches. Students can try their own ideas, make mistakes without breaking anything and see the result straight away.\n\nEverything runs in your web browser. There's nothing to install, and nothing you build leaves your computer unless you share it.",
+      "points": []
+    },
+    "start": {
+      "intro": "Here's a quick first chain: a singer, a microphone and a speaker.",
+      "points": [
+        "Check that **Beginner** is selected at the top of the screen.",
+        "Drag a **Vocal** from the elements panel on the left onto the canvas. If the panel is closed, open it with the button in the top left corner. Then add a **Microphone** and an **Active Speaker**.",
+        "Click the small circle on the right side of the Vocal, then the circle on the left side of the Microphone.",
+        "Connect the Microphone to the Active Speaker in the same way.",
+        "The speaker now says **Sound**. Point at its input, click the red × that appears, and it tells you there's no sound."
+      ]
+    },
+    "build": {
+      "intro": "Everything is done with the mouse, and there are no modes to switch between. When the pointer is over an input or an output you're wiring, and anywhere else you're moving things around.",
+      "points": [
+        "**Add an element** by dragging it from the elements panel. If you drop it onto a connection, it goes into the middle of it, as long as the connection makes sense.",
+        "**Connect** by clicking an output and then an input. While you're drawing a connection, the inputs that can take it light up. Click empty space on the way to add a bend, or press Esc to cancel.",
+        "One output can feed several inputs, so the same signal can go to more than one place.",
+        "**Unplug** a connection by pointing at the input it goes into and clicking the red × that appears.",
+        "**Right-click** an element to see what you can do with it, such as bypassing it (letting the signal through unchanged), flipping it, copying it or removing it.",
+        "The buttons in the bottom left set what a click does: **Drag** moves things, **Select** picks several at once and **Remove** deletes. **Undo** and **Redo** are next to them.",
+        "The usual shortcuts work too: {mod}Z to undo, {mod}C and {mod}V to copy and paste, and Delete to remove what's selected."
+      ]
+    },
+    "levels": {
+      "intro": "The levels show the same world at three scales, from the whole room down to the inside of the equipment. Pick one at the top of the screen. Switching level clears the canvas, so save your work first if you don't want to lose it.",
+      "points": [
+        "**Beginner** is about the room: microphones, instruments, a mixing desk, speakers and a computer. You learn what connects to what. There are no numbers yet. Each speaker, recorder or stream tells you whether sound reaches it.",
+        "**Intermediate** opens up the mixing desk. You build a channel yourself, control by control, from the microphone to the speakers. Meters appear and show the signal level at every step.",
+        "**Advanced** unlocks the rest of the elements. Levels are also worked out digitally, on the dBFS scale, so more complex routing and conversions along the chain can be shown."
+      ]
+    },
+    "meters": {
+      "intro": "From Intermediate on, the app plays a short piece of real sound through your chain, such as a voice, a drum beat or some music. It does this silently, inside the browser, and measures the result at every piece of equipment. The meters replay what it measured, so they move the way the sound does.\n\nLevels are given in decibels (dB). On most meters, 0 dB marks the top of the green zone, the normal working level.",
+      "points": [
+        "The solid part of the bar is the average level, which is close to how loud the sound seems. The pale part above it shows the peaks, the short loudest moments. The light grey part at the bottom is the noise. This lets you show the signal-to-noise ratio, and why setting the right level at every step (gain staging) matters so much.",
+        "The word under each meter sums up the whole piece of sound:",
+        "The ring around each input and output uses the same colours, so you can spot a problem along the chain at a glance. A grey ring means nothing is connected.",
+        "Clipping is judged on the peaks, not on the average. A drum can clip even when its average level looks fine.",
+        "Where the sound travels through the air, as from a speaker, the meter shows loudness in dB SPL, the scale used for what our ears hear.",
+        "After a converter the signal is digital, and the meters read dBFS. There, 0 is the absolute top: anything louder is lost.",
+        "When something is wrong, the equipment says so in a short note, for example when a condenser microphone isn't getting the power it needs."
+      ],
+      "health": {
+        "too-quiet": "so weak that it's close to the noise",
+        "good": "a healthy level",
+        "hot": "strong, with little room left before it distorts",
+        "clipping": "the loudest moments are cut off and the sound is distorted"
+      }
+    },
+    "wires": {
+      "intro": "A single connection carries the whole signal, stereo included. Stereo connections are drawn as a double line, and an output that carries only the left or the right side is marked **L** or **R**.",
+      "points": [
+        "From Intermediate on, a connection's colour shows the health of its signal, in the meters' colours:",
+        "**Red** can also mean that something there needs your attention.",
+        "An unbroken line with soft swells of light moving along it is a cable carrying the sound as electricity (an analog signal).",
+        "Dashes and dots, like Morse code, are a digital connection: the sound travels as numbers, after a converter or along a USB cable.",
+        "Waves spreading straight from a singer, a drum kit, an acoustic instrument or a guitar amp to a microphone are sound travelling through the air (no cable).",
+        "At Beginner, all connections are the same colour."
+      ],
+      "none": "No signal"
+    },
+    "save": {
+      "intro": "Your canvas is saved in this browser as you work. Close the app, and it'll be waiting for you next time you open it in the same browser.",
+      "points": [
+        "**File → Save to a file** keeps a copy you can open later or send to someone.",
+        "**File → Save as a picture** makes an image for a worksheet or a presentation. The chain is stored inside the picture, so **File → Open** turns it back into a chain you can edit.",
+        "**File → Copy a share link** gives you a link to send to your students. Everyone who opens it gets their own copy to work on.",
+        "**File → Download the app** saves the whole app as a single file. Copy it to a USB stick or a shared folder, and it opens in any web browser, even without an internet connection."
+      ]
+    },
+    "examples": {
+      "intro": "These ready-made chains are a good starting point for a lesson, or for exploring on your own. Open one, look at how it's built, then change something and see what happens. The app switches to the example's level when you open it.",
+      "open": "Open",
+      "chains": {
+        "singer": {
+          "name": "A singer on two speakers",
+          "about": "A singer, a microphone and a mixing desk feeding two speakers. The simplest live setup."
+        },
+        "band": {
+          "name": "A band on stage",
+          "about": "Vocals, drums, guitar and keyboard plugged into a stage box and sent to the mixing desk. The audience hears an amplifier and two speakers, and the band hears a stage monitor."
+        },
+        "recording": {
+          "name": "Recording a voice",
+          "about": "A singer recorded on a computer through an audio interface, with studio monitors to listen back on."
+        },
+        "vocalChannel": {
+          "name": "A vocal channel",
+          "about": "One microphone through a complete channel: preamp, filter, equalizer, compressor, fader and pan, then out to the speakers."
+        },
+        "monitorMix": {
+          "name": "A monitor mix",
+          "about": "The singer's voice goes to the audience speakers and, at a separate level, to a monitor on stage."
+        },
+        "guitarDi": {
+          "name": "A guitar with a DI box",
+          "about": "An electric guitar split by a DI box. One feed goes straight to the desk, the other to an amp with a microphone in front of it."
+        },
+        "converters": {
+          "name": "Through the converters",
+          "about": "A voice turned into digital, processed as numbers and turned back into a signal for the speaker."
+        },
+        "stream": {
+          "name": "A live stream",
+          "about": "A voice channel turned into digital and sent out as a live stream."
+        }
+      }
+    }
+  },
+  "ports": {
+    "diOut": "DI Out",
+    "analog": "Analog",
+    "digital": "Digital"
+  },
+  "levelNames": {
+    "intermediate": { "eq": "Equalizer", "hpf": "High-Pass Filter" }
+  },
+  "files": {
+    "playsWav": "WAV file → PCM",
+    "recordsTrack": "Records {n} track → WAV",
+    "recordsTracks": "Records {n} tracks → WAV"
+  }
+}

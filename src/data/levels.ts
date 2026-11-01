@@ -1,0 +1,24 @@
+// The complexity levels. They change which elements the palette shows (and how a few of them look),
+// never what is on the canvas: every level starts from a blank canvas.
+
+export type ComplexityLevel = 'beginner' | 'intermediate' | 'advanced'
+
+/** The levels from easiest to hardest */
+export const LEVELS: ComplexityLevel[] = ['beginner', 'intermediate', 'advanced']
+
+/** Is `level` at least as hard as `min`? */
+export function atLeast(level: ComplexityLevel, min: ComplexityLevel): boolean {
+  return LEVELS.indexOf(level) >= LEVELS.indexOf(min)
+}
+
+/**
+ * The easiest level whose meters show the peaks and the noise, move with the sound, and give their
+ * Peak / RMS / Noise numbers. Beginner shows only the average (decision D3, docs/decisions.md).
+ */
+export const DETAIL_LEVEL: ComplexityLevel = 'intermediate'
+
+/**
+ * The easiest level whose chain is worked out: the number engine and the render on real sound.
+ * Beginner shows only where the sound goes (D20, graph/reach.ts).
+ */
+export const SIGNAL_LEVEL: ComplexityLevel = 'intermediate'

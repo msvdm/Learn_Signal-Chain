@@ -1,0 +1,844 @@
+/* ── Reset ───────────────────────────────────────────────────────────────────
+   Tailwind CSS v4.2.4's preflight (MIT License, Copyright (c) Tailwind Labs, Inc.
+   — https://github.com/tailwindlabs/tailwindcss), which came with Tailwind until it was removed
+   (2026-10-09). Kept as it was but for its theme variables (the app's fonts instead) and the
+   rules for elements the app never shows (tables, lists, links, other form fields …). In a layer, as it was: every unlayered rule — the app's
+   below, React Flow's — beats it. */
+@layer base {
+  /*
+    1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+    2. Remove default margins and padding
+    3. Reset all borders.
+  */
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    box-sizing: border-box; /* 1 */
+    margin: 0; /* 2 */
+    padding: 0; /* 2 */
+    border: 0 solid; /* 3 */
+  }
+
+  /*
+    1. Use a consistent sensible line-height in all browsers.
+    2. Prevent adjustments of font size after orientation changes in iOS.
+    3. Use a more readable tab size.
+    4. The app's font.
+    5. Disable tap highlights on iOS.
+  */
+  html {
+    line-height: 1.5; /* 1 */
+    -webkit-text-size-adjust: 100%; /* 2 */
+    tab-size: 4; /* 3 */
+    font-family: var(--lsc-font-sans); /* 4 */
+    font-feature-settings: normal; /* 4 */
+    font-variation-settings: normal; /* 4 */
+    -webkit-tap-highlight-color: transparent; /* 5 */
+  }
+
+  /* Remove the default font size and weight for headings. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  /* Add the correct font weight in Edge and Safari. */
+  b,
+  strong {
+    font-weight: bolder;
+  }
+
+  /*
+    1. The app's monospace font.
+    2. Correct the odd `em` font sizing in all browsers.
+  */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--lsc-font-mono); /* 1 */
+    font-feature-settings: normal; /* 1 */
+    font-variation-settings: normal; /* 1 */
+    font-size: 1em; /* 2 */
+  }
+
+  /* Use the modern Firefox focus style for all focusable elements. */
+  :-moz-focusring {
+    outline: auto;
+  }
+
+  /*
+    1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+    2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+  */
+  img,
+  svg {
+    display: block; /* 1 */
+    vertical-align: middle; /* 2 */
+  }
+
+  /*
+    1. Inherit font styles in all browsers.
+    2. Remove border radius in all browsers.
+    3. Remove background color in all browsers.
+    4. Ensure consistent opacity for disabled states in all browsers.
+  */
+  button,
+  input {
+    font: inherit; /* 1 */
+    font-feature-settings: inherit; /* 1 */
+    font-variation-settings: inherit; /* 1 */
+    letter-spacing: inherit; /* 1 */
+    color: inherit; /* 1 */
+    border-radius: 0; /* 2 */
+    background-color: transparent; /* 3 */
+    opacity: 1; /* 4 */
+  }
+
+  /* Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300) */
+  ::placeholder {
+    opacity: 1;
+  }
+
+  /*
+    Set the default placeholder color to a semi-transparent version of the current text color in browsers that do not
+    crash when using `color-mix(…)` with `currentcolor`. (https://github.com/tailwindlabs/tailwindcss/issues/17194)
+  */
+  @supports (not (-webkit-appearance: -apple-pay-button)) /* Not Safari */ or
+    (contain-intrinsic-size: 1px) /* Safari 17+ */ {
+    ::placeholder {
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+  }
+
+  /* Remove the inner padding in Chrome and Safari on macOS. */
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+
+  /* Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737) */
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+
+  /* Correct the inability to style the border radius in iOS Safari. */
+  button {
+    appearance: button;
+  }
+
+  /* Make elements with the HTML hidden attribute stay hidden by default. */
+  [hidden]:where(:not([hidden='until-found'])) {
+    display: none !important;
+  }
+}
+
+/* =======================================================================
+   Learn Signal Chain — "Studio Canvas" theme
+   Two themes, chosen by data-theme on <html> (set from the store).
+   Signal-health colours are tuned for contrast on each background.
+   ======================================================================= */
+
+/* ── Theme-independent tokens ───────────────────────────────────────────── */
+:root {
+  /* Radii */
+  --lsc-radius-xs:   2px;
+  --lsc-radius-sm:   6px;
+  --lsc-radius-md:   8px;
+  --lsc-radius-lg:   12px;
+  --lsc-radius-pill: 9999px;
+
+  /* Type */
+  --lsc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --lsc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Node card text scale — edit here to resize all in-card text globally.
+     Minimum is 11px: the app is projected in class. */
+  --node-text-3xs: 11px;  /* graph axis labels */
+  --node-text-2xs: 11px;  /* channel labels, compact values */
+  --node-text-xs:  13px;  /* knob values, status text */
+  --node-text-sm:  12px;  /* slider/meter labels, band names */
+  --node-text-md:  14px;  /* node header title */
+
+  /* EQ band palette */
+  --lsc-eq-low:   #9a7fd4;
+  --lsc-eq-mid:   #d89548;
+  --lsc-eq-high:  #4fa876;
+
+  /* Knobs, drawn as the logo's (KnobFace, D32): the same in both themes */
+  --lsc-knob-outline: #24232b;
+  --lsc-knob-notch:   #fbfaf7;
+  --lsc-knob-gray:    #4d4a55;  /* the amps' knobs */
+  --lsc-knob-pan:     #c0bfbc;  /* Pan / Balance: a light grey */
+
+  /* The Amplifier's front panel (AmpNode): a dark grey rack in both themes, light print on it */
+  --lsc-rack-panel:   #5c5f66;
+  --lsc-rack-window:  #3d4046;
+  --lsc-rack-ink:     #e6e7ea;
+  --lsc-rack-muted:   #c4c7cd;
+}
+
+/* ── Dark theme ─────────────────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --lsc-canvas:      #111214;
+  --lsc-header:      #16181d;
+  --lsc-node-bg:     #1e2128;
+  --lsc-sunken:      #0d0f13;
+  --lsc-node-bg-2:   #1a1d24;
+  --lsc-grid:        #2a2f3a;
+
+  /* Lines */
+  --lsc-track:       #2e3341;
+  --lsc-track-2:     #262a34;
+  --lsc-track-3:     #3a4050;
+  --lsc-border:      #2e3341;
+  --lsc-border-soft: #262a34;
+  --lsc-border-mute: #20232b;
+  /* A card's outline and an empty port's ring: near white, so they stand out on the dark canvas */
+  --lsc-card-edge:   #d4d6db;
+
+  /* Text */
+  --lsc-fg:          #e8eaef;
+  --lsc-fg-muted:    #a3aaba;
+  --lsc-fg-dim:      #7c8496;
+  --lsc-fg-fainter:  #555c6c;
+
+  /* Signal health */
+  --signal-too-quiet:        #60a5fa;
+  --signal-good:             #4ade80;
+  --signal-hot:              #facc15;
+  --signal-clipping:         #f87171;
+  --signal-too-quiet-bg:     rgba(96,165,250,0.10);
+  --signal-too-quiet-border: rgba(96,165,250,0.25);
+  --signal-good-bg:          rgba(74,222,128,0.10);
+  --signal-good-border:      rgba(74,222,128,0.25);
+  --signal-hot-bg:           rgba(250,204,21,0.10);
+  --signal-hot-border:       rgba(250,204,21,0.28);
+  --signal-clipping-bg:      rgba(248,113,113,0.10);
+  --signal-clipping-border:  rgba(248,113,113,0.28);
+  /* Health words as text (overview cards) — the colours above already reach 4.5:1 here */
+  --signal-too-quiet-text:   var(--signal-too-quiet);
+  /* The noise on a meter (zoneColor): light grey, its numbers a readable grey */
+  --lsc-meter-noise:         #c9ced8;
+  --lsc-meter-noise-text:    var(--lsc-fg-muted);
+  --signal-good-text:        var(--signal-good);
+  --signal-hot-text:         var(--signal-hot);
+  --signal-clipping-text:    var(--signal-clipping);
+
+  /* Accent */
+  /* The light theme's purple too (the user's call, 2026-10-31) */
+  --lsc-accent:      #9a7fd4;
+  --lsc-accent-soft: #b8a3de;
+  --lsc-accent-bg:   rgba(154,127,212,0.14);
+  /* A button lit in the accent (the HPF): its rim, its fill, its word */
+  --lsc-accent-lit:    var(--lsc-accent);
+  --lsc-accent-lit-bg: var(--lsc-accent-bg);
+  --lsc-accent-text:   var(--lsc-accent-soft);
+  /* The PFL button, lit: solid bright yellow, a dark word */
+  --lsc-pfl:      #fde047;
+  --lsc-pfl-bg:   #facc15;
+  --lsc-pfl-text: #422006;
+  --lsc-select-halo: rgba(154,127,212,0.35);  /* glow around a selected element */
+  --lsc-select-tint: rgba(154,127,212,0.10);  /* fill of a selected element */
+  /* Beginner's wires: one colour, whatever they carry (D20; from Intermediate their health — D33) */
+  --lsc-wire-neutral: #8d95a6;
+  /* The palette: its tiles on a lighter shelf than they are (the user's call, 2026-10-31) */
+  --lsc-palette-bg:   #2b303b;
+  --lsc-palette-tile: #1a1d24;
+  --lsc-palette-edge: #3a4050;
+
+  /* Pro tip */
+
+  /* Shadows */
+  --lsc-shadow-node:    0 2px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.4);
+  --lsc-shadow-popup:   0 4px 24px rgba(0,0,0,0.5);
+  --lsc-shadow-tooltip: 0 4px 24px rgba(0,0,0,0.5);
+  --lsc-shadow-fader:   0 1px 4px rgba(0,0,0,0.5);
+  --lsc-fader-cap-rim:  rgba(255,255,255,0.22); /* outline of the solid fader cap */
+  /* A plain fader's cap (a channel's): white on the dark canvas */
+  --lsc-fader-cap-hi:    #ffffff;
+  --lsc-fader-cap-base:  #e3e4e8;
+  --lsc-fader-cap-lo:    #a7aab2;
+  --lsc-fader-cap-ridge: #f3f4f6;
+  --lsc-fader-cap-line:  #25262a;  /* the line across it that marks the value */
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --lsc-canvas:      #fbfaf7;
+  --lsc-header:      #ffffff;
+  --lsc-node-bg:     #ffffff;
+  --lsc-sunken:      #f5f3ee;
+  --lsc-node-bg-2:   #faf8f3;
+  --lsc-grid:        #dcd6c8;
+
+  /* Lines */
+  --lsc-track:       #e6e2d8;
+  --lsc-track-2:     #eeeae0;
+  --lsc-track-3:     #d6d0c3;
+  --lsc-border:      #e6e2d8;
+  --lsc-border-soft: #eeeae0;
+  --lsc-border-mute: #f4f1e8;
+  --lsc-card-edge:   #968d80;
+
+  /* Text */
+  --lsc-fg:          #3a3532;
+  --lsc-fg-muted:    #5c544f;
+  --lsc-fg-dim:      #8a8278;
+  --lsc-fg-fainter:  #b5ac9f;
+
+  /* Signal health */
+  --signal-too-quiet:        #5b8de8;
+  --signal-good:             #4fa876;
+  /* The logo's bright yellow, as the dark theme's (the user's call, 2026-10-31); words in it: -text */
+  --signal-hot:              #facc15;
+  --signal-clipping:         #d86b6b;
+  --signal-too-quiet-bg:     rgba(91,141,232,0.08);
+  --signal-too-quiet-border: rgba(91,141,232,0.22);
+  --signal-good-bg:          rgba(79,168,118,0.08);
+  --signal-good-border:      rgba(79,168,118,0.22);
+  --signal-hot-bg:           rgba(250,204,21,0.12);
+  --signal-hot-border:       rgba(234,179,8,0.45);
+  --signal-clipping-bg:      rgba(216,107,107,0.08);
+  --signal-clipping-border:  rgba(216,107,107,0.24);
+  /* Health words as text (overview cards): darker shades, at least 4.5:1 on --lsc-node-bg */
+  --signal-too-quiet-text:   #2f5fb8;
+  --lsc-meter-noise:         #bdb7ad;
+  --lsc-meter-noise-text:    var(--lsc-fg-muted);
+  --signal-good-text:        #2f7a52;
+  --signal-hot-text:         #93591a;
+  --signal-clipping-text:    #b23b3b;
+
+  /* Accent */
+  --lsc-accent:      #9a7fd4;
+  --lsc-accent-soft: #b8a3de;
+  --lsc-accent-bg:   rgba(154,127,212,0.08);
+  /* The pale accent fades on the cream: a lit button gets a deeper violet (its word over 4.5:1) */
+  --lsc-accent-lit:    #7d5fc9;
+  --lsc-accent-lit-bg: rgba(125,95,201,0.14);
+  --lsc-accent-text:   #5b3fa8;
+  --lsc-pfl:      #eab308;
+  --lsc-pfl-bg:   #fde047;
+  --lsc-pfl-text: #713f12;
+  --lsc-select-halo: rgba(154,127,212,0.38);
+  --lsc-select-tint: rgba(154,127,212,0.12);
+  --lsc-wire-neutral: #8a817a;
+  /* The palette: white tiles on a graphite-grey shelf ("graphite grey, not milk chocolate") */
+  --lsc-palette-bg:   #c5c5c5;
+  --lsc-palette-tile: #ffffff;
+  --lsc-palette-edge: #b0b0b0;
+
+  /* Pro tip */
+
+  /* Shadows */
+  --lsc-shadow-node:    0 1px 2px rgba(60,50,40,0.04), 0 1px 3px rgba(60,50,40,0.04);
+  --lsc-shadow-popup:   0 2px 12px rgba(60,50,40,0.06);
+  --lsc-shadow-tooltip: 0 2px 12px rgba(60,50,40,0.05);
+  --lsc-shadow-fader:   0 1px 2px rgba(60,50,40,0.08);
+  --lsc-fader-cap-rim:  rgba(0,0,0,0.55);
+  /* A plain fader's cap (a channel's): black on the light canvas */
+  --lsc-fader-cap-hi:    #5d6066;
+  --lsc-fader-cap-base:  #25262a;
+  --lsc-fader-cap-lo:    #09090b;
+  --lsc-fader-cap-ridge: #3d3f45;
+  --lsc-fader-cap-line:  #f4f4f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--lsc-font-sans);
+  background: var(--lsc-canvas);
+  color: var(--lsc-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+kbd {
+  font-family: var(--lsc-font-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+/* Text that should wrap to its container instead of widening it.
+   Nodes size themselves to their controls; descriptive text follows. */
+.lsc-wrap-text {
+  width: 0;
+  min-width: 100%;
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+
+/* A digital wire's dashes and dots (utils/wireLook.ts: their periods divide 240 px), FLOW_SPEED: 80 px a second.
+   The flow shows the direction, so it runs with reduced motion too (D12) */
+@keyframes signal-flow-digital {
+  to { stroke-dashoffset: -240; }
+}
+
+.signal-line-digital {
+  animation: signal-flow-digital 3s linear infinite;
+}
+
+/* Valid target port while drawing a wire */
+@keyframes lsc-ping {
+  0%, 100% { box-shadow: 0 0 0 4px var(--lsc-accent-bg); }
+  50%      { box-shadow: 0 0 0 10px var(--lsc-accent-bg); }
+}
+
+/* Clipping pulse */
+@keyframes clip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.clipping-pulse {
+  animation: clip-pulse 0.5s ease-in-out infinite;
+}
+
+/* ── Meters (components/SignalMeter.tsx) ─────────────────────────────────────
+   The colours belong to the scale (D16): a zones layer painted once, and two covers in the
+   track's colour sliding over it — the pale one down to the average (the peaks show pale under
+   it), the dark one down to the peaks. Each moving part sits at a share (0 … 1) of its bar: React
+   draws the still picture into --rms / --peak / --peak-on (still, both covers at the average).
+   While the chain plays, the painters write each part's own transform over it
+   (components/meterPaint.ts); removing it puts the still picture back. The parts are full-size and
+   slide along the bar (the track clips them), so a picture lays nothing out. */
+.lsc-meter-fill { position: absolute; inset: 0; background: var(--bar); } /* a plain sliding bar: the dynamics cards' turning-down bar */
+.lsc-meter-zones { position: absolute; inset: 0; }
+.lsc-meter-cover { position: absolute; inset: 0; background: var(--lsc-sunken); }
+.lsc-meter-pale  { opacity: 0.62; }
+.lsc-meter-up .lsc-meter-cover    { transform: translateY(calc(var(--rms) * -100%)); }
+.lsc-meter-right .lsc-meter-cover { transform: translateX(calc(var(--rms) * 100%)); }
+/* While it clips: a red line across the end of the bar, twice as thick as the peak mark */
+.lsc-meter-clip { position: absolute; background: var(--signal-clipping); opacity: var(--clip-on); }
+.lsc-meter-up .lsc-meter-clip    { left: 0; right: 0; top: 0; height: calc(var(--mark) * 2); }
+.lsc-meter-right .lsc-meter-clip { top: 0; bottom: 0; right: 0; width: calc(var(--mark) * 2); }
+
+/* The peak mark — the loudest peak over the loop; while the chain plays, the peak hold. It slides
+   over the bar less its own size, so it stays inside at both ends. */
+.lsc-meter-hold-track { position: absolute; inset: 0; pointer-events: none; }
+.lsc-meter-up .lsc-meter-hold-track    { top: var(--mark); }
+.lsc-meter-right .lsc-meter-hold-track { right: var(--mark); }
+.lsc-meter-hold { position: absolute; inset: 0; opacity: var(--peak-on); }
+.lsc-meter-up .lsc-meter-hold    { transform: translateY(calc(var(--peak) * -100%)); }
+.lsc-meter-right .lsc-meter-hold { transform: translateX(calc(var(--peak) * 100%)); }
+.lsc-meter-hold::after { content: ''; position: absolute; background: var(--lsc-fg); }
+.lsc-meter-up .lsc-meter-hold::after    { left: 0; right: 0; bottom: 0; height: var(--mark); }
+.lsc-meter-right .lsc-meter-hold::after { top: 0; bottom: 0; left: 0; width: var(--mark); }
+
+
+/* A dynamics card's turning-down bar (components/nodes/DynamicsLayout.tsx): it grows from the right */
+.lsc-reduction-fill { background: var(--signal-hot); border-radius: 3px; transform: translateX(calc((1 - var(--gr)) * 100%)); }
+
+/* The marks on a dynamics card's curve: each group at its point (--x, --y in the SVG's pixels), a
+   faint copy on the diagonal and a line between them while the card moves it 2 px or more; the word
+   and the ring for being at work, or not, one over the other (--live-active while it plays) */
+.lsc-curve-at, .lsc-curve-copy { transform: translate(calc(var(--x) * 1px), calc(var(--y) * 1px)); }
+.lsc-curve-copy { opacity: calc(var(--moved) * 0.3); }
+.lsc-curve-line {
+  transform: translate(calc(var(--x) * 1px), calc(var(--top) * 1px)) scale(1, var(--len));
+  opacity: var(--moved);
+}
+.lsc-curve-on  { opacity: calc(var(--live-active, var(--active)) * var(--word)); }
+.lsc-curve-off { opacity: calc((1 - var(--live-active, var(--active))) * var(--word)); }
+
+/* A still reading glides to a new one; a moving meter follows the sound at once */
+.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.lsc-meters-live :is(.lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line) { transition: none; }
+
+/* Card controls ↔ overview face crossfade. Visibility switches at the end when hiding
+   and at the start when showing, so nothing hidden stays clickable. */
+.lsc-fade {
+  transition: opacity 120ms ease, visibility 120ms;
+}
+
+/* The element palette collapsing / reopening (header toggle) */
+.lsc-palette-slide {
+  transition: width 200ms ease, visibility 200ms;
+}
+
+/* The palette slides over the canvas: the canvas's bottom-left tools step out from under it */
+.react-flow__panel.lsc-left-tools {
+  margin-left: calc(15px + var(--lsc-palette-w, 0px));
+  transition: margin-left 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lsc-palette-slide    { transition: none; }
+  .react-flow__panel.lsc-left-tools { transition: none; }
+  .lsc-fade             { transition: none; }
+  .lsc-port-target      { animation: none !important; }
+  .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
+}
+
+/* ── React Flow overrides ───────────────────────────────────────────────── */
+
+.react-flow__edge-path {
+  stroke-width: 3;
+}
+
+/* Ports — 28px ring centred on the card edge (big enough to see and click easily). The ring colour (set inline)
+   is the health of the signal on that port. Ports are rendered before the card
+   header, so without the z-index the header would cover their inner half and
+   swallow the hover (×) and unplug click there. */
+.react-flow__handle.lsc-port {
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 9999px;
+  border: 6px solid var(--lsc-card-edge);
+  background: var(--lsc-node-bg);
+  cursor: crosshair;
+  transition: width 0.1s, height 0.1s, background 0.1s;
+}
+
+/* Where the mouse finds a port: an unseen area twice the ring's size (PORT_REACH), centred on it
+   whatever size the ring is just then. A hit on it is a hit on the port — the cross cursor,
+   wiring (elementsFromPoint), the unplug ×. Towards a port stacked above / below it is cut
+   flat half way (--lsc-port-up / -down, NodePort; a clip-path is hit-tested as drawn), so each
+   point between two ports belongs to the nearer one. */
+.react-flow__handle.lsc-port::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(2 * var(--lsc-port-reach));
+  height: calc(2 * var(--lsc-port-reach));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  clip-path: inset(calc(var(--lsc-port-reach) - var(--lsc-port-up)) 0 calc(var(--lsc-port-reach) - var(--lsc-port-down)) 0);
+}
+
+/* Valid target while a wire is being drawn */
+.react-flow__handle.lsc-port.lsc-port-target {
+  width: 32px;
+  height: 32px;
+  background: var(--lsc-accent);
+  border-color: var(--lsc-node-bg);
+  animation: lsc-ping 1.5s ease-in-out infinite;
+}
+
+/* Connect mode — ports become hittable by document.elementsFromPoint */
+.lsc-connect-mode .react-flow__handle {
+  pointer-events: all !important;  /* React Flow defaults to none */
+  cursor: crosshair !important;
+}
+
+/* A wire being drawn: a click on empty canvas adds a corner */
+.lsc-wiring .react-flow__pane {
+  cursor: crosshair !important;
+}
+
+/* Connection rejected feedback — port flashes red briefly */
+.react-flow__handle.lsc-handle-rejected {
+  background: var(--signal-clipping) !important;
+  border-color: var(--signal-clipping) !important;
+  transform: translate(-50%, -50%) scale(1.5) !important;
+  transition: transform 0.15s ease-out, background 0.15s !important;
+}
+
+/* A connected input turns into a × on hover (not while drawing a wire) — click it to unplug the wire */
+.react-flow__handle.lsc-port.lsc-port-remove {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--signal-clipping);
+  border-color: var(--signal-clipping);
+  color: #fff;
+}
+.react-flow__handle.lsc-port.lsc-port-remove svg {
+  pointer-events: none;
+}
+/* An input a click unplugs: the finger from the first moment, in any mode — never the cross
+   first and the finger once the × shows */
+.react-flow__handle.lsc-port.lsc-port-unplug {
+  cursor: pointer !important;
+}
+
+.react-flow__panel {
+  color: var(--lsc-fg);
+}
+
+/* Chain highlight from a Matrix Bus row — everything outside the chain fades */
+.react-flow__node.lsc-dimmed {
+  opacity: 0.25;
+  transition: opacity 0.15s;
+}
+
+/* Right-click menu of an element */
+.lsc-menu-item:hover,
+.lsc-menu-item:focus-visible {
+  background: var(--lsc-sunken) !important;
+  outline: none;
+}
+.lsc-menu-item-danger:hover,
+.lsc-menu-item-danger:focus-visible {
+  background: var(--signal-clipping-bg) !important;
+}
+
+/* Canvas tools (Drag / Select / Remove · Undo / Redo): one row of icons right of the zoom
+   controls (3 × 32px + border + 8px gap) */
+.react-flow__panel.left.lsc-canvas-tools {
+  left: 106px;
+}
+.lsc-tool-bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--lsc-header);
+  border: 1px solid var(--lsc-border);
+  border-radius: var(--lsc-radius-md);
+  box-shadow: var(--lsc-shadow-popup);
+  /* no overflow: hidden — it would clip the hover labels */
+}
+.lsc-tool-divider {
+  width: 1px;
+  margin: 5px 3px;
+  background: var(--lsc-border);
+}
+.lsc-tool-button {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--lsc-fg-muted);
+  cursor: pointer;
+}
+.lsc-tool-bar > :first-child > .lsc-tool-button:first-child {
+  border-radius: calc(var(--lsc-radius-md) - 1px) 0 0 calc(var(--lsc-radius-md) - 1px);
+}
+.lsc-tool-bar > .lsc-tool-button:last-child {
+  border-radius: 0 calc(var(--lsc-radius-md) - 1px) calc(var(--lsc-radius-md) - 1px) 0;
+}
+.lsc-tool-button:hover:not(:disabled) { background: var(--lsc-sunken); color: var(--lsc-fg); }
+.lsc-tool-button:disabled { cursor: default; }
+.lsc-tool-button:disabled > svg { opacity: 0.35; }
+.lsc-tool-button.lsc-tool-active {
+  background: var(--lsc-accent-bg);
+  color: var(--lsc-accent);
+  box-shadow: inset 0 -3px 0 var(--lsc-accent);
+}
+.lsc-tool-button.lsc-tool-remove.lsc-tool-active {
+  background: var(--signal-clipping-bg);
+  color: var(--signal-clipping-text);
+  box-shadow: inset 0 -3px 0 var(--signal-clipping);
+}
+
+/* Hover label above a tool button: its name, shortcut and a line of help */
+.lsc-tool-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: max-content;
+  max-width: 260px;
+  padding: 7px 10px;
+  border-radius: var(--lsc-radius-sm);
+  border: 1px solid var(--lsc-border);
+  background: var(--lsc-node-bg);
+  color: var(--lsc-fg);
+  box-shadow: var(--lsc-shadow-popup);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s, visibility 0.12s;
+  z-index: 10;
+}
+.lsc-tool-tip strong { font-weight: 600; font-size: 13px; }
+.lsc-tool-tip-key { margin-left: 8px; color: var(--lsc-fg-dim); }
+.lsc-tool-tip-hint { display: block; margin-top: 2px; color: var(--lsc-fg-muted); }
+.lsc-tool-button:hover > .lsc-tool-tip,
+.lsc-tool-button:focus-visible > .lsc-tool-tip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.15s;
+}
+
+/* Remove tool: whatever is under the cursor shows it will go */
+.lsc-remove-mode .react-flow__node { cursor: pointer; }
+.lsc-remove-mode .react-flow__node * { cursor: pointer !important; }
+.lsc-remove-mode .react-flow__node:hover {
+  outline: 3px solid var(--signal-clipping);
+  outline-offset: 6px;
+  border-radius: 14px;
+  opacity: 0.75;
+}
+/* (React Flow makes wires inert while nothing is selectable — the Remove tool needs them) */
+.lsc-remove-mode .react-flow__edge.inactive { pointer-events: visibleStroke; }
+.lsc-remove-mode .react-flow__edge { cursor: pointer; }
+.lsc-remove-mode .react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--signal-clipping) !important;
+}
+
+/* Select tool: a crosshair says "drag a box" */
+.lsc-select-mode .react-flow__pane { cursor: crosshair; }
+
+/* Selection box while dragging; the box React Flow leaves around a selection is not used
+   (dragging any selected element moves them all, and the box would cover the controls) */
+.react-flow__selection {
+  background: var(--lsc-accent-bg);
+  border: 1.5px dashed var(--lsc-accent);
+}
+.react-flow__nodesselection { display: none; }
+
+/* Zoom controls (bottom-left) — themed to match the header */
+.react-flow__controls {
+  --xy-controls-button-background-color:       var(--lsc-header);
+  --xy-controls-button-background-color-hover: var(--lsc-sunken);
+  --xy-controls-button-color:                  var(--lsc-fg-muted);
+  --xy-controls-button-color-hover:            var(--lsc-fg);
+  --xy-controls-button-border-color:           var(--lsc-border);
+  --xy-controls-box-shadow:                    var(--lsc-shadow-popup);
+  border: 1px solid var(--lsc-border);
+  border-radius: var(--lsc-radius-md);
+  overflow: hidden;
+}
+/* Doubled class: React Flow's stylesheet loads after this one */
+.react-flow__controls .react-flow__controls-button {
+  width: 32px;
+  height: 32px;
+}
+.react-flow__controls .react-flow__controls-button svg {
+  max-width: 14px;
+  max-height: 14px;
+}
+.react-flow__controls .react-flow__controls-button:last-child {
+  border-bottom: none;
+  border-right: none;
+}
+
+.react-flow__attribution {
+  background: transparent !important;
+}
+.react-flow__attribution a {
+  color: var(--lsc-fg-dim) !important;
+}
+
+/* ── Node card ──────────────────────────────────────────────────────────── */
+
+/* Free-standing control (Gain, Pan, Fader, Switch): dashed outline on hover, accent when selected (inline) */
+.lsc-free-outline {
+  border: 2px dashed transparent;
+  transition: border-color 0.15s;
+}
+.lsc-free-control:hover .lsc-free-outline {
+  border-color: var(--lsc-border);
+}
+
+/* A frameless element's icon selected (Frameless.tsx): its glow, the icon's own lines thickened */
+.lsc-icon-glow svg {
+  overflow: visible;
+}
+.lsc-icon-glow svg * {
+  stroke-width: var(--lsc-glow);
+}
+
+/* Header buttons: on/off (and the unplug list's ×) */
+.lsc-node-btn:hover {
+  border-color: var(--lsc-accent) !important;
+}
+.lsc-node-btn-remove:hover {
+  background: var(--signal-clipping) !important;
+  border-color: var(--signal-clipping) !important;
+  color: #fff !important;
+}
+
+/* Nodes size their icons uniformly regardless of what the node passes in */
+.lsc-node-icon svg {
+  width: 16px;
+  height: 16px;
+}
+/* …and the overview draws them as big as its box (OverviewIcon sets the box) */
+.lsc-overview-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* React Flow sets cursor:grab on node wrappers — controls get pointers */
+.react-flow__node { cursor: default; }
+/* Dragging across a card or a bare control never selects its text */
+.lsc-node-card,
+.lsc-free-control {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.react-flow__node button,
+.react-flow__node input[type="range"] { cursor: pointer; }
+
+/* ── Semantic type classes ──────────────────────────────────────────────── */
+
+.lsc-overline {
+  font-family: var(--lsc-font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lsc-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lsc-knob-label {
+  font-family: var(--lsc-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lsc-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+/* Generic hover for outline buttons in chrome (header, toolbar, dialogs) */
+.lsc-btn-outline:hover {
+  border-color: var(--lsc-accent) !important;
+  background: var(--lsc-accent-bg) !important;
+}
+
+.lsc-palette-tile:hover {
+  border-color: var(--lsc-accent) !important;
+}
+
+.lsc-search-input::placeholder {
+  color: var(--lsc-fg-muted);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-thumb { background: var(--lsc-border); border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }

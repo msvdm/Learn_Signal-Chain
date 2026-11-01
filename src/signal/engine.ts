@@ -1,0 +1,253 @@
+import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
+import type { SideLevels, SignalDomain, SignalHealth } from './levels'
+import { SILENCE_DB, louder } from './levels'
+import type { StageCondition } from './process'
+import type { CardPlan, ChainLevels, StageRole, WireSignal } from './chain'
+import { healthOf, humOf, levelOf, planChain, runChain } from './chain'
+import type { MeasuredChain } from './measured'
+import { withMeasured } from './measured'
+import { sameShape } from '../utils/sameShape'
+import { outputKey, portOfOutput } from '../graph/graph'
+import { LINK_PORT } from '../data/nodeRegistry'
+import type { DigitalFormat } from './formats'
+import { formatsOf } from './formats'
+
+// The levels at every card and on every wire — per side, the peaks, the average and the noise —
+// shared by every card (graphSignal): the number engine's picture (stillPicture, worked out at once
+// on every change of the graph), with the readings of the last render on real sound put in
+// (signal/measured.ts, decision D9). Pure — no React, no store.
+
+// What the cards import from here; the walk itself is chain.ts
+export type { StageRole, WireSignal } from './chain'
+export { SILENT_WIRE, healthOf, humOf, levelOf, louderSide, outDomainOf, peakOf } from './chain'
+
+/** What one card does to the signal. */
+export interface StageResult {
+  /** What the card works on: both sides when it takes a stereo signal, else one channel (l = r). */
+  in: WireSignal
+  /** What it sends out: both sides when it works in stereo, else one channel (l = r). */
+  out: WireSignal
+  /** Health of what leaves, judged in `domain`: clipping when its peaks reach the ceiling, else from its average */
+  health: SignalHealth
+  /** Analog (dBu) or digital (dBFS), leaving — an ADC / DAC changes it */
+  domain: SignalDomain
+  /** Analog or digital, arriving */
+  inDomain: SignalDomain
+  /**
+   * A card of several paths (NodeTypeDef `routes`): the domain each output leaves in, by port — an
+   * Audio Interface sends numbers to the computer and an analog signal out (chain.ts outDomainOf)
+   */
+  outDomains?: Record<string, SignalDomain>
+  /**
+   * What its digital signal is (D36: signal/formats.ts) — what it sends (`format`) and what arrives
+   * (`inFormat`): a converter's sample rate and bit depth, a Codec's codec and bitrate. None on
+   * an analog signal.
+   */
+  format?: DigitalFormat
+  inFormat?: DigitalFormat
+  /**
+   * Stream / Broadcast fed numbers: what arrives, as loud as broadcasters measure it (LUFS, D38) —
+   * from the render only (audio/loudness.ts): none before the first
+   */
+  loudness?: number
+  /**
+   * How far a dynamics card at work turns the signal (its average) down: over a loop, makeup gain
+   * left out. Undefined for every other card, and for a dynamics card bypassed. The marks on its
+   * curve are the louder sides of `in` (left to right) and `out` (bottom to top: measured on real
+   * sound — a peak above the curve got through before the Attack turned it down).
+   */
+  gainReductionDb?: number
+  condition?: StageCondition
+  role?: StageRole
+  /**
+   * The level of the hum leaving it (dBu, dBFS after an ADC): a ground loop through a DI Box (its
+   * Direct Out on a Guitar Amp, its XLR Out on the desk, Ground Lift off) starts one at HUM_DBU on
+   * the XLR Out. It is part of the noise and follows the signal to the end of the chain — a fader
+   * turns it down with the music; only Ground Lift takes it away. Undefined: no hum.
+   */
+  hum?: number
+  /**
+   * What it plays was clipped — here, or by a card before it (its peaks reached the ceiling and
+   * were cut off). Turning down after that does not bring them back: the meters can be green, but
+   * the distortion is heard (a speaker says so). Carried along the wires a card works on, never
+   * through silence. Undefined: clean.
+   */
+  distorted?: true
+}
+
+export interface GraphSignalResult {
+  /** Keyed by node id. Cards in a loop (and after one) have none. */
+  stages: Record<string, StageResult>
+  /** What each output sends, keyed by outputKey (graph/graph.ts). */
+  wires: Map<string, WireSignal>
+  /** The hum on each output that carries one (its level), keyed like `wires`. */
+  hums: Map<string, number>
+}
+
+/** The number engine's picture of a graph: the plan, the levels it gives, and what the cards show from them. */
+export interface StillPicture {
+  plans: CardPlan[]
+  levels: ChainLevels
+  result: GraphSignalResult
+}
+
+// Every node card, port and edge reads the graph result. The store replaces the nodes / edges
+// arrays on every change, so a single-entry cache keyed on those references lets all callers reuse
+// one computation per change.
+let lastStill: { nodes: SignalNode[]; edges: SignalEdge[]; still: StillPicture } | null = null
+let lastShown: { still: GraphSignalResult; measured: MeasuredChain | null; result: GraphSignalResult } | null = null
+
+/** The number engine's picture (computed once per change of the graph). */
+export function stillPicture(nodes: SignalNode[], edges: SignalEdge[]): StillPicture {
+  if (lastStill && lastStill.nodes === nodes && lastStill.edges === edges) return lastStill.still
+  const plans  = planChain(nodes, edges)
+  const levels = runChain(plans)
+  const still  = { plans, levels, result: pictureOf(plans, levels) }
+  lastStill = { nodes, edges, still }
+  return still
+}
+
+/**
+ * The signal at every card and on every wire: the number engine's, the last render's readings put
+ * in (`measured`). A card's stage and a wire's signal that came out the same as last time are last
+ * time's objects, so a card that reads only its own (useStage) is redrawn only when its own result
+ * changed.
+ */
+export function graphSignal(nodes: SignalNode[], edges: SignalEdge[], measured: MeasuredChain | null = null): GraphSignalResult {
+  const picture = stillPicture(nodes, edges)
+  const still   = picture.result
+  if (lastShown && lastShown.still === still && lastShown.measured === measured) return lastShown.result
+  const fresh  = withCables(withDistortion(withMeasured(still, measured), picture.plans), picture.plans)
+  const result = lastShown ? keepUnchanged(fresh, lastShown.result) : fresh
+  lastShown = { still, measured, result }
+  return result
+}
+
+/**
+ * Every card that plays a clipped signal marked `distorted`: one whose own peaks reach the ceiling
+ * (health `clipping`), and every card after it on the wires it works on (a Relay's selected input,
+ * a bus's wires) — unless it sends nothing (a Switch turned off). A card of several paths is judged
+ * on the one it shows; its others pass on none (what an Audio Interface records never reaches what
+ * it plays back).
+ */
+function withDistortion(result: GraphSignalResult, plans: CardPlan[]): GraphSignalResult {
+  const clipped = new Set<string>()
+  let stages = result.stages
+  for (const card of plans) {
+    const id    = card.node.id
+    const stage = card.key === id ? result.stages[id] : undefined
+    if (!stage || levelOf(stage.out) <= SILENCE_DB) continue
+    const before = card.used.some((u) => clipped.has(u.from))
+    if (!before && stage.health !== 'clipping') continue
+    clipped.add(id)
+    if (stages === result.stages) stages = { ...result.stages }
+    stages[id] = { ...stage, distorted: true }
+  }
+  return stages === result.stages ? result : { ...result, stages }
+}
+
+/**
+ * Every Digital Interface's cable (D40) with a signal of its own, for its colour and its ports' rings:
+ * every channel it carries as one — reading by reading the loudest channel's, as a stereo wire is
+ * judged by its louder side.
+ */
+function withCables(result: GraphSignalResult, plans: CardPlan[]): GraphSignalResult {
+  let wires = result.wires
+  const sides = new Map<string, SideLevels[]>()
+  for (const card of plans) {
+    if (card.node.typeKey !== 'digital-interface' || !card.route || card.route.from === null || !card.outputs[0]) continue
+    const port = card.outputs[0].key
+    if (!/:ch\d+$/.test(port) || !card.route.from.startsWith('in')) continue
+    const w = result.wires.get(port)
+    if (!w) continue
+    const key = outputKey(card.node.id, LINK_PORT)
+    sides.set(key, [...(sides.get(key) ?? []), w.l, w.r])
+  }
+  for (const [key, all] of sides) {
+    if (wires === result.wires) wires = new Map(result.wires)
+    const loudest = all.reduce(louder)
+    wires.set(key, { kind: 'mono', l: loudest, r: loudest })
+  }
+  return wires === result.wires ? result : { ...result, wires }
+}
+
+/** `fresh`, with every stage, wire and hum that equals the one in `before` replaced by that one. */
+function keepUnchanged(fresh: GraphSignalResult, before: GraphSignalResult): GraphSignalResult {
+  let allSame = Object.keys(fresh.stages).length === Object.keys(before.stages).length
+  const stages: Record<string, StageResult> = {}
+  for (const [id, stage] of Object.entries(fresh.stages)) {
+    const old = before.stages[id]
+    const same = old !== undefined && sameShape(old, stage)
+    stages[id] = same ? old : stage
+    allSame &&= same
+  }
+
+  const wires = new Map<string, WireSignal>()
+  let wiresSame = fresh.wires.size === before.wires.size
+  for (const [key, wire] of fresh.wires) {
+    const old = before.wires.get(key)
+    const same = old !== undefined && sameShape(old, wire)
+    wires.set(key, same ? old : wire)
+    wiresSame &&= same
+  }
+
+  const humsSame = sameShape(Object.fromEntries(fresh.hums), Object.fromEntries(before.hums))
+  return {
+    stages: allSame ? before.stages : stages,
+    wires:  wiresSame ? before.wires : wires,
+    hums:   humsSame ? before.hums : fresh.hums,
+  }
+}
+// ── The number engine's picture ─────────────────────────────────────────────────
+
+function pictureOf(plans: CardPlan[], levels: ChainLevels): GraphSignalResult {
+  const { cards, wires } = levels
+  const stages: Record<string, StageResult> = {}
+  const hums   = new Map<string, number>()
+  /** A card of several paths: each output's domain */
+  const outDomains = new Map<string, Record<string, SignalDomain>>()
+  const formats    = formatsOf(plans).cards
+
+  for (const card of plans) {
+    const { node } = card
+    const at = cards.get(card.key)!
+    for (const o of card.outputs) {
+      const h = humOf(wires.get(o.key))
+      if (isFinite(h)) hums.set(o.key, h)
+    }
+    if (card.route) {
+      const domains = outDomains.get(node.id) ?? {}
+      for (const port of card.route.to) domains[port] = at.domain
+      outDomains.set(node.id, domains)
+    }
+    // An output sending numbers from an analog card (the Computer's Digital output — D40)
+    for (const o of card.outputs) {
+      if (o.tap !== 'digital') continue
+      outDomains.set(node.id, { ...outDomains.get(node.id), [portOfOutput(o.key)]: 'digital' })
+    }
+    // The card shows one of its paths (chain.ts shownRoute): the one its id keys
+    if (card.key !== node.id) continue
+    const hum = humOf(at.out)
+    const fmt = formats.get(card.key)
+
+    stages[node.id] = {
+      in: at.in,
+      out: at.out,
+      // Judged in the domain the signal leaves in
+      health: healthOf(at.out, at.domain),
+      domain: at.domain,
+      inDomain: at.inDomain,
+      gainReductionDb: at.gainReductionDb,
+      condition: at.condition,
+      role: card.role,
+      ...(fmt?.out ? { format: fmt.out } : {}),
+      ...(fmt?.in ? { inFormat: fmt.in } : {}),
+      ...(isFinite(hum) ? { hum } : {}),
+    }
+  }
+  for (const [id, domains] of outDomains) {
+    if (stages[id]) stages[id] = { ...stages[id], outDomains: domains }
+  }
+
+  return { stages, wires, hums }
+}

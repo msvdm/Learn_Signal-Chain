@@ -1,0 +1,118 @@
+import { describe, expect, it } from 'bun:test'
+import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
+import { getPorts } from './queries'
+import { planChain } from '../signal/chain'
+import { stillPicture } from '../signal/engine'
+import { reconcileMainFaders } from './mainFader'
+
+// A Limiter wired to a stereo bus's L or R takes the whole mix, as a Main Fader does: one stereo
+// wire in, L and R out — and a Fader after it is the Main Fader. A stereo channel through a Limiter
+// stays one wire: only a bus's mix is split.
+
+const node = (id: string, typeKey: TypeKey, params: SignalNode['params'] = {}): SignalNode =>
+  ({ id, typeKey, position: { x: 0, y: 0 }, params, bypassed: false })
+const wire = (source: string, target: string, sourceHandle = 'out'): SignalEdge =>
+  ({ id: `${source}-${target}`, source, sourceHandle, target, targetHandle: 'in' })
+
+/** The graph as the store settles it (commitGraph): `[source.handle → target]` per wire. */
+function settle(nodes: SignalNode[], edges: SignalEdge[]) {
+  const settled = reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges })
+  const outputs = (id: string) => getPorts(nodes.find((n) => n.id === id)!, { nodes, edges: settled }).outputs.map((p) => p.id)
+  const role    = (id: string) => planChain(nodes, settled).find((p) => p.node.id === id)?.role
+  return { wires: settled.map((e) => `${e.source}.${e.sourceHandle} → ${e.target}`), outputs, role }
+}
+
+describe('a Limiter after a stereo bus', () => {
+  const line = node('line', 'keyboard')
+  const bus  = node('bus', 'master-bus')
+  const lim  = node('lim', 'limiter')
+
+  it("wired to the bus's L: it takes the whole mix and sends L and R out", () => {
+    const g = settle([line, bus, lim], [wire('line', 'bus'), wire('bus', 'lim', 'out-l')])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.mix → lim'])
+    expect(g.outputs('lim')).toEqual(['out-l', 'out-r'])
+  })
+
+  it('a Fader on its L is the Main Fader', () => {
+    const g = settle([line, bus, lim, node('main', 'fader')], [
+      wire('line', 'bus'), wire('bus', 'lim', 'mix'), wire('lim', 'main', 'out-l'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.mix → lim', 'lim.mix → main'])
+    expect(g.outputs('main')).toEqual(['out-l', 'out-r'])
+    expect(g.role('main')).toBe('main-fader')
+  })
+
+  it('dropped onto the wire to the left speaker: both speakers move onto it', () => {
+    const g = settle([line, bus, lim, node('spkL', 'active-speaker'), node('spkR', 'active-speaker')], [
+      wire('line', 'bus'), wire('bus', 'lim', 'out-l'), wire('lim', 'spkL'), wire('bus', 'spkR', 'out-r'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.mix → lim', 'lim.out-l → spkL', 'lim.out-r → spkR'])
+  })
+
+  it("between the bus and its Main Fader, as an older save has it: settled the same way", () => {
+    const g = settle([line, bus, lim, node('main', 'fader')], [
+      wire('line', 'bus'), wire('bus', 'lim', 'mix'), wire('lim', 'main'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.mix → lim', 'lim.mix → main'])
+    expect(g.role('main')).toBe('main-fader')
+  })
+
+  it('on a stereo channel it stays one wire: only a mix is split', () => {
+    const g = settle([node('keys', 'keyboard'), lim, bus], [wire('keys', 'lim'), wire('lim', 'bus')])
+    expect(g.wires).toEqual(['keys.out → lim', 'lim.out → bus'])
+    expect(g.outputs('lim')).toEqual(['out'])
+  })
+})
+
+// An Amplifier (D27) on a bus's L takes the whole mix — one stereo wire, split into both its inputs —
+// and both speakers move onto its L and R; its outputs are always L and R
+describe('an Amplifier after a stereo bus', () => {
+  const line = node('line', 'keyboard')
+  const bus  = node('bus', 'master-bus')
+  const amp  = node('amp', 'amp')
+
+  it("wired to the bus's L: the whole mix in, both speakers on its L and R", () => {
+    const g = settle([line, bus, amp, node('spkL', 'speaker'), node('spkR', 'speaker')], [
+      wire('line', 'bus'), wire('bus', 'spkL', 'out-l'), wire('bus', 'spkR', 'out-r'), wire('bus', 'amp', 'out-l'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'amp.out-l → spkL', 'amp.out-r → spkR', 'bus.mix → amp'])
+    expect(g.outputs('amp')).toEqual(['out-l', 'out-r'])
+  })
+
+  it('fed one channel, its outputs are still L and R; in an older file its one output is its L', () => {
+    const g = settle([node('gen', 'generator'), amp, node('spk', 'speaker')], [wire('gen', 'amp'), wire('amp', 'spk')])
+    expect(g.wires).toEqual(['gen.out → amp', 'amp.out-l → spk'])
+    expect(g.outputs('amp')).toEqual(['out-l', 'out-r'])
+  })
+})
+
+// What goes out to listeners is the whole mix: a bus's L or R into Stream / Broadcast or a Codec
+// is its send — one stereo wire, after the fader — as into a Matrix Bus (the user's call, 2026-10-11)
+describe('Stream / Broadcast and a Codec take the whole mix', () => {
+  const line = node('line', 'keyboard')
+  const bus  = node('bus', 'master-bus')
+
+  it("wired to a bus's L or R: the send, with both sides, while its L / R stay on the speakers", () => {
+    const g = settle([line, bus, node('air', 'broadcast'), node('spk', 'active-speaker'), node('cod', 'codec')], [
+      wire('line', 'bus'), wire('bus', 'spk', 'out-l'), wire('bus', 'air', 'out-l'), wire('bus', 'cod', 'out-r'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.out-l → spk', 'bus.send → air', 'bus.send → cod'])
+    expect(g.outputs('bus')).toEqual(['out-l', 'out-r', 'send'])
+  })
+
+  it('Stream / Broadcast gets both sides of the mix', () => {
+    const nodes = [line, bus, node('air', 'broadcast')]
+    const edges = reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges: [wire('line', 'bus'), wire('bus', 'air', 'out-l')] })
+    const air   = stillPicture(nodes, edges).result.stages.air
+    expect(air.in?.kind).toBe('stereo')
+    expect(air.in?.l.rms).toBe(air.in?.r.rms)
+    expect(air.in?.r.rms).toBeGreaterThan(-20)
+  })
+
+  it('a Main Fader takes the send over: what goes out follows the fader', () => {
+    const g = settle([line, bus, node('air', 'broadcast'), node('main', 'fader')], [
+      wire('line', 'bus'), wire('bus', 'air', 'out-l'), wire('bus', 'main', 'out-r'),
+    ])
+    expect(g.wires).toEqual(['line.out → bus', 'main.send → air', 'bus.mix → main'])
+  })
+})
