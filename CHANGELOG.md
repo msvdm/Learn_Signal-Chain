@@ -2,6 +2,10 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.1.1
+
+- **No more freezing on big desks with a live stream.** On a chain with Stream / Broadcast fed a digital signal (like the *Simple digital desk* example), every change used to freeze the page for about two seconds while the app worked out the loudness reading. Now the page stays smooth, and the loudness reads exactly as before.
+
 ## 1.1.0
 
 - **Stereo everywhere.** One wire now carries both sides of a stereo signal. An effect wired after a Master, Aux or Matrix Bus works on the whole stereo mix, the same as one wired after a Keyboard.
