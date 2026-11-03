@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { CLIP_DBU } from '../signal/levels'
 import type { DynamicsSettings } from './processors'
-import { FULL_SCALE_DB, Meter, ampOf, dbOf, dynamicsProcessor } from './processors'
+import { FULL_SCALE_DB, Meter, ampOf, biquads, dbOf, dynamicsProcessor } from './processors'
+import { K_WEIGHTING_48K } from './loudness'
 
 // The processors that run in the audio thread, on plain blocks of samples: what the time engine's
 // tests checked before them (Attack, Release, Hold, a gate opening on peaks, a limiter's ceiling),
@@ -253,5 +254,45 @@ describe('the meter', () => {
     const [[slices]] = meter.slices()
     expect(slices.power.length).toBe(2)
     expect(dbOf(Math.sqrt(slices.power[1]))).toBeCloseTo(-10, 0)
+  })
+})
+
+// Stream / Broadcast's loudness (D38): the meter K-weights its input with BS.1770's own coefficients
+describe('the meter weighing an input as the ear does (K-weighting)', () => {
+  /** The filters' gain at `hz` (dB), from their coefficients */
+  const responseDb = (hz: number) => K_WEIGHTING_48K.reduce((db, { feedforward: b, feedback: a }) => {
+    const w = 2 * Math.PI * hz / RATE
+    const at = (c: readonly number[]) => Math.hypot(c[0] + c[1] * Math.cos(w) + c[2] * Math.cos(2 * w), c[1] * Math.sin(w) + c[2] * Math.sin(2 * w))
+    return db + 20 * Math.log10(at(b) / at(a))
+  }, 0)
+
+  it("a sine comes out as loud as the filters' response says, at every frequency", () => {
+    for (const hz of [20, 40, 100, 997, 2000, 5000, 12000]) {
+      const x = sine(0, 2, hz)
+      const out = biquads(x, K_WEIGHTING_48K, new Float64Array(4), new Float32Array(x.length))
+      // The second second: the filters have settled
+      const tail = out.subarray(RATE)
+      const rms = Math.sqrt(tail.reduce((sum, v) => sum + v * v, 0) / tail.length)
+      expect(dbOf(rms)).toBeCloseTo(responseDb(hz), 2)
+    }
+  })
+
+  it("BS.1770's own check: a full-scale 997 Hz sine reads −3.01 LUFS", () => {
+    // Full scale is 1 here (dBFS): its mean square K-weighted, −0.691 + 10·log10 of it
+    expect(-0.691 + 10 * Math.log10(10 ** (responseDb(997) / 10) / 2)).toBeCloseTo(-3.01, 2)
+  })
+
+  it('weighs only the inputs it is told to, the same whatever the blocks, from before its stretch', () => {
+    const x = sine(-10, 1, 60)
+    const meter = new Meter({ inputs: 2, start: RATE / 2, end: RATE, weigh: { inputs: [1], filters: K_WEIGHTING_48K } }, RATE)
+    for (let at = 0; at < x.length; at += 128) meter.add(at, [[x.subarray(at, at + 128)], [x.subarray(at, at + 128), x.subarray(at, at + 128)]])
+    const [[plain], [l, r]] = meter.read()
+    expect(dbOf(plain.rms)).toBeCloseTo(-10, 2)
+    // In one go, from the first frame
+    const whole = biquads(x, K_WEIGHTING_48K, new Float64Array(4), new Float32Array(x.length)).subarray(RATE / 2)
+    const rms = Math.sqrt(whole.reduce((sum, v) => sum + v * v, 0) / whole.length)
+    expect(dbOf(l.rms)).toBeCloseTo(dbOf(rms), 4)
+    expect(dbOf(r.rms)).toBeCloseTo(dbOf(rms), 4)
+    expect(dbOf(l.rms)).toBeCloseTo(-10 + responseDb(60), 2)
   })
 })

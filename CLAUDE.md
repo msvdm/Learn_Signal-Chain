@@ -114,7 +114,7 @@ Every slider change → updates `signalStore` → the number engine recomputes a
 - `signal/levels.ts` — the dB scale, health, the meters' zones and numbers, `SideLevels`
 - `signal/sided.ts` — `Sided<T>`: a signal's kind and its two sides, whatever is known of each (`WireSignal` is `Sided<SideLevels>`; the render's slices too), with the one `onPort` / `asKind`
 - `signal/formats.ts` — what a digital wire carries (D36): `formatsOf` walks the plan like the domains (an ADC's sample rate and bit depth, a Codec squeezing into its codec and bitrate or unpacking), into `StageResult` `format` / `inFormat`; `ditherFloorDbfs` (the ADC's own noise at its bit depth); its words `utils/formatText.ts`
-- `audio/loudness.ts` — integrated loudness (BS.1770, D38): the K-weighting coefficients the render filters Stream / Broadcast's tap with, and the pure gated average of its slices
+- `audio/loudness.ts` — integrated loudness (BS.1770, D38): the K-weighting coefficients, which the render's meter applies to Stream / Broadcast's tap (`weigh` in `audio/processors.ts` — the browser's `IIRFilterNode` froze the page 170 ms each to make), and the pure gated average of its slices
 - `signal/measured.ts`, `signal/moving.ts` — a render's readings and movement in the number engine's picture (D9, D10)
 - `audio/chainAudio.ts` — the plan as Web Audio nodes; `processed()` is each card on real sound (a gain from `GAINS`, every other type its entry in `OTHERS`)
 - `audio/measure.ts` — `measureChain`: two renders (the music; the quiet: noise and hum), every card measured, its movement recorded

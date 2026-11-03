@@ -2,7 +2,7 @@
 // sound weighted the way the ear hears it (K-weighting: a gentle lift of the highs, the lowest bass
 // left out), averaged in 400 ms blocks every 100 ms, silent stretches left out (two gates), in LUFS
 // (Loudness Units relative to Full Scale: like dBFS, of an average). The render K-weights the signal
-// with the browser's own IIR filters (audio/chainAudio.ts); what is left here is pure.
+// with these coefficients in its meter (audio/processors.ts, `weigh`); what is left here is pure.
 
 /** K-weighting at 48 kHz, BS.1770's own coefficients: the high shelf (stage 1), then the high-pass (stage 2) */
 export const K_WEIGHTING_48K = [

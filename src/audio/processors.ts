@@ -275,6 +275,38 @@ export interface MeterOptions {
    * and its power: how the signal moves, for the meters to play back (audio/meters.ts)
    */
   slice?: number
+  /**
+   * Inputs heard through these filters first, one after another (their coefficients, the feedback's
+   * first 1) — Stream / Broadcast's loudness: BS.1770's K-weighting (D38). The browser's own
+   * IIRFilterNode takes the standard's coefficients too, but each one took 170 ms of the main
+   * thread to make (2026-11-03), and its BiquadFilterNode cannot draw the standard's shelf.
+   */
+  weigh?: { inputs: number[]; filters: readonly Biquad[] }
+}
+
+/** A filter of two poles and two zeros: what it takes from now and the last two (feedforward), and from what it gave (feedback, its first 1). */
+export interface Biquad {
+  feedforward: readonly number[]
+  feedback: readonly number[]
+}
+
+/** One channel through `filters` in turn, from where it left off (`state`: two numbers a filter, its memory). */
+export function biquads(data: Float32Array, filters: readonly Biquad[], state: Float64Array, out: Float32Array): Float32Array {
+  out.set(data.subarray(0, out.length))
+  filters.forEach(({ feedforward: [b0, b1, b2], feedback: [, a1, a2] }, f) => {
+    let z1 = state[2 * f]
+    let z2 = state[2 * f + 1]
+    for (let i = 0; i < out.length; i++) {
+      const x = out[i]
+      const y = b0 * x + z1
+      z1 = b1 * x - a1 * y + z2
+      z2 = b2 * x - a2 * y
+      out[i] = y
+    }
+    state[2 * f] = z1
+    state[2 * f + 1] = z2
+  })
+  return out
 }
 
 /** One channel, slice by slice: its loudest sample and its mean square (amplitudes, as the samples). */
@@ -300,6 +332,9 @@ export class Meter {
   /** Each slot's slices (made when the slot first gets a channel) */
   private readonly slicePeak: (Float32Array | undefined)[]
   private readonly slicePower: (Float64Array | undefined)[]
+  /** A weighed slot's filters' memory, and its block as weighed */
+  private readonly weighState = new Map<number, Float64Array>()
+  private readonly weighed = new Map<number, Float32Array>()
 
   constructor(options: MeterOptions, sampleRate: number) {
     this.options  = options
@@ -329,6 +364,23 @@ export class Meter {
     const length = inputs.find((input) => input.length > 0)?.[0].length ?? 0
     const from = Math.max(start, frame) - frame
     const to   = Math.min(end, frame + length) - frame
+    // A weighed input is filtered from the first frame on, measured or not (its filters settle)
+    const weigh = this.options.weigh
+    if (weigh) {
+      inputs = inputs.slice()
+      for (const n of weigh.inputs) {
+        const input = inputs[n]
+        if (!input) continue
+        inputs[n] = input.slice(0, 2).map((data, c) => {
+          const slot = 2 * n + c
+          const state = this.weighState.get(slot) ?? new Float64Array(2 * weigh.filters.length)
+          this.weighState.set(slot, state)
+          let out = this.weighed.get(slot)
+          if (out?.length !== data.length) this.weighed.set(slot, (out = new Float32Array(data.length)))
+          return biquads(data, weigh.filters, state, out)
+        })
+      }
+    }
     if (to <= from) return
     const wave = this.cos.length
     const first = wave > 0 ? (frame + from - start) % wave : 0

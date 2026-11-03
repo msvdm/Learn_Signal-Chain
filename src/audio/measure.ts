@@ -19,7 +19,7 @@ import type { ChannelReading, ChannelSlices, MeterMessage, MeterOptions } from '
 import { FULL_SCALE_DB, METER_PROCESSOR, dbOf } from './processors'
 import processors from './processors.ts?worklet'
 import { LOOP_S, generatorSound, whiteNoise } from './sounds'
-import { integratedLoudness } from './loudness'
+import { K_WEIGHTING_48K, integratedLoudness } from './loudness'
 
 // Measuring a chain on real sound: it is played into an OfflineAudioContext — off the main thread,
 // faster than real time, silent — twice at once: with the music, and with the music stopped (what
@@ -106,10 +106,13 @@ async function render(plans: CardPlan[], still: ChainLevels, sounds: ChainSounds
   const ctx = new OfflineAudioContext({ numberOfChannels: 1, length: end + 128, sampleRate: MEASURE_RATE })
   await ctx.audioWorklet.addModule(processorsModule())
   const taps = buildChain(ctx, plans, still, sounds, music)
+  // Stream / Broadcast's loudness (D38): what arrives, K-weighted by the meter — the music's only
+  const loudness = taps.flatMap((t, i) => (t.at === 'loudness' ? [i] : []))
   const options: MeterOptions = {
     inputs: taps.length, start, end,
     ...(hum ? { humHz: HUM_HZ } : {}),
     ...(music ? { slice: SLICE_FRAMES } : {}),
+    ...(music && loudness.length > 0 ? { weigh: { inputs: loudness, filters: K_WEIGHTING_48K } } : {}),
   }
   const meter = new AudioWorkletNode(ctx, METER_PROCESSOR, {
     numberOfInputs: taps.length, numberOfOutputs: 1, outputChannelCount: [1],

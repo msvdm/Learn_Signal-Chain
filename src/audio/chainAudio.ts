@@ -14,7 +14,6 @@ import { DYNAMICS_PROCESSOR, FULL_SCALE_DB, ampOf } from './processors'
 import { DYNAMICS } from './dynamics'
 import type { Loop, LoopKind } from './loops'
 import { LOOP_S } from './sounds'
-import { K_WEIGHTING_48K } from './loudness'
 
 // A chain as Web Audio nodes, to be measured (audio/measure.ts): every card does to real sound what
 // the number engine does to its readings (signal/chain.ts runChain, from the same plan) — gains,
@@ -155,17 +154,6 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
 
   /** A signal of an RMS of 1 played at the reading `db`. */
   const atLevel = (db: number, x: Sig) => gain(db - FULL_SCALE_DB, x)
-
-  /** `sig` K-weighted (BS.1770 at 48 kHz, D38): the browser's IIR filters, the standard's coefficients */
-  const kWeighted = (sig: Sig): Sig => ({
-    channels: sig.channels,
-    parts: sig.parts.map((p) => {
-      const [shelf, highPass] = K_WEIGHTING_48K.map((c) => new IIRFilterNode(ctx, { feedforward: [...c.feedforward], feedback: [...c.feedback] }))
-      p.node.connect(shelf, p.output)
-      shelf.connect(highPass)
-      return { node: highPass, output: 0 }
-    }),
-  })
 
   /** A hiss at `db`, one channel or each side its own — every one from its own point of the noise. */
   const hiss = (db: number, channels: 1 | 2): Sig => {
@@ -369,9 +357,9 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       const below = minusBelow(inSig, Math.min(param(node, 'frequencyHz'), 0.45 * ctx.sampleRate))
       taps.push({ id: card.key, at: 'band-in', parts: plus(inSig, below).parts }, { id: card.key, at: 'band-out', parts: plus(outSig, below).parts })
     }
-    // Stream / Broadcast fed numbers: what arrives as the ear weighs it, for its loudness (D38 —
-    // in both renders, so their taps line up; only the music's is read)
-    if (node.typeKey === 'broadcast' && levels.inDomain === 'digital') taps.push({ id: card.key, at: 'loudness', parts: kWeighted(inSig).parts })
+    // Stream / Broadcast fed numbers: what arrives, for its loudness (D38 — in both renders, so
+    // their taps line up; the music's meter weighs it as the ear does, audio/measure.ts)
+    if (node.typeKey === 'broadcast' && levels.inDomain === 'digital') taps.push({ id: card.key, at: 'loudness', parts: inSig.parts })
 
     // A DI Box's Direct Out passes on what arrives; a Guitar Amp's DI Out sends it at mic level
     const tapped: Record<OutputTap, Sig> = { out: outSig, in: inSig, 'di-out': diSig, digital: numbers }
