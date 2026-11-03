@@ -263,7 +263,7 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     s.chain('voice', 'mic', 'preamp', 'adc', 'comp')
     s.wrap('comp', 'fader')
     s.chain('fader', 'master')
-    // The Main Fader's L into the Codec is its send: the whole mix goes out
+    // The Main Fader into the Codec: the whole mix goes out
     s.mainFader('master', 'main', 'codec')
     s.chain('codec', 'stream')
     return s.file(name)
