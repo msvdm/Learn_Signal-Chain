@@ -4,24 +4,28 @@ import type { NodeParamValue, SignalEdge, SignalNode, TypeKey } from '../data/no
 import type { Size } from './geometry'
 import { withNodes } from '../graph/edits'
 import { middleAt } from '../graph/queries'
-import { CHAIN_APP, CHAIN_VERSION } from './chainFile'
+import { CHAIN_APP, CHAIN_VERSION, parseChainFile } from './chainFile'
 import type { ChainFile } from './chainFile'
 import { GRID, PORT_TOP } from './layoutHelpers'
+import smallDesk from './examples/smallDesk.json'
+import digitalDesk from './examples/digitalDesk.json'
 
-// The tutorial's example chains (D25): built here, opened like a saved chain (File → Open).
+// The tutorial's example chains (D25), opened like a saved chain (File → Open): most built here,
+// the desks drawn by the user in the app and saved (examples/*.json — the hidden wires the app
+// makes itself left out: a cable's channels).
 // Cards in a row share their port line, so the wires between them are straight: their first port
 // line — a sound source's Sound output is halfway down its card, so the rest of its row sits lower.
 
 export type ExampleKey =
   | 'singer' | 'band' | 'recording'
-  | 'vocalChannel' | 'monitorMix' | 'guitarDi'
-  | 'converters' | 'stream'
+  | 'vocalChannel' | 'monitorMix' | 'guitarDi' | 'smallDesk'
+  | 'converters' | 'stream' | 'digitalDesk'
 
 /** The examples by level, in the order the tutorial lists them. */
 export const EXAMPLES: Record<ComplexityLevel, ExampleKey[]> = {
   beginner:     ['singer', 'band', 'recording'],
-  intermediate: ['vocalChannel', 'monitorMix', 'guitarDi'],
-  advanced:     ['converters', 'stream'],
+  intermediate: ['vocalChannel', 'monitorMix', 'guitarDi', 'smallDesk'],
+  advanced:     ['converters', 'stream', 'digitalDesk'],
 }
 
 /**
@@ -123,6 +127,15 @@ function sketch(level: ComplexityLevel) {
     chain(...ids: string[]) {
       for (let i = 1; i < ids.length; i++) this.wire(ids[i - 1], ids[i])
     },
+    /**
+     * A bus's Main Fader, wired as by hand: the bus's L into it (it takes the whole mix over), its L
+     * into `left` and its R into `right`
+     */
+    mainFader(bus: string, main: string, left: string, right?: string) {
+      this.wire(bus, main, 'out-l')
+      this.wire(main, left, 'out-l')
+      if (right) this.wire(main, right, 'out-r')
+    },
     file(name: string): ChainFile {
       // The sources get their chain colours, as when dropped on the canvas
       const view = withNodes({ nodes: [], edges: [] }, nodes, edges)
@@ -133,6 +146,13 @@ function sketch(level: ComplexityLevel) {
 }
 
 const FLIPPED = { flipH: true }
+
+/** A chain saved in the app, as File → Open reads it (its tests make sure nothing in it is left out). */
+function saved(file: unknown, name: string): ChainFile {
+  const parsed = parseChainFile(file)
+  if (!parsed || parsed.skipped > 0) throw new Error(`Example ${name} does not open whole`)
+  return { ...parsed.chain, name }
+}
 
 const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
   // ── Beginner ──
@@ -189,40 +209,41 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     const s = sketch('intermediate')
     s.row(0, 0, [['voice', 'vocal'], ['mic', 'mic'], ['preamp', 'gain'], ['hpf', 'hpf'], ['eq', 'eq'], ['comp', 'comp']])
     const y = s.under('voice', 'mic', 'preamp', 'hpf', 'eq', 'comp')
-    s.row(s.x('preamp'), y, [['fader', 'fader'], ['pan', 'pan'], ['master', 'master-bus'], ['left', 'active-speaker']])
+    s.row(s.x('preamp'), y, [['fader', 'fader'], ['pan', 'pan'], ['master', 'master-bus'], ['main', 'fader'], ['left', 'active-speaker']])
     s.put(['right', 'active-speaker'], s.x('left'), s.below('left'))
     s.chain('voice', 'mic', 'preamp', 'hpf', 'eq', 'comp')
     s.wrap('comp', 'fader')
-    s.chain('fader', 'pan', 'master', 'left')
-    s.wire('master', 'right', 'out-r')
+    s.chain('fader', 'pan', 'master')
+    s.mainFader('master', 'main', 'left', 'right')
     return s.file(name)
   },
   monitorMix: (name) => {
     const s = sketch('intermediate')
-    s.row(0, 0, [['voice', 'vocal'], ['mic', 'mic'], ['preamp', 'gain'], ['hpf', 'hpf'], ['fader', 'fader'], ['pan', 'pan'], ['master', 'master-bus'], ['left', 'active-speaker']])
+    s.row(0, 0, [['voice', 'vocal'], ['mic', 'mic'], ['preamp', 'gain'], ['hpf', 'hpf'], ['fader', 'fader'], ['pan', 'pan'], ['master', 'master-bus'], ['main', 'fader'], ['left', 'active-speaker']])
     s.put(['right', 'active-speaker'], s.x('left'), s.below('left'))
-    // The aux send: its own level for the voice in the wedge, before the fader
-    s.row(s.x('fader'), s.under('fader', 'right'), [['send', 'gain'], ['aux', 'aux-bus'], ['wedge', 'active-speaker', FLIPPED]])
-    s.chain('voice', 'mic', 'preamp', 'hpf', 'fader', 'pan', 'master', 'left')
-    s.wire('master', 'right', 'out-r')
-    s.chain('hpf', 'send', 'aux', 'wedge')
+    // The aux send: its own level for the voice in the wedge, before the fader; the aux's own fader after it
+    s.row(s.x('fader'), s.under('fader', 'right'), [['send', 'gain'], ['aux', 'aux-bus'], ['auxFader', 'fader'], ['wedge', 'active-speaker', FLIPPED]])
+    s.chain('voice', 'mic', 'preamp', 'hpf', 'fader', 'pan', 'master')
+    s.mainFader('master', 'main', 'left', 'right')
+    s.chain('hpf', 'send', 'aux', 'auxFader', 'wedge')
     return s.file(name)
   },
   guitarDi: (name) => {
     const s = sketch('intermediate')
     // The amp is loud and the DI's signal strong: each preamp set lower than a voice's, so the two
     // channels add up to a good level
-    s.row(0, 0, [['guitar', 'instrument'], ['di', 'di-box', { groundLift: true }], ['preamp', 'gain', { preampDb: 30 }], ['fader', 'fader'], ['master', 'master-bus'], ['left', 'active-speaker']])
+    s.row(0, 0, [['guitar', 'instrument'], ['di', 'di-box', { groundLift: true }], ['preamp', 'gain', { preampDb: 30 }], ['fader', 'fader'], ['master', 'master-bus'], ['main', 'fader'], ['left', 'active-speaker']])
     s.put(['right', 'active-speaker'], s.x('left'), s.below('left'))
     // The DI feeds the desk and the amp: both grounded through it, so its Ground Lift is on (no hum)
     s.row(0, s.under('fader', 'right'), [['amp', 'guitar-amp'], ['ampMic', 'mic'], ['ampPreamp', 'gain', { preampDb: 20 }], ['ampFader', 'fader']])
-    s.chain('guitar', 'di', 'preamp', 'fader', 'master', 'left')
-    s.wire('master', 'right', 'out-r')
+    s.chain('guitar', 'di', 'preamp', 'fader', 'master')
+    s.mainFader('master', 'main', 'left', 'right')
     s.wrap('di', 'amp', 'direct')
     s.chain('amp', 'ampMic', 'ampPreamp', 'ampFader')
     s.wire('ampFader', 'master', undefined, undefined, [{ x: s.x('master') - GRID, y: s.portY('ampFader') }])
     return s.file(name)
   },
+  smallDesk: (name) => saved(smallDesk, name),
 
   // ── Advanced ──
   converters: (name) => {
@@ -237,12 +258,16 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
   stream: (name) => {
     const s = sketch('advanced')
     s.row(0, 0, [['voice', 'vocal'], ['mic', 'mic'], ['preamp', 'gain'], ['adc', 'adc'], ['comp', 'comp']])
-    s.row(s.x('preamp'), s.under('voice', 'mic', 'preamp', 'adc', 'comp'), [['fader', 'fader'], ['master', 'master-bus'], ['codec', 'codec'], ['stream', 'broadcast']])
+    s.row(s.x('preamp'), s.under('voice', 'mic', 'preamp', 'adc', 'comp'), [['fader', 'fader'], ['master', 'master-bus'], ['main', 'fader'], ['codec', 'codec'], ['stream', 'broadcast']])
     s.chain('voice', 'mic', 'preamp', 'adc', 'comp')
     s.wrap('comp', 'fader')
-    s.chain('fader', 'master', 'codec', 'stream')
+    s.chain('fader', 'master')
+    // The Main Fader's L into the Codec is its send: the whole mix goes out
+    s.mainFader('master', 'main', 'codec')
+    s.chain('codec', 'stream')
     return s.file(name)
   },
+  digitalDesk: (name) => saved(digitalDesk, name),
 }
 
 /** An example as a chain file, named `name` (in the app's language). */

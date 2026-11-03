@@ -2,9 +2,8 @@ import { describe, expect, it } from 'bun:test'
 import { LEVELS } from '../data/levels'
 import { NODE_REGISTRY } from '../data/nodeRegistry'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
-import { reconcileMainFaders } from '../graph/mainFader'
 import { reachOf } from '../graph/reach'
-import { withUsbReturns } from '../graph/usbLink'
+import { settle } from '../graph/settle'
 import { stillPicture } from '../signal/engine'
 import { parseChainFile } from './chainFile'
 import { EXAMPLES, exampleChain } from './exampleChains'
@@ -32,8 +31,8 @@ describe('example chains', () => {
           expect(`${e.id}: ${portAcceptsWire(target, e.targetHandle, before, source, nodes)}`).toBe(`${e.id}: true`)
         })
 
-        // As the store settles it (commitGraph): L / R takeovers, the USB wire's way back
-        const edges = withUsbReturns({ nodes, edges: reconcileMainFaders({ nodes: [], edges: [] }, chain) })
+        // As the store settles it (commitGraph): L / R takeovers, the USB wire's way back, a cable's channels
+        const edges = settle({ nodes: [], edges: [] }, chain)
         if (level === 'beginner') {
           const verdicts = [...reachOf({ nodes, edges }).verdicts]
           expect(verdicts.length).toBeGreaterThan(0)

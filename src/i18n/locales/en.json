@@ -610,6 +610,10 @@
           "name": "A guitar with a DI box",
           "about": "An electric guitar split by a DI box. One feed goes straight to the desk, the other to an amp with a microphone in front of it."
         },
+        "smallDesk": {
+          "name": "Small mixing desk",
+          "about": "Three channels — a keyboard, a voice and an acoustic instrument — each with its own gain, filter, equalizer, compressor, fader and pan. They are mixed on the master bus and go through its main fader to two speakers."
+        },
         "converters": {
           "name": "Through the converters",
           "about": "A voice turned into digital, processed as numbers and turned back into a signal for the speaker."
@@ -617,6 +621,10 @@
         "stream": {
           "name": "A live stream",
           "about": "A voice channel turned into digital and sent out as a live stream."
+        },
+        "digitalDesk": {
+          "name": "Simple digital desk",
+          "about": "Three channels on a digital desk. A switch picks where each one comes from: an input on the desk, or the stage over a digital cable. Each channel has a filter, a gate, an equalizer and a compressor, a PFL button for the headphones, and its own level for the stage monitor, taken before or after its fader. The main mix goes to an amplifier with two speakers and out as a live stream."
         }
       }
     }

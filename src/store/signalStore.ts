@@ -5,10 +5,7 @@ import type { ComplexityLevel } from '../data/levels'
 import { LEVELS, atLeast } from '../data/levels'
 import type { Facing, NodeParamValue, SignalNode, SignalEdge } from '../data/nodeRegistry'
 import type { GraphView, WireSource } from '../graph/graph'
-import { reconcileMainFaders } from '../graph/mainFader'
-import { withUsbReturns } from '../graph/usbLink'
-import { withLinkChannels, withoutStrayInterfaceWires } from '../graph/interfaceLink'
-import { settleSlots } from '../graph/slots'
+import { settle } from '../graph/settle'
 import {
   withNodes, withoutNode, withoutNodes, withNodeOnWire, withPositions, withStereo,
 } from '../graph/edits'
@@ -379,17 +376,6 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
 /** No wire is being drawn (a new canvas, undo / redo: the wire's start may be gone or have moved). */
 const NO_WIRE = { toolMode: 'select', wire: null } as const
-
-/**
- * The wires as `graph` leaves them, after `prev`: its L / R takeovers settled, every USB wire with its
- * way back, a Digital Interface's wires on the ports it has, every cable with its channels (D40).
- */
-function settle(prev: GraphView, graph: GraphView): SignalEdge[] {
-  const { nodes } = graph
-  let edges = withUsbReturns({ nodes, edges: reconcileMainFaders(prev, graph) })
-  edges = withLinkChannels({ nodes, edges: withoutStrayInterfaceWires({ nodes, edges }) })
-  return settleSlots({ nodes, edges })
-}
 
 /**
  * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —

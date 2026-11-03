@@ -1,8 +1,9 @@
 // `npm run test:node`: runs the `bun:test` files with Node instead of Bun (CI runs `bun test`).
-// Node (22.18 and up) strips the types by itself; this teaches it the two things Bun does and Node
+// Node (22.18 and up) strips the types by itself; this teaches it the three things Bun does and Node
 // does not:
 // - `bun:test` is test/bun-test.ts, a stand-in built on node:test
 // - an import without an extension (`'./levels'`) is the .ts file
+// - a .json file is imported as JSON (Node wants `with { type: 'json' }` on the import)
 
 import { registerHooks } from 'node:module'
 
@@ -13,6 +14,9 @@ registerHooks({
     if (specifier === 'bun:test') return { url: BUN_TEST, shortCircuit: true }
     const relative = specifier.startsWith('./') || specifier.startsWith('../')
     if (relative && !/\.\w+$/.test(specifier)) return nextResolve(`${specifier}.ts`, context)
+    if (relative && specifier.endsWith('.json')) {
+      return { ...nextResolve(specifier, context), importAttributes: { type: 'json' } }
+    }
     return nextResolve(specifier, context)
   },
 })
