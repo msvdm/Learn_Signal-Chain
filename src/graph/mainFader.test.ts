@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { getPorts } from './queries'
+import { getPorts, isMatrixSource } from './queries'
 import { planChain } from '../signal/chain'
 import { stillPicture } from '../signal/engine'
 import { reconcileMainFaders } from './mainFader'
@@ -114,5 +114,41 @@ describe('Stream / Broadcast and a Codec take the whole mix', () => {
       wire('line', 'bus'), wire('bus', 'air', 'out-l'), wire('bus', 'main', 'out-r'),
     ])
     expect(g.wires).toEqual(['line.out → bus', 'main.send → air', 'bus.mix → main'])
+  })
+})
+
+// A Matrix Bus takes a finished mix, after its fader. A Main Fader whose L / R went on to an
+// Amplifier or a Graphic EQ has only its Mix output left: wired from it, the Matrix Bus gets the
+// Main Fader's send (the user found none could be wired, 2026-11-03)
+describe('a Matrix Bus after a Main Fader whose L / R went on', () => {
+  const line  = node('line', 'keyboard')
+  const bus   = node('bus', 'master-bus')
+  const main  = node('main', 'fader')
+  const amp   = node('amp', 'amp')
+  const mtx   = node('mtx', 'matrix-bus')
+  const chain = [wire('line', 'bus'), wire('bus', 'main', 'out-l'), wire('main', 'amp', 'out-l')]
+
+  it("takes the Main Fader's Mix output, not the bus's (that is before the fader)", () => {
+    const nodes = [line, bus, main, amp, mtx]
+    const view  = { nodes, edges: reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges: chain }) }
+    expect(isMatrixSource('main', 'mix', view)).toBe(true)
+    expect(isMatrixSource('bus', 'mix', view)).toBe(false)
+  })
+
+  it('that wire is the Main Fader\'s send: the whole mix, both sides', () => {
+    const nodes = [line, bus, main, amp, mtx]
+    const g = settle(nodes, [...chain, wire('main', 'mtx', 'mix')])
+    expect(g.wires).toEqual(['line.out → bus', 'bus.mix → main', 'main.mix → amp', 'main.send → mtx'])
+    expect(g.outputs('main')).toEqual(['mix', 'send'])
+    const edges = reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges: [...chain, wire('main', 'mtx', 'mix')] })
+    expect(stillPicture(nodes, edges).result.stages.mtx.in?.kind).toBe('stereo')
+  })
+
+  it("a bus with no Main Fader, its L / R on an Amplifier: the bus's Mix output, its send", () => {
+    const nodes = [line, bus, amp, mtx]
+    const edges = [wire('line', 'bus'), wire('bus', 'amp', 'out-l')]
+    const view  = { nodes, edges: reconcileMainFaders({ nodes: [], edges: [] }, { nodes, edges }) }
+    expect(isMatrixSource('bus', 'mix', view)).toBe(true)
+    expect(settle(nodes, [...view.edges, wire('bus', 'mtx', 'mix')]).wires).toEqual(['line.out → bus', 'bus.mix → amp', 'bus.send → mtx'])
   })
 })

@@ -83,12 +83,13 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
   // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and Main
   // Faders may feed one — isMatrixSource). Done before every takeover too, so a wire to a Matrix
   // Bus never follows L / R onto a Graphic EQ or Amplifier: the send stays on the Main Fader. The
-  // same for Stream / Broadcast and a Codec (TAKES_WHOLE_MIX)
+  // same for Stream / Broadcast and a Codec (TAKES_WHOLE_MIX). A Main Fader whose L / R went on
+  // has only its Mix output left: wired from it, a Matrix Bus gets the same send
   const matrixSends = (list: SignalEdge[]) => list.map((e) => {
     const target = byId.get(e.target)?.typeKey
-    return target !== undefined && TAKES_WHOLE_MIX.has(target) && portSide(e.sourceHandle) !== null
-      ? { ...e, sourceHandle: MATRIX_PORT }
-      : e
+    const send   = target !== undefined && TAKES_WHOLE_MIX.has(target) &&
+      (portSide(e.sourceHandle) !== null || (e.sourceHandle === MIX_PORT && target === 'matrix-bus'))
+    return send ? { ...e, sourceHandle: MATRIX_PORT } : e
   })
   let next = edges
 

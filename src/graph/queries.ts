@@ -262,18 +262,23 @@ export function faderBusOf(nodeId: string, view: GraphView): SignalNode | null {
  * True when output `handleId` of this card may feed a Matrix Bus. Matrix sends are post-fader:
  * - the Matrix send, or the L / R of a stereo bus or of its Main Fader (that wire becomes the
  *   Matrix send);
+ * - their Mix output, once a Graphic EQ, Amplifier … further on took the L / R over (that wire
+ *   becomes the Matrix send too): a Main Fader's, or a bus's with no Main Fader;
  * - a mono Aux Bus's output, straight or through its fader / effects.
- * Never a bus's Mix output (that is before the Main Fader), a single source, or another Matrix Bus.
+ * Never the Mix output of a bus with a Main Fader (that is before the fader), a single source, or
+ * another Matrix Bus.
  */
 export function isMatrixSource(nodeId: string, handleId: string, view: GraphView): boolean {
   const graph = graphOf(view)
   const node  = graph.node(nodeId)
-  if (!node || node.typeKey === 'matrix-bus' || handleId === MIX_PORT) return false
-  if (handleId === MATRIX_PORT || portSide(handleId) !== null) {
-    // L / R belong to a stereo bus or its Main Fader — but not a Matrix Bus's own Main Fader
+  if (!node || node.typeKey === 'matrix-bus') return false
+  if (handleId === MATRIX_PORT || handleId === MIX_PORT || portSide(handleId) !== null) {
+    // A stereo bus's or its Main Fader's — but not a Matrix Bus's own Main Fader
     const bus = node.typeKey === 'fader' ? mixBusOf(node.id, graph) : node.id
     const busNode = bus === null ? undefined : graph.node(bus)
-    return busNode !== undefined && isMixBus(busNode.typeKey)
+    if (busNode === undefined || !isMixBus(busNode.typeKey)) return false
+    return handleId !== MIX_PORT || node.typeKey === 'fader' ||
+      !graph.nodes.some((n) => n.typeKey === 'fader' && mixBusOf(n.id, graph) === node.id)
   }
   if (isMixBus(node.typeKey)) return handleId === 'out'
   if (!passesThrough(node.typeKey)) return false
