@@ -109,8 +109,6 @@ export type NodeTypeDef = {
   inputs: NodePort[]
   outputs: NodePort[]
   stereo: StereoSupport
-  /** Outputs when the Mono | Stereo switch is on (the Aux Bus splits into L / R). */
-  stereoOutputs?: NodePort[]
   defaultParams: Record<string, NodeParamValue>
   /**
    * The levels whose palette has it (D20: each level is a scale, so some elements leave at harder
@@ -129,13 +127,6 @@ export type NodeTypeDef = {
    * for listening only (no Main Fader, no Matrix).
    */
   bus?: 'mix' | 'matrix' | 'pfl'
-  /**
-   * Takes a stereo mix's Left / Right outputs over when wired to one of them, and sends L and R out
-   * separately: the Graphic EQ for any stereo wire (`true`; fed one channel it stays single-channel),
-   * the Amplifier too (its outputs are always L and R — D27); the Fader (Main Fader) and the Limiter
-   * only for a bus's mix (`'mix'`: a stereo channel through them stays one wire).
-   */
-  splits?: true | 'mix'
   /**
    * A dynamics card (Compressor, Noise Gate, Limiter, De-esser): a level curve that turns its signal
    * down. In stereo it runs linked: the louder side decides, both sides get the same change.
@@ -311,10 +302,6 @@ const IN: NodePort[]    = [{ id: 'in' }]
 // A bus's input: several wires, one port each (graph/slots.ts)
 const MANY_IN: NodePort[] = [{ id: 'in', many: true }]
 const OUT: NodePort[]   = [{ id: 'out' }]
-const SIDES: NodePort[] = [
-  { id: 'out-l' },
-  { id: 'out-r' },
-]
 // The cards' sizes (minSize): what they were with the readings under them at Intermediate, now the
 // same at every level, their content grown into the room (2026-10-08). The mixing buses are big
 // enough that their long names stay big in overview — wide enough for the Peak, RMS and Noise beside
@@ -436,7 +423,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'graphic-eq': {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: ADVANCED_ONLY, bypass: true, splits: true, minSize: EQ_SIZE,
+    levels: ADVANCED_ONLY, bypass: true, minSize: EQ_SIZE,
     // b0..b30 = gain of each of the 31 one-third-octave bands, 20 Hz … 20 kHz (eqMath GEQ_CENTERS)
     defaultParams: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`b${i}`, 0])),
   },
@@ -455,7 +442,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   limiter: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: ADVANCED_ONLY, bypass: true, minSize: { w: 618, h: 361 }, dynamics: true, splits: 'mix',
+    levels: ADVANCED_ONLY, bypass: true, minSize: { w: 618, h: 361 }, dynamics: true,
     defaultParams: { thresholdDb: -3, makeupGainDb: 0 },
   },
   deesser: {
@@ -501,12 +488,12 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', stereo: 'follow',
     inputs: [{ id: 'in', row: 0 }, { id: AMP_B_PORT, row: 4 }],
     outputs: [{ id: 'out-l', row: 0 }, { id: 'out-r', row: 4 }],
-    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 342 }, splits: true,
+    levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 342 },
     defaultParams: { gainDb: 0, on: true },
   },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: FROM_INTERMEDIATE, bypass: false, splits: 'mix', freeSize: { w: 249, h: 718 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 249, h: 718 },
     defaultParams: { faderDb: 0 },
   },
   switch: {
@@ -556,8 +543,7 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // output goes only into Stream / Broadcast (graph/connectionRules.ts). A codec in and PCM out, it
     // unpacks the stream Stream / Broadcast sends (the listener's end, D37) — of its codec only — into
     // 32-bit float. It works on numbers only: fed an analog signal it sends nothing (D23 — squeezing is
-    // more than converting). Always stereo, like what it feeds; a bus's L or R into it is the whole
-    // mix (TAKES_WHOLE_MIX). As a route's job it is a file played (the DAW's playback below Advanced)
+    // more than converting). Always stereo, like what it feeds. As a route's job it is a file played (the DAW's playback below Advanced)
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'always',
     levels: ADVANCED_ONLY, bypass: false, minSize: { w: 320, h: 420 },
     defaultParams: { codec: 'mp3', encodes: true, bitrate: 128 },
@@ -588,24 +574,23 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   'master-bus': {
     // Always stereo. Its input takes up to 8 wires, one port each; they are added together.
-    // The mix leaves on two wires: Left and Right.
-    category: 'merge', inputs: MANY_IN, outputs: SIDES, stereo: 'always', bus: 'mix',
+    // The mix leaves on one stereo wire — on L and R into speakers (D43: graph/sides.ts).
+    category: 'merge', inputs: MANY_IN, outputs: OUT, stereo: 'always', bus: 'mix',
     levels: FROM_INTERMEDIATE, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
   'aux-bus': {
     // Its input takes up to 8 wires, one port each; they are added together.
-    // Mono: one output. Stereo: Left and Right outputs.
-    category: 'merge', inputs: MANY_IN, outputs: OUT, stereoOutputs: SIDES, stereo: 'optional', bus: 'mix',
+    // Mono: one channel out. Stereo: one stereo wire — on L and R into speakers (D43).
+    category: 'merge', inputs: MANY_IN, outputs: OUT, stereo: 'optional', bus: 'mix',
     levels: FROM_INTERMEDIATE, bypass: true, minSize: { w: 618, h: 397 },
     defaultParams: { faderDb: 0, stereo: false },
   },
   'matrix-bus': {
-    // A bus of buses, always stereo: only finished mixes go in, after their fader — a stereo bus
-    // through its Matrix send (one stereo wire), a mono Aux Bus through its output or its fader.
-    // One send knob per bus (params `send-<busId>`, audio taper, 75 = full level).
-    // A mono bus lands on both sides at full level.
-    category: 'merge', inputs: MANY_IN, outputs: SIDES, stereo: 'always', bus: 'matrix',
+    // A bus of buses, always stereo: only whole mixes go in, a Master or Aux Bus's, before its
+    // fader or after it (D42). One send knob per bus (params `send-<busId>`, audio taper, 75 = full
+    // level). A mono bus lands on both sides at full level. Its mix leaves on one stereo wire (D43).
+    category: 'merge', inputs: MANY_IN, outputs: OUT, stereo: 'always', bus: 'matrix',
     levels: ADVANCED_ONLY, bypass: false, minSize: BUS_SIZE,
     defaultParams: { faderDb: 0 },
   },
@@ -641,9 +626,9 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   },
   headphones: {
     // There to show where a listener plugs in: no knob of their own — a Gain right before them sets
-    // how loud (the desk's Phones knob); fed by anything else they are silent. No card around them
-    // (D28): their size is their drawing's (HeadphonesNode)
-    category: 'sink', inputs: IN, outputs: [], stereo: 'never',
+    // how loud (the desk's Phones knob); fed by anything else they are silent. A stereo wire whole:
+    // left ear L, right ear R (D43). No card around them (D28): their size is their drawing's (HeadphonesNode)
+    category: 'sink', inputs: IN, outputs: [], stereo: 'follow',
     levels: EVERY_LEVEL, bypass: false, freeSize: BARE_OUTPUT_SIZE,
     defaultParams: {},
   },
@@ -933,16 +918,6 @@ export function isDynamics(typeKey: TypeKey): boolean {
   return NODE_REGISTRY[typeKey].dynamics === true
 }
 
-/** A Fader, Limiter, Graphic EQ or Amplifier: takes a stereo mix's L / R over (NodeTypeDef `splits`). */
-export function canSplit(typeKey: TypeKey): boolean {
-  return NODE_REGISTRY[typeKey].splits !== undefined
-}
-
-/** A Fader or Limiter: takes L / R over only from a bus's mix (NodeTypeDef `splits: 'mix'`). */
-export function splitsOnlyMix(typeKey: TypeKey): boolean {
-  return NODE_REGISTRY[typeKey].splits === 'mix'
-}
-
 /**
  * A one-input card that passes on what it gets (an EQ, a compressor, a pad, a fader …; a Recorder
  * Track through its Monitor out): walks up a chain (graph/queries.ts) go through these and stop at
@@ -961,37 +936,35 @@ export function isNodeStereo(node: Pick<SignalNode, 'typeKey' | 'params'>): bool
 }
 
 /**
- * A bus that sends its mix out as Left and Right: the Master, the Matrix, an Aux set to Stereo
- * (not the PFL Bus: stereo on one wire).
+ * A bus whose mix is stereo, with a Main Fader: the Master, the Matrix, an Aux set to Stereo (not
+ * the PFL Bus, for listening only).
  */
 export function isStereoBus(node: Pick<SignalNode, 'typeKey' | 'params'>): boolean {
-  if (!isBus(node.typeKey) || !isNodeStereo(node)) return false
-  const def = NODE_REGISTRY[node.typeKey]
-  return (def.stereoOutputs ?? def.outputs).some((p) => portSide(p.id) !== null)
+  const bus = NODE_REGISTRY[node.typeKey].bus
+  return bus !== undefined && bus !== 'pfl' && isNodeStereo(node)
 }
 
-/** Which side a bus output carries: 'l' / 'r' for Left / Right outputs, null otherwise. */
-/**
- * Cards that take a stereo mix's L or R as the whole mix — the holder's send (MATRIX_PORT, one
- * stereo wire after the fader: graph/mainFader.ts): a Matrix Bus, and what sends the mix out to
- * listeners as one stereo stream (the user's call, 2026-10-11).
- */
-export const TAKES_WHOLE_MIX: ReadonlySet<TypeKey> = new Set<TypeKey>(['matrix-bus', 'broadcast', 'codec'])
-
+/** Which side an output carries: 'l' / 'r' for Left / Right outputs, null otherwise. */
 export function portSide(portId: string): 'l' | 'r' | null {
   if (portId.endsWith('-l')) return 'l'
   if (portId.endsWith('-r')) return 'r'
   return null
 }
 
-/** The bus output that carries the whole stereo mix while a Main Fader is attached. */
-export const MIX_PORT = 'mix'
-
 /**
- * A stereo bus's (or its Main Fader's) send to Matrix Buses: Left and Right together on one wire,
- * after the fader. It shows below the R output once a wire uses it.
+ * Speakers: a stereo output wired to one turns into Left and Right (D43, graph/sides.ts) — the
+ * first speaker on L, the next on R, as a desk's Main L / R jacks. Anything else takes a stereo
+ * wire whole (headphones too: two ears).
  */
-export const MATRIX_PORT = 'send'
+export const TAKES_ONE_SIDE: ReadonlySet<TypeKey> = new Set<TypeKey>(['active-speaker', 'studio-monitor', 'speaker'])
+
+/** The output that splits into L and R toward speakers (D43): a card's `out`. */
+export const SPLIT_PORT = 'out'
+
+/** The output a port is part of: `out` for its L and R (an output split toward speakers), else the port itself. */
+export function wholeOutput(portId: string): string {
+  return portId === 'out-l' || portId === 'out-r' ? SPLIT_PORT : portId
+}
 
 /** Param key of a Matrix Bus send knob (`key`: the bus it is for, graph/queries.ts matrixSendKey). */
 export function matrixSendParam(key: string): `send-${string}` {

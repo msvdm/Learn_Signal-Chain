@@ -1,5 +1,5 @@
 import type { SignalEdge, SignalNode } from '../data/nodeRegistry'
-import { AMP_B_PORT, MIX_PORT, NODE_REGISTRY, param } from '../data/nodeRegistry'
+import { AMP_B_PORT, NODE_REGISTRY, param, wholeOutput } from '../data/nodeRegistry'
 import type { Graph, GraphView } from './graph'
 import { graphOf } from './graph'
 import { ampSplit } from './queries'
@@ -51,12 +51,12 @@ function onward(graph: Graph, id: string, port: string, powered = true): readonl
   if (powered && switchedOff(node)) return NO_WIRES
   if (node?.typeKey === 'amp' && !ampSplit(id, graph)) {
     const out = port === AMP_B_PORT ? 'out-r' : 'out-l'
-    return graph.from(id).filter((e) => e.sourceHandle === out || e.sourceHandle === MIX_PORT)
+    return graph.from(id).filter((e) => e.sourceHandle === out)
   }
   const routes = node && NODE_REGISTRY[node.typeKey].routes
   if (!routes) return graph.from(id)
   const to = new Set(routes.filter((r) => r.from === port).flatMap((r) => r.to))
-  return graph.from(id).filter((e) => to.has(e.sourceHandle))
+  return graph.from(id).filter((e) => to.has(wholeOutput(e.sourceHandle)))
 }
 
 /** The outputs a card makes a sound of its own on: a source's, a DAW's playback (a route from nothing). */
@@ -66,7 +66,7 @@ function ownSound(graph: Graph, id: string): readonly SignalEdge[] {
   const def = NODE_REGISTRY[node.typeKey]
   if (def.routes) {
     const to = new Set(def.routes.filter((r) => r.from === null).flatMap((r) => r.to))
-    return graph.from(id).filter((e) => to.has(e.sourceHandle))
+    return graph.from(id).filter((e) => to.has(wholeOutput(e.sourceHandle)))
   }
   return def.category === 'source' ? graph.from(id) : []
 }

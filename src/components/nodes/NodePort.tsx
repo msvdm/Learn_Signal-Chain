@@ -15,7 +15,7 @@ import { outputKind, wiresIntoPort } from '../../graph/queries'
 import { slotFree, slotOfHandle, takesMany, wiresIntoSlot } from '../../graph/slots'
 import { PORT_TOP, PORT_GAP, PORT_REACH } from '../../utils/layoutHelpers'
 import { sideLetter } from '../../utils/nodeName'
-import { MATRIX_PORT, portFacing } from '../../data/nodeRegistry'
+import { SPLIT_PORT, portFacing, portSide } from '../../data/nodeRegistry'
 import type { Facing, PortLabel, SignalEdge } from '../../data/nodeRegistry'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -131,13 +131,14 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0
   const showUnplug = canUnplug && hovered
-  // L / R on an output carrying one side; "L+R" on a send (both sides on one wire)
-  const isSend     = type === 'source' && portId === MATRIX_PORT
+  // L / R on an output carrying one side; "L+R" on the whole output under them (both sides on one wire — D43)
+  const isWhole    = useSignalStore((s) => type === 'source' && portId === SPLIT_PORT &&
+    graphOf(s).from(nodeId).some((e) => portSide(e.sourceHandle) !== null))
   // (At Beginner, where no signal is worked out, what the wiring makes of the output)
   const sideKind   = useSignalStore((s) => type !== 'source' ? undefined
     : atLeast(s.complexityLevel, SIGNAL_LEVEL) ? signalIn(s).wires.get(outputKey(nodeId, portId))?.kind
     : outputKind(nodeId, portId, s))
-  const side       = isSend ? 'L+R' : sideLetter(sideKind)
+  const side       = isWhole ? 'L+R' : sideLetter(sideKind)
   const top        = middle ? '50%' : PORT_TOP + row * PORT_GAP
   // On a top or bottom edge (a card on its side): in the middle of it, where React Flow puts it
   const upright    = facing === 'top' || facing === 'bottom'
@@ -182,7 +183,7 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
           aria-hidden
           style={{
             // Beside the ring, just above the wire leaving it (beside it, on a top or bottom edge)
-            position: 'absolute', ...letterPlace(facing, top, isSend),
+            position: 'absolute', ...letterPlace(facing, top, isWhole),
             fontSize: 10, fontWeight: 800, lineHeight: 1,
             color: 'var(--lsc-fg-muted)', pointerEvents: 'none',
           }}

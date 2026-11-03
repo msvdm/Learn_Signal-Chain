@@ -4,8 +4,7 @@ import { initialParams } from '../src/data/nodeRegistry'
 import type { WireKind } from '../src/graph/queries'
 import type { GraphSignalResult, StageResult, StageRole, WireSignal } from '../src/signal/engine'
 import { graphSignal, louderSide } from '../src/signal/engine'
-import { withUsbReturns } from '../src/graph/usbLink'
-import { withLinkChannels } from '../src/graph/interfaceLink'
+import { settle } from '../src/graph/settle'
 import type { SideLevels, SignalDomain, SignalHealth } from '../src/signal/levels'
 import { CLIP_DBU, louder, sumNoiseToDb } from '../src/signal/levels'
 import type { StageCondition, Transfer } from '../src/signal/process'
@@ -21,8 +20,9 @@ export function card(id: string, typeKey: TypeKey, params: Record<string, NodePa
 }
 
 /**
- * A wire from `card:output` to `card:input` (`out` / `in` when left out). Written as the app holds
- * it once settled (graph/mainFader.ts): a Main Fader on its bus's `mix`, a Matrix send on `send`.
+ * A wire from `card:output` to `card:input` (`out` / `in` when left out), as drawn: the engine's
+ * picture (signalOf) settles it as the store does — into a speaker, a stereo output's `out` goes on
+ * a side (graph/sides.ts, D43).
  */
 export function wire(from: string, to: string): SignalEdge {
   const [source, sourceHandle = 'out'] = from.split(':')
@@ -53,11 +53,10 @@ export const line = (id: string, params: Record<string, NodeParamValue> = {}): S
   card(id, 'generator', { sound: 'noise', levelDb: -10, ...params })
 
 /**
- * The engine's picture of a chain, its wires as the store keeps them: every USB wire with its way
- * back (graph/usbLink.ts), every Digital Interface's cable with its channels (graph/interfaceLink.ts).
+ * The engine's picture of a chain, its wires as the store keeps them (graph/settle.ts): every wire's
+ * side (D43), every USB wire with its way back, every Digital Interface's cable with its channels.
  */
-export const signalOf = (nodes: SignalNode[], edges: SignalEdge[]) =>
-  graphSignal(nodes, withLinkChannels({ nodes, edges: withUsbReturns({ nodes, edges }) }))
+export const signalOf = (nodes: SignalNode[], edges: SignalEdge[]) => graphSignal(nodes, settle({ nodes, edges }))
 
 // ── What a card should show ─────────────────────────────────────────────────────
 

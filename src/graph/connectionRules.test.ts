@@ -104,7 +104,7 @@ describe('the Amplifier: two inputs, one stereo wire into both', () => {
   it('a mono wire in one: the other takes a mono wire, not a stereo one (it would go into both)', () => {
     expect(takes('gen2', 'pa:in-b', gen)).toBe(true)
     expect(takes('keys', 'pa:in-b', gen)).toBe(false)
-    // A mix's L or R is the whole mix to it (it takes the L / R over)
+    // Wired from a bus's L or R, the wire takes the whole mix (D43)
     expect(takes('bus:out-l', 'pa:in-b', gen)).toBe(false)
   })
 })

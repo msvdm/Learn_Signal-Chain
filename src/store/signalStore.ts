@@ -88,8 +88,8 @@ function getInitialCanvas() {
     const saved = parseChainFile(JSON.parse(localStorage.getItem(CANVAS_KEY) ?? 'null'))
     if (saved && saved.chain.nodes.length > 0) {
       const { nodes, edges, name, level } = saved.chain
-      // Its L / R takeovers and USB links settled as today's rules have them (as every change is: commitGraph)
-      return { nodes, edges: settle(EMPTY_GRAPH, { nodes, edges }), chainName: name, complexityLevel: level }
+      // Its sides and USB links settled as today's rules have them (as every change is: commitGraph)
+      return { nodes, edges: settle({ nodes, edges }), chainName: name, complexityLevel: level }
     }
   } catch { /* a broken save: start blank */ }
   return { nodes: [], edges: [], chainName: '', complexityLevel: getInitialComplexityLevel() }
@@ -337,17 +337,16 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
       edges: s.edges,
     })),
 
-  // A fader on the new L output becomes the Main Fader; one that lost its Mix wire is plain again
+  // Its wires into speakers go out on L and R while it is stereo (graph/sides.ts)
   setNodeStereo: (nodeId, on) =>
     set((s) => {
       const next = withStereo(s, nodeId, on)
       return next ? commitGraph(s, next) : {}
     }),
 
-  // A Fader wired to a stereo bus's L or R becomes its Main Fader (see graph/mainFader.ts)
+  // A stereo output's wire into a speaker goes on its L or R (graph/sides.ts, D43)
   addEdge: (edge) => set((s) => commitGraph(s, { nodes: s.nodes, edges: [...s.edges, edge] })),
 
-  // Unplugging a Main Fader hands the bus's L / R wires back to the bus
   removeEdge: (edgeId) =>
     set((s) => commitGraph(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) })),
 
@@ -378,21 +377,20 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 const NO_WIRE = { toolMode: 'select', wire: null } as const
 
 /**
- * Every change to the graph goes through here. Settles who holds each stereo mix's Left / Right —
- * plugging or unplugging a wire, removing an element, switching a bus to Mono or a Relay to its
- * other input can each change it (graph/mainFader.ts) —, keeps every USB wire's way back
- * (graph/usbLink.ts), puts each wire into an input taking several on a port of its own
- * (graph/slots.ts) and drops what pointed at elements or wires that are gone. A new canvas
- * (New, a level change, an opened chain) comes from nothing: nothing is handed back to it, and
- * nothing that pointed at the old canvas is kept, even where the new one reuses its ids.
+ * Every change to the graph goes through here. Settles which wires go out on an output's Left or
+ * Right — only those into speakers, from a stereo output: plugging or unplugging a wire, switching a
+ * source to Mono or a Relay to its other input can each change it (graph/sides.ts, D43) —, keeps
+ * every USB wire's way back (graph/usbLink.ts), puts each wire into an input taking several on a
+ * port of its own (graph/slots.ts) and drops what pointed at elements or wires that are gone. A new
+ * canvas (New, a level change, an opened chain) comes from nothing: nothing that pointed at the old
+ * canvas is kept, even where the new one reuses its ids.
  */
 function commitGraph(
   s: SignalChainStore,
   graph: GraphView,
   { newCanvas = false } = {},
 ): Partial<SignalChainStore> {
-  const prev    = newCanvas ? EMPTY_GRAPH : s
-  const settled = settle(prev, graph)
+  const settled = settle(graph)
   // Unchanged wires keep the same array, so what watches only the wires does not re-render
   const edges   = settled.length === graph.edges.length && settled.every((e, i) => e === graph.edges[i])
     ? graph.edges
@@ -437,8 +435,7 @@ function withoutHistory(fn: () => void) {
 
 /**
  * The graph back as it was in `step`; what pointed at missing elements is dropped. Not through
- * commitGraph: a step was settled when it was made, and the takeover rules would hand wires back
- * across the jump.
+ * commitGraph: a step was settled when it was made (its speakers on the sides they were on).
  */
 function restore(s: SignalChainStore, step: GraphSnapshot): Partial<SignalChainStore> {
   return { nodes: step.nodes, edges: step.edges, ...pruneRefs(s, step), ...NO_WIRE }

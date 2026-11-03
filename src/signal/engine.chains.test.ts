@@ -92,7 +92,7 @@ describe('a stereo Master Bus: Pan, Balance and the Main Fader', () => {
     heard('vox'), wire('vox', 'pre'), wire('pre', 'voxPan'), wire('voxPan', 'bus'),
     wire('gtr', 'gtrPan'), wire('gtrPan', 'bus'),
     wire('keys', 'keysBal'), wire('keysBal', 'bus'),
-    wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
+    wire('bus', 'main'), wire('main', 'spkL'), wire('main', 'spkR'),
   ])
 
   expectCards(result, {
@@ -114,14 +114,16 @@ describe('a stereo Master Bus: Pan, Balance and the Main Fader', () => {
     spkR:    { in: -11.25, out: -11.25, health: 'good' },
   })
 
-  it('sends the mix to the Main Fader on one stereo wire, and one side to each speaker', () => {
-    expectWire(result, 'bus:mix', 'stereo', -5.27, -8.25)
+  it('sends the mix to the Main Fader on one stereo wire, and one side to each speaker (D43: the first L, the next R)', () => {
+    expectWire(result, 'bus:out', 'stereo', -5.27, -8.25)
     expectWire(result, 'main:out-l', 'left', -8.27, S)
     expectWire(result, 'main:out-r', 'right', S, -11.25)
   })
 })
 
-describe('on a stereo bus a mono wire lands on both sides, a side wire keeps its side', () => {
+// One wire carries a whole stereo signal (D43): the Aux's mix goes through the compressor on both
+// sides — until D43 its L output carried the left side only (comp −20 mono, the bus's Left −7.61, its Right −10)
+describe('on a stereo bus a mono wire lands on both sides, a stereo one on its own', () => {
   const result = signalOf([
     line('line', { levelDb: -20 }),
     card('aux', 'aux-bus', { stereo: true }),
@@ -131,26 +133,28 @@ describe('on a stereo bus a mono wire lands on both sides, a side wire keeps its
     card('spkL', 'active-speaker'),
     card('spkR', 'active-speaker'),
   ], [
-    wire('line', 'aux'), wire('aux:out-l', 'comp'), wire('comp', 'bus'),
+    wire('line', 'aux'), wire('aux', 'comp'), wire('comp', 'bus'),
     wire('line2', 'bus'),
-    wire('bus:out-l', 'spkL'), wire('bus:out-r', 'spkR'),
+    wire('bus', 'spkL'), wire('bus', 'spkR'),
   ])
 
   expectCards(result, {
     line:  { out: -20, health: 'good' },
     aux:   { in: [-20, -20], out: [-20, -20], health: 'good' },
-    // The Aux's L through a compressor (D9: on average just below its threshold): still the left side only
-    comp:  { in: -20, out: -20, health: 'good', reduction: 0 },
+    // The Aux's mix through a compressor (D9: on average just below its threshold), both sides
+    comp:  { in: [-20, -20], out: [-20, -20], health: 'good', reduction: 0 },
     line2: { out: -10, health: 'good' },
-    // Left: −10 and −20 added · Right: only the mono −10
-    bus:   { in: [-7.61, -10], out: [-7.61, -10], health: 'good' },
+    // Each side: −10 (the mono line) and −20 (the Aux) added
+    bus:   { in: [-7.61, -7.61], out: [-7.61, -7.61], health: 'good' },
     spkL:  { in: -7.61, out: -7.61, health: 'good' },
-    spkR:  { in: -10, out: -10, health: 'good' },
+    spkR:  { in: -7.61, out: -7.61, health: 'good' },
   })
 
-  it('carries one side through the compressor', () => {
-    expectWire(result, 'aux:out-l', 'left', -20, S)
-    expectWire(result, 'comp:out', 'left', -20, S)
+  it('carries the whole mix through the compressor, and one side to each speaker', () => {
+    expectWire(result, 'aux:out', 'stereo', -20, -20)
+    expectWire(result, 'comp:out', 'stereo', -20, -20)
+    expectWire(result, 'bus:out-l', 'left', -7.61, S)
+    expectWire(result, 'bus:out-r', 'right', S, -7.61)
   })
 })
 
@@ -572,9 +576,9 @@ describe('the Matrix Bus: finished mixes, each through its send knob', () => {
     card('mtxL', 'active-speaker'),
     card('mtxR', 'active-speaker'),
   ], [
-    wire('line', 'bus'), wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
+    wire('line', 'bus'), wire('bus', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
     wire('line2', 'aux'),
-    wire('main:send', 'mtx'), wire('aux', 'mtx'),
+    wire('main', 'mtx'), wire('aux', 'mtx'),
     wire('mtx:out-l', 'mtxL'), wire('mtx:out-r', 'mtxR'),
   ])
 
@@ -593,7 +597,7 @@ describe('the Matrix Bus: finished mixes, each through its send knob', () => {
   })
 
   it('takes the Master after its fader, on one stereo wire', () => {
-    expectWire(result, 'main:send', 'stereo', -15, -15)
+    expectWire(result, 'main:out', 'stereo', -15, -15)
   })
 })
 
@@ -610,9 +614,9 @@ describe('the Matrix Bus fed the Master before its fader (D42): the Main Fader d
     card('mtxL', 'active-speaker'),
     card('mtxR', 'active-speaker'),
   ], [
-    wire('line', 'bus'), wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
+    wire('line', 'bus'), wire('bus', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
     wire('line2', 'aux'),
-    wire('bus:send', 'mtx'), wire('aux', 'mtx'),
+    wire('bus', 'mtx'), wire('aux', 'mtx'),
     wire('mtx:out-l', 'mtxL'), wire('mtx:out-r', 'mtxR'),
   ])
 
@@ -631,7 +635,7 @@ describe('the Matrix Bus fed the Master before its fader (D42): the Main Fader d
   })
 
   it('takes the Master before its fader, on one stereo wire', () => {
-    expectWire(result, 'bus:send', 'stereo', -10, -10)
+    expectWire(result, 'bus:out', 'stereo', -10, -10)
   })
 })
 
@@ -759,6 +763,7 @@ describe('record and play back (D22): an Audio Interface\'s two paths never meet
   // One USB wire between them carries both ways (its way back: signalOf adds it, as the store does)
   // A Computer at 0 dBu recorded: the Interface turns it into numbers (−18 dBFS) for the DAW. The
   // DAW's song (−18 dBFS) comes back out of the Interface at 0 dBu, Left and Right to two monitors
+  // (D43: into monitors its one line output turns into L and R)
   const chain = (pcDb: number) => signalOf([
     card('pc', 'pc', { levelDb: pcDb }),
     card('box', 'interface'),
@@ -776,16 +781,17 @@ describe('record and play back (D22): an Audio Interface\'s two paths never meet
     box:  { in: [0, 0], out: [-18, -18], health: 'good', domain: 'digital' },
     // The DAW shows what it records
     daw:  { in: [-18, -18], out: [-18, -18], health: 'good', domain: 'digital', inDomain: 'digital' },
-    // One stereo line output (the user's call, 2026-10-11: it was Line out L / R): straight into a
-    // one-channel monitor its two sides fold into one, 6 dB up
-    monL: { in: 6.02, out: 6.02, health: 'hot' },
-    monR: { in: 6.02, out: 6.02, health: 'hot' },
+    // One stereo line output (the user's call, 2026-10-11: it was Line out L / R) — into the
+    // monitors its L and R, one side each (D43; until then each folded both sides in, 6 dB up: +6.02, hot)
+    monL: { in: 0, out: 0, health: 'good' },
+    monR: { in: 0, out: 0, health: 'good' },
   })
 
   it('plays back its song at −18 dBFS, back along the USB wire and out of the Interface at 0 dBu', () => {
     expectWire(result, 'daw:playback', 'stereo', -18, -18)
     expectWire(result, 'box:to-pc', 'stereo', -18, -18)
-    expectWire(result, 'box:out', 'stereo', 0, 0)
+    expectWire(result, 'box:out-l', 'left', 0, S)
+    expectWire(result, 'box:out-r', 'right', S, 0)
   })
 
   it('each output leaves in its own domain: numbers to the computer, an analog signal out', () => {
@@ -795,7 +801,7 @@ describe('record and play back (D22): an Audio Interface\'s two paths never meet
   it('what it plays back never depends on what it records', () => {
     const quieter = chain(-20)
     expectDb(average(quieter.stages.daw.in, 'l'), -38)
-    expectWire(quieter, 'box:out', 'stereo', 0, 0)
+    expectWire(quieter, 'box:out-l', 'left', 0, S)
   })
 })
 

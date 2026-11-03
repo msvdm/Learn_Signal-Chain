@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
+import { SOUND_PORT } from '../data/nodeRegistry'
 import { faderBusOf, phantomPowered, unwiredSource } from './queries'
 
 // No connection, no signal (decision D11): a source with nothing plugged into its output, or a
@@ -58,14 +58,14 @@ describe('a source not connected yet', () => {
 describe('the bus a Fader sets the level of', () => {
   it("an Aux Bus's, mono or stereo, through effects", () => {
     const nodes = [node('aux', 'aux-bus'), node('comp', 'comp'), node('f', 'fader'), node('saux', 'aux-bus'), node('sf', 'fader')]
-    const view  = { nodes, edges: [wire('aux', 'comp'), wire('comp', 'f'), wire('saux', 'sf', MIX_PORT)] }
+    const view  = { nodes, edges: [wire('aux', 'comp'), wire('comp', 'f'), wire('saux', 'sf')] }
     expect(faderBusOf('f', view)?.id).toBe('aux')
     expect(faderBusOf('sf', view)?.id).toBe('saux')
   })
 
   it("a Master or Matrix Bus's: its Main Fader", () => {
     const nodes = [node('bus', 'master-bus'), node('f', 'fader'), node('mx', 'matrix-bus'), node('mf', 'fader')]
-    const view  = { nodes, edges: [wire('bus', 'f', MIX_PORT), wire('mx', 'mf', MIX_PORT)] }
+    const view  = { nodes, edges: [wire('bus', 'f'), wire('mx', 'mf')] }
     expect(faderBusOf('f', view)?.typeKey).toBe('master-bus')
     expect(faderBusOf('mf', view)?.typeKey).toBe('matrix-bus')
   })

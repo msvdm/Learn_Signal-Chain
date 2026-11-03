@@ -31,8 +31,8 @@ describe('example chains', () => {
           expect(`${e.id}: ${portAcceptsWire(target, e.targetHandle, before, source, nodes)}`).toBe(`${e.id}: true`)
         })
 
-        // As the store settles it (commitGraph): L / R takeovers, the USB wire's way back, a cable's channels
-        const edges = settle({ nodes: [], edges: [] }, chain)
+        // As the store settles it (commitGraph): every wire's side, the USB wire's way back, a cable's channels
+        const edges = settle(chain)
         if (level === 'beginner') {
           const verdicts = [...reachOf({ nodes, edges }).verdicts]
           expect(verdicts.length).toBeGreaterThan(0)

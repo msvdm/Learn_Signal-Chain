@@ -15,7 +15,7 @@ import { nodeAcceptsWire } from '../graph/connectionRules'
 export function useNodeChrome(nodeId: string, typeKey: TypeKey) {
   // (Gone for the moment the card is drawn while being removed)
   const node     = useSignalStore((s) => graphOf(s).node(nodeId))
-  // The outputs follow the wiring (a bus's L / R taken over by its Main Fader …); a layout is always
+  // The outputs follow the wiring (an output's L / R while speakers are wired to it — D43); a layout is always
   // the same arrays (drawnPorts: the hidden ones left out), so this changes only when the ports do
   const ports    = useSignalStore(useShallow((s) => drawnPorts(graphOf(s).node(nodeId) ?? { typeKey, params: {} }, s.complexityLevel, s)))
   const selected = useSignalStore((s) => s.selectedNodeIds.includes(nodeId))

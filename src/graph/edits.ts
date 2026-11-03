@@ -1,10 +1,10 @@
 import type { SignalNode, SignalEdge } from '../data/nodeRegistry'
-import { NODE_REGISTRY, MATRIX_PORT, MIX_PORT, SOUND_PORT } from '../data/nodeRegistry'
+import { NODE_REGISTRY, SOUND_PORT, wholeOutput } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { getPorts } from './queries'
 
 // Pure edits of the graph: each takes a graph and gives the new one. The store runs the result
-// through commitGraph (signalStore.ts), which settles the L / R takeovers (graph/mainFader.ts).
+// through commitGraph (signalStore.ts), which settles the wires' sides (graph/sides.ts).
 
 let lastStamp = 0
 
@@ -53,20 +53,25 @@ export function withoutNode(graph: GraphView, nodeId: string): GraphView {
 
 /**
  * The graph with `node` added in the middle of a wire: the wire is replaced by one into the
- * node's first input and one from its first output. Unchanged if the wire is gone.
+ * node's first input and one from its first output. Dropped onto a wire to a speaker on one side
+ * of an output (D43: not an Amplifier's), it goes into the whole output, and every speaker on its L
+ * and R moves after it, on the same side — a stereo effect on the speakers. Unchanged if the wire is gone.
  */
 export function withNodeOnWire(graph: GraphView, node: SignalNode, edgeId: string): GraphView {
   const wire = graph.edges.find((e) => e.id === edgeId)
   if (!wire) return graph
-  const ports = getPorts(node)
-  const added = withNodes(graph, [node])
+  const ports  = getPorts(node)
+  const added  = withNodes(graph, [node])
+  const source = graph.nodes.find((n) => n.id === wire.source)
+  const sided  = source !== undefined && source.typeKey !== 'amp' && wholeOutput(wire.sourceHandle) !== wire.sourceHandle
+  const moved  = (e: SignalEdge) => sided && e.source === wire.source && wholeOutput(e.sourceHandle) !== e.sourceHandle
   return {
     nodes: added.nodes,
     edges: [
-      ...graph.edges.filter((e) => e.id !== edgeId),
-      newEdge({ source: wire.source, sourceHandle: wire.sourceHandle, target: node.id, targetHandle: ports.inputs[0].id }),
+      ...graph.edges.filter((e) => e.id !== edgeId).map((e) => (moved(e) ? { ...e, source: node.id, waypoints: undefined } : e)),
+      newEdge({ source: wire.source, sourceHandle: wholeOutput(wire.sourceHandle), target: node.id, targetHandle: ports.inputs[0].id }),
       newEdge({
-        source: node.id, sourceHandle: ports.outputs[0].id, target: wire.target, targetHandle: wire.targetHandle,
+        source: node.id, sourceHandle: sided ? wire.sourceHandle : ports.outputs[0].id, target: wire.target, targetHandle: wire.targetHandle,
         ...(wire.slot !== undefined ? { slot: wire.slot } : {}),
       }),
     ],
@@ -87,39 +92,13 @@ export function withPositions(graph: GraphView, moves: Map<string, { x: number; 
 
 /**
  * The graph with an element's Mono / Stereo switch set (Generator, Aux Bus); null when nothing
- * changes. Inputs never change. Only a bus splits its output: Mono → Stereo moves 'out' to 'out-l'
- * (into a Matrix Bus it then becomes the Matrix send); Stereo → Mono moves 'out-l', 'out-r', the
- * Matrix send and a Main Fader's 'mix' back to 'out'.
+ * changes. Its ports never change: its wires into speakers go out on L and R while it is stereo
+ * (commitGraph settles them — graph/sides.ts, D43).
  */
 export function withStereo(graph: GraphView, nodeId: string, on: boolean): GraphView | null {
   const node = graph.nodes.find((n) => n.id === nodeId)
   if (!node || NODE_REGISTRY[node.typeKey].stereo !== 'optional') return null
   if ((node.params.stereo === true) === on) return null
-
   const updated = { ...node, params: { ...node.params, stereo: on } }
-  const outIds  = new Set(getPorts(updated).outputs.map((p) => p.id))
-
-  function remap(portId: string): string | null {
-    if (outIds.has(portId)) return portId
-    if (on) return outIds.has(`${portId}-l`) ? `${portId}-l` : null
-    const base = portId === MIX_PORT || portId === MATRIX_PORT ? 'out' : portId.replace(/-[lr]$/, '')
-    return outIds.has(base) ? base : null
-  }
-
-  const edges: SignalEdge[] = []
-  for (const e of graph.edges) {
-    let next = e
-    if (e.source === nodeId) {
-      const h = remap(e.sourceHandle)
-      if (!h) continue
-      next = { ...next, sourceHandle: h }
-    }
-    // Left and right wires to the same input collapse into one — keep one
-    const dup = edges.some((x) =>
-      x.source === next.source && x.sourceHandle === next.sourceHandle &&
-      x.target === next.target && x.targetHandle === next.targetHandle)
-    if (!dup) edges.push(next)
-  }
-
-  return { nodes: graph.nodes.map((n) => (n.id === nodeId ? updated : n)), edges }
+  return { nodes: graph.nodes.map((n) => (n.id === nodeId ? updated : n)), edges: graph.edges }
 }

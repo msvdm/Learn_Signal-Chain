@@ -128,12 +128,12 @@ function sketch(level: ComplexityLevel) {
       for (let i = 1; i < ids.length; i++) this.wire(ids[i - 1], ids[i])
     },
     /**
-     * A bus's Main Fader, wired as by hand: the bus's L into it (it takes the whole mix over), its L
-     * into `left` and its R into `right`
+     * A bus's Main Fader: the bus's mix into it, its mix into `left` — with `right`, two speakers:
+     * its L into `left`, its R into `right` (D43)
      */
     mainFader(bus: string, main: string, left: string, right?: string) {
-      this.wire(bus, main, 'out-l')
-      this.wire(main, left, 'out-l')
+      this.wire(bus, main)
+      this.wire(main, left, right ? 'out-l' : undefined)
       if (right) this.wire(main, right, 'out-r')
     },
     file(name: string): ChainFile {
@@ -199,8 +199,9 @@ const BUILD: Record<ExampleKey, (name: string) => ChainFile> = {
     s.put(['left', 'studio-monitor'], s.x('computer'), s.below('computer'))
     s.put(['right', 'studio-monitor'], s.x('left'), s.below('left'))
     s.chain('voice', 'mic', 'interface', 'computer')
-    s.wire('interface', 'left', 'out')
-    s.wire('interface', 'right', 'out')
+    // Its line output into the monitors: L and R (D43)
+    s.wire('interface', 'left', 'out-l')
+    s.wire('interface', 'right', 'out-r')
     return s.file(name)
   },
 

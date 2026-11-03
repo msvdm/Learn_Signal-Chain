@@ -43,7 +43,7 @@ const lastFlowNodes = new Map<string, FlowNode>()
 const lastFlowEdges = new Map<string, Edge>()
 
 /**
- * A card's outputs (a stereo Aux's L / R, a bus or fader taken over by a Main Fader …; inputs never
+ * A card's outputs (an output's L / R while speakers are wired to it — D43 …; inputs never
  * change): the same array while they stay the same (getPorts). When they change, React Flow must
  * re-read the ports.
  */

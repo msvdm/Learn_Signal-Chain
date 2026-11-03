@@ -41,7 +41,7 @@
     {"id": "fader-pan-6", "source": "fader", "sourceHandle": "out", "target": "pan", "targetHandle": "in"},
     {"id": "master-left-8", "source": "fader-1793706483275", "sourceHandle": "out-l", "target": "left", "targetHandle": "in"},
     {"source": "comp", "sourceHandle": "out", "target": "fader", "targetHandle": "in", "id": "e-comp-fader-1793706455666"},
-    {"source": "master", "sourceHandle": "mix", "target": "fader-1793706483275", "targetHandle": "in", "id": "e-master-fader-1793706483275-1793706483275"},
+    {"source": "master", "sourceHandle": "out", "target": "fader-1793706483275", "targetHandle": "in", "id": "e-master-fader-1793706483275-1793706483275"},
     {"source": "fader-1793706483275", "sourceHandle": "out-r", "target": "right", "targetHandle": "in", "id": "e-fader-1793706483275-right-1793706483276"},
     {"id": "e-mic-1793706521994-0-gain-1793706521994-1-1793706521994", "source": "mic-1793706521994-0", "sourceHandle": "out", "target": "gain-1793706521994-1", "targetHandle": "in"},
     {"id": "e-gain-1793706521994-1-hpf-1793706521994-2-1793706521995", "source": "gain-1793706521994-1", "sourceHandle": "out", "target": "hpf-1793706521994-2", "targetHandle": "in"},

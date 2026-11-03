@@ -88,8 +88,11 @@ export function InterfaceNode({ id }: CardProps) {
   const text      = t.nodes.interface
   const Icon      = NODE_LOOK.interface.icon
   const recording = isFinite(levelOf(useStage(id)?.in))
-  // The DAW plays back along the USB wire: the line output carries it
-  const playing   = isFinite(levelOf(useWire(outputKey(id, 'out'))))
+  // The DAW plays back along the USB wire: the line output carries it (on L and R into monitors — D43)
+  const whole     = isFinite(levelOf(useWire(outputKey(id, 'out'))))
+  const left      = isFinite(levelOf(useWire(outputKey(id, 'out-l'))))
+  const right     = isFinite(levelOf(useWire(outputKey(id, 'out-r'))))
+  const playing   = whole || left || right
   const look      = useLookInside()
   return (
     <FaceCard

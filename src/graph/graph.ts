@@ -1,5 +1,5 @@
 import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, param, passesThrough } from '../data/nodeRegistry'
+import { NODE_REGISTRY, param, passesThrough, wholeOutput } from '../data/nodeRegistry'
 
 // The graph with lookups, and the walks every query is built from (graph/queries.ts).
 
@@ -135,7 +135,7 @@ export function upstreamOf(nodeId: string, edges: SignalEdge[], nodes?: SignalNo
     const wires  = into.get(id) ?? NO_WIRES
     const routes = port === null ? undefined : routesOf(id)
     if (!routes) return wires
-    const from = routes.find((r) => r.to.includes(port!))?.from
+    const from = routes.find((r) => r.to.includes(wholeOutput(port!)))?.from
     return from ? wires.filter((e) => e.targetHandle === from) : NO_WIRES
   }
   const nodeIds = new Set<string>([nodeId])
@@ -200,9 +200,9 @@ export function wiresInto(path: CardPath, graph: Graph): readonly SignalEdge[] {
   return route ? into.filter((e) => e.targetHandle === route.from) : into
 }
 
-/** Does this path send on output `port`? */
+/** Does this path send on output `port`? (Its L and R too, split toward speakers — D43) */
 export function pathSends(path: CardPath, port: string): boolean {
-  return !path.route || path.route.to.includes(port)
+  return !path.route || path.route.to.includes(wholeOutput(port))
 }
 
 /**

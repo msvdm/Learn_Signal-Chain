@@ -1,5 +1,5 @@
 import type { Route, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { NODE_REGISTRY, AMP_B_PORT, AMP_DI_PORT, DI_DIRECT_PORT, LINK_WIRES, PC_DIGITAL_PORT, channelIn, isDynamics, isNodeStereo, matrixSendParam, param } from '../data/nodeRegistry'
+import { NODE_REGISTRY, AMP_B_PORT, AMP_DI_PORT, DI_DIRECT_PORT, LINK_WIRES, PC_DIGITAL_PORT, channelIn, isDynamics, isNodeStereo, matrixSendParam, param, wholeOutput } from '../data/nodeRegistry'
 import type { CardPath, Graph } from '../graph/graph'
 import { graphOf, drivingWire, fedBy, flowPaths, outputKey, pathSends, wiresInto } from '../graph/graph'
 import type { WireKind } from '../graph/queries'
@@ -57,7 +57,7 @@ export function humOf(w: WireSignal | undefined): number {
  * of several paths its path's (`outDomains`).
  */
 export function outDomainOf(stage: { domain: SignalDomain; outDomains?: Record<string, SignalDomain> } | undefined, port: string): SignalDomain {
-  return stage?.outDomains?.[port] ?? stage?.domain ?? 'analog'
+  return stage?.outDomains?.[wholeOutput(port)] ?? stage?.domain ?? 'analog'
 }
 
 /** The health of a signal, judged in `domain`: clipping from its peaks, the rest from its average. */
@@ -80,7 +80,7 @@ const humming = (s: SideLevels): SideLevels =>
 /** A card working as something more than its type: it changes its name. */
 export type StageRole =
   | 'preamp'     // a Gain after a microphone or a DI Box's XLR Out: lifts it up to line level
-  | 'main-fader' // a Fader on a bus's Mix output: controls the whole mix
+  | 'main-fader' // the first Fader after a stereo bus (through effects): controls the whole mix
   | 'balance'    // a Pan fed a stereo wire
   | 'pfl'        // an On Off Switch wired into a PFL Bus: that channel's PFL button
 // ── What the wiring makes of each card ────────────────────────────────────────
@@ -191,7 +191,7 @@ export function shownRoute(node: SignalNode, graph: Graph): Route | undefined {
   if (!routes) return undefined
   const inUse = (r: Route) => r.from !== null
     ? graph.into(node.id).some((e) => e.targetHandle === r.from)
-    : graph.from(node.id).some((e) => r.to.includes(e.sourceHandle))
+    : graph.from(node.id).some((e) => r.to.includes(wholeOutput(e.sourceHandle)))
   return routes.find(inUse) ?? routes[0]
 }
 

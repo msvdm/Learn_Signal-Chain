@@ -6,7 +6,7 @@ import type { WireKind } from '../graph/queries'
 
 /**
  * Which name a node goes by: its role in the chain if it has one (a Pan fed a stereo wire is a
- * Balance knob, a Fader on a bus's Mix output is the Main Fader, a Gain after a microphone is a
+ * Balance knob, the first Fader after a stereo bus is the Main Fader, a Gain after a microphone is a
  * Preamp), else what it is turned into (an Active
  * Speaker flipped toward the band: a stage monitor), else its type.
  */

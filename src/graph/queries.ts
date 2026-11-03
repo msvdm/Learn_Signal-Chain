@@ -1,8 +1,8 @@
 import type { NodePort, SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import {
-  NODE_REGISTRY, MIX_PORT, MATRIX_PORT, DI_DIRECT_PORT, AMP_DI_PORT, AMP_B_PORT, channelIn as channelInPort,
-  canSplit, isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, splitsOnlyMix,
+  NODE_REGISTRY, DI_DIRECT_PORT, AMP_DI_PORT, AMP_B_PORT, SPLIT_PORT, channelIn as channelInPort,
+  isBus, isMixBus, isNodeStereo, isStereoBus, param, passesThrough, portSide, wholeOutput,
 } from '../data/nodeRegistry'
 import type { GraphView } from './graph'
 import { graphOf, drivingWire, walkPassthrough } from './graph'
@@ -16,15 +16,15 @@ import { interfacePorts, partnerOf, unpacks, wiredChannels } from './interfaceLi
  * What a wire carries:
  * - mono:   one channel. On a stereo bus it lands on both sides at full level.
  * - stereo: Left and Right together on one wire.
- * - left / right: one side of a stereo mix (a bus's L / R output). It keeps its side
- *   through effects and lands only on that side of a stereo bus.
+ * - left / right: one side of a stereo signal, into a speaker (D43: an output's L / R — sides.ts;
+ *   an Amplifier's).
  */
 export type WireKind = 'mono' | 'stereo' | 'left' | 'right'
 
 /**
- * What output `handleId` of a card carries: L / R outputs carry one side, a Mix or Matrix send
- * both; a Pan, a stereo source or bus sends stereo; an effect passes on what reaches it (the Relay:
- * its selected input); everything else is one channel. The signal maths takes it from here.
+ * What output `handleId` of a card carries: L / R outputs carry one side; a Pan, a stereo source or
+ * bus sends stereo; an effect passes on what reaches it (the Relay: its selected input); everything
+ * else is one channel. The signal maths takes it from here.
  */
 export function outputKind(nodeId: string, handleId: string, view: GraphView): WireKind {
   const graph = graphOf(view)
@@ -34,7 +34,6 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
   for (;;) {
     const side = portSide(handle)
     if (side) return side === 'l' ? 'left' : 'right'
-    if (handle === MIX_PORT || handle === MATRIX_PORT) return 'stereo'
     const node = graph.node(id)
     if (!node || seen.has(id)) return 'mono'
     seen.add(id)
@@ -42,29 +41,12 @@ export function outputKind(nodeId: string, handleId: string, view: GraphView): W
     const def = NODE_REGISTRY[node.typeKey]
     if (def.stereo !== 'follow') return isNodeStereo(node) ? 'stereo' : 'mono'
     // A card of several paths (a Digital Interface's channels): the wire into this output's path
-    const from = def.routes?.find((r) => r.to.includes(handle))?.from
+    const from = def.routes?.find((r) => r.to.includes(wholeOutput(handle)))?.from
     const wire = def.routes ? graph.into(id).find((e) => e.targetHandle === from) : drivingWire(node, graph)
     if (!wire) return 'mono'
     id     = wire.source
     handle = wire.sourceHandle
   }
-}
-
-/**
- * True when this card splits a stereo signal into Left and Right: a Fader fed a bus's mix (the
- * Main Fader) or a Limiter fed one, or a Graphic EQ / Amplifier fed a stereo wire. A Graphic EQ / Amplifier with
- * nothing plugged in keeps the layout its wires show, so plugging it back in restores L and R.
- */
-export function splitsStereo(node: Pick<SignalNode, 'id' | 'typeKey'>, view: GraphView): boolean {
-  if (!canSplit(node.typeKey)) return false
-  if (splitsOnlyMix(node.typeKey)) return mixBusOf(node.id, view) !== null
-  if (node.typeKey === 'amp') return ampSplit(node.id, view) !== null
-  const graph = graphOf(view)
-  const wire  = graph.into(node.id)[0]
-  if (!wire) {
-    return graph.from(node.id).some((e) => portSide(e.sourceHandle) !== null || e.sourceHandle === MIX_PORT)
-  }
-  return outputKind(wire.source, wire.sourceHandle, graph) === 'stereo'
 }
 
 /**
@@ -94,31 +76,31 @@ export function wiresIntoPort(nodeId: string, portId: string, view: GraphView): 
   return split && split.targetHandle === otherAmpInput(portId) ? [split] : plugged
 }
 
-const MIX_OUTPUTS: NodePort[] = [{ id: MIX_PORT }]
-const MATRIX_SEND_OUTPUT: NodePort = { id: MATRIX_PORT }
-const SIDE_OUTPUTS: NodePort[] = [
-  { id: 'out-l' },
-  { id: 'out-r' },
-]
-
-/** Outputs with the Matrix send below them — one array per layout, so a layout is always the same arrays. */
-const withMatrixSend = new WeakMap<NodePort[], NodePort[]>()
-function matrixSendAdded(outputs: NodePort[]): NodePort[] {
-  let added = withMatrixSend.get(outputs)
-  if (!added) withMatrixSend.set(outputs, added = [...outputs, MATRIX_SEND_OUTPUT])
-  return added
+/** A card's outputs with its `out` split into L and R, and with the whole `out` under them too — one array per layout. */
+const SPLIT = new WeakMap<NodePort[], { sides: NodePort[]; both: NodePort[] }>()
+function splitOutputs(outputs: NodePort[], whole: boolean): NodePort[] {
+  let made = SPLIT.get(outputs)
+  if (!made) {
+    const at    = outputs.findIndex((p) => p.id === SPLIT_PORT)
+    const port  = outputs[at]
+    // Each on a port line of its own, under the one before; the name (the Computer's Analog) by L only
+    const next  = (k: number) => (port.row === undefined ? {} : { row: port.row + k })
+    const plain = { ...port, label: undefined, labelLevels: undefined }
+    const left  = { ...port, id: 'out-l', ...next(0) }
+    const right = { ...plain, id: 'out-r', ...next(1) }
+    const all   = { ...plain, ...next(2) }
+    const [before, after] = [outputs.slice(0, at), outputs.slice(at + 1)]
+    made = { sides: [...before, left, right, ...after], both: [...before, left, right, all, ...after] }
+    SPLIT.set(outputs, made)
+  }
+  return whole ? made.both : made.sides
 }
 
 /**
- * The ports a node shows right now. Inputs never change. Outputs:
- * - a bus switched to Stereo splits its output into Left and Right;
- * - a Fader fed from a bus's Mix output is the Main Fader, with Left and Right outputs; a Graphic EQ
- *   or Amplifier fed a stereo wire has Left and Right outputs too (splitsStereo);
- * - any of these whose L / R were taken over by the next card (a Main Fader, an EQ, an amp) has
- *   one Mix output instead;
- * - a Matrix send output below R while a wire uses it.
- * Pass the graph so the layout can be read from the wires. The same layout is always the same
- * arrays, so "did the ports change?" is one comparison per array.
+ * The ports a node shows right now. Inputs never change. Outputs: a card's `out` with a speaker
+ * wired to one of its sides is Left and Right (D43, sides.ts), with the whole `out` under them
+ * while a wire uses it too. Pass the graph so the layout can be read from the wires. The same
+ * layout is always the same arrays, so "did the ports change?" is one comparison per array.
  */
 export function getPorts(
   node: Pick<SignalNode, 'typeKey' | 'params'> & { id?: string },
@@ -129,20 +111,12 @@ export function getPorts(
 } {
   if (node.typeKey === 'digital-interface') return interfacePorts(node, view)
   const def = NODE_REGISTRY[node.typeKey]
-  let outputs = def.stereoOutputs && isNodeStereo(node) ? def.stereoOutputs : def.outputs
-  if (view && node.id) {
-    const out     = graphOf(view).from(node.id)
-    const passing = out.some((e) => e.sourceHandle === MIX_PORT)
-    if (isStereoBus(node) && passing) {
-      outputs = MIX_OUTPUTS
-    } else if (node.typeKey === 'amp') {
-      // Always L and R, on its inputs' lines (D27)
-      outputs = passing ? MIX_OUTPUTS : def.outputs
-    } else if (splitsStereo({ id: node.id, typeKey: node.typeKey }, view)) {
-      outputs = passing ? MIX_OUTPUTS : SIDE_OUTPUTS
-    }
-    if (out.some((e) => e.sourceHandle === MATRIX_PORT)) {
-      outputs = matrixSendAdded(outputs)
+  let outputs = def.outputs
+  // (An Amplifier's outputs are always L and R — D27)
+  if (view && node.id && node.typeKey !== 'amp' && outputs.some((p) => p.id === SPLIT_PORT)) {
+    const out = graphOf(view).from(node.id)
+    if (out.some((e) => portSide(e.sourceHandle) !== null)) {
+      outputs = splitOutputs(outputs, out.some((e) => e.sourceHandle === SPLIT_PORT))
     }
   }
   return { inputs: def.inputs, outputs }
@@ -195,37 +169,16 @@ export function drawnPorts(
 }
 
 /**
- * The card whose Mix output feeds this one — straight in, or through effects on the way.
- * Null when no mix reaches it: also when one side of it does (an effect on an Amplifier's R output
- * carries the right side only, so a Fader after it is a plain fader, not a Main Fader).
- */
-export function mixSourceOf(nodeId: string, view: GraphView): string | null {
-  const own = graphOf(view).node(nodeId)?.typeKey
-  for (const { wire, source } of walkPassthrough(nodeId, view)) {
-    if (wire.sourceHandle === MIX_PORT) return wire.source
-    if (portSide(wire.sourceHandle) !== null) return null
-    // Another card of the same type would take the role itself
-    if (source.typeKey === own) return null
-  }
-  return null
-}
-
-/**
- * The bus whose mix feeds this card — through effects on the way (a limiter on the master, say)
- * and through cards that passed it on (a Main Fader, a Graphic EQ). For a Fader: null when it is
- * not a Main Fader.
+ * The stereo bus (Master, Matrix, an Aux set to Stereo) whose mix reaches this card through
+ * one-input effects (a limiter on the master, say), with no other card of its type on the way: for
+ * a Fader, the bus it is the Main Fader of. Null when no such mix reaches it.
  */
 export function mixBusOf(nodeId: string, view: GraphView): string | null {
-  const graph = graphOf(view)
-  const seen  = new Set<string>()
-  let cur: string | null = nodeId
-  while (cur && !seen.has(cur)) {
-    seen.add(cur)
-    const via = mixSourceOf(cur, graph)
-    const src = via ? graph.node(via) : undefined
-    if (!src) return null
-    if (isStereoBus(src)) return src.id
-    cur = src.id
+  const own = graphOf(view).node(nodeId)?.typeKey
+  for (const { source } of walkPassthrough(nodeId, view)) {
+    if (isStereoBus(source)) return source.id
+    // Another card of the same type would take the role itself
+    if (source.typeKey === own) return null
   }
   return null
 }
@@ -259,28 +212,16 @@ export function faderBusOf(nodeId: string, view: GraphView): SignalNode | null {
 }
 
 /**
- * True when output `handleId` of this card may feed a Matrix Bus: it carries the whole mix of a
- * Master or Aux Bus, before its fader or after it (D42):
- * - any output of the bus itself — its Mix output is before its Main Fader;
- * - the L / R, Mix output or Matrix send of a card holding the mix (its Main Fader; a Graphic EQ or
- *   Limiter that took it over): an L, R or Mix wire becomes that card's Matrix send;
- * - the output of a one-input effect the mix goes through (an EQ, a compressor, an On Off Switch,
- *   the Main Fader …), but not one side of it.
- * Never a single source, an Amplifier's output (speaker level), the PFL Bus's or a Matrix Bus's.
- * One send per bus: nodeAcceptsWire.
+ * True when this card's output may feed a Matrix Bus: it carries the whole mix of a Master or Aux
+ * Bus, before its fader or after it (D42) — the bus's own, or a one-input effect's the mix goes
+ * through (an EQ, a compressor, an On Off Switch, the Main Fader …). Wired from one of its sides,
+ * the wire takes the whole output (D43). Never a single source, an Amplifier's output (speaker
+ * level), the PFL Bus's or a Matrix Bus's. One send per bus: nodeAcceptsWire.
  */
-export function isMatrixSource(nodeId: string, handleId: string, view: GraphView): boolean {
-  const graph = graphOf(view)
-  const node  = graph.node(nodeId)
+export function isMatrixSource(nodeId: string, view: GraphView): boolean {
+  const node = graphOf(view).node(nodeId)
   if (!node || node.typeKey === 'matrix-bus' || node.typeKey === 'amp') return false
-  if (isMixBus(node.typeKey)) return true
-  if (handleId === MATRIX_PORT || handleId === MIX_PORT || portSide(handleId) !== null) {
-    // A card holding a bus's L / R — but not a Matrix Bus's (its own Main Fader)
-    const bus = mixBusOf(node.id, graph)
-    return bus !== null && isMixBus(graph.node(bus)!.typeKey)
-  }
-  const kind = outputKind(nodeId, handleId, graph)
-  return kind !== 'left' && kind !== 'right' && sourceBusOf(nodeId, graph) !== null
+  return sourceBusOf(nodeId, view) !== null
 }
 
 /**

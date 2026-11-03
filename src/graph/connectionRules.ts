@@ -1,5 +1,5 @@
 import type { SignalNode, SignalEdge, TypeKey } from '../data/nodeRegistry'
-import { LINK_PORT, MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TAKES_WHOLE_MIX, TO_PC_PORT, param, portSide } from '../data/nodeRegistry'
+import { LINK_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGISTRY, SOUND_PORT, TO_PC_PORT, param, wholeOutput } from '../data/nodeRegistry'
 import type { ComplexityLevel } from '../data/levels'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { GraphView, WireSource } from './graph'
@@ -13,11 +13,16 @@ type TargetNode = Pick<SignalNode, 'id' | 'typeKey' | 'params'>
 const MIXER_OUTPUTS: ReadonlySet<string> = new Set([MIXER_MAIN_PORT, MIXER_MONITOR_PORT])
 
 /**
- * A wire from `source` that goes into an Amplifier as one stereo wire: a stereo one, or a mix's L / R
- * (the Amplifier takes the mix over — graph/mainFader.ts).
+ * What a wire from `source` carries into anything but a speaker: its output whole — wired from one
+ * of its sides, the wire takes the whole output (D43, sides.ts).
  */
+function kindInto(source: WireSource, view: GraphView) {
+  return outputKind(source.nodeId, wholeOutput(source.handleId), view)
+}
+
+/** A wire from `source` that goes into an Amplifier as one stereo wire (into both its inputs — D27). */
 function stereoInto(source: WireSource, view: GraphView): boolean {
-  return portSide(source.handleId) !== null || outputKind(source.nodeId, source.handleId, view) === 'stereo'
+  return kindInto(source, view) === 'stereo'
 }
 
 /**
@@ -64,8 +69,7 @@ export function portAcceptsWire(
  * True when a wire from `source` may end on at least one input of `targetNode` (`level`: the canvas's
  * — some rules hold only at a level; none, only the rest).
  * A Matrix Bus takes mixes only — a Master or Aux Bus's, before its fader or after it (isMatrixSource,
- * D42) — and each bus once: one send per bus. A send (the whole mix on one wire) feeds only what
- * takes a whole mix: a Matrix Bus, Stream / Broadcast, a Codec.
+ * D42) — and each bus once: one send per bus.
  * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
  * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
  * An Amplifier's output is speaker level: only a passive speaker takes it; a Stage Box's snake goes
@@ -117,17 +121,16 @@ export function nodeAcceptsWire(
   if ((sender !== undefined) !== unpacking) return false
   if (sender && param(sender, 'protocol') !== param(targetNode, 'protocol')) return false
   if (targetNode.typeKey === 'digital-interface' && !unpacking && param(targetNode, 'protocol') === 'aes3') {
-    const adding = outputKind(source.nodeId, source.handleId, { nodes, edges }) === 'stereo' ? 2 : 1
+    const adding = kindInto(source, { nodes, edges }) === 'stereo' ? 2 : 1
     if (linkChannelCount(targetNode.id, { nodes, edges }) + adding > 2) return false
   }
-  if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
+  if (toMatrix && !isMatrixSource(source.nodeId, { nodes, edges })) return false
   // One send per bus: before its fader or after it, not both (its knob on the Matrix Bus is the bus's)
   if (toMatrix) {
     const view = { nodes, edges }
     const bus  = sourceBusOf(source.nodeId, view)
     if (bus !== null && edges.some((e) => e.target === targetNode.id && matrixSendKey(e, view) === bus)) return false
   }
-  if (!TAKES_WHOLE_MIX.has(targetNode.typeKey) && source.handleId === MATRIX_PORT) return false
   return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source, nodes))
 }
 
