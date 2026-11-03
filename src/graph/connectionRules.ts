@@ -3,7 +3,7 @@ import { LINK_PORT, MATRIX_PORT, MIXER_MAIN_PORT, MIXER_MONITOR_PORT, NODE_REGIS
 import type { ComplexityLevel } from '../data/levels'
 import { SIGNAL_LEVEL, atLeast } from '../data/levels'
 import type { GraphView, WireSource } from './graph'
-import { drawnPorts, getPorts, instrumentAt, isMatrixSource, linkChannelCount, micLevelAt, otherAmpInput, outputKind } from './queries'
+import { drawnPorts, getPorts, instrumentAt, isMatrixSource, linkChannelCount, matrixSendKey, micLevelAt, otherAmpInput, outputKind, sourceBusOf } from './queries'
 import { unpacks } from './interfaceLink'
 import { MAX_SLOTS, takesMany } from './slots'
 
@@ -63,8 +63,9 @@ export function portAcceptsWire(
 /**
  * True when a wire from `source` may end on at least one input of `targetNode` (`level`: the canvas's
  * — some rules hold only at a level; none, only the rest).
- * A Matrix Bus takes mixes only, after their fader (isMatrixSource); a send (the whole mix on one
- * wire) feeds only what takes a whole mix: a Matrix Bus, Stream / Broadcast, a Codec.
+ * A Matrix Bus takes mixes only — a Master or Aux Bus's, before its fader or after it (isMatrixSource,
+ * D42) — and each bus once: one send per bus. A send (the whole mix on one wire) feeds only what
+ * takes a whole mix: a Matrix Bus, Stream / Broadcast, a Codec.
  * A Guitar Amp's sound reaches only a microphone, and a microphone hears nothing else; a Guitar Amp
  * takes only a guitar at instrument level (instrumentAt: not a DI Box's XLR Out, not a line or a mic).
  * An Amplifier's output is speaker level: only a passive speaker takes it; a Stage Box's snake goes
@@ -120,6 +121,12 @@ export function nodeAcceptsWire(
     if (linkChannelCount(targetNode.id, { nodes, edges }) + adding > 2) return false
   }
   if (toMatrix && !isMatrixSource(source.nodeId, source.handleId, { nodes, edges })) return false
+  // One send per bus: before its fader or after it, not both (its knob on the Matrix Bus is the bus's)
+  if (toMatrix) {
+    const view = { nodes, edges }
+    const bus  = sourceBusOf(source.nodeId, view)
+    if (bus !== null && edges.some((e) => e.target === targetNode.id && matrixSendKey(e, view) === bus)) return false
+  }
   if (!TAKES_WHOLE_MIX.has(targetNode.typeKey) && source.handleId === MATRIX_PORT) return false
   return getPorts(targetNode).inputs.some((p) => portAcceptsWire(targetNode, p.id, edges, source, nodes))
 }

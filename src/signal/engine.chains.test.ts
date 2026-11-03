@@ -597,6 +597,44 @@ describe('the Matrix Bus: finished mixes, each through its send knob', () => {
   })
 })
 
+describe('the Matrix Bus fed the Master before its fader (D42): the Main Fader does not change it', () => {
+  const result = signalOf([
+    line('line'),
+    card('bus', 'master-bus'),
+    card('main', 'fader', { faderDb: -5 }),
+    card('spkL', 'active-speaker'),
+    card('spkR', 'active-speaker'),
+    line('line2', { levelDb: -20 }),
+    card('aux', 'aux-bus'),
+    card('mtx', 'matrix-bus', { 'send-aux': 50 }),
+    card('mtxL', 'active-speaker'),
+    card('mtxR', 'active-speaker'),
+  ], [
+    wire('line', 'bus'), wire('bus:mix', 'main'), wire('main:out-l', 'spkL'), wire('main:out-r', 'spkR'),
+    wire('line2', 'aux'),
+    wire('bus:send', 'mtx'), wire('aux', 'mtx'),
+    wire('mtx:out-l', 'mtxL'), wire('mtx:out-r', 'mtxR'),
+  ])
+
+  expectCards(result, {
+    line:  { out: -10, health: 'good' },
+    bus:   { in: [-10, -10], out: [-10, -10], health: 'good' },
+    main:  { in: [-10, -10], out: [-15, -15], health: 'good', role: 'main-fader' },
+    spkL:  { in: -15, out: -15, health: 'good' },
+    spkR:  { in: -15, out: -15, health: 'good' },
+    line2: { out: -20, health: 'good' },
+    aux:   { in: -20, out: -20, health: 'good' },
+    // −10 (the Master, before its fader) and −30.57 (the mono Aux, on both sides) added
+    mtx:   { in: [-9.22, -9.22], out: [-9.22, -9.22], health: 'good' },
+    mtxL:  { in: -9.22, out: -9.22, health: 'good' },
+    mtxR:  { in: -9.22, out: -9.22, health: 'good' },
+  })
+
+  it('takes the Master before its fader, on one stereo wire', () => {
+    expectWire(result, 'bus:send', 'stereo', -10, -10)
+  })
+})
+
 describe('an aux send: a Relay Switch takes its copy before (A) or after (B) the fader', () => {
   const send = (selectedInput: 'a' | 'b') => signalOf([
     ...voiceInto('mic'),

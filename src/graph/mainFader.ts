@@ -10,9 +10,11 @@ import { getPorts, isMatrixSource, mixBusOf, mixSourceOf, splitsStereo } from '.
 // between the bus's Mix output and the fader.
 // The Graphic EQ, the Amplifier and the Limiter do the same, from whichever card holds the L / R at
 // that point (a bus, its Main Fader, another EQ, amp or limiter): the chain carries one stereo wire
-// up to the last of them, which sends Left and Right out. A Fader or Limiter only after a bus. The Matrix send stays where it is (it is after the fader).
+// up to the last of them, which sends Left and Right out. A Fader or Limiter only after a bus. A bus's Matrix send moves onto its new Main Fader
+// (after the fader, the usual); nothing else takes it.
 // Matrix send: the same idea for Matrix Buses. A stereo bus's (or Main Fader's) L or R wired to a
-// Matrix Bus becomes its Matrix send — one stereo wire, after the fader. An L or R into Stream /
+// Matrix Bus becomes its Matrix send — one stereo wire: the bus's before the Main Fader, the Main
+// Fader's after it (D42); a Mix output wired to one too. An L or R into Stream /
 // Broadcast or a Codec becomes the same send, from whatever card holds the L / R
 // (TAKES_WHOLE_MIX): what goes out to listeners is the whole mix.
 // The ports themselves are read from the wires (getPorts), so these functions only move wires.
@@ -44,7 +46,7 @@ function holdsSides(node: SignalNode, graph: GraphView): boolean {
 
 /**
  * The card a Matrix send from `nodeId` belongs on: `nodeId` itself if it may feed a Matrix Bus
- * (a bus or its Main Fader), else the first such card up the chain the mix came through.
+ * (a bus, or a card holding its mix), else the first such card up the chain the mix came through.
  */
 function sendHolder(nodeId: string, graph: GraphView): string | null {
   const seen = new Set<string>()
@@ -80,11 +82,11 @@ function takeovers(graph: GraphView): Map<string, string> {
  */
 function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[] {
   const byId = new Map(nodes.map((n) => [n.id, n]))
-  // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send (only buses and Main
-  // Faders may feed one — isMatrixSource). Done before every takeover too, so a wire to a Matrix
-  // Bus never follows L / R onto a Graphic EQ or Amplifier: the send stays on the Main Fader. The
-  // same for Stream / Broadcast and a Codec (TAKES_WHOLE_MIX). A Main Fader whose L / R went on
-  // has only its Mix output left: wired from it, a Matrix Bus gets the same send
+  // L or R into a Matrix Bus is the whole mix: it becomes the Matrix send of the card holding them
+  // (isMatrixSource). Done before every takeover too, so a wire to a Matrix Bus never follows L / R
+  // onto a Graphic EQ or Amplifier: the send stays where it was taken. The same for Stream /
+  // Broadcast and a Codec (TAKES_WHOLE_MIX). A Mix output wired to a Matrix Bus is that card's send
+  // too (a bus's before its Main Fader, a Main Fader's whose L / R went on)
   const matrixSends = (list: SignalEdge[]) => list.map((e) => {
     const target = byId.get(e.target)?.typeKey
     const send   = target !== undefined && TAKES_WHOLE_MIX.has(target) &&
@@ -110,7 +112,8 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
       if (!hit) break
       const side   = portSide(hit.sourceHandle)
       const target = byId.get(hit.target)!
-      // The Matrix send is after the fader: only a Main Fader takes it over
+      // A bus's Matrix send goes after its new Main Fader, the usual (one wired from the bus's Mix
+      // output once the fader is there stays before it — D42); nothing else takes it over
       const follows = (portId: string) => portSide(portId) !== null || (portId === MATRIX_PORT && target.typeKey === 'fader')
       next = next.map((e) => {
         if (e.id === hit.id) return { ...e, sourceHandle: MIX_PORT }
@@ -148,8 +151,8 @@ function attachMainFaders(nodes: SignalNode[], edges: SignalEdge[]): SignalEdge[
   // (The tidy can move a one-output wire to L)
   next = matrixSends(next)
 
-  // A Graphic EQ or Amplifier that fed a Matrix Bus while its chain was mono (a mono Aux), then
-  // took the L / R over, may not keep the send: it goes back to the bus, or its Main Fader
+  // A card holding a send it may not give (isMatrixSource) hands it back up the mix: to the bus,
+  // or its Main Fader
   const graph = { nodes, edges: next }
   next = next.map((e) => {
     if (e.sourceHandle !== MATRIX_PORT || byId.get(e.target)?.typeKey !== 'matrix-bus') return e
