@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { besideRoute, buildWirePath, orthogonalRoute, wireRuns } from './wirePath'
 import { findEdgeAtPoint, GRID, PORT_TOP, snapBend } from './layoutHelpers'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
-import { SOUND_PORT, portFacing, rotated } from '../data/nodeRegistry'
+import { SOUND_PORT, portFacing } from '../data/nodeRegistry'
 import type { Box } from './geometry'
 
 // Wires are routed at right angles, out of the side of its card an output faces and into the side
@@ -129,14 +129,10 @@ describe('which way a port faces', () => {
     expect(portFacing(node('fader', { flipH: true }), 'target')).toBe('left')
   })
 
-  it('an On Off Switch rotated: a quarter turn each time, its input left, top, right, bottom and back', () => {
-    let sw = node('switch')
-    const sides: string[] = []
-    for (let i = 0; i < 5; i++) {
-      sides.push(`${portFacing(sw, 'target')} → ${portFacing(sw, 'source')}`)
-      sw = node('switch', rotated(sw))
-    }
-    expect(sides).toEqual(['left → right', 'top → bottom', 'right → left', 'bottom → top', 'left → right'])
+  it('an On Off Switch: where its wires put its input and output, else where its flips did (a file from before)', () => {
+    const sw = node('switch', { inSide: 'bottom', outSide: 'left' })
+    expect([portFacing(sw, 'target'), portFacing(sw, 'source')]).toEqual(['bottom', 'left'])
+    expect([portFacing(node('switch', { flipV: true }), 'target'), portFacing(node('switch', { flipV: true }), 'source')]).toEqual(['top', 'bottom'])
   })
 
   it('a Relay Switch flipped: its inputs on the right, its output on the left', () => {

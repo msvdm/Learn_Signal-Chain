@@ -441,7 +441,6 @@
     "removeMany": "Remove {count} elements",
     "flipH": "Flip horizontal",
     "flipV": "Flip vertical",
-    "rotate": "Rotate the connections",
     "splitBend": "Split — a new connection from this bend",
     "removeBend": "Remove this bend",
     "removeConnection": "Remove the connection"

@@ -33,6 +33,8 @@ interface FreeControlProps {
   outline?: boolean
   /** Right of the control and its name, its top level with the control's (the Preamp's meter — D34) */
   beside?: ReactNode
+  /** Its connection points, drawn by the control itself (an On Off Switch's, on any side) instead of inputs left, outputs right */
+  points?: ReactNode
 }
 
 /**
@@ -41,7 +43,7 @@ interface FreeControlProps {
  * enough to read zoomed out. Remove is in the right-click menu, like on the cards.
  * Grab the name or the space around the control to move it.
  */
-export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1, outline = true, beside }: FreeControlProps) {
+export function FreeControl({ nodeId, typeKey, label, showName = true, value, portLine, children, footer, textScale = 1, outline = true, beside, points }: FreeControlProps) {
   const { ports, selected, overview, wireTarget } = useNodeChrome(nodeId, typeKey)
   // Room above the control so its port line sits at PORT_TOP. A control whose port line is lower
   // than that (a 110px knob: 55) reaches above the box instead — a negative padding would void
@@ -77,7 +79,7 @@ export function FreeControl({ nodeId, typeKey, label, showName = true, value, po
 
       {wireTarget && <WireTargetBadge label={label} />}
 
-      <PortStack nodeId={nodeId} ports={ports} />
+      {points ?? <PortStack nodeId={nodeId} ports={ports} />}
       <EdgeTags nodeId={nodeId} overview={overview} />
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: BESIDE_GAP }}>

@@ -292,24 +292,33 @@ function distanceToSegment(p: Pt, a: Pt, b: Pt): number {
  * The wire under a drop point (flow coordinates): the nearest one within HIT_THRESHOLD of the point,
  * along its route as it is drawn (wireRoute) — a wire turning down to a PFL Bus as well as a
  * straight one. `firstRun`: the point is on its first run, along its output's port line (a card
- * dropped there sits right of its source, and both wires stay straight).
+ * dropped there sits right of its source, and both wires stay straight). `run`: the straight run it
+ * is on (an On Off Switch dropped there takes its way — graph/freeSides.ts); `bendsBefore`: how
+ * many of the wire's bends come before that run.
  */
 export function findEdgeAtPoint(
   point: Pt, edges: SignalEdge[], cards: Box[], view: GraphView, level: ComplexityLevel,
-): { edge: SignalEdge; firstRun: boolean } | null {
-  let best: { edge: SignalEdge; firstRun: boolean; distance: number } | null = null
+): { edge: SignalEdge; firstRun: boolean; run: { from: Pt; to: Pt }; bendsBefore: number } | null {
+  let best: { edge: SignalEdge; firstRun: boolean; distance: number; run: { from: Pt; to: Pt }; bendsBefore: number } | null = null
   for (const edge of edges) {
     const route = wireRoute(edge, cards, view, level)
     if (!route || route.length < 2) continue
     // The runs from its output, rightward along its port line, before it first turns
     let onLine = 0
     while (route[1].x > route[0].x && onLine < route.length - 1 && route[onLine + 1].y === route[0].y) onLine++
+    // Where each of its bends is on the route (the route goes through every one)
+    const bendAt: number[] = []
+    for (const b of edge.waypoints ?? []) {
+      const from = bendAt.length ? bendAt[bendAt.length - 1] : 0
+      const k = route.findIndex((p, j) => j >= from && p.x === b.x && p.y === b.y)
+      bendAt.push(k < 0 ? route.length : k)
+    }
     for (let i = 0; i < route.length - 1; i++) {
       const distance = distanceToSegment(point, route[i], route[i + 1])
       if (distance > HIT_THRESHOLD || (best && distance >= best.distance)) continue
-      best = { edge, distance, firstRun: i < onLine }
+      best = { edge, distance, firstRun: i < onLine, run: { from: route[i], to: route[i + 1] }, bendsBefore: bendAt.filter((k) => k <= i).length }
     }
   }
-  return best && { edge: best.edge, firstRun: best.firstRun }
+  return best && { edge: best.edge, firstRun: best.firstRun, run: best.run, bendsBefore: best.bendsBefore }
 }
 

@@ -11,6 +11,7 @@ import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { slotFree, slotOfHandle, wireInto } from '../graph/slots'
 import { useCanvasLayout } from './useCanvasLayout'
 import { snapBend } from '../utils/layoutHelpers'
+import { IN, OUT } from '../graph/freeSides'
 import type { SignalEdge } from '../store/signalStore'
 
 /** The loose end of the wire being drawn: the cursor, the input it would land on, and whether it crosses a card. */
@@ -35,6 +36,16 @@ function handleUnder(clientX: number, clientY: number): HTMLElement | null {
     document.elementsFromPoint(clientX, clientY)
       .find((el) => el.classList.contains('react-flow__handle')) as HTMLElement
   ) ?? null
+}
+
+/**
+ * An On Off Switch's open point (graph/freeSides.ts, NodePort `open`): the side it is on, and
+ * which way a wire may go through it — `any` (in or out), `in`, `out`. Null for any other port.
+ */
+function openPoint(el: HTMLElement | null): { side: Facing; as: 'any' | 'in' | 'out' } | null {
+  const side = el?.dataset.openSide
+  const as   = el?.dataset.openAs
+  return side && (as === 'any' || as === 'in' || as === 'out') ? { side: side as Facing, as } : null
 }
 
 /** Flow-coordinate centre of a handle DOM element. */
@@ -139,12 +150,15 @@ export function useWireDrawing(
   }, [screenToFlowPosition, layout])
 
   useEffect(() => {
-    /** A new wire from the output `hEl`. */
+    /** A new wire from the output `hEl` — or from a switch's open point: its output, leaving by that side. */
     function startFrom(hEl: HTMLElement, at: Pt) {
+      const open = openPoint(hEl)
       useSignalStore.getState().startWire(
-        { nodeId: hEl.dataset.nodeid!, handleId: hEl.dataset.handleid! },
+        { nodeId: hEl.dataset.nodeid!, handleId: open ? OUT : hEl.dataset.handleid! },
         handleFlowPos(hEl, screenToFlowPosition),
-        facingOf(hEl),
+        open?.side ?? facingOf(hEl),
+        [],
+        open?.side,
       )
       setCursor({ pos: at, snap: null, snapFacing: null, warning: false })
     }
@@ -164,9 +178,11 @@ export function useWireDrawing(
       const { wire } = store
       const hEl      = handleUnder(e.clientX, e.clientY)
       const flowPos  = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      // A switch's open point: a wire may start there (`any`, `out`) or end there (`any`, `in`)
+      const open     = openPoint(hEl)
 
       if (!wire) {
-        if (hEl?.classList.contains('source')) {
+        if (hEl && (hEl.classList.contains('source') || open?.as === 'any')) {
           e.stopPropagation()
           swallowClick.current = true
           startFrom(hEl, flowPos)
@@ -185,7 +201,8 @@ export function useWireDrawing(
       if (hEl?.classList.contains('target')) {
         const { nodes, edges } = store
         const targetNodeId     = hEl.dataset.nodeid!
-        const targetHandleId   = hEl.dataset.handleid!
+        // Onto a switch's open point: into its input, which comes in by that side
+        const targetHandleId   = open ? IN : hEl.dataset.handleid!
         const targetNode       = nodes.find((n) => n.id === targetNodeId)
         const { source }       = wire
 
@@ -209,7 +226,11 @@ export function useWireDrawing(
           // An input taking several wires: its port, and which of its ports this one is (slots.ts)
           ...wireInto(targetNode, targetHandleId),
           waypoints:    wire.waypoints.length > 0 ? wire.waypoints : undefined,
-        }))
+        }), {
+          // The sides of the switches it joins (graph/freeSides.ts), as it was drawn
+          ...(wire.outSide ? { [source.nodeId]: { outSide: wire.outSide } } : {}),
+          ...(open ? { [targetNodeId]: { inSide: open.side } } : {}),
+        })
         store.cancelWire()
         return
       }

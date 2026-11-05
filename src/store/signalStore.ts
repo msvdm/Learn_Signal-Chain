@@ -36,6 +36,8 @@ export interface WireDraft {
   start: Pt
   facing: Facing
   waypoints: Pt[]
+  /** Drawn from an On Off Switch's open point: the side it leaves by, set on the switch when the wire lands (graph/freeSides.ts) */
+  outSide?: Facing
 }
 
 // ── Settings kept in the browser ────────────────────────────────────────────
@@ -151,7 +153,7 @@ export interface SignalChainStore {
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
   /** A new wire from `source`; `waypoints`: bends it already has (one split off a wire at its bend) */
-  startWire: (source: WireSource, start: Pt, facing: Facing, waypoints?: Pt[]) => void
+  startWire: (source: WireSource, start: Pt, facing: Facing, waypoints?: Pt[], outSide?: Facing) => void
   /** A click in empty space while drawing: the wire turns a corner there */
   addWireCorner: (at: Pt) => void
   cancelWire: () => void
@@ -178,11 +180,12 @@ export interface SignalChainStore {
   /** Add pasted / duplicated elements with their wires, and select them */
   addGroup: (nodes: SignalNode[], edges: SignalEdge[]) => void
   /** Add an element in the middle of a wire, in one step (a card dropped onto a wire) */
-  insertOnWire: (node: SignalNode, edgeId: string) => void
+  insertOnWire: (node: SignalNode, edgeId: string, bendsBefore?: number) => void
   updateNodeParams: (nodeId: string, patch: Record<string, NodeParamValue>) => void
   toggleBypassNode: (nodeId: string) => void
   setNodeStereo: (nodeId: string, on: boolean) => void
-  addEdge: (edge: SignalEdge) => void
+  /** A new wire; `sides`: an On Off Switch's sides it sets (graph/freeSides.ts) — one undo step with it */
+  addEdge: (edge: SignalEdge, sides?: Record<string, { inSide?: Facing; outSide?: Facing }>) => void
   removeEdge: (edgeId: string) => void
   updateEdgeWaypoints: (edgeId: string, waypoints: Pt[]) => void
   /** Move elements to new positions, in one step (cards making room for a new wire or card) */
@@ -270,7 +273,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   // Back in Select mode nothing is being wired (a new canvas and undo / redo drop the wire too: NO_WIRE)
   setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wire: null } : { toolMode: mode }),
 
-  startWire: (source, start, facing, waypoints = []) => set({ wire: { source, start, facing, waypoints } }),
+  startWire: (source, start, facing, waypoints = [], outSide) => set({ wire: { source, start, facing, waypoints, ...(outSide ? { outSide } : {}) } }),
 
   // The source stays the same object, so the cards watching it do not re-render
   addWireCorner: (at) => set((s) => (s.wire ? { wire: { ...s.wire, waypoints: [...s.wire.waypoints, at] } } : {})),
@@ -328,7 +331,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     set((s) => ({ ...commitGraph(s, withNodes(s, added, addedEdges)), selectedNodeIds: added.map((n) => n.id) })),
 
   // One step, so a card dropped onto a Mix wire does not unplug the Main Fader on the way
-  insertOnWire: (node, edgeId) => set((s) => commitGraph(s, withNodeOnWire(s, node, edgeId))),
+  insertOnWire: (node, edgeId, bendsBefore) => set((s) => commitGraph(s, withNodeOnWire(s, node, edgeId, bendsBefore))),
 
   // A Relay switching input can change what reaches a Graphic EQ / Amplifier after it (Mono ↔ Stereo)
   updateNodeParams: (nodeId, patch) =>
@@ -351,7 +354,10 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     }),
 
   // A stereo output's wire into a speaker goes on its L or R (graph/sides.ts, D43)
-  addEdge: (edge) => set((s) => commitGraph(s, { nodes: s.nodes, edges: [...s.edges, edge] })),
+  addEdge: (edge, sides = {}) => set((s) => commitGraph(s, {
+    nodes: s.nodes.map((n) => (sides[n.id] ? { ...n, params: { ...n.params, ...sides[n.id] } } : n)),
+    edges: [...s.edges, edge],
+  })),
 
   removeEdge: (edgeId) =>
     set((s) => commitGraph(s, { nodes: s.nodes, edges: s.edges.filter((e) => e.id !== edgeId) })),

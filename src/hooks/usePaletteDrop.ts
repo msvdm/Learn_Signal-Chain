@@ -5,7 +5,8 @@ import type { SignalEdge } from '../store/signalStore'
 import { initialParams, isTypeKey } from '../data/nodeRegistry'
 import type { TypeKey } from '../data/nodeRegistry'
 import { activeDragTypeKey } from '../utils/dragState'
-import { GRID, MIN_NODE_GAP, usualSize, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
+import { GRID, MIN_NODE_GAP, PORT_TOP, usualSize, resolveOverlap, makeRoomForInsert, findEdgeAtPoint } from '../utils/layoutHelpers'
+import { hasFreeSides, sidesAlong } from '../graph/freeSides'
 import type { Pt } from '../utils/geometry'
 import { wireTakesCard } from '../graph/connectionRules'
 import { isHiddenWire } from '../graph/interfaceLink'
@@ -33,9 +34,13 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
    * Where a card dropped at `raw` goes if it lands on a wire (null if it doesn't). On the wire's first
    * run, along its source's port line: right of the source and top-aligned with it, so the wires on
    * both sides stay straight, and the chain after it makes room (`straight`). Further along (a wire
-   * turning down to a PFL Bus): where it is dropped, clear of the other cards.
+   * turning down to a PFL Bus): where it is dropped, clear of the other cards. An On Off Switch
+   * further along sits on the wire where it is dropped, its points along it (`sides`, the wire's
+   * way there: in from behind, out ahead; its bends kept — `bendsBefore`).
    */
-  function insertSlot(raw: Pt, typeKey: TypeKey): { edge: SignalEdge; pos: Pt; straight: boolean } | null {
+  function insertSlot(raw: Pt, typeKey: TypeKey): {
+    edge: SignalEdge; pos: Pt; straight: boolean; sides?: ReturnType<typeof sidesAlong>; bendsBefore?: number
+  } | null {
     // Edges from Zustand: always in sync, unlike getEdges() which can lag
     const view  = useSignalStore.getState()
     const cards = layout.layoutSnapshot(view.nodes)
@@ -43,6 +48,16 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
     const edge  = hit?.edge
     const src   = edge && cards.find((n) => n.id === edge.source)
     if (!hit || !edge || !src || !wireTakesCard(typeKey, edge, view, view.complexityLevel)) return null
+    if (!hit.firstRun && hasFreeSides(typeKey)) {
+      const size  = usualSize(typeKey, view.complexityLevel, view.overview)
+      const { from, to } = hit.run
+      const sides = sidesAlong({ x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) })
+      // Its points on the wire: across a level run, its port line on it; up or down one, its middle
+      const pos   = from.y === to.y
+        ? { x: Math.round(raw.x - size.w / 2), y: from.y - PORT_TOP }
+        : { x: Math.round(from.x - size.w / 2), y: Math.round(raw.y - size.h / 2) }
+      return { edge, pos, straight: false, sides, bendsBefore: hit.bendsBefore }
+    }
     if (!hit.firstRun) {
       const size = usualSize(typeKey, view.complexityLevel, view.overview)
       return { edge, pos: resolveOverlap(layout.dropOrigin(raw), size, cards), straight: false }
@@ -89,7 +104,7 @@ export function usePaletteDrop(insertChainAt: (read: ParsedChain, at: Pt) => voi
     if (slot) {
       // One step: a Fader dropped on a bus's L / R wire becomes the Main Fader, and a card
       // dropped on a Mix wire sits between the bus and its Main Fader without unplugging it
-      store.insertOnWire({ id: newId, typeKey, position: slot.pos, params, bypassed: false }, slot.edge.id)
+      store.insertOnWire({ id: newId, typeKey, position: slot.pos, params: { ...params, ...slot.sides }, bypassed: false }, slot.edge.id, slot.bendsBefore)
       // The cards around it move once React Flow has measured it (onMeasured): a type not
       // dropped before has no known size yet. The card stays hidden until then, so no overlap shows.
       if (slot.straight) pendingInsertRef.current = newId

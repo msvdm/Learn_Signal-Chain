@@ -2,11 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2, ScanEye, Split, RotateCw,
+  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2, ScanEye, Split,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
-import { FLIPS, NODE_REGISTRY, ROTATES, isFlipped, rotated } from '../data/nodeRegistry'
+import { FLIPS, FREE_SIDES, NODE_REGISTRY, isFlipped } from '../data/nodeRegistry'
 import { useLatestRef } from '../hooks/useLatestRef'
 import { useDismiss } from '../hooks/useDismiss'
 import { MOD } from '../utils/shortcut'
@@ -60,8 +60,8 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
   const many      = targets.length > 1
   const bypassed  = node.bypassed ?? false
   const canBypass = !many && NODE_REGISTRY[node.typeKey].bypass
-  const rotates   = !many && ROTATES.has(node.typeKey)
-  const flips     = many || rotates ? [] : (FLIPS[node.typeKey] ?? [])
+  // (An On Off Switch turns by itself: its wires say where its points are — FREE_SIDES)
+  const flips     = many || FREE_SIDES.has(node.typeKey) ? [] : (FLIPS[node.typeKey] ?? [])
   const inside    = !many && intermediate && hasInside(node.typeKey) ? node.typeKey : null
 
   const act = (fn: () => void) => () => { fn(); onClose() }
@@ -94,10 +94,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
           onClick={act(() => updateNodeParams(nodeId, { [flip === 'h' ? 'flipH' : 'flipV']: !isFlipped(node, flip) }))}
         />
       ))}
-      {rotates && (
-        <MenuItem icon={<RotateCw size={15} />} label={t.nodeMenu.rotate} onClick={act(() => updateNodeParams(nodeId, rotated(node)))} />
-      )}
-      {(canBypass || flips.length > 0 || rotates) && <MenuDivider />}
+      {(canBypass || flips.length > 0) && <MenuDivider />}
       <MenuItem icon={<Scissors size={15} />} label={t.nodeMenu.cut} hint={`${MOD}X`} onClick={act(onCut)} />
       <MenuItem icon={<Copy size={15} />} label={t.nodeMenu.copy} hint={`${MOD}C`} onClick={act(onCopy)} />
       {/* Duplicate: one row, an arrow per side the copy can go */}

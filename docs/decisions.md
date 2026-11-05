@@ -226,15 +226,23 @@ the descriptions). Each is what the user asked for; change one only when they as
   out at the bottom (both: flowing up); a PFL button can stand under its channel. The Active Speaker
   and the Headphones horizontally: the picture and the input turn to face the other way — an Active
   Speaker flipped is a **Stage Monitor** (its name). A wire into a port facing away
-  goes over its card. Since 2026-11-05 (the user's calls: "Allow the same flip button from the
-  speakers to the relay. Add rotate connection button in the right context menu of the On/Off
-  switch - it does not a need a flip button, because it works in both ways. I need rotate so i can
-  add a on/off switch on the vertical path", then "do not rotate the button itself - ON needs to
-  read as it does now. Only the handles rotate"): the Relay Switch flips horizontally (its inputs
-  on the right, its symbol mirrored, the A / B buttons as they are); the On Off Switch's menu has
-  **Rotate the connections** instead of its two flips — each a quarter turn clockwise, its input
-  left, top, right, bottom (`ROTATES`, `rotated`: it steps through the same `flipH` / `flipV`, so
-  files keep them); the button itself never turns.
+  goes over its card. Since 2026-11-05 (the user's call: "Allow the same flip button from the
+  speakers to the relay"): the Relay Switch flips horizontally (its inputs on the right, its symbol
+  mirrored, the A / B buttons as they are). The On Off Switch no longer flips: see below.
+- **The On Off Switch has no input or output** (2026-11-05, the user's calls: "both points of the
+  on/off switch can be connected to anything! There is no such thing as input or output on a
+  switch. It is a simple element!", then "When the user drops it on the line - use the line to
+  determine where the connections are. When the button is dropped on the canvas show all 4 handles.
+  When two connections are made - hide the other two … The app does not care bout direction of the
+  button, only possible connections … right angle buttons, reverse buttons, vertical and horizontal
+  without right clicking anything!", and "do not rotate the button itself - ON needs to read as it
+  does now. Only the handles rotate"). Dropped on the canvas it has a point on each side, each taking
+  a wire in or sending one out; the first wire in and the first wire out say where its signal comes
+  in and leaves, and once both are there the other two points are gone (unplugged, they come back).
+  Dropped on a wire further along, it sits on it — in from behind, out ahead, the wire's bends kept;
+  on the wire's first run, as any card. The button never turns. No Flip or Rotate in its menu (a
+  Rotate was there for an hour). The signal still goes one way through it: two wires in, or two out
+  of different points, is not a switch. `graph/freeSides.ts`, `SwitchNode.tsx`.
 - **A card dropped anywhere on a wire goes into it** (2026-10-11): the wire is found along its route
   as drawn (a branch turning down to a PFL Bus too); dropped past its first run, the card stays where
   it was dropped.

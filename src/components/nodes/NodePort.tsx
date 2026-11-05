@@ -69,6 +69,10 @@ interface NodePortProps {
   label?: PortLabel
   /** Another port of its stack on the line above / below */
   near: { above: boolean; below: boolean }
+  /** The side it sits on, when its card says (an On Off Switch's points — graph/freeSides.ts) */
+  side?: Facing
+  /** An open point of an On Off Switch: no wire on it yet, it takes one in (`any`, `in`) or sends one out (`any`, `out`) */
+  open?: 'any' | 'in' | 'out'
 }
 
 /**
@@ -82,7 +86,7 @@ interface NodePortProps {
  * - An output that carries one side of a stereo mix (a bus's L / R output, or an effect fed one)
  *   shows a small L / R letter beside the dot.
  */
-export function NodePort({ nodeId, portId, type, row, middle = false, label, near }: NodePortProps) {
+export function NodePort({ nodeId, portId, type, row, middle = false, label, near, side: sideOn, open }: NodePortProps) {
   const { t } = useTranslation()
   const removeEdge = useSignalStore((s) => s.removeEdge)
   const [hovered, setHovered]   = useState(false)
@@ -94,6 +98,7 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
   // The side of the card it sits on (a flipped card's ports face another way): once it turns, React
   // Flow re-reads the port so its wires leave from where it is now
   const facing = useSignalStore((s) => {
+    if (sideOn) return sideOn
     const node = graphOf(s).node(nodeId)
     return node ? portFacing(node, type) : type === 'source' ? 'right' : 'left'
   })
@@ -122,11 +127,13 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
   })
 
   const wiring        = useSignalStore((s) => s.wire !== null)
+  // An open point that takes a wire takes it into the switch's input
+  const takesInto     = open === 'any' || open === 'in' ? 'in' : portId
   const isValidTarget = useSignalStore((s) => {
     const node = graphOf(s).node(nodeId)
     return type === 'target' && s.wire !== null && node !== undefined &&
       nodeAcceptsWire(node, s.wire.source, s.edges, s.nodes, s.complexityLevel) &&
-      portAcceptsWire(node, slotOfHandle(portId).port, s.edges, s.wire.source, s.nodes) && slotFree(s, node, portId)
+      portAcceptsWire(node, slotOfHandle(takesInto).port, s.edges, s.wire.source, s.nodes) && slotFree(s, node, takesInto)
   })
 
   const canUnplug  = type === 'target' && !wiring && connected.length > 0
@@ -166,6 +173,8 @@ export function NodePort({ nodeId, portId, type, row, middle = false, label, nea
         position={POSITION[facing]}
         className={className}
         style={{ ...reach, ...(upright ? {} : { top }), borderColor: isValidTarget || showUnplug ? undefined : ringColor }}
+        // (What useWireDrawing reads of an open point: its side, and which way a wire may go)
+        {...(open ? { 'data-open-side': facing, 'data-open-as': open } : {})}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         // The ring grows while hovered or while a wire looks for an input. Once its size settles,

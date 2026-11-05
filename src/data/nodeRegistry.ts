@@ -881,6 +881,9 @@ export interface ParamTypes {
   flipH: boolean | undefined
   /** Flipped vertically (FLIPS): on its side — its input on top, its output at the bottom */
   flipV: boolean | undefined
+  /** On Off Switch (FREE_SIDES): the side of it its signal comes in by, and leaves by — set by its wires */
+  inSide: Facing | undefined
+  outSide: Facing | undefined
 }
 
 export type ParamKey = keyof ParamTypes
@@ -906,21 +909,13 @@ export const FLIPS: Partial<Record<TypeKey, readonly Flip[]>> = {
 }
 
 /**
- * The cards whose menu turns their connections a quarter turn (Rotate) instead of flipping them:
- * an On Off Switch passes the signal either way, so it needs no flip — only its ports go round its
- * button (the button itself stays upright, its ON readable: the user's call, 2026-11-05). Rotating
- * steps through its flips, so a file keeps them.
+ * The cards with no input or output side (the user's call, 2026-11-05: "The app does not care about
+ * direction of the button, only possible connections"): an On Off Switch has a point on each of its
+ * four sides, each taking a wire in or sending one out; once it has a wire in and a wire out, only
+ * those two points are left (graph/freeSides.ts). Where its signal comes in and leaves is kept in
+ * `inSide` / `outSide`, set by the wires; one saved before that keeps its flips. No flip in its menu.
  */
-export const ROTATES: ReadonlySet<TypeKey> = new Set(['switch'])
-
-/**
- * The flips of a card rotated a quarter turn clockwise: its input goes from the left to the top,
- * the right, the bottom and back — the sound flowing right, down, left, up.
- */
-export function rotated(node: Pick<SignalNode, 'typeKey' | 'params'>): { flipH: boolean; flipV: boolean } {
-  const h = isFlipped(node, 'h'), v = isFlipped(node, 'v')
-  return v ? { flipH: !h, flipV: false } : { flipH: h, flipV: true }
-}
+export const FREE_SIDES: ReadonlySet<TypeKey> = new Set(['switch'])
 
 /** Is this card flipped that way (a type that can't be never is)? */
 export function isFlipped(node: Pick<SignalNode, 'typeKey' | 'params'>, flip: Flip): boolean {
@@ -929,6 +924,7 @@ export function isFlipped(node: Pick<SignalNode, 'typeKey' | 'params'>, flip: Fl
 
 /** The side of its card a port sits on and its wire leaves or enters by */
 export type Facing = 'left' | 'right' | 'top' | 'bottom'
+export const FACINGS: readonly Facing[] = ['left', 'top', 'right', 'bottom']
 
 /**
  * Where a card's inputs (`target`) and outputs (`source`) sit: inputs left, outputs right — flipped
@@ -936,6 +932,9 @@ export type Facing = 'left' | 'right' | 'top' | 'bottom'
  * bottom (both ways: the input at the bottom, the output on top).
  */
 export function portFacing(node: Pick<SignalNode, 'typeKey' | 'params'>, type: 'source' | 'target'): Facing {
+  // An On Off Switch: where its wires put its input and output (FREE_SIDES)
+  const set = FREE_SIDES.has(node.typeKey) ? param(node, type === 'target' ? 'inSide' : 'outSide') : undefined
+  if (set) return set
   const first = (type === 'target') !== isFlipped(node, 'h')
   if (isFlipped(node, 'v')) return first ? 'top' : 'bottom'
   return first ? 'left' : 'right'
@@ -955,6 +954,8 @@ const PARAM_CHOICES: Partial<Record<string, readonly string[]>> = {
   clock:         CLOCKS,
   sound:         GENERATOR_SOUNDS,
   selectedInput: ['a', 'b'],
+  inSide:        FACINGS,
+  outSide:       FACINGS,
 }
 
 /** The words a setting can take (undefined: it is not a word). */

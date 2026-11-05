@@ -51,13 +51,18 @@ export function withoutNode(graph: GraphView, nodeId: string): GraphView {
   return { nodes: next.nodes, edges: [...next.edges, bridge] }
 }
 
+/** Bends kept on a wire (none: no `waypoints` at all) */
+const bends = (pts: SignalEdge['waypoints']) => (pts && pts.length > 0 ? { waypoints: pts } : {})
+
 /**
  * The graph with `node` added in the middle of a wire: the wire is replaced by one into the
  * node's first input and one from its first output. Dropped onto a wire to a speaker on one side
  * of an output (D43: not an Amplifier's), it goes into the whole output, and every speaker on its L
  * and R moves after it, on the same side — a stereo effect on the speakers. Unchanged if the wire is gone.
+ * `bendsBefore` (an On Off Switch dropped further along a wire): the wire's bends stay where they
+ * are, that many on the way in, the rest on the way out; otherwise the two wires have none.
  */
-export function withNodeOnWire(graph: GraphView, node: SignalNode, edgeId: string): GraphView {
+export function withNodeOnWire(graph: GraphView, node: SignalNode, edgeId: string, bendsBefore?: number): GraphView {
   const wire = graph.edges.find((e) => e.id === edgeId)
   if (!wire) return graph
   const ports  = getPorts(node)
@@ -69,10 +74,14 @@ export function withNodeOnWire(graph: GraphView, node: SignalNode, edgeId: strin
     nodes: added.nodes,
     edges: [
       ...graph.edges.filter((e) => e.id !== edgeId).map((e) => (moved(e) ? { ...e, source: node.id, waypoints: undefined } : e)),
-      newEdge({ source: wire.source, sourceHandle: wholeOutput(wire.sourceHandle), target: node.id, targetHandle: ports.inputs[0].id }),
+      newEdge({
+        source: wire.source, sourceHandle: wholeOutput(wire.sourceHandle), target: node.id, targetHandle: ports.inputs[0].id,
+        ...(bendsBefore !== undefined ? bends(wire.waypoints?.slice(0, bendsBefore)) : {}),
+      }),
       newEdge({
         source: node.id, sourceHandle: sided ? wire.sourceHandle : ports.outputs[0].id, target: wire.target, targetHandle: wire.targetHandle,
         ...(wire.slot !== undefined ? { slot: wire.slot } : {}),
+        ...(bendsBefore !== undefined ? bends(wire.waypoints?.slice(bendsBefore)) : {}),
       }),
     ],
   }
