@@ -226,7 +226,15 @@ the descriptions). Each is what the user asked for; change one only when they as
   out at the bottom (both: flowing up); a PFL button can stand under its channel. The Active Speaker
   and the Headphones horizontally: the picture and the input turn to face the other way — an Active
   Speaker flipped is a **Stage Monitor** (its name). A wire into a port facing away
-  goes over its card.
+  goes over its card. Since 2026-11-05 (the user's calls: "Allow the same flip button from the
+  speakers to the relay. Add rotate connection button in the right context menu of the On/Off
+  switch - it does not a need a flip button, because it works in both ways. I need rotate so i can
+  add a on/off switch on the vertical path", then "do not rotate the button itself - ON needs to
+  read as it does now. Only the handles rotate"): the Relay Switch flips horizontally (its inputs
+  on the right, its symbol mirrored, the A / B buttons as they are); the On Off Switch's menu has
+  **Rotate the connections** instead of its two flips — each a quarter turn clockwise, its input
+  left, top, right, bottom (`ROTATES`, `rotated`: it steps through the same `flipH` / `flipV`, so
+  files keep them); the button itself never turns.
 - **A card dropped anywhere on a wire goes into it** (2026-10-11): the wire is found along its route
   as drawn (a branch turning down to a PFL Bus too); dropped past its first run, the card stays where
   it was dropped.

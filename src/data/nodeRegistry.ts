@@ -902,6 +902,24 @@ export const FLIPS: Partial<Record<TypeKey, readonly Flip[]>> = {
   phase:            ['h', 'v'],
   'active-speaker': ['h'],
   headphones:       ['h'],
+  relay:            ['h'],
+}
+
+/**
+ * The cards whose menu turns their connections a quarter turn (Rotate) instead of flipping them:
+ * an On Off Switch passes the signal either way, so it needs no flip — only its ports go round its
+ * button (the button itself stays upright, its ON readable: the user's call, 2026-11-05). Rotating
+ * steps through its flips, so a file keeps them.
+ */
+export const ROTATES: ReadonlySet<TypeKey> = new Set(['switch'])
+
+/**
+ * The flips of a card rotated a quarter turn clockwise: its input goes from the left to the top,
+ * the right, the bottom and back — the sound flowing right, down, left, up.
+ */
+export function rotated(node: Pick<SignalNode, 'typeKey' | 'params'>): { flipH: boolean; flipV: boolean } {
+  const h = isFlipped(node, 'h'), v = isFlipped(node, 'v')
+  return v ? { flipH: !h, flipV: false } : { flipH: h, flipV: true }
 }
 
 /** Is this card flipped that way (a type that can't be never is)? */

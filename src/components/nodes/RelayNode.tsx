@@ -37,7 +37,7 @@ const CONTACT_R   = { normal: 5, overview: 10 }
 
 /**
  * The Relay Switch (type `relay`): two inputs, A (top) and B, one output — the chosen input goes
- * out, the other is cut off. Drawn as a relay's symbol whose arm swings to the chosen contact, on
+ * out, the other is cut off (flipped: the inputs on the right, the symbol mirrored). Drawn as a relay's symbol whose arm swings to the chosen contact, on
  * its card at every zoom, under its A / B buttons; a click on the symbol flips it too. An aux send's pre-fader (A) or post-fader (B) copy is one use; skipping a
  * group of elements is another.
  */
@@ -49,6 +49,8 @@ export function RelayNode({ id }: CardProps) {
   const label            = useNodeName(id, 'relay')
   const { t }            = useTranslation()
   const onB              = p('selectedInput') === 'b'
+  // Flipped (its right-click menu): the inputs on the right — the symbol mirrored, the A / B buttons as they are
+  const flipped          = p('flipH') === true
   const choose           = (input: 'a' | 'b') => updateNodeParams(id, { selectedInput: input })
 
   const stroke  = overview ? STROKE.overview : STROKE.normal
@@ -88,7 +90,10 @@ export function RelayNode({ id }: CardProps) {
         })}
       </div>
 
-      <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, overflow: 'visible' }} fill="none" strokeLinecap="round">
+      <svg
+        width="100%" height="100%" fill="none" strokeLinecap="round"
+        style={{ position: 'absolute', inset: 0, overflow: 'visible', transform: flipped ? 'scaleX(-1)' : undefined }}
+      >
         {/* The inputs, from their ports to their contacts */}
         <path d={`M0 ${Y_A}H${X_CONTACT}`} stroke={onB ? cut : live} strokeWidth={stroke} />
         <path d={`M0 ${Y_B}H${X_CONTACT}`} stroke={onB ? live : cut} strokeWidth={stroke} />
