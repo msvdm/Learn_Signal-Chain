@@ -2,6 +2,18 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.2.0
+
+- **Phase switch** (from Intermediate): press it and the signal leaves upside down. Send the same signal twice to a bus with one of them upside down, and the sound disappears.
+- **Delay knob** (Advanced): holds the signal back by up to 20 milliseconds. Two copies of one signal a little apart in time stop lining up; with the phase switch, line them up again.
+- **Effects processor** (Advanced): a rack unit for an aux bus to send to. Its knobs are for show: the signal passes through unchanged.
+- **The On / Off switch has no input or output.** Dropped on the canvas, it has a connection point on every side; wire it any way you like — straight, reversed, up, down or round a corner — and the points you don't use disappear. Dropped onto a wire, it turns to follow it.
+- **The Relay Switch can be flipped**, like the speakers: right-click it.
+- **Bends on a wire:** right-click a bend to start another connection from there (*Split*), or to remove it. With *Snap to grid* on, bends land on the grid, level with the elements' connection points. A wire no longer doubles back on itself at a bend.
+- **Moving around:** hold the middle mouse button to move the canvas while you draw a wire. You can zoom out until the whole chain fits, however big; far out, the meters and wires stop moving and the bends' dots hide, so the computer stays fast.
+- **The File menu** says *Import*, *Export* and *Save as image*, and opens your computer's own *Save as* window straight away.
+- **The Audio Interface** at Intermediate is a simple box with *To computer* and *Line out*; *Look inside* is in its right-click menu, and the DAW's.
+
 ## 1.1.1
 
 - **No more freezing on big desks with a live stream.** On a chain with Stream / Broadcast fed a digital signal (like the *Simple digital desk* example), every change used to freeze the page for about two seconds while the app worked out the loudness reading. Now the page stays smooth, and the loudness reads exactly as before.
