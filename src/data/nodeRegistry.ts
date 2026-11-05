@@ -518,9 +518,10 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
   phase: {
     // Polarity: pressed, the signal leaves upside down (every sample its opposite). Alone it changes
     // nothing you hear; added to the same signal the right way up, the two cancel out (the render
-    // adds real samples — the number engine does not know which signals are the same)
+    // adds real samples — the number engine does not know which signals are the same). From
+    // Intermediate, where real sound is measured (the Delay at Advanced)
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
-    levels: ADVANCED_ONLY, bypass: false, freeSize: { w: 162, h: 161 },
+    levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 161 },
     defaultParams: { inverted: false },
   },
   delay: {

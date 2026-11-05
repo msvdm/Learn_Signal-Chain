@@ -10,7 +10,7 @@ import { useParams } from '../../hooks/useParams'
 const BUTTON = 110
 
 /**
- * The Phase switch (Advanced): pressed, the signal leaves upside down — lit light blue, as the
+ * The Phase switch (from Intermediate): pressed, the signal leaves upside down — lit light blue, as the
  * Parametric equalizer's first band. Drawn as the On Off Switch is, one big square button, the
  * polarity sign Ø on it instead of On / Off. Alone it changes nothing you hear; added on a bus to
  * the same signal the right way up, the two cancel out (real sound shows it — the render).
