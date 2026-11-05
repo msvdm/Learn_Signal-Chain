@@ -20,7 +20,8 @@ import { useLatestRef } from './useLatestRef'
 // no frames.
 //
 // Cheap on purpose: 30 pictures a second (a DAW's meters update about as often), only the meters on
-// screen (an IntersectionObserver) and only what changed (components/meterPaint.ts).
+// screen (an IntersectionObserver) and only what changed (components/meterPaint.ts). Zoomed far out
+// (`farOut`) the meters are a few pixels tall: they stand still at their average, and the loop stops.
 
 /** Pictures a second while it plays */
 const FPS = 30
@@ -104,8 +105,8 @@ function rebuild() {
 
 /** Start or stop playing, as the level and the render say. */
 function update() {
-  const { complexityLevel } = useSignalStore.getState()
-  const should = atLeast(complexityLevel, DETAIL_LEVEL) && stages.size > 0
+  const { complexityLevel, farOut } = useSignalStore.getState()
+  const should = atLeast(complexityLevel, DETAIL_LEVEL) && stages.size > 0 && !farOut
   if (should === playing) return
   playing = should
   document.documentElement.classList.toggle('lsc-meters-live', playing)
@@ -118,6 +119,7 @@ function update() {
 }
 
 useSignalStore.subscribe((s, prev) => {
+  if (s.farOut !== prev.farOut) update()
   if (s.nodes === prev.nodes && s.edges === prev.edges && s.measured === prev.measured && s.complexityLevel === prev.complexityLevel) return
   rebuild()
   update()

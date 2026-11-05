@@ -411,6 +411,11 @@ kbd {
   animation: signal-flow-digital 3s linear infinite;
 }
 
+/* Zoomed far out nothing flows (SignalChain's farOut): the dashes stand where they are */
+.lsc-far-out .signal-line-digital {
+  animation-play-state: paused;
+}
+
 /* Valid target port while drawing a wire */
 @keyframes lsc-ping {
   0%, 100% { box-shadow: 0 0 0 4px var(--lsc-accent-bg); }

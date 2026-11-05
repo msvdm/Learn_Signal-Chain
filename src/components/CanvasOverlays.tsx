@@ -22,10 +22,12 @@ import { SoundWaves } from './SoundWaves'
  */
 export function CanvasOverlays({ cursor, ghosts }: { cursor: WireCursor | null; ghosts: Ghost[] }) {
   const complexityLevel = useSignalStore((s) => s.complexityLevel)
+  // Zoomed far out the bends' dots (a fixed size on screen) would dwarf the cards: none are drawn
+  const farOut          = useSignalStore((s) => s.farOut)
   return (
     <>
       {/* Reshaping wires: from Intermediate up */}
-      {complexityLevel !== 'beginner' && <ReshapeHandles />}
+      {complexityLevel !== 'beginner' && !farOut && <ReshapeHandles />}
       <WirePreview cursor={cursor} />
       {ghosts.length > 0 && <Ghosts ghosts={ghosts} />}
     </>
@@ -150,6 +152,7 @@ function ReshapeHandles() {
 /** The wire being drawn: dashed, to the cursor or the input it snaps to (orange when it would cross a card). */
 function WirePreview({ cursor }: { cursor: WireCursor | null }) {
   const wire      = useSignalStore((s) => s.wire)
+  const farOut    = useSignalStore((s) => s.farOut)
   // A wire drawn from a stereo output previews as a twin line, like the wire it will become (what
   // the wiring makes of the output: at Beginner too, where no signal is worked out)
   const stereo    = useSignalStore((s) => s.wire !== null && outputKind(s.wire.source.nodeId, s.wire.source.handleId, s) === 'stereo')
@@ -209,7 +212,7 @@ function WirePreview({ cursor }: { cursor: WireCursor | null }) {
                 strokeWidth={2 / zoom}
               />
             )}
-            {wire.waypoints.map((wp, i) => (
+            {!farOut && wire.waypoints.map((wp, i) => (
               <circle key={i} cx={wp.x} cy={wp.y} r={4 / zoom} fill="var(--lsc-accent)" />
             ))}
           </>

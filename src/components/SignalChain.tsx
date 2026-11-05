@@ -26,7 +26,7 @@ import { useSignalStore }       from '../store/signalStore'
 import { useTranslation }       from '../i18n/useTranslation'
 import { useChainEmpty }        from '../hooks/useChainEmpty'
 import { useChainFile }         from '../hooks/useChainFile'
-import { useFitView }           from '../hooks/useFitView'
+import { useFitView, useMinZoom } from '../hooks/useFitView'
 import { useSwallowClick, useWireDrawing } from '../hooks/useWireDrawing'
 import { useCanvasClicks }      from '../hooks/useCanvasClicks'
 import { useNodeDrag }          from '../hooks/useNodeDrag'
@@ -50,6 +50,11 @@ const FLOW_STYLE = { background: 'var(--lsc-canvas)' }
 // (hysteresis), so a zoom resting near the boundary never flips the cards back and forth.
 const OVERVIEW_ENTER_ZOOM = 0.42
 const OVERVIEW_LEAVE_ZOOM = 0.5
+// Zoomed out further, nothing moves: a meter is a few pixels tall, a wire's swells a blur, and a
+// big chain's movement all on screen at once kept the main thread busy nine tenths of the time
+// (measured headless, 108 cards at 12%: ~890 ms a second, 45 pictures a second; still: none)
+const FAR_ENTER_ZOOM = 0.2
+const FAR_LEAVE_ZOOM = 0.24
 
 /**
  * The canvas: React Flow with the app's own wiring, selecting, dragging and dropping (the hooks
@@ -68,6 +73,8 @@ export function SignalChain() {
   // The type of the element the wire is drawn from, for the "Connecting from …" toast
   const wireFromType    = useSignalStore((s) => s.nodes.find((n) => n.id === s.wire?.source.nodeId)?.typeKey)
   const setOverview     = useSignalStore((s) => s.setOverview)
+  const farOut          = useSignalStore((s) => s.farOut)
+  const setFarOut       = useSignalStore((s) => s.setFarOut)
   const setSelection    = useSignalStore((s) => s.setSelection)
   const setSelectedNode = useSignalStore((s) => s.setSelectedNode)
   const zoom            = useStore((s) => s.transform[2])
@@ -88,6 +95,7 @@ export function SignalChain() {
   useCanvasShortcuts(wrapperRef, actions)
   const drop         = usePaletteDrop(actions.insertChainAt)
   const flow         = useFlowElements()
+  const minZoom      = useMinZoom(flow.nodes)
 
   // Right-click menu of an element (Bypass, Flip, Cut, Copy, Duplicate, Remove) — `targets` are
   // what its actions apply to: the element, or the whole selection it belongs to
@@ -111,6 +119,20 @@ export function SignalChain() {
     if (!overview && zoom < OVERVIEW_ENTER_ZOOM) setOverview(true)
     else if (overview && zoom > OVERVIEW_LEAVE_ZOOM) setOverview(false)
   }, [zoom, overview, setOverview, capturing])
+
+  // Far out the meters stand still (useLiveMeter) and the wires' flow pauses: their SVG animations
+  // (the analog swells, the sound's ripples — every edge is its own svg, so again when the wires
+  // change) and their CSS ones (lsc-far-out: the digital dashes)
+  useEffect(() => {
+    if (!farOut && zoom < FAR_ENTER_ZOOM) setFarOut(true)
+    else if (farOut && zoom > FAR_LEAVE_ZOOM) setFarOut(false)
+  }, [zoom, farOut, setFarOut])
+  useEffect(() => {
+    for (const svg of wrapperRef.current?.querySelectorAll('svg') ?? []) {
+      if (farOut) svg.pauseAnimations()
+      else svg.unpauseAnimations()
+    }
+  }, [farOut, flow.edges])
 
   // What React Flow calls back, as functions that never change: it passes the node handlers on to
   // every card, and a new function would redraw them all on every change
@@ -162,6 +184,7 @@ export function SignalChain() {
     wiring ? 'lsc-wiring' : '',
     leftTool === 'remove' ? 'lsc-remove-mode' : '',
     leftTool === 'select' ? 'lsc-select-mode' : '',
+    farOut ? 'lsc-far-out' : '',
   ].join(' ')
   const canEdit = toolMode === 'select' && leftTool !== 'remove'
 
@@ -186,7 +209,7 @@ export function SignalChain() {
         nodeOrigin={NODE_ORIGIN}
         fitView={startsFilled}
         fitViewOptions={fitViewOptions}
-        minZoom={0.15}
+        minZoom={minZoom}
         maxZoom={2}
         proOptions={PRO_OPTIONS}
         ariaLabelConfig={ariaLabelConfig}

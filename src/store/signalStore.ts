@@ -118,6 +118,8 @@ export interface SignalChainStore {
   highlightEdgeIds: string[]
   /** Zoomed out far enough that cards show only their name and output level (set by SignalChain, not persisted). */
   overview: boolean
+  /** Zoomed out so far that nothing moves: the meters still at their average, the wires' flow paused (set by SignalChain) */
+  farOut: boolean
   /** A picture of the canvas is being taken: cards show their controls whatever the zoom */
   capturing: boolean
   /** The name the chain was last saved or opened as (autosaved; suggested when saving) */
@@ -155,6 +157,7 @@ export interface SignalChainStore {
   cancelWire: () => void
   setHighlightEdges: (edgeIds: string[]) => void
   setOverview: (on: boolean) => void
+  setFarOut: (on: boolean) => void
   setCapturing: (on: boolean) => void
   setChainName: (name: string) => void
   offerChain: (offer: ParsedChain | null) => void
@@ -206,6 +209,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   wire: null,
   highlightEdgeIds: [],
   overview: false,
+  farOut: false,
   capturing: false,
   chainOffer: null,
   notice: null,
@@ -276,6 +280,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   setHighlightEdges: (edgeIds) => set({ highlightEdgeIds: edgeIds }),
 
   setOverview: (on) => set({ overview: on }),
+  setFarOut: (on) => set({ farOut: on }),
 
   setCapturing: (on) => set(on ? { capturing: true, overview: false } : { capturing: false }),
 
