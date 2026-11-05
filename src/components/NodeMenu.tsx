@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2, ScanEye,
+  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2, ScanEye, Split,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
@@ -151,6 +151,34 @@ export function CanvasMenu({ x, y, canPaste, canSelectAll, onPaste, onSelectAll,
       />
       <MenuDivider />
       <MenuItem icon={<FolderInput size={15} />} label={t.nodeMenu.insertChain} onClick={act(onInsertChain)} />
+    </ContextMenu>
+  )
+}
+
+/**
+ * A wire's bend, right-clicked: a new connection split off from it (from the same output, along
+ * the same bends), or the bend removed — the connection itself when it is its only bend.
+ */
+export function BendMenu({ x, y, onlyBend, onSplit, onRemove, onClose }: {
+  x: number
+  y: number
+  onlyBend: boolean
+  onSplit: () => void
+  onRemove: () => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const act = (fn: () => void) => () => { fn(); onClose() }
+  return (
+    <ContextMenu x={x} y={y} onClose={onClose}>
+      <MenuItem icon={<Split size={15} />} label={t.nodeMenu.splitBend} onClick={act(onSplit)} />
+      <MenuDivider />
+      <MenuItem
+        icon={<Trash2 size={15} />}
+        label={onlyBend ? t.nodeMenu.removeConnection : t.nodeMenu.removeBend}
+        danger
+        onClick={act(onRemove)}
+      />
     </ContextMenu>
   )
 }

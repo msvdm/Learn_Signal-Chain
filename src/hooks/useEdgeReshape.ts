@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import type { Pt } from '../utils/geometry'
 import { useLatestRef } from './useLatestRef'
+import { snapBend } from '../utils/layoutHelpers'
 
 export type Reshaping = {
   edgeId: string
@@ -12,7 +13,7 @@ export type Reshaping = {
   livePos: Pt
 }
 
-/** Dragging a wire's corner (or a segment's midpoint, which adds a corner): committed on release. */
+/** Dragging a wire's corner (or a segment's midpoint, which adds a corner): committed on release, on the grid when Snap to grid is on. */
 export function useEdgeReshape() {
   const { screenToFlowPosition } = useReactFlow()
   const [reshaping, setReshaping] = useState<Reshaping | null>(null)
@@ -22,7 +23,7 @@ export function useEdgeReshape() {
     function onReshapeMove(e: MouseEvent) {
       const r = reshapingRef.current
       if (!r) return
-      const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const fp = snapBend(screenToFlowPosition({ x: e.clientX, y: e.clientY }), useSignalStore.getState().snapToGrid)
       setReshaping((prev) => prev ? { ...prev, livePos: fp } : prev)
     }
 
@@ -30,7 +31,7 @@ export function useEdgeReshape() {
       const r = reshapingRef.current
       if (!r) return
       e.stopPropagation()
-      const fp = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const fp = snapBend(screenToFlowPosition({ x: e.clientX, y: e.clientY }), useSignalStore.getState().snapToGrid)
       const { edges, updateEdgeWaypoints } = useSignalStore.getState()
       const edge = edges.find((ed) => ed.id === r.edgeId)
       if (edge) {

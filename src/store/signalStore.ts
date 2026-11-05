@@ -148,7 +148,8 @@ export interface SignalChainStore {
   redo: () => void
   setComplexityLevel: (level: ComplexityLevel) => void
   setToolMode: (mode: ToolMode) => void
-  startWire: (source: WireSource, start: Pt, facing: Facing) => void
+  /** A new wire from `source`; `waypoints`: bends it already has (one split off a wire at its bend) */
+  startWire: (source: WireSource, start: Pt, facing: Facing, waypoints?: Pt[]) => void
   /** A click in empty space while drawing: the wire turns a corner there */
   addWireCorner: (at: Pt) => void
   cancelWire: () => void
@@ -265,7 +266,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   // Back in Select mode nothing is being wired (a new canvas and undo / redo drop the wire too: NO_WIRE)
   setToolMode: (mode) => set(mode === 'select' ? { toolMode: mode, wire: null } : { toolMode: mode }),
 
-  startWire: (source, start, facing) => set({ wire: { source, start, facing, waypoints: [] } }),
+  startWire: (source, start, facing, waypoints = []) => set({ wire: { source, start, facing, waypoints } }),
 
   // The source stays the same object, so the cards watching it do not re-render
   addWireCorner: (at) => set((s) => (s.wire ? { wire: { ...s.wire, waypoints: [...s.wire.waypoints, at] } } : {})),

@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useReactFlow, useViewport } from '@xyflow/react'
 import { useSignalStore } from '../store/signalStore'
 import { useEdgeReshape } from '../hooks/useEdgeReshape'
 import type { Reshaping } from '../hooks/useEdgeReshape'
 import type { WireCursor } from '../hooks/useWireDrawing'
+import { splitWireAt } from '../hooks/useWireDrawing'
+import { BendMenu } from './NodeMenu'
 import type { Ghost } from '../hooks/useNodeDrag'
 import { buildWirePath } from '../utils/wirePath'
 import { DIGITAL_CORNER, morseDash } from '../utils/wireLook'
@@ -54,12 +57,21 @@ type ReshapeGrab = Pick<Reshaping, 'waypointIndex' | 'segmentIndex' | 'inserting
 
 /**
  * Drag handles on wires with bends — in either mode: one on each corner (moves it) and one on
- * each segment's midpoint (adds a corner there).
+ * each segment's midpoint (adds a corner there). A corner right-clicked opens its menu (BendMenu).
  */
 function ReshapeHandles() {
   const edges = useSignalStore((s) => s.edges)
   const { screenToFlowPosition } = useReactFlow()
   const { reshaping, setReshaping } = useEdgeReshape()
+  const [menu, setMenu] = useState<{ edgeId: string; bend: number; x: number; y: number } | null>(null)
+  const menuEdge = menu && edges.find((e) => e.id === menu.edgeId)
+
+  /** The bend `bend` of a wire right-clicked: its menu (a right-click while drawing a wire only cancels it — useWireDrawing) */
+  const openMenu = (edgeId: string, bend: number) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setMenu({ edgeId, bend, x: e.clientX, y: e.clientY })
+  }
 
   /** Handlers of one handle: a left press starts the drag (and goes no further: not a wire corner, not a pan). */
   const grab = (edgeId: string, handle: ReshapeGrab) => ({
@@ -72,47 +84,66 @@ function ReshapeHandles() {
   })
 
   return (
-    <ViewportLayer zIndex={95}>
-      {(zoom) => edges.map((edge) => {
-        // (Sound in the air goes straight: corners saved on it are not drawn)
-        const wps = edge.sourceHandle === SOUND_PORT ? [] : edge.waypoints ?? []
-        if (wps.length === 0) return null
-        return (
-          <g key={edge.id}>
-            {/* Segment midpoint handles — for inserting new waypoints */}
-            {wps.slice(0, -1).map((wp, i) => (
-              <circle
-                key={`mid-${i}`}
-                className="lsc-reshape-handle lsc-overlay"
-                {...grab(edge.id, { waypointIndex: -1, segmentIndex: i, inserting: true })}
-                cx={(wp.x + wps[i + 1].x) / 2} cy={(wp.y + wps[i + 1].y) / 2}
-                r={4 / zoom}
-                fill="var(--lsc-accent)"
-                opacity={0.35}
-                style={{ pointerEvents: 'all', cursor: 'crosshair' }}
-              />
-            ))}
-            {/* Waypoint handles — for moving existing waypoints */}
-            {wps.map((wp, i) => {
-              const isActive  = reshaping?.edgeId === edge.id && !reshaping.inserting && reshaping.waypointIndex === i
-              const displayPt = isActive ? reshaping.livePos : wp
-              return (
+    <>
+      <ViewportLayer zIndex={95}>
+        {(zoom) => edges.map((edge) => {
+          // (Sound in the air goes straight: corners saved on it are not drawn)
+          const wps = edge.sourceHandle === SOUND_PORT ? [] : edge.waypoints ?? []
+          if (wps.length === 0) return null
+          return (
+            <g key={edge.id}>
+              {/* Segment midpoint handles — for inserting new waypoints */}
+              {wps.slice(0, -1).map((wp, i) => (
                 <circle
-                  key={`wp-${i}`}
+                  key={`mid-${i}`}
                   className="lsc-reshape-handle lsc-overlay"
-                  {...grab(edge.id, { waypointIndex: i, segmentIndex: -1, inserting: false })}
-                  cx={displayPt.x} cy={displayPt.y}
-                  r={5 / zoom}
+                  {...grab(edge.id, { waypointIndex: -1, segmentIndex: i, inserting: true })}
+                  cx={(wp.x + wps[i + 1].x) / 2} cy={(wp.y + wps[i + 1].y) / 2}
+                  r={4 / zoom}
                   fill="var(--lsc-accent)"
-                  opacity={0.75}
-                  style={{ pointerEvents: 'all', cursor: 'move' }}
+                  opacity={0.35}
+                  style={{ pointerEvents: 'all', cursor: 'crosshair' }}
                 />
-              )
-            })}
-          </g>
-        )
-      })}
-    </ViewportLayer>
+              ))}
+              {/* Waypoint handles — for moving existing waypoints */}
+              {wps.map((wp, i) => {
+                const isActive  = reshaping?.edgeId === edge.id && !reshaping.inserting && reshaping.waypointIndex === i
+                const displayPt = isActive ? reshaping.livePos : wp
+                return (
+                  <circle
+                    key={`wp-${i}`}
+                    className="lsc-reshape-handle lsc-overlay"
+                    {...grab(edge.id, { waypointIndex: i, segmentIndex: -1, inserting: false })}
+                    onContextMenu={openMenu(edge.id, i)}
+                    cx={displayPt.x} cy={displayPt.y}
+                    r={5 / zoom}
+                    fill="var(--lsc-accent)"
+                    opacity={0.75}
+                    style={{ pointerEvents: 'all', cursor: 'move' }}
+                  />
+                )
+              })}
+            </g>
+          )
+        })}
+      </ViewportLayer>
+      {menu && menuEdge && (
+        <BendMenu
+          x={menu.x}
+          y={menu.y}
+          onlyBend={(menuEdge.waypoints ?? []).length === 1}
+          onSplit={() => splitWireAt(menuEdge, menu.bend, screenToFlowPosition)}
+          onRemove={() => {
+            const { removeEdge, updateEdgeWaypoints } = useSignalStore.getState()
+            const wps = menuEdge.waypoints ?? []
+            // Its only bend: the connection goes; else the bend, the wire taking the shortest route between the rest
+            if (wps.length <= 1) removeEdge(menuEdge.id)
+            else updateEdgeWaypoints(menuEdge.id, wps.filter((_, i) => i !== menu.bend))
+          }}
+          onClose={() => setMenu(null)}
+        />
+      )}
+    </>
   )
 }
 

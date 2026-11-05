@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { besideRoute, buildWirePath, orthogonalRoute, wireRuns } from './wirePath'
-import { findEdgeAtPoint, PORT_TOP } from './layoutHelpers'
+import { findEdgeAtPoint, GRID, PORT_TOP, snapBend } from './layoutHelpers'
 import type { SignalEdge, SignalNode, TypeKey } from '../data/nodeRegistry'
 import { SOUND_PORT, portFacing } from '../data/nodeRegistry'
 import type { Box } from './geometry'
@@ -180,5 +180,28 @@ describe('sound in the air under a drop', () => {
     // A quarter of the way along the line, from (200, 500) to (400, 80)
     expect(find(250, 500 - (500 - PORT_TOP) / 4)?.edge.id).toBe('air')
     expect(find(300, 900)).toBeNull()
+  })
+})
+
+// Snap to grid puts a bend on a card's port line, not on the grid's dots: a card snaps its top-left
+// corner to the grid, so its port lines are PORT_TOP below a grid line (the user's call, 2026-11-05)
+describe('a bend with Snap to grid on', () => {
+  it('on a grid column, and level with the port lines of the cards on the grid', () => {
+    const portLine = 3 * GRID + PORT_TOP           // a card at y = 3 grid steps
+    expect(snapBend({ x: 5 * GRID + 10, y: portLine + 9 }, true)).toEqual({ x: 5 * GRID, y: portLine })
+    expect(snapBend({ x: 5 * GRID + 20, y: portLine + 20 }, true)).toEqual({ x: 6 * GRID, y: portLine + GRID })
+  })
+
+  it('a wire from a port to a bend clicked near its line runs straight', () => {
+    const port = { x: 300, y: 2 * GRID + PORT_TOP }
+    const bend = snapBend({ x: 610, y: port.y + 12 }, true)
+    // One straight run from the port to the bend: no step on the way
+    const route = orthogonalRoute([port, bend, { x: 900, y: 500 }])
+    const toBend = route.slice(0, route.findIndex((p) => p.x === bend.x && p.y === bend.y) + 1)
+    expect(toBend.length > 1 && toBend.every((p) => p.y === port.y)).toBe(true)
+  })
+
+  it('off: on whole pixels, where it was clicked', () => {
+    expect(snapBend({ x: 100.4, y: 57.6 }, false)).toEqual({ x: 100, y: 58 })
   })
 })

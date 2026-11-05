@@ -440,7 +440,10 @@
     "selected": "{count} elements selected",
     "removeMany": "Remove {count} elements",
     "flipH": "Flip horizontal",
-    "flipV": "Flip vertical"
+    "flipV": "Flip vertical",
+    "splitBend": "Split — a new connection from this bend",
+    "removeBend": "Remove this bend",
+    "removeConnection": "Remove the connection"
   },
   "stereo": {
     "mono": "Mono",
@@ -548,7 +551,7 @@
       "intro": "Everything is done with the mouse, and there are no modes to switch between. When the pointer is over an input or an output you're wiring, and anywhere else you're moving things around.",
       "points": [
         "**Add an element** by dragging it from the elements panel. If you drop it onto a connection, it goes into the middle of it, as long as the connection makes sense.",
-        "**Connect** by clicking an output and then an input. While you're drawing a connection, the inputs that can take it light up. Click empty space on the way to add a bend, or press Esc to cancel.",
+        "**Connect** by clicking an output and then an input. While you're drawing a connection, the inputs that can take it light up. Click empty space on the way to add a bend, or press Esc to cancel. Right-click a bend to start another connection from it, or to remove it.",
         "One output can feed several inputs, so the same signal can go to more than one place.",
         "**Unplug** a connection by pointing at the input it goes into and clicking the red × that appears.",
         "**Right-click** an element to see what you can do with it, such as bypassing it (letting the signal through unchanged), flipping it, copying it or removing it.",

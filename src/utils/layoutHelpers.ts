@@ -22,6 +22,17 @@ export function snapPoint(p: Pt, toGrid: boolean): Pt {
     : { x: Math.round(p.x), y: Math.round(p.y) }
 }
 
+/**
+ * Where a wire's bend goes: with Snap to grid on, on a grid column and on a port line of the cards
+ * on the grid (their port lines are PORT_TOP below a grid line, not on one — a bend on the grid
+ * would put a step in a wire running level with a port); else on whole pixels.
+ */
+export function snapBend(p: Pt, toGrid: boolean): Pt {
+  if (!toGrid) return snapPoint(p, false)
+  const off = PORT_TOP % GRID
+  return { x: Math.round(p.x / GRID) * GRID, y: Math.round((p.y - off) / GRID) * GRID + off }
+}
+
 // Room left between cards: a card dropped onto a wire pushes the chain after it this far right of
 // itself, and a copy sits this far beside its original.
 export const MIN_NODE_GAP = 100

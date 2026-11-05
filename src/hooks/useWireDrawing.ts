@@ -10,6 +10,8 @@ import { wirePassesThroughNode } from '../utils/wireValidation'
 import { nodeAcceptsWire, portAcceptsWire } from '../graph/connectionRules'
 import { slotFree, slotOfHandle, wireInto } from '../graph/slots'
 import { useCanvasLayout } from './useCanvasLayout'
+import { snapBend } from '../utils/layoutHelpers'
+import type { SignalEdge } from '../store/signalStore'
 
 /** The loose end of the wire being drawn: the cursor, the input it would land on, and whether it crosses a card. */
 export interface WireCursor {
@@ -39,6 +41,25 @@ function handleUnder(clientX: number, clientY: number): HTMLElement | null {
 function handleFlowPos(el: HTMLElement, toFlow: (p: Pt) => Pt): Pt {
   const r = el.getBoundingClientRect()
   return toFlow({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+}
+
+/**
+ * A new wire split off `edge` at its bend `bend`: from the same output, along the same bends up to
+ * that one, its loose end then drawn on as any wire's (Connect mode, so the next clicks wire).
+ */
+export function splitWireAt(edge: SignalEdge, bend: number, toFlow: (p: Pt) => Pt) {
+  const hEl = document.querySelector<HTMLElement>(
+    `.react-flow__handle.source[data-nodeid="${CSS.escape(edge.source)}"][data-handleid="${CSS.escape(edge.sourceHandle ?? 'out')}"]`,
+  )
+  if (!hEl) return
+  const store = useSignalStore.getState()
+  store.startWire(
+    { nodeId: edge.source, handleId: edge.sourceHandle ?? 'out' },
+    handleFlowPos(hEl, toFlow),
+    facingOf(hEl),
+    (edge.waypoints ?? []).slice(0, bend + 1),
+  )
+  store.setToolMode('connect')
 }
 
 /**
@@ -97,7 +118,9 @@ export function useWireDrawing(
     function onMove(e: MouseEvent) {
       const { wire } = useSignalStore.getState()
       if (!wire) { followMouse(e); return }
-      const pos      = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const at       = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      // The loose end where a click would put its bend (sound in the air has none: it goes straight)
+      const pos      = wire.source.handleId === SOUND_PORT ? at : snapBend(at, useSignalStore.getState().snapToGrid)
       const hEl      = handleUnder(e.clientX, e.clientY)
       const onTarget = hEl?.classList.contains('target') ? hEl : null
       const snap     = onTarget ? handleFlowPos(onTarget, screenToFlowPosition) : null
@@ -197,7 +220,7 @@ export function useWireDrawing(
       }
 
       // Click in empty space → commit a corner waypoint (none on sound in the air: it goes straight)
-      if (wire.source.handleId !== SOUND_PORT) store.addWireCorner(flowPos)
+      if (wire.source.handleId !== SOUND_PORT) store.addWireCorner(snapBend(flowPos, store.snapToGrid))
     }
 
     function onContext(e: MouseEvent) {
