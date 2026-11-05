@@ -14,6 +14,8 @@ const TONES = {
   accent:   { rim: 'var(--lsc-accent-lit)',  fill: 'var(--lsc-accent-lit-bg)',  word: 'var(--lsc-accent-text)' },
   // Solid bright yellow: the PFL button
   pfl:      { rim: 'var(--lsc-pfl)',         fill: 'var(--lsc-pfl-bg)',         word: 'var(--lsc-pfl-text)' },
+  // Light blue, as the Parametric equalizer's first band: the Phase button
+  phase:    { rim: 'var(--lsc-phase)',       fill: 'var(--lsc-phase-bg)',       word: 'var(--lsc-phase-text)' },
 } as const
 
 export type ButtonTone = keyof typeof TONES
@@ -21,7 +23,7 @@ export type ButtonTone = keyof typeof TONES
 /**
  * The big square On / Off button of a free-standing switch: its word, lit while on — green for the
  * On Off Switch (solid yellow as a PFL button), the hot colour for the Pad's −20 dB, red for 48V,
- * violet for the HPF.
+ * violet for the HPF, light blue for the Phase button.
  */
 export function SquareButton({ on, tone, size, fontSize, onClick, children }: {
   on: boolean

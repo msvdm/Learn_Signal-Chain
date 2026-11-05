@@ -252,6 +252,8 @@ export const GUITAR_AMP_NOISE_DBU = -76
 const PASSIVE = new Set<TypeKey>([
   'vocal', 'drum-kit', 'acoustic', 'keyboard', 'pc', 'instrument', 'generator', 'daw',
   'phantom', 'di-box', 'pad', 'switch', 'relay', 'pan', 'speaker', 'recorder', 'broadcast',
+  // A desk's polarity button and its channel delay (the number engine keeps their levels as they are)
+  'phase', 'delay',
   // Beginner's devices: no engine runs there (D20) — they only add up what arrives
   'mixer', 'stage-box',
 ])
@@ -260,7 +262,7 @@ const PASSIVE = new Set<TypeKey>([
 const OUTPUT_NOISE: Partial<Record<TypeKey, number>> = {
   hpf: LINE_NOISE_DBU, eq: LINE_NOISE_DBU, 'graphic-eq': LINE_NOISE_DBU,
   comp: LINE_NOISE_DBU, 'noise-gate': LINE_NOISE_DBU, limiter: LINE_NOISE_DBU, deesser: LINE_NOISE_DBU,
-  fader: LINE_NOISE_DBU,
+  fader: LINE_NOISE_DBU, effects: LINE_NOISE_DBU,
   'master-bus': BUS_NOISE_DBU, 'aux-bus': BUS_NOISE_DBU, 'matrix-bus': BUS_NOISE_DBU, 'pfl-bus': BUS_NOISE_DBU,
   amp: AMP_NOISE_DBU, 'active-speaker': AMP_NOISE_DBU, 'studio-monitor': AMP_NOISE_DBU, headphones: AMP_NOISE_DBU,
   'guitar-amp': GUITAR_AMP_NOISE_DBU,
@@ -445,6 +447,8 @@ const PROCESS: Record<TypeKey, Process> = {
     return pass(eachReading((k) => Math.min(input[k] + gainDb, ceilingOf(ctx.domain))), ctx)
   },
   amp: switchedOn(analogOnly('digitalToAmp', gained)),
+  // Passes its signal on as it is (its knobs change nothing); switched off, nothing
+  effects: switchedOn((_, input, ctx) => pass(input, ctx)),
   hpf: (node, input, ctx) =>
     pass(shifted(input, levelChange(node, 'hpf', () => hpfLevelChange(param(node, 'cutoffHz')))), ctx),
   eq: (node, input, ctx) =>
@@ -466,6 +470,11 @@ const PROCESS: Record<TypeKey, Process> = {
   relay:  gained,
   // Pan / Balance spread the signal over L / R in the engine (panSides, balanceSides)
   pan:    (_, input, ctx) => pass(input, ctx),
+  // Upside down, or held back in time: its level the same. What that does when it meets the same
+  // signal again (cancelling out, or not lining up) only real sound shows — the number engine adds
+  // a bus's wires as if they always lined up (sumSignalsToDb)
+  phase:  (_, input, ctx) => pass(input, ctx),
+  delay:  (_, input, ctx) => pass(input, ctx),
   adc: (node, input, ctx) => {
     if (ctx.domain === 'digital') return blocked('adcExpectsAnalog', 'digital')
     return { out: shifted(input, gainDbOf(node, ctx)!), domain: 'digital' }

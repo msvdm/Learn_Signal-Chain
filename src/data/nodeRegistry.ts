@@ -77,7 +77,7 @@ export type StereoSupport = 'never' | 'follow' | 'optional' | 'always'
 export type TypeKey =
   | 'vocal' | 'drum-kit' | 'acoustic' | 'mic' | 'keyboard' | 'pc' | 'instrument' | 'guitar-amp' | 'generator'
   | 'phantom' | 'gain' | 'hpf' | 'eq' | 'graphic-eq' | 'comp' | 'noise-gate' | 'limiter' | 'deesser' | 'pad'
-  | 'di-box' | 'amp' | 'fader' | 'switch' | 'relay' | 'pan' | 'adc' | 'dac'
+  | 'di-box' | 'amp' | 'effects' | 'fader' | 'switch' | 'phase' | 'delay' | 'relay' | 'pan' | 'adc' | 'dac'
   | 'master-bus' | 'aux-bus' | 'matrix-bus' | 'pfl-bus'
   | 'speaker' | 'active-speaker' | 'studio-monitor' | 'headphones' | 'recorder' | 'broadcast'
   | 'interface' | 'daw' | 'mixer' | 'stage-box' | 'codec' | 'digital-interface'
@@ -298,6 +298,12 @@ export function isGeneratorSound(kind: string): kind is GeneratorSound {
   return (GENERATOR_SOUNDS as readonly string[]).includes(kind)
 }
 
+/** The Delay knob's longest delay (ms): sound travels about 3.4 m in 10 ms — mics on one source, a few metres apart at most */
+export const DELAY_MAX_MS = 20
+
+/** The Effects processor's programs, by index (fxProgram): their names in the locales' nodes.effects.programs */
+export const EFFECT_PROGRAMS = ['hall', 'room', 'plate', 'echo', 'chorus'] as const
+
 const IN: NodePort[]    = [{ id: 'in' }]
 // A bus's input: several wires, one port each (graph/slots.ts)
 const MANY_IN: NodePort[] = [{ id: 'in', many: true }]
@@ -491,6 +497,14 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     levels: EVERY_LEVEL, bypass: false, freeSize: { w: 692, h: 342 },
     defaultParams: { gainDb: 0, on: true },
   },
+  effects: {
+    // An effects unit in a rack, 1U (a destination for an Aux Bus): it passes its signal on as it
+    // is — its Program and knobs are part of the picture, no effect is made. In and Out meters, a
+    // power switch (switched off: silent, as an Amplifier — D27). Drawn as the rack (EffectsNode)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    levels: ADVANCED_ONLY, bypass: false, freeSize: { w: 972, h: 186 },
+    defaultParams: { on: true, fxProgram: 0, fxTime: 50, fxTone: 50, fxDepth: 50 },
+  },
   fader: {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 249, h: 718 },
@@ -500,6 +514,21 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
     levels: FROM_INTERMEDIATE, bypass: false, freeSize: { w: 162, h: 161 },
     defaultParams: { on: true },
+  },
+  phase: {
+    // Polarity: pressed, the signal leaves upside down (every sample its opposite). Alone it changes
+    // nothing you hear; added to the same signal the right way up, the two cancel out (the render
+    // adds real samples — the number engine does not know which signals are the same)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    levels: ADVANCED_ONLY, bypass: false, freeSize: { w: 162, h: 161 },
+    defaultParams: { inverted: false },
+  },
+  delay: {
+    // Holds the signal back by delayMs (0 … DELAY_MAX_MS): its level unchanged — two copies of one
+    // signal a little apart in time no longer line up (with the Phase switch: phase alignment)
+    category: 'processor', inputs: IN, outputs: OUT, stereo: 'follow',
+    levels: ADVANCED_ONLY, bypass: false, freeSize: { w: 237, h: 248 },
+    defaultParams: { delayMs: 0 },
   },
   relay: {
     // The Relay Switch: two inputs, A (in-a, top) and B (in-b), one goes out — an aux send's
@@ -816,6 +845,18 @@ export interface ParamTypes {
   groundLift: boolean
   selectedInput: 'a' | 'b'
   panPosition: number
+  /** Phase switch: pressed — the signal upside down */
+  inverted: boolean
+  /** Delay: how long it holds the signal back (ms, 0 … DELAY_MAX_MS) */
+  delayMs: number
+  /**
+   * Effects processor: its program (EFFECT_PROGRAMS, an index) and its knobs (0 … 100) — part of
+   * the picture, they change nothing
+   */
+  fxProgram: number
+  fxTime: number
+  fxTone: number
+  fxDepth: number
   alignmentDb: number
   outputTrimDb: number
   volumeDb: number
@@ -849,6 +890,7 @@ export type Flip = 'h' | 'v'
 export const FLIPS: Partial<Record<TypeKey, readonly Flip[]>> = {
   gain:             ['h', 'v'],
   switch:           ['h', 'v'],
+  phase:            ['h', 'v'],
   'active-speaker': ['h'],
   headphones:       ['h'],
 }

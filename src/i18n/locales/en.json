@@ -169,6 +169,22 @@
       "channelA": "A",
       "channelB": "B"
     },
+    "effects": {
+      "power": "Power",
+      "program": "Program",
+      "time": "Time",
+      "tone": "Tone",
+      "depth": "Depth",
+      "input": "In",
+      "output": "Out",
+      "programs": {
+        "hall": "Hall",
+        "room": "Room",
+        "plate": "Plate",
+        "echo": "Echo",
+        "chorus": "Chorus"
+      }
+    },
     "hpf": {
       "label": "HPF",
       "button": "HPF",
@@ -293,6 +309,13 @@
     },
     "pan": {
       "label": "Pan"
+    },
+    "phase": {
+      "label": "Phase",
+      "invert": "Phase: signal upside down"
+    },
+    "delay": {
+      "label": "Delay"
     },
     "adc": {
       "label": "Analog to Digital Converter"
@@ -471,9 +494,12 @@
       "limiter": "Limiter",
       "pad": "Pad (−20 dB)",
       "amp": "Amplifier",
+      "effects": "Effects Processor",
       "graphic-eq": "Graphic equalizer",
       "fader": "Fader",
       "switch": "On Off Switch",
+      "phase": "Phase Switch",
+      "delay": "Delay",
       "relay": "Relay Switch",
       "pan": "Pan / Balance",
       "adc": "Analog to Digital Converter",

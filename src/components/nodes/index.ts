@@ -28,6 +28,9 @@ import { PadNode, PhantomNode } from './PadNode'
 import { DeesserNode }        from './DeesserNode'
 import { RelayNode }          from './RelayNode'
 import { PanNode }            from './PanNode'
+import { PhaseNode }          from './PhaseNode'
+import { DelayNode }          from './DelayNode'
+import { EffectsNode }        from './EffectsNode'
 import { AdcDacNode }         from './AdcDacNode'
 import { CodecNode }            from './CodecNode'
 import { DigitalInterfaceNode }  from './DigitalInterfaceNode'
@@ -68,6 +71,8 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   'guitar-amp':      GuitarAmpNode,
   gain:              GainNode,
   amp:               AmpNode,
+  // An effects unit in a rack: drawn as the Amplifier, 1U
+  effects:           EffectsNode,
   fader:             FaderNode,
   'noise-gate':      NoiseGateNode,
   limiter:           LimiterNode,
@@ -84,6 +89,8 @@ export const NODE_COMPONENTS: Record<TypeKey, NodeTypes[string]> = {
   switch:            SwitchNode,
   relay:             RelayNode,
   pan:               PanNode,
+  phase:             PhaseNode,
+  delay:             DelayNode,
   'graphic-eq':      GraphicEQNode,
   // No card around them, the same at every level (D28): at Beginner they say what they get
   speaker:           SpeakerNode,

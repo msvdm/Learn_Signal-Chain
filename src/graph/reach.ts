@@ -33,9 +33,9 @@ export function soundAt(reach: Reach, nodeId: string, port?: string): boolean {
   return false
 }
 
-/** An Amplifier or a Guitar Amp whose power switch is off (D27): no sound goes on from it. */
+/** An Amplifier, a Guitar Amp or an Effects processor whose power switch is off (D27): no sound goes on from it. */
 export function switchedOff(node: SignalNode | undefined): boolean {
-  return (node?.typeKey === 'amp' || node?.typeKey === 'guitar-amp') && param(node, 'on') === false
+  return (node?.typeKey === 'amp' || node?.typeKey === 'guitar-amp' || node?.typeKey === 'effects') && param(node, 'on') === false
 }
 
 const NO_WIRES: readonly SignalEdge[] = []

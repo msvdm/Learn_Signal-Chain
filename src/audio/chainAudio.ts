@@ -1,5 +1,5 @@
 import type { GeneratorSound, TypeKey } from '../data/nodeRegistry'
-import { isDynamics, isGeneratorSound, isNodeStereo, param } from '../data/nodeRegistry'
+import { DELAY_MAX_MS, isDynamics, isGeneratorSound, isNodeStereo, param } from '../data/nodeRegistry'
 import type { WireKind } from '../graph/queries'
 import type { CardPlan, ChainLevels, OutputTap } from '../signal/chain'
 import { peakOf } from '../signal/chain'
@@ -142,8 +142,33 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
       : db === 0 && channels === x.channels ? x
       : one(into(x, gainNode(db, channels)), channels)
 
+  /**
+   * Outputs added up. One output in the list twice — one signal reaching a bus along two wires, the
+   * cards on both ways leaving it as it is — counts twice: Web Audio makes one connection of two
+   * between the same two nodes, so a repeated output goes through a gain of how many times it came.
+   */
+  const added = (parts: Part[], channels: 1 | 2): Sig => {
+    const times = new Map<AudioNode, Map<number, number>>()
+    for (const { node, output } of parts) {
+      const outputs = times.get(node) ?? new Map<number, number>()
+      outputs.set(output, (outputs.get(output) ?? 0) + 1)
+      times.set(node, outputs)
+    }
+    if ([...times.values()].every((outputs) => [...outputs.values()].every((n) => n === 1))) return { parts, channels }
+    const once: Part[] = []
+    for (const [node, outputs] of times) {
+      for (const [output, n] of outputs) {
+        if (n === 1) { once.push({ node, output }); continue }
+        const counted = new GainNode(ctx, { gain: n, channelCount: channels, channelCountMode: 'explicit', channelInterpretation: 'speakers' })
+        node.connect(counted, output)
+        once.push({ node: counted, output: 0 })
+      }
+    }
+    return { parts: once, channels }
+  }
+
   /** Signals added together. */
-  const plus = (...xs: Sig[]): Sig => ({ parts: xs.flatMap((x) => x.parts), channels: xs[0].channels })
+  const plus = (...xs: Sig[]): Sig => added(xs.flatMap((x) => x.parts), xs[0].channels)
 
   /** A buffer (one channel, or a stereo file's two) played over and over from `offset`, between `start` and `end`. */
   const playing = (buffer: AudioBuffer, start = 0, end = buffer.duration, offset = start): Sig => {
@@ -223,7 +248,7 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
         all.push(sent)
       }
     }
-    return { parts: all.flatMap((x) => x.parts), channels }
+    return added(all.flatMap((x) => x.parts), channels)
   }
 
   /** What arrives at a card is the one wire before it as it is: measured there already. */
@@ -248,6 +273,21 @@ export function buildChain(ctx: BaseAudioContext, plans: CardPlan[], still: Chai
     generator: (_, x) => x,
     pan: (_, x) => x,
     phantom: (_, x) => x,
+    // Upside down: every sample its opposite — added to the same signal the right way up, nothing is left
+    phase: ({ node }, x) => !param(node, 'inverted') || x.parts.length === 0 ? x
+      : one(into(x, new GainNode(ctx, { gain: -1, channelCount: x.channels, channelCountMode: 'explicit' })), x.channels),
+    // Held back by its delay (the loops play over and over: one loop measured later is the same loop)
+    delay: ({ node }, x) => {
+      const ms = Math.max(0, Math.min(DELAY_MAX_MS, param(node, 'delayMs')))
+      if (ms === 0 || x.parts.length === 0) return x
+      const held = new DelayNode(ctx, {
+        delayTime: ms / 1000, maxDelayTime: DELAY_MAX_MS / 1000,
+        channelCount: x.channels, channelCountMode: 'explicit',
+      })
+      return one(into(x, held), x.channels)
+    },
+    // Its programs and knobs make no effect: it passes its signal on (switched off it is silent: SILENCES)
+    effects: (_, x) => x,
     // The ends that take the sound in: what reaches them is what they record or send (a Recorder
     // Track's Monitor out passes it on)
     recorder: (_, x) => x,

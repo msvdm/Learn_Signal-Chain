@@ -130,6 +130,19 @@ describe('cards that pass the level on', () => {
     expect(out('pan', -12)).toBe(-12)
   })
 
+  it('the Phase switch and the Delay keep the level, hiss and all (what they do to the same signal met again only real sound shows)', () => {
+    for (const [type, params] of [['phase', { inverted: true }], ['phase', {}], ['delay', { delayMs: 12.5 }], ['delay', {}]] as const) {
+      expect(levels(type, sig(2, -10, -80), params)).toEqual(sig(2, -10, -80))
+    }
+  })
+
+  it('an Effects processor passes its signal on, its own line hiss after it — whatever its knobs; switched off, nothing', () => {
+    expect(out('effects', -10)).toBe(-10)
+    expect(out('effects', -10, { fxProgram: 3, fxTime: 100, fxTone: 0, fxDepth: 80 })).toBe(-10)
+    expect(levels('effects', sig(2, -10, S)).noise).toBe(LINE_NOISE_DBU)
+    expect(run('effects', -10, { on: false })).toEqual({ out: S, domain: 'analog', condition: 'switchedOff' })
+  })
+
   it('a DI Box brings an instrument down to mic level on its XLR Out', () => {
     expect(out('di-box', -30)).toBe(-50)
     expect(out('di-box', S)).toBe(S)

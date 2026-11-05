@@ -5,11 +5,11 @@ import {
   AudioWaveform, Minus, Zap,
   Merge, Volume2, Ear,
   SlidersHorizontal, MoveHorizontal, Headphones, Speaker, CassetteTape, RadioTower, Usb,
-  FileArchive,
+  FileArchive, Timer,
 } from 'lucide-react'
 import type { TypeKey } from '../../data/nodeRegistry'
 import type { ComplexityLevel } from '../../data/levels'
-import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, AmpIcon, GeneratorIcon, AdcIcon, DacIcon, DigitalInterfaceIcon, RelayIcon, VocalIcon, TrumpetIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
+import { HighPassIcon, GateIcon, CompressorIcon, LimiterIcon, KnobIcon, GuitarIcon, GuitarAmpIcon, AmpIcon, PhaseIcon, EffectsIcon, GeneratorIcon, AdcIcon, DacIcon, DigitalInterfaceIcon, RelayIcon, VocalIcon, TrumpetIcon, LaptopIcon, DawIcon, MixerIcon, StageBoxIcon } from './icons'
 
 // How each element type looks: its icon (palette tile, card header, a source's or speaker's face)
 // and its palette group. Its card is in ./index.ts, what it is in data/nodeRegistry.ts.
@@ -86,9 +86,14 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   codec:               { icon: FileArchive,       group: 'processing' },
   // PCM packed into a cable (AES/EBU, AES50) and unpacked at its other end (D40)
   'digital-interface':  { icon: DigitalInterfaceIcon, group: 'processing' },
+  // An effects unit in a rack (a reverb, an echo …): where an Aux Bus sends
+  effects:           { icon: EffectsIcon,       group: 'processing' },
   // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },
+  // Polarity and time: two copies of one signal lining up, or not
+  phase:             { icon: PhaseIcon,         group: 'routing' },
+  delay:             { icon: Timer,             group: 'routing' },
   relay:             { icon: RelayIcon,         group: 'routing' },
   pan:               { icon: MoveHorizontal,    group: 'routing' },
   'master-bus':      { icon: Merge,             group: 'routing' },

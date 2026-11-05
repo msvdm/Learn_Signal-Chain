@@ -134,6 +134,31 @@ export function AmpIcon({ size = 24 }: { size?: number }) {
   )
 }
 
+/** The polarity symbol Ø (the Phase switch): a circle, a stroke through it. */
+export function PhaseIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="7" />
+      <path d="M5 19L19 5" />
+    </svg>
+  )
+}
+
+/** An effects unit, 1U (the Effects processor): a thin rack panel, its display, three knobs. */
+export function EffectsIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="8" width="22" height="8" rx="1.6" />
+      <g strokeWidth="1.5">
+        <rect x="3.6" y="10.4" width="5" height="3.2" rx="0.6" />
+        <circle cx="12" cy="12" r="1.5" />
+        <circle cx="16" cy="12" r="1.5" />
+        <circle cx="20" cy="12" r="1.5" />
+      </g>
+    </svg>
+  )
+}
+
 const GRILLE = Array.from({ length: 15 }, (_, i) => {
   const x = i * 2 - 9
   return `M${x} 21L${x + 13} 8M${x + 13} 21L${x} 8`

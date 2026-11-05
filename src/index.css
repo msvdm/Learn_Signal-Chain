@@ -247,6 +247,10 @@
   --lsc-pfl:      #fde047;
   --lsc-pfl-bg:   #facc15;
   --lsc-pfl-text: #422006;
+  /* The Phase button, lit: the light blue of the Parametric equalizer's first band (BAND_COLORS[0]) */
+  --lsc-phase:      #7c98d6;
+  --lsc-phase-bg:   rgba(124,152,214,0.18);
+  --lsc-phase-text: #a9bce6;
   --lsc-select-halo: rgba(154,127,212,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(154,127,212,0.10);  /* fill of a selected element */
   /* Beginner's wires: one colour, whatever they carry (D20; from Intermediate their health — D33) */
@@ -332,6 +336,9 @@
   --lsc-pfl:      #eab308;
   --lsc-pfl-bg:   #fde047;
   --lsc-pfl-text: #713f12;
+  --lsc-phase:      #7c98d6;
+  --lsc-phase-bg:   rgba(124,152,214,0.18);
+  --lsc-phase-text: #3d5a9e;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-wire-neutral: #8a817a;
