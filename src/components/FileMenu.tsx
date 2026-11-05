@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { FilePlus, FolderOpen, Save, Link, ImageDown, Download } from 'lucide-react'
-import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
 import { useChainFile } from '../hooks/useChainFile'
 import { useChainEmpty } from '../hooks/useChainEmpty'
@@ -11,9 +10,6 @@ import { MOD, pressedInside } from '../utils/shortcut'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MenuItem, MenuDivider } from './NodeMenu'
 import { OFFLINE_FILE, OFFLINE_FILE_SAVE_AS } from '../data/site'
-
-/** The picture's name being asked for (a file needs no window of ours: the system's Save as asks) */
-type Saving = 'picture' | null
 
 /** This is the downloaded one-file copy, opened from disk: it has nothing to download. */
 const isDownloadedCopy = window.location.protocol === 'file:'
@@ -27,9 +23,10 @@ function downloadApp() {
 }
 
 /**
- * The header's File menu: New (empty canvas), Open…, Save to a file…, Copy a share link,
- * Save as a picture…, Download the app… (not in the downloaded copy itself). Ctrl / ⌘ + S saves
- * and Ctrl / ⌘ + O opens from anywhere.
+ * The header's File menu: New (empty canvas), Import…, Export…, Copy a share link, Save as
+ * image…, Download the app… (not in the downloaded copy itself). Export and Save as image open the
+ * system's Save as window at once — no window of the app's own (saveFileAs). Ctrl / ⌘ + S exports
+ * and Ctrl / ⌘ + O imports from anywhere.
  */
 export function FileMenu({ onNew, buttonStyle }: {
   /** Ask before clearing the canvas (the header's confirm dialog) */
@@ -40,33 +37,13 @@ export function FileMenu({ onNew, buttonStyle }: {
   const { t }      = useTranslation()
   const chainFile  = useChainFile()
   const [open, setOpen]     = useState(false)
-  const [saving, setSaving] = useState<Saving>(null)
   const [offerApp, setOfferApp] = useState(false)
-  const [name, setName]     = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useDismiss(ref, () => setOpen(false), { open })
 
-  /** A picture: ask for its name first (the last one used is suggested). A file goes straight to the system's Save as window. */
-  function startSave(kind: 'file' | 'picture') {
-    const { nodes, chainName } = useSignalStore.getState()
-    if (nodes.length === 0) return
-    if (kind === 'file') {
-      void chainFile.saveFile()
-      return
-    }
-    setName(chainName || t.file.defaultName)
-    setSaving(kind)
-  }
-
-  function finishSave() {
-    const chosen = name.trim() || t.file.defaultName
-    if (saving === 'picture') chainFile.savePicture(chosen)
-    setSaving(null)
-  }
-
   // Ctrl / ⌘ + S and O — instead of the browser's own "Save page" and "Open file"
-  const keysRef = useLatestRef({ startSave, openChain: chainFile.openChain })
+  const keysRef = useLatestRef({ saveFile: chainFile.saveFile, openChain: chainFile.openChain })
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
@@ -76,7 +53,7 @@ export function FileMenu({ onNew, buttonStyle }: {
       // (Even while typing: Ctrl / ⌘ + S in the palette search saves too)
       if (pressedInside(e, '[role="dialog"], [role="alertdialog"]')) return
       setOpen(false)
-      if (key === 's') keysRef.current.startSave('file')
+      if (key === 's') void keysRef.current.saveFile()
       else keysRef.current.openChain()
     }
     window.addEventListener('keydown', onKey)
@@ -116,13 +93,13 @@ export function FileMenu({ onNew, buttonStyle }: {
           <MenuItem icon={<FolderOpen size={15} />} label={t.file.open} hint={`${MOD}O`} onClick={act(chainFile.openChain)} />
           <MenuItem
             icon={<Save size={15} />} label={t.file.save} hint={`${MOD}S`} disabled={empty}
-            onClick={act(() => startSave('file'))}
+            onClick={act(() => void chainFile.saveFile())}
           />
           <MenuDivider />
           <MenuItem icon={<Link size={15} />} label={t.file.shareLink} disabled={empty} onClick={act(chainFile.copyShareLink)} />
           <MenuItem
             icon={<ImageDown size={15} />} label={t.file.picture} disabled={empty}
-            onClick={act(() => startSave('picture'))}
+            onClick={act(() => void chainFile.savePicture())}
           />
           {!isDownloadedCopy && (
             <>
@@ -144,33 +121,6 @@ export function FileMenu({ onNew, buttonStyle }: {
         />
       )}
 
-      {saving && (
-        <ConfirmDialog
-          title={t.file.pictureTitle}
-          body={t.file.pictureBody}
-          confirmLabel={t.file.pictureConfirm}
-          cancelLabel={t.dialog.cancel}
-          onConfirm={finishSave}
-          onCancel={() => setSaving(null)}
-        >
-          <label style={{ display: 'block', marginTop: 12, fontSize: 12, fontWeight: 600, color: 'var(--lsc-fg-muted)' }}>
-            {t.file.nameLabel}
-            <input
-              autoFocus
-              value={name}
-              maxLength={100}
-              onChange={(e) => setName(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); finishSave() } }}
-              style={{
-                display: 'block', width: '100%', height: 34, marginTop: 4, padding: '0 10px',
-                borderRadius: 8, border: '1px solid var(--lsc-border)', background: 'var(--lsc-sunken)',
-                color: 'var(--lsc-fg)', fontSize: 13, fontWeight: 400,
-              }}
-            />
-          </label>
-        </ConfirmDialog>
-      )}
     </div>
   )
 }

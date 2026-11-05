@@ -223,17 +223,17 @@ type SaveFilePicker = (options: {
 /**
  * Save a file where the learner chooses: the system's Save as window, `fileName` to start with;
  * `make` gives the file for the name chosen (its extension left off — a chain keeps its name
- * inside). That name, or null when the window was closed. A browser without that window gets the
+ * inside), made only once it is chosen (an image takes a moment: the window must open first). That name, or null when the window was closed. A browser without that window gets the
  * file as a download named `fileName` (it asks where only if it is set to). Call it straight from
  * a click or a key: the window opens only then.
  */
 export async function saveFileAs(
-  make: (name: string) => Blob, fileName: string, type: string, description: string,
+  make: (name: string) => Blob | Promise<Blob>, fileName: string, type: string, description: string,
 ): Promise<string | null> {
   const ext  = fileName.slice(fileName.lastIndexOf('.'))
   const base = fileName.slice(0, -ext.length)
-  const download = () => {
-    downloadBlob(make(base), fileName)
+  const download = async () => {
+    downloadBlob(await make(base), fileName)
     return base
   }
   const picker = (window as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker
@@ -247,8 +247,9 @@ export async function saveFileAs(
     return download()
   }
   const name = handle.name.toLowerCase().endsWith(ext) ? handle.name.slice(0, -ext.length) : handle.name
+  const blob = await make(name)
   const out  = await handle.createWritable()
-  await out.write(make(name))
+  await out.write(blob)
   await out.close()
   return name
 }

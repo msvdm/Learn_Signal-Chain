@@ -22,17 +22,14 @@
   "file": {
     "menu": "File",
     "new": "New — empty canvas",
-    "open": "Open…",
-    "save": "Save to a file…",
+    "open": "Import…",
+    "save": "Export…",
     "shareLink": "Copy a share link",
-    "picture": "Save as a picture…",
+    "picture": "Save as image…",
     "defaultName": "My signal chain",
-    "nameLabel": "Name",
     "fileType": "Signal chain",
+    "imageType": "Image with the chain inside",
     "saveFailed": "The chain could not be saved. Try again, or copy a share link instead.",
-    "pictureTitle": "Save a picture of your chain",
-    "pictureBody": "A PNG picture of everything on the canvas — for a worksheet or a chat. The chain is hidden inside the picture too: File → Open turns it back into the chain.",
-    "pictureConfirm": "Save picture",
     "download": "Download the app…",
     "downloadTitle": "Use it without internet",
     "downloadBody": "The whole app in one file. Double-click it and it opens in your web browser — no internet, nothing to install. Copy it to a USB stick or a shared folder for a class; saved chains open in it too. For a newer version later, download it again. (This website also works offline once you have visited it: your browser keeps a copy.)",
@@ -50,13 +47,13 @@
     "levelAdd": "It was made at the {level} level, so the app switches to {level}.",
     "skipped": "{count} elements were left out: this version of the app does not have them.",
     "linkCopied": "Link copied. Anyone who opens it gets a copy of this chain.",
-    "linkLong": "Link copied — but it is very long, so some chat apps may cut it short. Saving a file is safer.",
-    "linkFailed": "The link could not be copied. Save the chain to a file instead.",
+    "linkLong": "Link copied — but it is very long, so some chat apps may cut it short. Exporting a file is safer.",
+    "linkFailed": "The link could not be copied. Export the chain to a file instead.",
     "linkBroken": "This link is broken or cut short, so the chain could not be opened. Ask for the link again.",
-    "pictureSaved": "Picture saved — usually in your Downloads folder.",
-    "pictureFailed": "The picture could not be made. Try again, or save a file instead.",
-    "notChain": "This file isn't a saved signal chain. Open a .json file or a picture saved from this app.",
-    "noChainInPicture": "This picture has no chain inside. Only pictures saved from this app can be opened."
+    "pictureSaved": "Image saved.",
+    "pictureFailed": "The image could not be made. Try again, or export the chain instead.",
+    "notChain": "This file isn't a saved signal chain. Import a .json file or an image saved from this app.",
+    "noChainInPicture": "This image has no chain inside. Only images saved from this app can be imported."
   },
   "toolbar": {
     "snap": "Snap to grid",
@@ -601,8 +598,8 @@
     "save": {
       "intro": "Your canvas is saved in this browser as you work. Close the app, and it'll be waiting for you next time you open it in the same browser.",
       "points": [
-        "**File → Save to a file** keeps a copy you can open later or send to someone.",
-        "**File → Save as a picture** makes an image for a worksheet or a presentation. The chain is stored inside the picture, so **File → Open** turns it back into a chain you can edit.",
+        "**File → Export** keeps a copy you can import later or send to someone.",
+        "**File → Save as image** makes an image for a worksheet or a presentation. The chain is stored inside the image, so **File → Import** turns it back into a chain you can edit.",
         "**File → Copy a share link** gives you a link to send to your students. Everyone who opens it gets their own copy to work on.",
         "**File → Download the app** saves the whole app as a single file. Copy it to a USB stick or a shared folder, and it opens in any web browser, even without an internet connection."
       ]

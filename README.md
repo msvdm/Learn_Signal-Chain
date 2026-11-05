@@ -54,7 +54,7 @@ The app does not explain what each element is — that is the teacher's part. It
 - **Build the desk yourself:** Gain / Preamp (with its meter), 48V, high-pass filter, pad, equalizer, compressor, fader, on / off switch, relay switch, pan, and the Master, Aux, Matrix and PFL buses. The first fader after a bus is its main fader. One stereo wire carries both sides everywhere; wired to speakers, an output turns into L and R, one speaker each.
 - **Record and play back:** an Audio Interface and a DAW (a recording program on a computer), joined by one USB wire that carries the sound both ways. *Look inside* shows what the boxes hold.
 - **The digital side**, at Advanced: converters with their sample rate and bit depth (a 16-bit converter's noise floor is real), a codec squeezing the mix into MP3, AAC or Opus, a Digital Interface packing the numbers into an AES/EBU or AES50 cable — with its clock —, a DAW recording and mixing tracks, and a live stream sent and received again, with its loudness in LUFS. Four different things side by side: the numbers (PCM), a file that keeps them (WAV), a codec that squeezes them (MP3), a protocol that carries them (AES/EBU, AES50).
-- **Save and share:** your chain is kept in the browser as you work; save it as a file or as a picture with the chain inside, or send a link that opens it.
+- **Save and share:** your chain is kept in the browser as you work; export it as a file or save it as an image with the chain inside, or send a link that opens it.
 - **A short tutorial** on how the app works (the **?** button), with example chains to open and change.
 - **English and Bulgarian**, light and dark themes, and it works offline (see above).
 

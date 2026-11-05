@@ -9,7 +9,7 @@ import { cssVar } from '../utils/fitText'
 import { addPngText } from '../utils/pngText'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
 import {
-  PNG_KEYWORD, toChainFile, encodeChain, shareLink, readChainFrom, pickChainFile, downloadBlob, fileNameOf, saveFileAs,
+  PNG_KEYWORD, toChainFile, encodeChain, shareLink, readChainFrom, pickChainFile, fileNameOf, saveFileAs,
 } from '../utils/chainFile'
 
 /** Room around the chain in a saved picture */
@@ -50,7 +50,7 @@ export function useChainFile() {
   }
 
   /**
-   * File → Save: straight into the system's Save as window, named after the chain (the last name
+   * File → Export: straight into the system's Save as window, named after the chain (the last name
    * used); the name it is saved under becomes the chain's (saved inside the file too).
    */
   async function saveFile() {
@@ -77,10 +77,27 @@ export function useChainFile() {
     }
   }
 
-  async function savePicture(name: string) {
+  /**
+   * File → Save as image: the system's Save as window first (straight from the click), then the
+   * picture of the canvas, the chain hidden inside it (File → Import turns it back into the chain).
+   */
+  async function savePicture() {
     const store = useSignalStore.getState()
     if (store.nodes.length === 0) return
-    store.setChainName(name)
+    const name = store.chainName || t.file.defaultName
+    try {
+      const saved = await saveFileAs(picture, fileNameOf(name, t.file.defaultName, 'png'), 'image/png', t.file.imageType)
+      if (saved === null) return
+      useSignalStore.getState().setChainName(saved)
+      useSignalStore.getState().showNotice(t.file.pictureSaved)
+    } catch {
+      useSignalStore.getState().showNotice(t.file.pictureFailed, true)
+    }
+  }
+
+  /** A PNG of everything on the canvas, the chain (named `name`) hidden inside it. */
+  async function picture(name: string): Promise<Blob> {
+    const store     = useSignalStore.getState()
     const chain     = snapshot(name)
     const selection = store.selectedNodeIds
     const zoomedOut = store.overview
@@ -90,7 +107,7 @@ export function useChainFile() {
     store.setCapturing(true)
     try {
       const viewport = document.querySelector<HTMLElement>('.react-flow__viewport')
-      if (!viewport) return
+      if (!viewport) throw new Error('no canvas')
       // The cards are drawn again (through React Flow, a few frames); then the crossfade ends
       await waitFor(() => !viewport.querySelector(NOT_IN_PICTURE))
       if (zoomedOut) await wait(FADE_MS + 30)
@@ -110,10 +127,7 @@ export function useChainFile() {
       })
       if (!blob) throw new Error('no picture')
       const png = addPngText(new Uint8Array(await blob.arrayBuffer()), PNG_KEYWORD, await encodeChain(chain))
-      downloadBlob(new Blob([png], { type: 'image/png' }), fileNameOf(name, t.file.defaultName, 'png'))
-      useSignalStore.getState().showNotice(t.file.pictureSaved)
-    } catch {
-      useSignalStore.getState().showNotice(t.file.pictureFailed, true)
+      return new Blob([png], { type: 'image/png' })
     } finally {
       const s = useSignalStore.getState()
       s.setCapturing(false)

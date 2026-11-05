@@ -155,7 +155,7 @@ The canvas works like a drawing app and **follows the mouse** — there is no mo
 
 Every level starts from a **blank canvas** at 100% zoom (also after New, a level change or removing the last node): no preset layout, no fixed Master Bus, no position restrictions. The header (level stepper, Snap to grid, theme, language, the File menu, the tutorial's ?) fits from 1024px up in English and Bulgarian (at 1024 the Bulgarian title wraps onto three lines).
 
-**Save / Open**: File → Save opens the system's Save as window at once (`saveFileAs`; a download where the browser has none), no window of the app's own. One format everywhere, `ChainFile` (`utils/chainFile.ts`) — the autosave (`localStorage` `lsc-canvas`), `.json` files, pictures (the chain inside the PNG), share links (`#chain=…`). `parseChainFile` keeps only what the app can show: unknown types left out (and counted), saved params over `initialParams()`, a wrong value back to the default (no older formats are read: the history starts at 1.0).
+**Save / Open**: File → Export and Save as image open the system's Save as window at once (`saveFileAs`; a download where the browser has none), no window of the app's own; Import opens a file. One format everywhere, `ChainFile` (`utils/chainFile.ts`) — the autosave (`localStorage` `lsc-canvas`), `.json` files, pictures (the chain inside the PNG), share links (`#chain=…`). `parseChainFile` keeps only what the app can show: unknown types left out (and counted), saved params over `initialParams()`, a wrong value back to the default (no older formats are read: the history starts at 1.0).
 
 ### Cards
 
