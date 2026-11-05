@@ -1,27 +1,18 @@
-import type { ReactNode } from 'react'
 import type { CardProps } from './cardProps'
 import { useNodeName } from '../../hooks/useNodeName'
-import { useStage, useWire } from '../../hooks/useGraphSignal'
+import { useNodeChrome } from '../../hooks/useNodeChrome'
 import { useSignalStore } from '../../store/signalStore'
 import { useTranslation } from '../../i18n/useTranslation'
-import { outputKey } from '../../graph/graph'
-import { levelOf } from '../../signal/engine'
-import { FaceCard } from './FaceCard'
+import { NODE_REGISTRY, TO_PC_PORT, portRows } from '../../data/nodeRegistry'
+import { PORT_GAP, PORT_TOP } from '../../utils/layoutHelpers'
+import { CardFrame } from './CardFrame'
 import { NodeWrapper } from './NodeWrapper'
-import { LookInside } from './LookInside'
 import { NODE_LOOK } from './nodeLook'
-import { OverviewIcon } from './OverviewFace'
 import { LINE_H, lineTop } from './portLines'
 
-// Record and play back (D22): the Audio Interface and the DAW, two face cards — a big icon and an
-// upright meter reading what they record (the Interface in dBu, the DAW in dBFS). Zoomed in, a line
-// across the face on each port line names what goes in and out there, each name lit while sound
-// passes; an arrow joins them where one is the other's way on (the Interface's two paths). At
-// Intermediate a Look inside button under the icon shows what is inside the box (D22).
-
-/** The Look inside button's height (px), and its gap under the icon */
-const LOOK_H   = 30
-const LOOK_GAP = 10
+// Record and play back (D22): the Audio Interface — a plain card, the USB sign and its outputs'
+// names — and the DAW, a bus's face (D39). Their Look inside (D22) is in the right-click menu at
+// Intermediate (NodeMenu, LookInside.tsx). PortLine is Beginner's Interface face's (BeginnerFaces).
 
 const shade = (lit: boolean) => (lit ? 'var(--lsc-accent)' : 'var(--lsc-fg-muted)')
 
@@ -53,60 +44,61 @@ export function PortLine({ row, from, to, lit, arrow }: {
   )
 }
 
-/** Shows the Look inside button: at Intermediate only (Advanced shows the parts on the card) */
-const useLookInside = () => useSignalStore((s) => s.complexityLevel === 'intermediate')
-
-/** The face: the port lines on top (zoomed in), the icon under them, and under it `footer` if any. */
-function Face({ box, lines, icon, footer }: {
-  box: { w: number; h: number }
-  lines: ReactNode
-  icon: ReactNode
-  footer?: ReactNode
-}) {
-  const overview = useSignalStore((s) => s.overview)
-  // Zoomed out the icon alone, as big as it fits
-  if (overview) return <OverviewIcon icon={icon} box={box} />
-  const below = lineTop(2) + LINE_H
-  return (
-    <div style={{ position: 'relative', width: box.w, height: box.h }}>
-      {lines}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: below, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: LOOK_GAP }}>
-        <OverviewIcon icon={icon} box={{ w: box.w, h: box.h - below - (footer ? LOOK_H + LOOK_GAP : 0) }} />
-        {footer && <div style={{ height: LOOK_H }}>{footer}</div>}
-      </div>
-    </div>
-  )
-}
+/**
+ * The USB sign's size (px) — the gap between the two names' lines, so a long name (Bulgarian's
+ * "Към компютъра") runs over it, never into it — and its room from the card's left edge (the input
+ * rings reach 14px in)
+ */
+const USB_ICON = 80
+const USB_LEFT = 30
+/** The outputs' names: as big as a bus's Output label (24px), clear of the output rings */
+const OUT_TEXT  = 24
+const OUT_RIGHT = 26
 
 /**
- * Audio Interface: Line in → To computer (what it records, its meter in dBu), From computer → Line
- * out (what the computer plays back, back along the same USB wire: no port on the left for it) —
- * two paths that never meet (NodeTypeDef `routes`).
+ * Audio Interface, from Intermediate (D22): a plain card, the same at every zoom — the USB sign on
+ * its left, its inputs one port per wire as a bus's (what it records, over the USB wire into the
+ * computer), its two outputs named beside their rings: To computer, and three lines down Line out
+ * (the computer's sound, back along the same USB wire — no port on the left for it). Nothing else:
+ * no meter; Look inside is in its right-click menu (NodeMenu). Beginner has its own face (BeginnerInterface).
  */
 export function InterfaceNode({ id }: CardProps) {
-  const { t }     = useTranslation()
-  const text      = t.nodes.interface
-  const Icon      = NODE_LOOK.interface.icon
-  const recording = isFinite(levelOf(useStage(id)?.in))
-  // The DAW plays back along the USB wire: the line output carries it (on L and R into monitors — D43)
-  const whole     = isFinite(levelOf(useWire(outputKey(id, 'out'))))
-  const left      = isFinite(levelOf(useWire(outputKey(id, 'out-l'))))
-  const right     = isFinite(levelOf(useWire(outputKey(id, 'out-r'))))
-  const playing   = whole || left || right
-  const look      = useLookInside()
+  const { t }   = useTranslation()
+  const text    = t.nodes.interface
+  const chrome  = useNodeChrome(id, 'interface')
+  const label   = useNodeName(id, 'interface')
+  const Icon    = NODE_LOOK.interface.icon
+  const rows    = portRows(chrome.ports.outputs)
+  const rowOf   = (match: (portId: string) => boolean) => rows[chrome.ports.outputs.findIndex((p) => match(p.id))] ?? 0
+  const toPc    = rowOf((p) => p === TO_PC_PORT)
+  // Line out: its whole output, or its L while it feeds speakers (D43)
+  const lineOut = rowOf((p) => p === 'out' || p === 'out-l')
+  const size    = NODE_REGISTRY.interface.freeSize!
+  const lastRow = Math.max(0, ...portRows(chrome.ports.inputs), ...rows)
+  const height  = Math.max(size.h, PORT_TOP + lastRow * PORT_GAP + 24)
+  const name = (row: number, words: string) => (
+    <span
+      style={{
+        position: 'absolute', right: OUT_RIGHT, top: PORT_TOP + row * PORT_GAP, transform: 'translateY(-50%)',
+        fontSize: OUT_TEXT, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap', color: 'var(--lsc-fg)',
+      }}
+    >
+      {words}
+    </span>
+  )
   return (
-    <FaceCard
-      nodeId={id} typeKey="interface" label={useNodeName(id, 'interface')} meterAt="in"
-      art={(box) => (
-        <Face
-          box={box} icon={<Icon />} footer={look && <LookInside type="interface" />}
-          lines={<>
-            <PortLine row={0} from={text.lineIn} to={text.toComputer} lit={[recording, recording]} arrow />
-            <PortLine row={1} from={text.fromComputer} to={text.lineOut} lit={[playing, playing]} arrow />
-          </>}
-        />
-      )}
-    />
+    <CardFrame nodeId={id} label={label} chrome={chrome} size={{ w: size.w, h: height }}>
+      <div style={{ position: 'relative', flex: 1 }}>
+        <span
+          aria-hidden
+          style={{ position: 'absolute', left: USB_LEFT, top: PORT_TOP + ((toPc + lineOut) / 2) * PORT_GAP - USB_ICON / 2, display: 'flex' }}
+        >
+          <Icon size={USB_ICON} />
+        </span>
+        {name(toPc, text.toComputer)}
+        {name(lineOut, text.lineOut)}
+      </div>
+    </CardFrame>
   )
 }
 
@@ -119,7 +111,6 @@ export function InterfaceNode({ id }: CardProps) {
  */
 export function DawNode({ id }: CardProps) {
   const advanced = useSignalStore((s) => s.complexityLevel === 'advanced')
-  const look     = useLookInside()
   const { t, fmt } = useTranslation()
   // At Advanced: what it records into, a file per track (D40) — each wire into it a track
   const tracks   = useSignalStore((s) => s.edges.reduce((n, e) => n + (e.target === id && e.targetHandle === 'in' ? 1 : 0), 0))
@@ -129,7 +120,7 @@ export function DawNode({ id }: CardProps) {
   return (
     <NodeWrapper
       nodeId={id} typeKey="daw" label={useNodeName(id, 'daw')} overviewSides="output" faceOnly
-      face={{ reads: advanced ? 'out' : 'in', Icon: NODE_LOOK.daw.icon, top: look ? <LookInside type="daw" /> : undefined, under }}
+      face={{ reads: advanced ? 'out' : 'in', Icon: NODE_LOOK.daw.icon, under }}
     />
   )
 }

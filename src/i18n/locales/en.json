@@ -363,7 +363,6 @@
       "label": "Balance"
     },
     "interface": {
-      "lineIn": "Line in",
       "toComputer": "To computer",
       "fromComputer": "From computer",
       "lineOut": "Line out"
@@ -386,7 +385,7 @@
       "title": "Inside the DAW"
     },
     "steps": {
-      "preamp": "Preamp",
+      "gain": "Gain",
       "adc": "A/D converter",
       "usb": "USB ⇄ computer",
       "dac": "D/A converter",

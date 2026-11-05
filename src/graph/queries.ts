@@ -84,7 +84,14 @@ function splitOutputs(outputs: NodePort[], whole: boolean): NodePort[] {
     const at    = outputs.findIndex((p) => p.id === SPLIT_PORT)
     const port  = outputs[at]
     // Each on a port line of its own, under the one before; the name (the Computer's Analog) by L only
-    const next  = (k: number) => (port.row === undefined ? {} : { row: port.row + k })
+    const next  = (k: number): Partial<NodePort> => ({
+      ...(port.row === undefined ? {} : { row: port.row + k }),
+      // A level's own line moves down with it (the Audio Interface's Line out at Beginner)
+      ...(port.atLevels === undefined ? {} : {
+        atLevels: Object.fromEntries(Object.entries(port.atLevels).map(([level, at]) =>
+          [level, at?.row === undefined ? at : { ...at, row: at.row + k }])),
+      }),
+    })
     const plain = { ...port, label: undefined, labelLevels: undefined }
     const left  = { ...port, id: 'out-l', ...next(0) }
     const right = { ...plain, id: 'out-r', ...next(1) }
@@ -134,7 +141,7 @@ export const middleAt = (p: NodePort, level: ComplexityLevel) =>
 
 /**
  * A stack of ports without those not drawn at `level`, each halfway down its card or not as it is
- * drawn there (`middleLevels` settled) — the same array for the same stack.
+ * drawn there (`middleLevels` settled), on its line there (`atLevels`) — the same array for the same stack.
  */
 function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
   let shown = DRAWN[level].get(ports)
@@ -143,6 +150,10 @@ function drawn(ports: NodePort[], level: ComplexityLevel): NodePort[] {
     shown = ports.some(unseen) ? ports.filter((p) => !unseen(p)) : ports
     if (shown.some((p) => p.middleLevels !== undefined)) {
       shown = shown.map((p) => p.middleLevels === undefined ? p : { ...p, middle: middleAt(p, level) || undefined, middleLevels: undefined })
+    }
+    // A port different at some levels (NodePort `atLevels`): settled for this one
+    if (shown.some((p) => p.atLevels !== undefined)) {
+      shown = shown.map((p) => p.atLevels === undefined ? p : { ...p, ...p.atLevels[level], atLevels: undefined })
     }
     // A name shown only at some levels (the Computer's Analog and Digital, at Advanced)
     if (shown.some((p) => p.labelLevels !== undefined)) {

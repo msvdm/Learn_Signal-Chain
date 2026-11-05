@@ -32,6 +32,11 @@ export type NodePort = {
    * line — BareSource). drawnPorts settles it: a port drawn at a level has `middle` or not.
    */
   middleLevels?: readonly ComplexityLevel[]
+  /**
+   * Different at some levels (graph/queries.ts drawnPorts settles it): the Audio Interface's Line
+   * out on its own line from Intermediate, on the line under To computer on its Beginner face
+   */
+  atLevels?: Partial<Record<ComplexityLevel, Pick<NodePort, 'row' | 'skipRows'>>>
   /** Its name, beside its ring (the locales' `ports`): the Computer's Analog and Digital outputs */
   label?: PortLabel
   /** With `label`: shown only at these levels (the Computer's, at Advanced where it has two outputs) */
@@ -686,12 +691,15 @@ export const NODE_REGISTRY: Record<TypeKey, NodeTypeDef> = {
     // comes back along it and out of its line output (one stereo wire, From computer: into the
     // desk, or the monitors). The two never meet
     category: 'processor', stereo: 'always',
-    // (its extra input ports below its playback line)
-    inputs: [{ id: 'in', many: true, skipRows: [1] }, { id: FROM_PC_PORT, hidden: true }],
-    outputs: [{ id: TO_PC_PORT }, { id: 'out' }],
+    // Its inputs one port per wire, as a bus's; its two outputs named on the card (InterfaceNode):
+    // Line out three lines under To computer. At Beginner its face has a line across for each path
+    // (BeginnerInterface): Line out on the second line, the extra inputs below it
+    inputs: [{ id: 'in', many: true, atLevels: { beginner: { skipRows: [1] } } }, { id: FROM_PC_PORT, hidden: true }],
+    outputs: [{ id: TO_PC_PORT }, { id: 'out', row: 3, atLevels: { beginner: { row: 1 } } }],
     routes: [{ from: 'in', to: [TO_PC_PORT], as: 'adc' }, { from: FROM_PC_PORT, to: ['out'], as: 'dac' }],
     // Advanced has its parts instead: the converters and the Codec
-    levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE,
+    // minSize: its Beginner face's; freeSize: its card's at Intermediate (the USB sign, the outputs' names)
+    levels: ['beginner', 'intermediate'], bypass: false, minSize: FACE_SIZE, freeSize: { w: 320, h: 240 },
     defaultParams: {},
   },
   daw: {

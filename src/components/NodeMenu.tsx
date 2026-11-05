@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2,
+  Power, Trash2, Scissors, Copy, ClipboardPaste, BoxSelect, FolderInput, FlipHorizontal2, FlipVertical2, ScanEye,
 } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
 import { useTranslation } from '../i18n/useTranslation'
@@ -12,8 +12,12 @@ import { useDismiss } from '../hooks/useDismiss'
 import { MOD } from '../utils/shortcut'
 import type { Direction } from '../utils/nodeGroup'
 import { DirectionArrows } from './DirectionArrows'
+import type { InsideType } from './nodes/LookInside'
 
 const MARGIN = 8
+
+/** The boxes with a Look inside (D22): in their right-click menu, at Intermediate */
+const hasInside = (typeKey: string): typeKey is InsideType => typeKey === 'interface' || typeKey === 'daw'
 
 interface NodeMenuProps {
   /** The element that was right-clicked */
@@ -27,18 +31,22 @@ interface NodeMenuProps {
   onCopy: () => void
   onDuplicate: (dir: Direction) => void
   onRemove: () => void
+  /** Look inside (the Audio Interface, the DAW — at Intermediate: D22) */
+  onLookInside: (type: InsideType) => void
   onClose: () => void
 }
 
 /**
- * Right-click menu of an element on the canvas: Bypass / Turn back on, Flip horizontal /
+ * Right-click menu of an element on the canvas: Look inside (the Audio Interface and the DAW at
+ * Intermediate), Bypass / Turn back on, Flip horizontal /
  * vertical (the cards that flip: FLIPS), Cut, Copy, Duplicate (left / right / up / down), Remove.
  * With several elements selected, the actions apply to all of them (Bypass and Flip are left out).
  */
-export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, onRemove, onClose }: NodeMenuProps) {
+export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, onRemove, onLookInside, onClose }: NodeMenuProps) {
   const node             = useSignalStore((s) => s.nodes.find((n) => n.id === nodeId))
   const toggleBypassNode = useSignalStore((s) => s.toggleBypassNode)
   const updateNodeParams = useSignalStore((s) => s.updateNodeParams)
+  const intermediate     = useSignalStore((s) => s.complexityLevel === 'intermediate')
   const { t, fmt }       = useTranslation()
 
   // The element is gone (removed, Reset, level change) — nothing to act on
@@ -53,6 +61,7 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
   const bypassed  = node.bypassed ?? false
   const canBypass = !many && NODE_REGISTRY[node.typeKey].bypass
   const flips     = many ? [] : (FLIPS[node.typeKey] ?? [])
+  const inside    = !many && intermediate && hasInside(node.typeKey) ? node.typeKey : null
 
   const act = (fn: () => void) => () => { fn(); onClose() }
 
@@ -62,6 +71,12 @@ export function NodeMenu({ nodeId, targets, x, y, onCut, onCopy, onDuplicate, on
         <div style={{ padding: '6px 10px 4px', fontSize: 12, fontWeight: 600, color: 'var(--lsc-fg-muted)' }}>
           {fmt(t.nodeMenu.selected, { count: String(targets.length) })}
         </div>
+      )}
+      {inside && (
+        <>
+          <MenuItem icon={<ScanEye size={15} />} label={t.inside.button} onClick={act(() => onLookInside(inside))} />
+          <MenuDivider />
+        </>
       )}
       {canBypass && (
         <MenuItem

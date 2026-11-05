@@ -56,9 +56,26 @@ describe('the ports of an input that takes several wires', () => {
     expect(drawnPorts(bus, 'intermediate', { nodes, edges: [] }).inputs).toEqual([{ id: 'in', many: true }])
   })
 
-  it('an Audio Interface’s extra input ports leave its playback line free', () => {
+  it('an Audio Interface’s extra input ports leave its playback line free on its Beginner face; from Intermediate they stack as a bus’s', () => {
     const edges = settleSlots({ nodes, edges: [into('k0', 'box'), into('k1', 'box')] })
-    expect(drawnPorts(nodes.at(-1)!, 'intermediate', { nodes, edges }).inputs.map((p) => p.row)).toEqual([0, 2, 3])
+    const box   = nodes.at(-1)!
+    expect(drawnPorts(box, 'beginner', { nodes, edges }).inputs.map((p) => p.row)).toEqual([0, 2, 3])
+    expect(drawnPorts(box, 'intermediate', { nodes, edges }).inputs.map((p) => p.row)).toEqual([0, 1, 2])
+  })
+
+  it('an Audio Interface’s Line out: under To computer at Beginner, three lines under it from Intermediate — L and R for speakers too', () => {
+    const box  = nodes.at(-1)!
+    const rows = (level: 'beginner' | 'intermediate', edges: SignalEdge[]) =>
+      drawnPorts(box, level, { nodes, edges }).outputs.map((p) => [p.id, p.row ?? 0])
+    expect(rows('beginner', [])).toEqual([['to-pc', 0], ['out', 1]])
+    expect(rows('intermediate', [])).toEqual([['to-pc', 0], ['out', 3]])
+    // Into two monitors (D43): L and R, the whole output under them while something else takes it
+    const monitors: SignalEdge[] = [
+      { id: 'l', source: 'box', sourceHandle: 'out-l', target: 'k0', targetHandle: 'in' },
+      { id: 'w', source: 'box', sourceHandle: 'out', target: 'k1', targetHandle: 'in' },
+    ]
+    expect(rows('beginner', monitors)).toEqual([['to-pc', 0], ['out-l', 1], ['out-r', 2], ['out', 3]])
+    expect(rows('intermediate', monitors)).toEqual([['to-pc', 0], ['out-l', 3], ['out-r', 4], ['out', 5]])
   })
 })
 

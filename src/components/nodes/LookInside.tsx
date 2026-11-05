@@ -1,14 +1,14 @@
-import { Fragment, useEffect, useId, useState } from 'react'
+import { Fragment, useEffect, useId } from 'react'
 import type { SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Cable, ScanEye } from 'lucide-react'
+import { Cable } from 'lucide-react'
 import { useTranslation } from '../../i18n/useTranslation'
 import type { Translations } from '../../i18n/translations'
 import { NODE_LOOK } from './nodeLook'
 import type { NodeIcon } from './nodeLook'
 
 // "Look inside" (D22, explanation 2): at Intermediate the Audio Interface and the DAW are boxes that
-// record and play back; a button on each opens a picture of what is inside — the same parts as the
+// record and play back; their right-click menu opens a picture of what is inside — the same parts as the
 // desk's cards (their icons), the digital ones greyed in a frame of their own. Read-only: Esc, the
 // backdrop or Close shuts it.
 
@@ -24,7 +24,7 @@ interface InsideStep {
 /** What is inside each box, in the order the sound goes through it. */
 const INSIDE: Record<'interface' | 'daw', readonly InsideStep[]> = {
   interface: [
-    { icon: NODE_LOOK.gain.icon,      name: 'preamp' },
+    { icon: NODE_LOOK.gain.icon,      name: 'gain' },
     { icon: NODE_LOOK.adc.icon,       name: 'adc' },
     { icon: NODE_LOOK.interface.icon, name: 'usb', digital: true },
     { icon: NODE_LOOK.dac.icon,       name: 'dac' },
@@ -57,35 +57,15 @@ function runsOf(steps: readonly InsideStep[]): InsideStep[][] {
   return runs
 }
 
-/** The button on the card's face, and the picture it opens. */
-export function LookInside({ type }: { type: keyof typeof INSIDE }) {
-  const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        className="nodrag nopan lsc-btn-outline"
-        onClick={() => setOpen(true)}
-        style={{
-          height: '100%', padding: '0 12px', borderRadius: 8, pointerEvents: 'auto',
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          border: '1px solid var(--lsc-border)', background: 'transparent', color: 'var(--lsc-fg)',
-          fontSize: 'var(--node-text-xs)', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer',
-        }}
-      >
-        <ScanEye size={15} />
-        {t.inside.button}
-      </button>
-      {open && <InsideView type={type} onClose={() => setOpen(false)} />}
-    </>
-  )
-}
-
-// The view is drawn in document.body but sits in the card in React's tree: its events must not
-// reach the card (a click would select it, a right-click open its menu)
+// The view is drawn in document.body: its events must not reach what holds it in React's tree (the
+// canvas: a click would drop the selection, a right-click open a menu)
 const stop = (e: SyntheticEvent) => e.stopPropagation()
 
-function InsideView({ type, onClose }: { type: keyof typeof INSIDE; onClose: () => void }) {
+/** What a box can show inside: the Audio Interface, the DAW. */
+export type InsideType = keyof typeof INSIDE
+
+/** The picture of what is inside a box, opened from its right-click menu. */
+export function InsideView({ type, onClose }: { type: InsideType; onClose: () => void }) {
   const { t }   = useTranslation()
   const titleId = useId()
   const text    = t.inside[type]

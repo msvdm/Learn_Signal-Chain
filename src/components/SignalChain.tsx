@@ -15,6 +15,8 @@ import { NODE_COMPONENTS }      from './nodes'
 import { ChainEdge }            from './ChainEdge'
 import { ConnectingToast }      from './ConnectingToast'
 import { NodeMenu, CanvasMenu } from './NodeMenu'
+import { InsideView } from './nodes/LookInside'
+import type { InsideType } from './nodes/LookInside'
 import { CanvasTools }          from './CanvasTools'
 import { CanvasOverlays }       from './CanvasOverlays'
 import { SwellClock }           from './AnalogWire'
@@ -90,6 +92,8 @@ export function SignalChain() {
   // Right-click menu of an element (Bypass, Flip, Cut, Copy, Duplicate, Remove) — `targets` are
   // what its actions apply to: the element, or the whole selection it belongs to
   const [nodeMenu, setNodeMenu]     = useState<{ nodeId: string; targets: string[]; x: number; y: number } | null>(null)
+  // Look inside the Audio Interface or the DAW (their right-click menu, at Intermediate — D22)
+  const [inside, setInside]         = useState<InsideType | null>(null)
   // Right-click menu of the empty canvas (Paste here, Select everything); `at` in flow coordinates
   const [canvasMenu, setCanvasMenu] = useState<{ x: number; y: number; at: Pt } | null>(null)
 
@@ -215,6 +219,7 @@ export function SignalChain() {
           onCopy={() => actions.copyNodes(nodeMenu.targets)}
           onDuplicate={(dir) => actions.duplicateNodes(nodeMenu.targets, dir)}
           onRemove={() => actions.removeSelected(nodeMenu.targets)}
+          onLookInside={setInside}
           onClose={() => setNodeMenu(null)}
         />
       )}
@@ -233,6 +238,7 @@ export function SignalChain() {
           onClose={() => setCanvasMenu(null)}
         />
       )}
+      {inside && <InsideView type={inside} onClose={() => setInside(null)} />}
       <ChainOpener />
       {wiring && <ConnectingToast sourceLabel={wireFromType ? (t.palette.items[wireFromType] ?? wireFromType) : ''} />}
     </div>
