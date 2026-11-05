@@ -12,7 +12,8 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { MenuItem, MenuDivider } from './NodeMenu'
 import { OFFLINE_FILE, OFFLINE_FILE_SAVE_AS } from '../data/site'
 
-type Saving = 'file' | 'picture' | null
+/** The picture's name being asked for (a file needs no window of ours: the system's Save as asks) */
+type Saving = 'picture' | null
 
 /** This is the downloaded one-file copy, opened from disk: it has nothing to download. */
 const isDownloadedCopy = window.location.protocol === 'file:'
@@ -46,17 +47,20 @@ export function FileMenu({ onNew, buttonStyle }: {
 
   useDismiss(ref, () => setOpen(false), { open })
 
-  /** Ask for the name first (the last one used is suggested). */
-  function startSave(kind: Exclude<Saving, null>) {
+  /** A picture: ask for its name first (the last one used is suggested). A file goes straight to the system's Save as window. */
+  function startSave(kind: 'file' | 'picture') {
     const { nodes, chainName } = useSignalStore.getState()
     if (nodes.length === 0) return
+    if (kind === 'file') {
+      void chainFile.saveFile()
+      return
+    }
     setName(chainName || t.file.defaultName)
     setSaving(kind)
   }
 
   function finishSave() {
     const chosen = name.trim() || t.file.defaultName
-    if (saving === 'file') chainFile.saveFile(chosen)
     if (saving === 'picture') chainFile.savePicture(chosen)
     setSaving(null)
   }
@@ -142,9 +146,9 @@ export function FileMenu({ onNew, buttonStyle }: {
 
       {saving && (
         <ConfirmDialog
-          title={saving === 'file' ? t.file.saveTitle : t.file.pictureTitle}
-          body={saving === 'file' ? t.file.saveBody : t.file.pictureBody}
-          confirmLabel={saving === 'file' ? t.file.saveConfirm : t.file.pictureConfirm}
+          title={t.file.pictureTitle}
+          body={t.file.pictureBody}
+          confirmLabel={t.file.pictureConfirm}
           cancelLabel={t.dialog.cancel}
           onConfirm={finishSave}
           onCancel={() => setSaving(null)}

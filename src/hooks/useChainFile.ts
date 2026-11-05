@@ -9,7 +9,7 @@ import { cssVar } from '../utils/fitText'
 import { addPngText } from '../utils/pngText'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
 import {
-  PNG_KEYWORD, toChainFile, encodeChain, shareLink, readChainFrom, pickChainFile, downloadBlob, fileNameOf,
+  PNG_KEYWORD, toChainFile, encodeChain, shareLink, readChainFrom, pickChainFile, downloadBlob, fileNameOf, saveFileAs,
 } from '../utils/chainFile'
 
 /** Room around the chain in a saved picture */
@@ -49,10 +49,21 @@ export function useChainFile() {
     return toChainFile(group, name, complexityLevel)
   }
 
-  function saveFile(name: string) {
-    useSignalStore.getState().setChainName(name)
-    const json = JSON.stringify(snapshot(name), null, 2)
-    downloadBlob(new Blob([json], { type: 'application/json' }), fileNameOf(name, t.file.defaultName, 'json'))
+  /**
+   * File → Save: straight into the system's Save as window, named after the chain (the last name
+   * used); the name it is saved under becomes the chain's (saved inside the file too).
+   */
+  async function saveFile() {
+    const store = useSignalStore.getState()
+    if (store.nodes.length === 0) return
+    const name = store.chainName || t.file.defaultName
+    const json = (n: string) => new Blob([JSON.stringify(snapshot(n), null, 2)], { type: 'application/json' })
+    try {
+      const saved = await saveFileAs(json, fileNameOf(name, t.file.defaultName, 'json'), 'application/json', t.file.fileType)
+      if (saved !== null) useSignalStore.getState().setChainName(saved)
+    } catch {
+      useSignalStore.getState().showNotice(t.file.saveFailed, true)
+    }
   }
 
   async function copyShareLink() {

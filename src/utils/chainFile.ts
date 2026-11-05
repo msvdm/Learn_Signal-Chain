@@ -214,6 +214,45 @@ export function downloadBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
+/** The system's Save as window (Chrome, Edge: the File System Access API — not in Firefox or Safari, off in Brave). */
+type SaveFilePicker = (options: {
+  suggestedName: string
+  types: { description: string; accept: Record<string, string[]> }[]
+}) => Promise<{ name: string; createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }> }>
+
+/**
+ * Save a file where the learner chooses: the system's Save as window, `fileName` to start with;
+ * `make` gives the file for the name chosen (its extension left off — a chain keeps its name
+ * inside). That name, or null when the window was closed. A browser without that window gets the
+ * file as a download named `fileName` (it asks where only if it is set to). Call it straight from
+ * a click or a key: the window opens only then.
+ */
+export async function saveFileAs(
+  make: (name: string) => Blob, fileName: string, type: string, description: string,
+): Promise<string | null> {
+  const ext  = fileName.slice(fileName.lastIndexOf('.'))
+  const base = fileName.slice(0, -ext.length)
+  const download = () => {
+    downloadBlob(make(base), fileName)
+    return base
+  }
+  const picker = (window as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker
+  if (!picker) return download()
+  let handle: Awaited<ReturnType<SaveFilePicker>>
+  try {
+    handle = await picker({ suggestedName: fileName, types: [{ description, accept: { [type]: [ext] } }] })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return null
+    // Not allowed here (a sandboxed frame …): a download, as without the window
+    return download()
+  }
+  const name = handle.name.toLowerCase().endsWith(ext) ? handle.name.slice(0, -ext.length) : handle.name
+  const out  = await handle.createWritable()
+  await out.write(make(name))
+  await out.close()
+  return name
+}
+
 /** Ask for a .json or .png file (null if the learner closes the picker). */
 export function pickChainFile(): Promise<File | null> {
   return new Promise((resolve) => {
