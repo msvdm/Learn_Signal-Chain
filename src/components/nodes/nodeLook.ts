@@ -75,6 +75,10 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // "HPF" in capitals looks much bigger than mixed-case names at the same size
   hpf:               { icon: HighPassIcon,      group: 'processing', nameMax: 70 },
   pad:               { icon: Minus,             group: 'processing', headerSize: 18 },
+  // A desk's input section goes on: polarity, then the channel delay — two copies of one signal
+  // lining up, or not
+  phase:             { icon: PhaseIcon,         group: 'processing' },
+  delay:             { icon: Timer,             group: 'processing' },
   'noise-gate':      { icon: GateIcon,          group: 'processing' },
   eq:                { icon: Activity,          group: 'processing' },
   comp:              { icon: CompressorIcon,    group: 'processing' },
@@ -91,9 +95,6 @@ export const NODE_LOOK: Record<TypeKey, NodeLook> = {
   // Routing — level controls, switches, panning, buses
   fader:             { icon: SlidersHorizontal, group: 'routing' },
   switch:            { icon: ToggleLeft,        group: 'routing' },
-  // Polarity and time: two copies of one signal lining up, or not
-  phase:             { icon: PhaseIcon,         group: 'routing' },
-  delay:             { icon: Timer,             group: 'routing' },
   relay:             { icon: RelayIcon,         group: 'routing' },
   pan:               { icon: MoveHorizontal,    group: 'routing' },
   'master-bus':      { icon: Merge,             group: 'routing' },
