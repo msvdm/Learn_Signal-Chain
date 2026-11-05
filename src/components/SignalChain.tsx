@@ -176,8 +176,10 @@ export function SignalChain() {
         nodesDraggable={canEdit}
         nodesConnectable={false}
         elementsSelectable={canEdit}
-        // Select tool: dragging empty space draws a selection box (the middle button still pans)
-        panOnDrag={toolMode !== 'select' ? false : leftTool === 'select' ? PAN_MIDDLE_BUTTON : true}
+        // Select tool: dragging empty space draws a selection box (the middle button still pans).
+        // Connect mode — over a port, or drawing a wire — the left button wires, the middle pans
+        // (to reach a card off screen with the wire still in hand)
+        panOnDrag={toolMode !== 'select' || leftTool === 'select' ? PAN_MIDDLE_BUTTON : true}
         selectionOnDrag={canEdit && leftTool === 'select'}
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={null}

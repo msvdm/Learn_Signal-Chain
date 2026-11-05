@@ -16,6 +16,34 @@ describe('a wire between two ordinary cards', () => {
   })
 })
 
+// A corner clicked where the wire would come back on itself is where it turns: no hairpin, the
+// stereo wire's two lines never cross (the user's call, 2026-11-05)
+describe('a wire through a corner the user clicked', () => {
+  it('coming back toward the input: it turns at the corner, not back over its own line', () => {
+    // Out at (0, 0), a corner left and below at (-200, 300), the input to its right at (100, 400)
+    expect(orthogonalRoute([{ x: 0, y: 0 }, { x: -200, y: 300 }, { x: 100, y: 400 }])).toEqual([
+      { x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 300 }, { x: -200, y: 300 },
+      { x: -200, y: 400 }, { x: 100, y: 400 },
+    ])
+  })
+
+  it('carrying on the way it came: it turns half way, as it always has', () => {
+    expect(orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }, { x: 400, y: 300 }])).toEqual([
+      { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 200, y: 100 },
+      { x: 300, y: 100 }, { x: 300, y: 300 }, { x: 400, y: 300 },
+    ])
+  })
+
+  it('no run of the route goes straight back over the one before it', () => {
+    const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 300, y: 200 }, { x: 100, y: 500 }, { x: 600, y: 300 }])
+    for (let i = 1; i < route.length - 1; i++) {
+      const a = { x: route[i].x - route[i - 1].x, y: route[i].y - route[i - 1].y }
+      const b = { x: route[i + 1].x - route[i].x, y: route[i + 1].y - route[i].y }
+      expect(a.x * b.x + a.y * b.y < 0).toBe(false)
+    }
+  })
+})
+
 // A stereo digital wire is two lines, one each side of its route (the user's call, 2026-10-31)
 describe('a line beside a route', () => {
   const route = orthogonalRoute([{ x: 0, y: 0 }, { x: 200, y: 100 }])

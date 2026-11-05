@@ -27,6 +27,8 @@ const outOf   = (p: Pt, f: Facing): Pt => ({ x: p.x + STEP[f].x * MIN_EXIT, y: p
  *   horizontal) so all turns are at right angles.
  * - Two points produce the simplest possible elbow; additional waypoints add
  *   extra corner segments as the user places them.
+ * - A wire never folds back on itself at a corner the user clicked: where its turn half way to the
+ *   next point would send it back the way it came, it turns at the corner itself (unturned).
  */
 export function orthogonalRoute(points: Pt[], ends: RouteEnds = {}): Pt[] {
   const from = ends.from ?? 'right'
@@ -38,10 +40,22 @@ export function orthogonalRoute(points: Pt[], ends: RouteEnds = {}): Pt[] {
     const b = points[i + 1]
     const pivot = i === 0
       ? Math.max(a.x + MIN_EXIT, (a.x + b.x) / 2)
-      : (a.x + b.x) / 2
+      : unturned(route, (a.x + b.x) / 2)
     route.push({ x: pivot, y: a.y }, { x: pivot, y: b.y }, b)
   }
   return withoutRepeats(route)
+}
+
+/**
+ * Where an H→V→H elbow out of the route's last point turns: at `pivot`, unless the wire came into
+ * that point sideways from the other side — the elbow's first run would go back over it (a hairpin;
+ * a stereo wire's two lines cross there). Then it turns at the point itself, up or down at once.
+ */
+function unturned(route: Pt[], pivot: number): number {
+  const at   = route[route.length - 1]
+  const from = [...route].reverse().find((p) => p.x !== at.x || p.y !== at.y)
+  if (!from || from.y !== at.y) return pivot
+  return Math.sign(at.x - from.x) === -Math.sign(pivot - at.x) ? at.x : pivot
 }
 
 /** Drop zero-length segments so corner rounding sees real turns only */
@@ -82,7 +96,7 @@ function turnedRoute(points: Pt[], from: Facing, to: Facing): Pt[] {
     } else if (entersUpright) {
       route.push({ x: q.x, y: p.y }, q)
     } else {
-      const midX = (p.x + q.x) / 2
+      const midX = unturned(route, (p.x + q.x) / 2)
       route.push({ x: midX, y: p.y }, { x: midX, y: q.y }, q)
     }
   }
