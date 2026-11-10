@@ -112,7 +112,8 @@ function makePainter(find: Finder): Painter {
         const x = SUPPLY_X + i * MAGNET_GAP + (moved % MAGNET_GAP)
         const m = tapeMagnet(r, x - REC_X)
         const long = MAGNET_LONG * Math.abs(m)
-        if (long < 0.6) { magnet.setAttribute('d', ''); return }
+        // None behind a reel: its windows would show them
+        if (long < 0.6 || x + MAGNET_LONG / 2 > TAKEUP_X - TAPE_OUT) { magnet.setAttribute('d', ''); return }
         const way = Math.sign(m), tip = x + (way * long) / 2, head = Math.min(5, long * 0.5), y = TAPE_Y + TAPE_H / 2
         const back = tip - way * head
         magnet.setAttribute('d',
