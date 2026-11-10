@@ -93,23 +93,27 @@ export type Recipe = readonly Sine[]
 export const SAWTOOTH: Recipe = Array.from({ length: 10 }, (_, i) => ({ size: 1 / (i + 1), phase: 0 }))
 
 /**
- * A real piano's C5 (523 Hz), measured from a recording (the user's, 2026-11-10): half a second
- * from 60 ms after the hammer strikes, Hann-windowed, each harmonic's peak searched near its
- * place. Rebuilt from these ten (at their own, slightly sharp frequencies: the 6th at 6.10×) the
- * recording's waveform is within −27 dB. Its sizes: 0, −21, −27, −25, −30, −38 dB, then nothing
- * (below −65 dB) — the fundamental almost alone.
+ * A real guitar's low E (82 Hz), measured from a recording (FreePats' electric guitar sampled
+ * straight into an instrument input, CC0: `E2_s1_soft_03.flac`, a soft pluck, 48 kHz, 24-bit — the
+ * string's own signal, with no body and no room over it). A quarter of a second from 60 ms after
+ * the pluck, Hann-windowed, each harmonic's peak searched near its place. Rebuilt from these ten
+ * (at their own, slightly sharp frequencies: the 10th at 10.08×) the recording's waveform is
+ * within −29 dB — as close as the method comes on a note that is dying away. Its sizes: 0, −0.5,
+ * −5.4, −18.5, −36.4, −31.7, −23.8, −22.3, −27.8, −32.9 dB — the first three nearly as one, which
+ * is what makes the sum a shape and not a sine. The whole recipe is turned so the first sine
+ * starts at 0, as the sawtooth's do (a later starting moment: the shape is the same).
  */
-export const PIANO_C5: Recipe = [
+export const GUITAR_LOW_E: Recipe = [
   { size: 1,      phase: 0 },
-  { size: 0.0892, phase: 0.08 },
-  { size: 0.0461, phase: 1.83 },
-  { size: 0.0544, phase: 3.01 },
-  { size: 0.0333, phase: -2.3 },
-  { size: 0.0132, phase: -1.24 },
-  { size: 0.0005, phase: -1.05 },
-  { size: 0.0002, phase: 1.82 },
-  { size: 0.0003, phase: -0.28 },
-  { size: 0.0001, phase: 0.8 },
+  { size: 0.9475, phase: -0.03 },
+  { size: 0.5367, phase: 0.01 },
+  { size: 0.1186, phase: -0.32 },
+  { size: 0.0151, phase: -3.06 },
+  { size: 0.0261, phase: -0.58 },
+  { size: 0.0645, phase: -0.61 },
+  { size: 0.0764, phase: -0.93 },
+  { size: 0.0409, phase: -0.95 },
+  { size: 0.0226, phase: -1.54 },
 ]
 
 /** The first `count` sines of a recipe added up, at phase `r` (radians). */

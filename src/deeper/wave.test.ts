@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, K, PIANO_C5, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, GUITAR_LOW_E, K, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -197,22 +197,30 @@ describe('the string, in its harmonics', () => {
   })
 })
 
-describe("a real piano's C5", () => {
-  test('is the fundamental almost alone: no other harmonic above a tenth of it', () => {
-    expect(PIANO_C5[0]).toEqual({ size: 1, phase: 0 })
-    for (const sine of PIANO_C5.slice(1)) expect(sine.size).toBeLessThan(0.1)
-    expect(PIANO_C5.length).toBe(10)
+describe("a real guitar's low E", () => {
+  test('is a complex wave: the first three nearly as one, the rest small', () => {
+    expect(GUITAR_LOW_E[0]).toEqual({ size: 1, phase: 0 })
+    expect(GUITAR_LOW_E.length).toBe(10)
+    // The 2nd is −0.5 dB of the 1st, the 3rd −5.4 dB; from the 4th on, every one is far below
+    expect(GUITAR_LOW_E[1].size).toBeGreaterThan(0.9)
+    expect(GUITAR_LOW_E[2].size).toBeGreaterThan(0.5)
+    for (const sine of GUITAR_LOW_E.slice(3)) expect(sine.size).toBeLessThan(0.13)
+    // Three sines that big make the sum swing further than the first alone — that is the shape
+    let peak = 0
+    for (let deg = 0; deg < 360; deg += 1) peak = Math.max(peak, Math.abs(complexWave(rad(deg), GUITAR_LOW_E)))
+    expect(peak).toBeGreaterThan(2)
+    expect(peak).toBeLessThan(2.1)
   })
 
   test('its circles, its sum and its string follow its sizes and its timing', () => {
     for (const deg of [0, 77, 190]) {
       const r = rad(deg)
-      const points = circlesOnCircles(r, PIANO_C5, 10, 60)
-      expect(points[10].y).toBeCloseTo(60 * complexWave(r, PIANO_C5), 9)
+      const points = circlesOnCircles(r, GUITAR_LOW_E, 10, 60)
+      expect(points[10].y).toBeCloseTo(60 * complexWave(r, GUITAR_LOW_E), 9)
       const tiny = 1e-6
-      expect(stringSwing(r, tiny, PIANO_C5) / tiny).toBeCloseTo(Math.PI * complexWave(r, PIANO_C5), 4)
+      expect(stringSwing(r, tiny, GUITAR_LOW_E) / tiny).toBeCloseTo(Math.PI * complexWave(r, GUITAR_LOW_E), 4)
     }
-    // The 4th starts 3.01 radians ahead: at r = 0 its sine is sin(3.01)
-    expect(complexWave(0, [PIANO_C5[0], { size: 0, phase: 0 }, { size: 0, phase: 0 }, PIANO_C5[3]])).toBeCloseTo(0.0544 * Math.sin(3.01), 9)
+    // The 4th starts 0.32 radians behind: at r = 0 its sine is sin(−0.32)
+    expect(complexWave(0, [GUITAR_LOW_E[0], { size: 0, phase: 0 }, { size: 0, phase: 0 }, GUITAR_LOW_E[3]])).toBeCloseTo(0.1186 * Math.sin(-0.32), 9)
   })
 })

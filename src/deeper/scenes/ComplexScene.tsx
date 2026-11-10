@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { PIANO_C5, SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
+import { GUITAR_LOW_E, SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
 import type { Recipe } from '../wave'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import { put, usePainter } from './painter'
@@ -12,7 +12,7 @@ import { Air, Label, Step } from './sceneParts'
 // and its sine: the fundamental (step 1), the 2nd (2), the 3rd (4), the 4th to the 10th (5). On the
 // right what they make together (from step 3): the circles riding on each other, their sum, and the
 // recipe — how big each sine is. Then that shape in the air from a speaker cone (6), and last a
-// real piano's C5, measured (7): every part takes its recipe. The string vibrates in as many
+// real guitar's low E, measured (7): every part takes its recipe. The string vibrates in as many
 // harmonics as are added up, and grows down beside the rows reached. The phase is the
 // fundamental's: everything is one function of it.
 
@@ -27,8 +27,8 @@ const ROW_Y = [130, 290, 395, 470, 526, 582, 638, 694, 750, 806]
 const ROW_STEP = [1, 2, 4, 5, 5, 5, 5, 5, 5, 5]
 /** How many harmonics are added up at each step: the string's, the circles', the recipe's */
 const COUNT = [1, 2, 2, 3, SINES, SINES, SINES]
-/** The piano's step: from it on, every part takes the piano's recipe instead of the sawtooth's */
-const PIANO_STEP = 7
+/** The guitar's step: from it on, every part takes the guitar's recipe instead of the sawtooth's */
+const GUITAR_STEP = 7
 /** What they make together: the circles' first centre, the sum's graph, the recipe's bars */
 const CHAIN_X = 740, CHAIN_Y = 300, SUM_X = 960, SUM_Y = 300
 const BAR_X = 966, BAR_STEP = 36, BAR_W = 22, BAR_BOTTOM = 560, BAR_H = 80
@@ -47,7 +47,7 @@ const AIR_DOTS = scatter(23, 520, { x: AIR_FROM, y: AIR_Y, w: AIR_TO - AIR_FROM,
 
 const atStep = <T,>(list: readonly T[], step: number) => list[Math.min(step, list.length) - 1]
 const countAt = (step: number) => atStep(COUNT, step)
-const recipeAt = (step: number): Recipe => (step >= PIANO_STEP ? PIANO_C5 : SAWTOOTH)
+const recipeAt = (step: number): Recipe => (step >= GUITAR_STEP ? GUITAR_LOW_E : SAWTOOTH)
 
 const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
 const sumX   = (deg: number) => SUM_X + (GRAPH_W * deg) / 360
@@ -159,7 +159,7 @@ function Axes({ x, y, h }: { x: number; y: number; h: number }) {
 
 /** One harmonic alone: its circle, turning n times as fast, and its sine beside it */
 function Harmonic({ n, name, recipe }: { n: number; name: string; recipe: Recipe }) {
-  // Its label and axes keep the sawtooth's place: the row stays put when the piano's sizes come in
+  // Its label and axes keep the sawtooth's place: the row stays put when the guitar's sizes come in
   const y = ROW_Y[n - 1], room = radiusOf(n, SAWTOOTH), radius = radiusOf(n, recipe), big = n === 1
   return (
     <>
@@ -182,12 +182,12 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
   usePainter(root, onPainter, makePainter)
   const { t, fmt } = useTranslation()
   const l = t.deeper.labels
-  const count = countAt(step), recipe = recipeAt(step), piano = step >= PIANO_STEP
-  // The piano's harmonics are not "half as big", "a third as big": only their numbers then
+  const count = countAt(step), recipe = recipeAt(step), guitar = step >= GUITAR_STEP
+  // The guitar's harmonics are not "half as big", "a third as big": only their numbers then
   const nameOf = (n: number) =>
     n === 1 ? l.fundamental
-    : n === 2 && !piano ? l.secondHarmonic
-    : n === 3 && !piano ? l.thirdHarmonic
+    : n === 2 && !guitar ? l.secondHarmonic
+    : n === 3 && !guitar ? l.thirdHarmonic
     : fmt(l.nthHarmonic, { n: String(n) })
 
   return (
@@ -222,7 +222,7 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
 
       {/* What they make together: circles on circles, their sum, the recipe */}
       <Step n={3} step={step}>
-        <Label at={[SUM_X + 8, 172]}>{piano ? l.pianoC5 : fmt(l.sinesAddedUp, { n: String(count) })}</Label>
+        <Label at={[SUM_X + 8, 172]}>{guitar ? l.guitarLowE : fmt(l.sinesAddedUp, { n: String(count) })}</Label>
         <g data-p="rings">
           {recipe.map(({ size }, i) => (
             <circle key={i} r={UNIT * size}fill="none" stroke={i ? FAINT : PART} strokeWidth={1}
@@ -255,8 +255,8 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         })}
       </Step>
 
-      {/* With ten: the sawtooth the sum comes close to (not the piano's) */}
-      <Step n={5} until={PIANO_STEP - 1} step={step}>
+      {/* With ten: the sawtooth the sum comes close to (not the guitar's) */}
+      <Step n={5} until={GUITAR_STEP - 1} step={step}>
         <path d={`M${SUM_X} ${SUM_Y} V${SUM_Y - (UNIT * Math.PI) / 2} L${SUM_X + GRAPH_W} ${SUM_Y + (UNIT * Math.PI) / 2} V${SUM_Y}`}
           fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
         <Label at={[SUM_X + GRAPH_W, 432]} anchor="end">{l.sawtooth}</Label>

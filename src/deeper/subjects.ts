@@ -57,7 +57,7 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'thirdSine',        box: [-110, 355, 620, 420] },
       { id: 'moreSines',        box: [-110, 430, 620, 830] },
       { id: 'complexInAir',     box: [600, 620, 1370, 850] },
-      { id: 'piano',            box: [690, 150, 1365, 590] },
+      { id: 'guitar',           box: [690, 150, 1365, 590] },
     ],
   },
   {
