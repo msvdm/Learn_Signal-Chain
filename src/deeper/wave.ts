@@ -128,3 +128,21 @@ const AIR_K = TAU / AIR_WAVELENGTH
 export function complexSwing(r: number, distance: number, count: number): number {
   return AIR_SWING * sawtooth(r - AIR_K * distance, count)
 }
+
+/**
+ * A string held at both ends, vibrating in its `n`-th harmonic alone: how far the point `along`
+ * its length (0 … 1) is from rest, at phase `r`. The n-th harmonic is n half-waves along the string
+ * (its ends and n − 1 points between them never move), n times as fast, and 1/n² as far — a bowed
+ * string's own recipe (Helmholtz): the push its swing gives the bridge, the string's slope at that
+ * end, then has the sawtooth's 1/n.
+ */
+export function harmonicSwing(r: number, along: number, n: number): number {
+  return (Math.sin(n * Math.PI * along) * Math.sin(n * r)) / (n * n)
+}
+
+/** The string vibrating in its first `count` harmonics at once: theirs added up, point by point. */
+export function stringSwing(r: number, along: number, count: number): number {
+  let sum = 0
+  for (let n = 1; n <= count; n++) sum += harmonicSwing(r, along, n)
+  return sum
+}

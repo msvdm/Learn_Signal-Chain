@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, K, SWING, WAVELENGTH, addsUp, cameraFor, circlesOnCircles, complexSwing, curvePath, rad, sawtooth, scatter, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, K, SWING, WAVELENGTH, addsUp, harmonicSwing, stringSwing, cameraFor, circlesOnCircles, complexSwing, curvePath, rad, sawtooth, scatter, swing, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -158,5 +158,39 @@ describe('a complex wave from sines', () => {
         expect(next).toBeGreaterThan(here)
       }
     }
+  })
+})
+
+describe('the string, in its harmonics', () => {
+  test('its ends never move; the 2nd harmonic leaves its middle still too', () => {
+    for (const deg of [0, 40, 90, 200, 333]) {
+      for (const n of [1, 2, 3, 10]) {
+        expect(harmonicSwing(rad(deg), 0, n)).toBeCloseTo(0, 9)
+        expect(harmonicSwing(rad(deg), 1, n)).toBeCloseTo(0, 9)
+      }
+      expect(harmonicSwing(rad(deg), 0.5, 2)).toBeCloseTo(0, 9)
+    }
+  })
+
+  test('one harmonic alone is the fundamental: half a sine along the string, swinging with the first sine', () => {
+    expect(stringSwing(rad(90), 0.5, 1)).toBeCloseTo(1, 9)
+    expect(stringSwing(rad(270), 0.5, 1)).toBeCloseTo(-1, 9)
+    expect(stringSwing(rad(90), 0.25, 1)).toBeCloseTo(Math.SQRT1_2, 9)
+  })
+
+  test('the push on the bridge (the slope at its end) is the sawtooth of as many sines', () => {
+    const tiny = 1e-6
+    for (const deg of [20, 70, 150, 300]) {
+      const slope = stringSwing(rad(deg), tiny, 10) / tiny
+      expect(slope).toBeCloseTo(Math.PI * sawtooth(rad(deg), 10), 4)
+    }
+  })
+
+  test('ten harmonics swing no further than π² / 8 of the first alone: the drawing has room', () => {
+    let peak = 0
+    for (let deg = 0; deg < 360; deg += 2) {
+      for (let a = 0; a <= 1; a += 0.01) peak = Math.max(peak, Math.abs(stringSwing(rad(deg), a, 10)))
+    }
+    expect(peak).toBeLessThan(1.25)
   })
 })

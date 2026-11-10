@@ -502,7 +502,7 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .lsc-palette-slide    { transition: none; }
-  .lsc-dd-camera, .lsc-dd-step { transition: none; }
+  .lsc-dd-camera, .lsc-dd-step, .lsc-dd-grow { transition: none; }
   .react-flow__panel.lsc-left-tools { transition: none; }
   .lsc-fade             { transition: none; }
   .lsc-port-target      { animation: none !important; }
@@ -513,6 +513,8 @@ kbd {
 
 /* The camera glides to show the steps reached; a step's parts fade in and out */
 .lsc-dd-camera { transition: transform 1s cubic-bezier(.4, 0, .2, 1); }
+/* What grows from one step to the next (Complex waves' string), as the camera moves */
+.lsc-dd-grow   { transition: transform 1s cubic-bezier(.4, 0, .2, 1); }
 .lsc-dd-step   { transition: opacity .7s ease; }
 .lsc-dd-step[data-off] { opacity: 0; pointer-events: none; }
 

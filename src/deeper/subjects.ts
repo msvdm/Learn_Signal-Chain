@@ -61,10 +61,9 @@ export const SUBJECTS: readonly Subject[] = [
     icon: AudioWaveform,
     Scene: ComplexScene,
     steps: [
-      { id: 'fundamental',      box: [30, 35, 620, 225] },
-      { id: 'secondSine',       box: [30, 235, 620, 340] },
-      { id: 'addingUp',         box: [30, 370, 620, 590] },
-      { id: 'circlesOnCircles', box: [30, 370, 620, 590] },
+      { id: 'fundamental',      box: [-110, 30, 620, 225] },
+      { id: 'secondSine',       box: [-110, 235, 620, 345] },
+      { id: 'addingUp',         box: [-110, 370, 620, 590] },
       { id: 'moreSines',        box: [690, 150, 1365, 590] },
       { id: 'complexInAir',     box: [10, 570, 1370, 815] },
     ],

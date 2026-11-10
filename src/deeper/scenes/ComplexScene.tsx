@@ -1,14 +1,15 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { addsUp, circlesOnCircles, clamp, complexSwing, curvePath, rad, sawtooth, scatter } from '../wave'
+import { addsUp, circlesOnCircles, clamp, complexSwing, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing } from '../wave'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Step } from './sceneParts'
 
-// Complex waves (Dive deeper, D46): a complex wave built from sines. The fundamental, a second
+// Complex waves (Dive deeper, D46): a complex wave built from sines, beside a string vibrating in
+// as many harmonics as there are sines (it grows down beside the rows reached). The fundamental, a second
 // sine twice as fast and half as big, the two added up (where both go the same way they add up,
-// where they go opposite ways they partly cancel), the same sum as circles on circles, ten sines
+// where they go opposite ways they partly cancel) and as circles on circles, ten sines
 // coming close to a sawtooth with their recipe, and that shape travelling through the air. The
 // phase is the fundamental's: everything is one function of it.
 
@@ -25,7 +26,33 @@ const BAR_X = 966, BAR_STEP = 36, BAR_W = 22, BAR_BOTTOM = 560, BAR_H = 80
 /** The air: where the speaker cone's front rests, how far the air reaches, the wave's shape above it */
 const CONE_X = 104, AIR_FROM = 116, AIR_TO = 1360, SHAPE_Y = 618, SHAPE_SCALE = 1.5
 
+/**
+ * The string on the left: its x at rest, its top end, its bottom end at each step (it grows down
+ * beside the rows reached), how far its first harmonic swings, and in how many harmonics it
+ * vibrates at each step — as many sines as the graphs have added up
+ */
+const STRING_X = -50, STRING_TOP = 60, STRING_SWING = 38
+const STRING_BOTTOM = [205, 335, 575, 575, 575]
+const STRING_HARMONICS = [1, 2, 2, SINES, SINES]
+/** The string is drawn 100 units long, stretched to its length (`lsc-dd-grow` glides it) */
+const STRING_UNITS = 100, STRING_POINTS = 100
+
 const AIR_DOTS = scatter(23, 900, { x: AIR_FROM, y: 662, w: AIR_TO - AIR_FROM, h: 116 })
+
+/** The string's shape, when the point `along` its length (0 … 1) is `swing` of its first harmonic's from rest */
+function stringPath(swing: (along: number) => number): string {
+  let path = ''
+  for (let i = 0; i <= STRING_POINTS; i++) {
+    const along = i / STRING_POINTS
+    path += `${i ? ' L' : 'M'}${(STRING_X + STRING_SWING * swing(along)).toFixed(1)} ${(STRING_UNITS * along).toFixed(1)}`
+  }
+  return path
+}
+const stretch = (step: number) => {
+  const bottom = STRING_BOTTOM[Math.min(step, STRING_BOTTOM.length) - 1]
+  return `translate(0px, ${STRING_TOP}px) scale(1, ${(bottom - STRING_TOP) / STRING_UNITS})`
+}
+const bottomAt = (step: number) => `translate(0px, ${STRING_BOTTOM[Math.min(step, STRING_BOTTOM.length) - 1]}px)`
 
 const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
 const rightX = (deg: number) => RIGHT_X + (GRAPH_W * deg) / 360
@@ -67,10 +94,19 @@ function makePainter(find: Finder): Painter {
   const cone = find('cone'), shape = find('shape')
   const air = find.dots('air', AIR_DOTS, 1.8).map((el, i) => ({ el, x: AIR_DOTS[i].x }))
   for (const { el } of air) el.setAttribute('fill', INK)
+  const string = find('string'), mode1 = find('mode1'), mode2 = find('mode2')
 
   return (deg, step) => {
     const r = rad(deg), whole = Math.round(deg)
     const x = graphX(deg)
+
+    // The string: in as many harmonics as the sines added up so far — and, while two, each alone
+    const count = STRING_HARMONICS[Math.min(step, STRING_HARMONICS.length) - 1]
+    string.setAttribute('d', stringPath((along) => stringSwing(r, along, count)))
+    if (step === 2 || step === 3) {
+      mode1.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 1)))
+      mode2.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 2)))
+    }
 
     // 1 · the first sine: a circle's height, drawn out over the cycle
     const p1x = CIRCLE_X + UNIT * Math.cos(r), p1y = first(deg)
@@ -104,8 +140,8 @@ function makePainter(find: Finder): Painter {
       cancels.style.opacity = together ? '0' : '1'
     }
 
-    // 4 · the same sum as circles on circles: the small one rides on the big one's tip
-    if (step >= 4) {
+    // 3 · the same sum as circles on circles: the small one rides on the big one's tip
+    if (step >= 3) {
       const [, a, b] = circlesOnCircles(r, 2, UNIT)
       const ax = CIRCLE_X + a.x, ay = Y3 - a.y, bx = CIRCLE_X + b.x, by = Y3 - b.y
       arm(bigArm, CIRCLE_X, Y3, ax, ay)
@@ -115,8 +151,8 @@ function makePainter(find: Finder): Painter {
       arm(reach4, bx, by, x, by)
     }
 
-    // 5 · ten sines: ten circles on circles, and their sum close to a sawtooth
-    if (step >= 5) {
+    // 4 · ten sines: ten circles on circles, and their sum close to a sawtooth
+    if (step >= 4) {
       const points = circlesOnCircles(r, SINES, UNIT)
       for (let n = 0; n < SINES; n++) {
         const c = points[n], t = points[n + 1]
@@ -130,8 +166,8 @@ function makePainter(find: Finder): Painter {
       put(dot5, 'cx', gx); put(dot5, 'cy', ty)
     }
 
-    // 6 · the cone moves in that shape, and the air carries it away
-    if (step >= 6) {
+    // 5 · the cone moves in that shape, and the air carries it away
+    if (step >= 5) {
       const push = complexSwing(r, 0, SINES)
       cone.setAttribute('d', `M55 700 L${(CONE_X + push).toFixed(1)} 664 L${(CONE_X + push).toFixed(1)} 776 L55 740 Z`)
       for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, SINES), AIR_FROM - 4, AIR_TO + 2))
@@ -196,6 +232,24 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         <Label at={[(third(3) + third(4)) / 2, 578]} anchor="middle">{l.addUp}</Label>
       </Step>
 
+      {/* The string, held at both ends: in its harmonics, growing down beside the rows reached */}
+      <Step n={1} step={step}>
+        <g className="lsc-dd-grow" style={{ transform: stretch(step) }}>
+          <Step n={1} until={1} step={step}>
+            <path d={stringPath((along) => Math.sin(Math.PI * along))} {...DASHED} vectorEffect="non-scaling-stroke" />
+            <path d={stringPath((along) => -Math.sin(Math.PI * along))} {...DASHED} vectorEffect="non-scaling-stroke" />
+          </Step>
+          <Step n={2} until={3} step={step}>
+            <path data-p="mode1" fill="none" stroke={PART} strokeWidth={1.25} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+            <path data-p="mode2" fill="none" stroke={PART} strokeWidth={1.25} strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+          </Step>
+          <path data-p="string" fill="none" stroke={INK} strokeWidth={3} vectorEffect="non-scaling-stroke" />
+        </g>
+        <circle cx={STRING_X} cy={STRING_TOP} r={9} fill={MOVER} />
+        <circle className="lsc-dd-grow" cx={STRING_X} cy={0} r={9} fill={MOVER} style={{ transform: bottomAt(step) }} />
+        <Label at={[STRING_X, 42]} anchor="middle">{l.string}</Label>
+      </Step>
+
       {/* 1 · the first sine */}
       <Step n={1} step={step}>
         <Label at={[GRAPH_X + 8, 52]}>{l.fundamental}</Label>
@@ -228,8 +282,8 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         <line data-p="sum2" {...ARROW_LINE} />
       </Step>
 
-      {/* 4 · the sum as circles on circles */}
-      <Step n={4} step={step}>
+      {/* 3 · the sum as circles on circles */}
+      <Step n={3} step={step}>
         <circle cx={CIRCLE_X} cy={Y3} r={UNIT} {...DASHED} fill={MOVER} fillOpacity={0.08} />
         <circle data-p="small" r={UNIT / 2} fill="none" stroke={PART} strokeWidth={1} strokeDasharray="4 4" />
         <line data-p="bigArm" stroke={INK} strokeWidth={2.5} />
@@ -239,8 +293,8 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         <circle data-p="tip4" r={7} fill={MOVER} />
       </Step>
 
-      {/* 5 · ten sines, close to a sawtooth, and their recipe */}
-      <Step n={5} step={step}>
+      {/* 4 · ten sines, close to a sawtooth, and their recipe */}
+      <Step n={4} step={step}>
         <Label at={[RIGHT_X + 8, 172]}>{l.tenSines}</Label>
         <g data-p="rings">
           {Array.from({ length: SINES }, (_, i) => (
@@ -273,8 +327,8 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         })}
       </Step>
 
-      {/* 6 · the complex wave in the air */}
-      <Step n={6} step={step}>
+      {/* 5 · the complex wave in the air */}
+      <Step n={5} step={step}>
         <Air id="lsc-dd-air-complex" x={AIR_FROM} y={662} w={AIR_TO - AIR_FROM} h={116} r={58} />
         <g data-p="air" mask="url(#lsc-dd-air-complex)" />
         <rect x={28} y={694} width={27} height={52} rx={3} fill={PART_3} />
