@@ -42,7 +42,14 @@ const AMP_TIP = AMP_H * (1 - PIN / AMP_HALF)
 /** Where the output amplifier's wires end: the speaker's leads start there */
 const PIN_TOP = AMP_OUT_BASE - AMP_H - 18
 /** The reels' middles, at the picture's two sides, each as far from its head: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
-const SUPPLY_X = 130, TAKEUP_X = PLAY_X + (REC_X - SUPPLY_X), REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
+const SUPPLY_X = 130, TAKEUP_X = PLAY_X + (REC_X - SUPPLY_X)
+/**
+ * A reel's middle: the tape wound on it (REEL_R round) rests on the tape's bottom edge, so the tape
+ * leaves it — and winds onto it — along its bottom. Its flanges are as big as the microphone.
+ */
+const REEL_Y = TAPE_Y + TAPE_H - REEL_R, FLANGE_R = 75, HUB_R = 16
+/** How close to a reel's middle the tape's magnets are still drawn: nearer, they are wound under the next turn */
+const WOUND = Math.sqrt(REEL_R ** 2 - (TAPE_Y + TAPE_H / 2 - REEL_Y) ** 2)
 /** The tape's little magnets, every MAGNET_GAP along it (15 to a cycle), at most MAGNET_LONG long */
 const MAGNET_GAP = TAPE_WAVELENGTH / 15, MAGNET_LONG = 13
 const MAGNETS = Math.ceil((TAKEUP_X - SUPPLY_X) / MAGNET_GAP) + 1
@@ -104,7 +111,7 @@ function makePainter(find: Finder): Painter {
         const x = SUPPLY_X + i * MAGNET_GAP + (moved % MAGNET_GAP)
         const m = tapeMagnet(r, x - REC_X)
         const long = MAGNET_LONG * Math.abs(m)
-        if (long < 0.6) { magnet.setAttribute('d', ''); return }
+        if (long < 0.6 || x > TAKEUP_X - WOUND) { magnet.setAttribute('d', ''); return }
         const way = Math.sign(m), tip = x + (way * long) / 2, head = Math.min(5, long * 0.5), y = TAPE_Y + TAPE_H / 2
         const back = tip - way * head
         magnet.setAttribute('d',
@@ -207,12 +214,14 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
 
       {/* 3 · the recording head and the tape, from one side of the picture to the other */}
       <Step n={3} step={step}>
+        <ReelBack x={SUPPLY_X} />
+        <ReelBack x={TAKEUP_X} />
         <rect x={SUPPLY_X} y={TAPE_Y} width={TAKEUP_X - SUPPLY_X} height={TAPE_H} fill={PART_3} />
         <g data-p="magnets" fill={INK} stroke={INK} strokeWidth={1.8} strokeLinejoin="round">
           {Array.from({ length: MAGNETS }, (_, i) => <path key={i} />)}
         </g>
-        <Reel x={SUPPLY_X} name="supplyReel" />
-        <Reel x={TAKEUP_X} name="takeupReel" />
+        <ReelFront x={SUPPLY_X} name="supplyReel" />
+        <ReelFront x={TAKEUP_X} name="takeupReel" />
         <Label at={[660, TAPE_Y + 54]} anchor="middle" flow>{l.magneticTape}</Label>
         <line x1={710} y1={TAPE_Y + 50} x2={748} y2={TAPE_Y + 50} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
         <Amp x={REC_X} base={AMP_IN_TOP} way={1} from={800} />
@@ -329,26 +338,37 @@ function Head({ x, field, top }: { x: number; field: string; top: number }) {
   )
 }
 
-/** The cut-outs in a reel's front: three windows onto the tape wound on it */
-function reelFront(cx: number, cy: number): string {
-  const R = REEL_R + 7, at = (r: number, a: number) => `${(cx + r * Math.cos(a)).toFixed(1)} ${(cy + r * Math.sin(a)).toFixed(1)}`
-  let d = `M${cx - R} ${cy.toFixed(1)} A${R} ${R} 0 1 0 ${cx + R} ${cy.toFixed(1)} A${R} ${R} 0 1 0 ${cx - R} ${cy.toFixed(1)} Z`
-  for (let k = 0; k < 3; k++) {
-    const a0 = rad(k * 120 - 40), a1 = rad(k * 120 + 40), inner = 20, outer = REEL_R - 3
-    d += ` M${at(outer, a0)} A${outer} ${outer} 0 0 1 ${at(outer, a1)} L${at(inner, a1)} A${inner} ${inner} 0 0 0 ${at(inner, a0)} Z`
-  }
-  return d
-}
-
-/** A reel: the tape wound on it, and its front with three windows, turning (`name`) */
-function Reel({ x, name }: { x: number; name: string }) {
+/**
+ * A reel's back: its flange, and the tape wound on it — in the tape's colour, so the tape running to
+ * the heads leaves it (or winds onto it) along its bottom; faint rings, the turns of tape.
+ */
+function ReelBack({ x }: { x: number }) {
   return (
     <>
+      <circle cx={x} cy={REEL_Y} r={FLANGE_R} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
       <circle cx={x} cy={REEL_Y} r={REEL_R} fill={PART_3} />
-      <g data-p={name}>
-        <path d={reelFront(x, REEL_Y)} fill="var(--lsc-sunken)" fillRule="evenodd" stroke={PART} strokeWidth={1.5} />
-        <circle cx={x} cy={REEL_Y} r={7} fill={PART} />
+      <g fill="none" stroke={PART_2} strokeWidth={0.75} opacity={0.35}>
+        {[24, 32, 40, 47].map((r) => <circle key={r} cx={x} cy={REEL_Y} r={r} />)}
       </g>
     </>
+  )
+}
+
+/** A reel's front, turning (`name`): three spokes from its hub to its rim, the tape seen between them */
+function ReelFront({ x, name }: { x: number; name: string }) {
+  const spoke = (deg: number) => {
+    const at = (r: number, side: number) => {
+      const a = rad(deg), w = 5 * side
+      return `${(x + r * Math.cos(a) - w * Math.sin(a)).toFixed(1)} ${(REEL_Y + r * Math.sin(a) + w * Math.cos(a)).toFixed(1)}`
+    }
+    return `M${at(HUB_R - 2, -1)} L${at(FLANGE_R - 2, -1)} L${at(FLANGE_R - 2, 1)} L${at(HUB_R - 2, 1)} Z`
+  }
+  return (
+    <g data-p={name}>
+      <path d={[90, 210, 330].map(spoke).join(' ')} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.2} strokeLinejoin="round" />
+      <circle cx={x} cy={REEL_Y} r={FLANGE_R} fill="none" stroke={PART} strokeWidth={3} />
+      <circle cx={x} cy={REEL_Y} r={HUB_R} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
+      <circle cx={x} cy={REEL_Y} r={6} fill={PART} />
+    </g>
   )
 }
