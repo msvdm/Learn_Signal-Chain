@@ -41,7 +41,7 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'ear',      box: [15, 35, 1300, 312] },
       { id: 'pendulum', box: [30, 300, 230, 552] },
       { id: 'circle',   box: [230, 325, 460, 510] },
-      { id: 'sine',     box: [460, 325, 860, 535] },
+      { id: 'sine',     box: [460, 325, 975, 610] },
     ],
     credit: 'ear',
   },

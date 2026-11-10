@@ -172,7 +172,6 @@ export function AcousticScene({ step, onPainter }: SceneProps) {
 
       {/* 4 · the pendulum */}
       <Step n={4} step={step}>
-        <Label at={[115, 326]} anchor="middle">{l.sameMotion}</Label>
         <g transform="translate(-35,322)">
           <line x1={90} y1={40} x2={210} y2={40} stroke={PART} strokeWidth={3} strokeLinecap="round" />
           <path d="M80 172 A150 150 0 0 0 220 172" {...DASHED} />
@@ -195,7 +194,7 @@ export function AcousticScene({ step, onPainter }: SceneProps) {
         <g transform={`translate(${WAVE_AT},0)`}>
           <Air id="lsc-dd-air-wave" x={-174} y={76} w={726} h={218} r={95} />
           <g data-p="air" mask="url(#lsc-dd-air-wave)" />
-          <Label at={[250, 56]} anchor="middle" flow>{l.longitudinal}</Label>
+          <Label at={[338, 56]} anchor="end" flow>{l.longitudinal} · {l.speedOfSound}</Label>
           <line x1={346} y1={52} x2={404} y2={52} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
         </g>
       </Step>
@@ -234,7 +233,7 @@ export function AcousticScene({ step, onPainter }: SceneProps) {
         <g transform="translate(200,40)">
           <line x1={GRAPH_X} y1={300} x2={GRAPH_X} y2={440} stroke={INK} strokeWidth={1.5} />
           <line x1={GRAPH_X} y1={GRAPH_Y} x2={650} y2={GRAPH_Y} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
-          <Label at={[298, 296]}>{l.displacement}</Label>
+          <Label at={[298, 296]}>{l.sinusoidalWave}</Label>
           <g stroke={FAINT} strokeWidth={0.5} strokeDasharray="3 4">
             {[375, 460, 545, 630].map((x) => <line key={x} x1={x} y1={305} x2={x} y2={435} />)}
           </g>
@@ -249,6 +248,17 @@ export function AcousticScene({ step, onPainter }: SceneProps) {
                 <Label at={[x, 488]} anchor="middle">{where}</Label>
               </g>
             ))}
+          {/* Amplitude: from the centre line to the peak */}
+          <line x1={375} y1={GRAPH_Y - GRAPH_H} x2={672} y2={GRAPH_Y - GRAPH_H} stroke={FAINT} strokeWidth={0.5} strokeDasharray="3 4" />
+          <line x1={666} y1={GRAPH_Y - 4} x2={666} y2={GRAPH_Y - GRAPH_H + 4} stroke={INK} strokeWidth={1.5}
+            markerStart={ARROW_INK} markerEnd={ARROW_INK} />
+          <Label at={[676, GRAPH_Y - GRAPH_H / 2 + 4]}>{l.amplitude}</Label>
+          {/* One cycle: its length in the air, its time; the frequency from it */}
+          <line x1={GRAPH_X + 4} y1={506} x2={GRAPH_X + GRAPH_W - 4} y2={506} stroke={INK} strokeWidth={1.5}
+            markerStart={ARROW_INK} markerEnd={ARROW_INK} />
+          <Label at={[GRAPH_X + GRAPH_W / 2, 526]} anchor="middle">{l.wavelength}</Label>
+          <Label at={[GRAPH_X + GRAPH_W / 2, 544]} anchor="middle">{l.period}</Label>
+          <Label at={[GRAPH_X + GRAPH_W / 2, 562]} anchor="middle">{l.frequency}</Label>
         </g>
       </Step>
     </g>
