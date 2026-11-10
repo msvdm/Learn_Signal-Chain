@@ -47,16 +47,6 @@ export const SUBJECTS: readonly Subject[] = [
     credit: 'ear',
   },
   {
-    id: 'transducer',
-    icon: Speaker,
-    Scene: TransducerScene,
-    steps: [
-      { id: 'microphone', box: [35, 560, 540, 800] },
-      { id: 'voltage',    box: [530, 590, 925, 800] },
-      { id: 'speaker',    box: [925, 492, 1300, 850] },
-    ],
-  },
-  {
     id: 'complex',
     icon: AudioWaveform,
     Scene: ComplexScene,
@@ -67,6 +57,17 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'thirdSine',        box: [-110, 355, 620, 420] },
       { id: 'moreSines',        box: [-110, 430, 620, 830] },
       { id: 'complexInAir',     box: [600, 620, 1370, 850] },
+      { id: 'piano',            box: [690, 150, 1365, 590] },
+    ],
+  },
+  {
+    id: 'transducer',
+    icon: Speaker,
+    Scene: TransducerScene,
+    steps: [
+      { id: 'microphone', box: [35, 560, 540, 800] },
+      { id: 'voltage',    box: [530, 590, 925, 800] },
+      { id: 'speaker',    box: [925, 492, 1300, 850] },
     ],
   },
 ]

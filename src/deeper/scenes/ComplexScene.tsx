@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
+import { PIANO_C5, SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
+import type { Recipe } from '../wave'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
@@ -10,9 +11,10 @@ import { Air, Label, Step } from './sceneParts'
 // the left the string, and beside it each harmonic alone, one below the other — a circle turning
 // and its sine: the fundamental (step 1), the 2nd (2), the 3rd (4), the 4th to the 10th (5). On the
 // right what they make together (from step 3): the circles riding on each other, their sum, and the
-// recipe — how big each sine is. Then that shape in the air from a speaker cone (6). The string
-// vibrates in as many harmonics as are added up, and grows down beside the rows reached. The phase
-// is the fundamental's: everything is one function of it.
+// recipe — how big each sine is. Then that shape in the air from a speaker cone (6), and last a
+// real piano's C5, measured (7): every part takes its recipe. The string vibrates in as many
+// harmonics as are added up, and grows down beside the rows reached. The phase is the
+// fundamental's: everything is one function of it.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
 /** The first sine's radius: every other sine is a share of it (its size in the recipe) */
@@ -24,7 +26,9 @@ const ROW_Y = [130, 290, 395, 470, 526, 582, 638, 694, 750, 806]
 /** The step each harmonic's row comes in */
 const ROW_STEP = [1, 2, 4, 5, 5, 5, 5, 5, 5, 5]
 /** How many harmonics are added up at each step: the string's, the circles', the recipe's */
-const COUNT = [1, 2, 2, 3, SINES, SINES]
+const COUNT = [1, 2, 2, 3, SINES, SINES, SINES]
+/** The piano's step: from it on, every part takes the piano's recipe instead of the sawtooth's */
+const PIANO_STEP = 7
 /** What they make together: the circles' first centre, the sum's graph, the recipe's bars */
 const CHAIN_X = 740, CHAIN_Y = 300, SUM_X = 960, SUM_Y = 300
 const BAR_X = 966, BAR_STEP = 36, BAR_W = 22, BAR_BOTTOM = 560, BAR_H = 80
@@ -35,7 +39,7 @@ const CONE_X = 700, AIR_FROM = 712, AIR_TO = 1360, AIR_Y = 690, AIR_H = 110, SHA
  * how far its first harmonic swings
  */
 const STRING_X = -50, STRING_TOP = 60, STRING_SWING = 38
-const STRING_BOTTOM = [205, 335, 335, 425, 826, 826]
+const STRING_BOTTOM = [205, 335, 335, 425, 826, 826, 826]
 /** The string is drawn 100 units long, stretched to its length (`lsc-dd-grow` glides it) */
 const STRING_UNITS = 100, STRING_POINTS = 100
 
@@ -43,13 +47,15 @@ const AIR_DOTS = scatter(23, 520, { x: AIR_FROM, y: AIR_Y, w: AIR_TO - AIR_FROM,
 
 const atStep = <T,>(list: readonly T[], step: number) => list[Math.min(step, list.length) - 1]
 const countAt = (step: number) => atStep(COUNT, step)
+const recipeAt = (step: number): Recipe => (step >= PIANO_STEP ? PIANO_C5 : SAWTOOTH)
 
 const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
 const sumX   = (deg: number) => SUM_X + (GRAPH_W * deg) / 360
 /** The n-th harmonic's radius, and its graph's height at a phase */
-const radiusOf = (n: number) => UNIT * SAWTOOTH[n - 1]
-const ROW_GRAPH = ROW_Y.map((y, i) => (deg: number) => y - radiusOf(i + 1) * Math.sin((i + 1) * rad(deg)))
-const sumOf = (count: number) => (deg: number) => SUM_Y - UNIT * complexWave(rad(deg), SAWTOOTH, count)
+const radiusOf = (n: number, recipe: Recipe) => UNIT * recipe[n - 1].size
+const rowGraph = (n: number, recipe: Recipe) => (deg: number) =>
+  ROW_Y[n - 1] - radiusOf(n, recipe) * Math.sin(n * rad(deg) + recipe[n - 1].phase)
+const sumOf = (recipe: Recipe, count: number) => (deg: number) => SUM_Y - UNIT * complexWave(rad(deg), recipe, count)
 
 /** A line from one point to another */
 function line(el: SVGElement, x1: number, y1: number, x2: number, y2: number) {
@@ -69,10 +75,10 @@ const stretch  = (step: number) => `translate(0px, ${STRING_TOP}px) scale(1, ${(
 const bottomAt = (step: number) => `translate(0px, ${atStep(STRING_BOTTOM, step)}px)`
 
 /** The ten sines' shape laid along the air, from the cone outward */
-function shapePath(r: number): string {
+function shapePath(r: number, recipe: Recipe): string {
   let path = ''
   for (let d = 0; d <= AIR_TO - AIR_FROM; d += 4) {
-    const y = SHAPE_Y - SHAPE_SCALE * complexSwing(r, d, SAWTOOTH)
+    const y = SHAPE_Y - SHAPE_SCALE * complexSwing(r, d, recipe)
     path += `${path ? ' L' : 'M'}${(AIR_FROM + d).toFixed(1)} ${y.toFixed(1)}`
   }
   return path
@@ -92,10 +98,10 @@ function makePainter(find: Finder): Painter {
 
   return (deg, step) => {
     const r = rad(deg), whole = Math.round(deg), x = graphX(deg)
-    const count = countAt(step)
+    const count = countAt(step), recipe = recipeAt(step)
 
     // The string: in as many harmonics as are added up — and, while two, each one alone
-    string.setAttribute('d', stringPath((along) => stringSwing(r, along, SAWTOOTH, count)))
+    string.setAttribute('d', stringPath((along) => stringSwing(r, along, recipe, count)))
     if (step === 2 || step === 3) {
       mode1.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 1, SAWTOOTH[0])))
       mode2.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 2, SAWTOOTH[1])))
@@ -104,8 +110,8 @@ function makePainter(find: Finder): Painter {
     // Each harmonic alone: its circle's height, drawn out over the cycle
     for (const row of rows) {
       if (step < ROW_STEP[row.n - 1]) continue
-      const radius = radiusOf(row.n), graph = ROW_GRAPH[row.n - 1]
-      const px = CIRCLE_X + radius * Math.cos(row.n * r), py = graph(deg)
+      const radius = radiusOf(row.n, recipe), graph = rowGraph(row.n, recipe)
+      const px = CIRCLE_X + radius * Math.cos(row.n * r + recipe[row.n - 1].phase), py = graph(deg)
       line(row.arm, CIRCLE_X, row.y, px, py)
       put(row.tip, 'cx', px); put(row.tip, 'cy', py)
       line(row.reach, px, py, x, py)
@@ -115,7 +121,7 @@ function makePainter(find: Finder): Painter {
 
     // What they make together: each circle riding on the one before, the last one's tip their sum
     if (step >= 3) {
-      const points = circlesOnCircles(r, SAWTOOTH, count, UNIT)
+      const points = circlesOnCircles(r, recipe, count, UNIT)
       for (let n = 0; n < count; n++) {
         const c = points[n], t = points[n + 1]
         put(rings[n], 'cx', CHAIN_X + c.x); put(rings[n], 'cy', CHAIN_Y - c.y)
@@ -124,16 +130,16 @@ function makePainter(find: Finder): Painter {
       const end = points[count], tx = CHAIN_X + end.x, ty = CHAIN_Y - end.y, gx = sumX(deg)
       put(tip, 'cx', tx); put(tip, 'cy', ty)
       line(reach, tx, ty, gx, ty)
-      trace.setAttribute('d', curvePath(whole, sumX, sumOf(count)))
+      trace.setAttribute('d', curvePath(whole, sumX, sumOf(recipe, count)))
       put(dot, 'cx', gx); put(dot, 'cy', ty)
     }
 
     // The cone moves in that shape, and the air carries it away
     if (step >= 6) {
-      const push = complexSwing(r, 0, SAWTOOTH)
+      const push = complexSwing(r, 0, recipe)
       cone.setAttribute('d', `M651 725 L${(CONE_X + push).toFixed(1)} 689 L${(CONE_X + push).toFixed(1)} 801 L651 765 Z`)
-      for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, SAWTOOTH), AIR_FROM - 4, AIR_TO + 2))
-      shape.setAttribute('d', shapePath(r))
+      for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, recipe), AIR_FROM - 4, AIR_TO + 2))
+      shape.setAttribute('d', shapePath(r, recipe))
     }
   }
 }
@@ -152,18 +158,19 @@ function Axes({ x, y, h }: { x: number; y: number; h: number }) {
 }
 
 /** One harmonic alone: its circle, turning n times as fast, and its sine beside it */
-function Harmonic({ n, name }: { n: number; name: string }) {
-  const y = ROW_Y[n - 1], radius = radiusOf(n), big = n === 1
+function Harmonic({ n, name, recipe }: { n: number; name: string; recipe: Recipe }) {
+  // Its label and axes keep the sawtooth's place: the row stays put when the piano's sizes come in
+  const y = ROW_Y[n - 1], room = radiusOf(n, SAWTOOTH), radius = radiusOf(n, recipe), big = n === 1
   return (
     <>
-      <Label at={[GRAPH_X + 8, y - radius - (big ? 18 : 8)]}>{name}</Label>
-      <Axes x={GRAPH_X} y={y} h={radius + (big ? 10 : 6)} />
+      <Label at={[GRAPH_X + 8, y - room - (big ? 18 : 8)]}>{name}</Label>
+      <Axes x={GRAPH_X} y={y} h={room + (big ? 10 : 6)} />
       <circle cx={CIRCLE_X} cy={y} r={radius} {...DASHED} fill={MOVER} fillOpacity={0.08} />
       <line data-p={`arm${n}`} stroke={INK} strokeWidth={big ? 2.5 : 2} />
       <circle cx={CIRCLE_X} cy={y} r={big ? 3.5 : 2.5} fill={INK} />
       <line data-p={`reach${n}`} {...REACH} />
       <circle data-p={`tip${n}`} r={big ? 7 : 5} fill={MOVER} />
-      <path d={curvePath(360, graphX, ROW_GRAPH[n - 1])} fill="none" stroke={TRACE} strokeWidth={big ? 3 : 2} opacity={0.3} />
+      <path d={curvePath(360, graphX, rowGraph(n, recipe))} fill="none" stroke={TRACE} strokeWidth={big ? 3 : 2} opacity={0.3} />
       <path data-p={`trace${n}`} fill="none" stroke={TRACE} strokeWidth={big ? 3.5 : 2.5} strokeLinecap="round" />
       <circle data-p={`dot${n}`} r={big ? 6 : 4.5} fill={MOVER} />
     </>
@@ -175,9 +182,13 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
   usePainter(root, onPainter, makePainter)
   const { t, fmt } = useTranslation()
   const l = t.deeper.labels
-  const count = countAt(step)
+  const count = countAt(step), recipe = recipeAt(step), piano = step >= PIANO_STEP
+  // The piano's harmonics are not "half as big", "a third as big": only their numbers then
   const nameOf = (n: number) =>
-    n === 1 ? l.fundamental : n === 2 ? l.secondHarmonic : n === 3 ? l.thirdHarmonic : fmt(l.nthHarmonic, { n: String(n) })
+    n === 1 ? l.fundamental
+    : n === 2 && !piano ? l.secondHarmonic
+    : n === 3 && !piano ? l.thirdHarmonic
+    : fmt(l.nthHarmonic, { n: String(n) })
 
   return (
     <g ref={root}>
@@ -202,7 +213,7 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
       {/* Each harmonic alone, one below the other */}
       {ROW_Y.map((_, i) => (
         <Step key={i} n={ROW_STEP[i]} step={step}>
-          <Harmonic n={i + 1} name={nameOf(i + 1)} />
+          <Harmonic n={i + 1} name={nameOf(i + 1)} recipe={recipe} />
           {i === 0 && ([0, 90, 180, 270, 360] as const).map((deg) => (
             <Label key={deg} at={[graphX(deg), ROW_Y[0] + 88]} anchor="middle">{deg}°</Label>
           ))}
@@ -211,10 +222,10 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
 
       {/* What they make together: circles on circles, their sum, the recipe */}
       <Step n={3} step={step}>
-        <Label at={[SUM_X + 8, 172]}>{fmt(l.sinesAddedUp, { n: String(count) })}</Label>
+        <Label at={[SUM_X + 8, 172]}>{piano ? l.pianoC5 : fmt(l.sinesAddedUp, { n: String(count) })}</Label>
         <g data-p="rings">
-          {SAWTOOTH.map((size, i) => (
-            <circle key={i} r={UNIT * size} fill="none" stroke={i ? FAINT : PART} strokeWidth={1}
+          {recipe.map(({ size }, i) => (
+            <circle key={i} r={UNIT * size}fill="none" stroke={i ? FAINT : PART} strokeWidth={1}
               strokeDasharray={i ? undefined : '6 5'} style={i < count ? undefined : { display: 'none' }} />
           ))}
         </g>
@@ -228,12 +239,12 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         <circle data-p="sumTip" r={7} fill={MOVER} />
         <line x1={SUM_X} y1={SUM_Y - 125} x2={SUM_X} y2={SUM_Y + 125} stroke={INK} strokeWidth={1.5} />
         <line x1={SUM_X} y1={SUM_Y} x2={SUM_X + GRAPH_W + 24} y2={SUM_Y} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
-        <path d={curvePath(360, sumX, sumOf(count))} fill="none" stroke={TRACE} strokeWidth={3} opacity={0.3} />
+        <path d={curvePath(360, sumX, sumOf(recipe, count))} fill="none" stroke={TRACE} strokeWidth={3} opacity={0.3} />
         <path data-p="sumTrace" fill="none" stroke={TRACE} strokeWidth={3.5} strokeLinecap="round" />
         <circle data-p="sumDot" r={6} fill={MOVER} />
         {/* The recipe: how big each sine is */}
         <Label at={[SUM_X + 8, 466]}>{l.recipe}</Label>
-        {SAWTOOTH.slice(0, count).map((size, i) => {
+        {recipe.slice(0, count).map(({ size }, i) => {
           const h = BAR_H * size, x = BAR_X + i * BAR_STEP
           return (
             <g key={i}>
@@ -244,8 +255,8 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         })}
       </Step>
 
-      {/* With ten: the sawtooth the sum comes close to */}
-      <Step n={5} step={step}>
+      {/* With ten: the sawtooth the sum comes close to (not the piano's) */}
+      <Step n={5} until={PIANO_STEP - 1} step={step}>
         <path d={`M${SUM_X} ${SUM_Y} V${SUM_Y - (UNIT * Math.PI) / 2} L${SUM_X + GRAPH_W} ${SUM_Y + (UNIT * Math.PI) / 2} V${SUM_Y}`}
           fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
         <Label at={[SUM_X + GRAPH_W, 432]} anchor="end">{l.sawtooth}</Label>

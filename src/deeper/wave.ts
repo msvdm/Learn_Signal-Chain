@@ -80,19 +80,42 @@ export function wrapPhase(deg: number): number {
 
 // ── Complex waves: sines added up ───────────────────────────────────────────
 
-/**
- * A recipe: how big each sine is, the 1st (the fundamental) first, as a share of the fundamental's.
- * The n-th sine turns n times as fast.
- */
-export type Recipe = readonly number[]
+/** One sine of a recipe: how big it is, as a share of the fundamental's, and where it starts (radians) */
+export interface Sine { size: number; phase: number }
 
-/** A sawtooth's: every sine, the n-th 1/n as big */
-export const SAWTOOTH: Recipe = Array.from({ length: 10 }, (_, i) => 1 / (i + 1))
+/**
+ * A recipe: its sines, the 1st (the fundamental) first. The n-th turns n times as fast, starting
+ * `phase` ahead of the fundamental's start.
+ */
+export type Recipe = readonly Sine[]
+
+/** A sawtooth's: every sine, the n-th 1/n as big, all starting together */
+export const SAWTOOTH: Recipe = Array.from({ length: 10 }, (_, i) => ({ size: 1 / (i + 1), phase: 0 }))
+
+/**
+ * A real piano's C5 (523 Hz), measured from a recording (the user's, 2026-11-10): half a second
+ * from 60 ms after the hammer strikes, Hann-windowed, each harmonic's peak searched near its
+ * place. Rebuilt from these ten (at their own, slightly sharp frequencies: the 6th at 6.10×) the
+ * recording's waveform is within −27 dB. Its sizes: 0, −21, −27, −25, −30, −38 dB, then nothing
+ * (below −65 dB) — the fundamental almost alone.
+ */
+export const PIANO_C5: Recipe = [
+  { size: 1,      phase: 0 },
+  { size: 0.0892, phase: 0.08 },
+  { size: 0.0461, phase: 1.83 },
+  { size: 0.0544, phase: 3.01 },
+  { size: 0.0333, phase: -2.3 },
+  { size: 0.0132, phase: -1.24 },
+  { size: 0.0005, phase: -1.05 },
+  { size: 0.0002, phase: 1.82 },
+  { size: 0.0003, phase: -0.28 },
+  { size: 0.0001, phase: 0.8 },
+]
 
 /** The first `count` sines of a recipe added up, at phase `r` (radians). */
 export function complexWave(r: number, recipe: Recipe, count = recipe.length): number {
   let sum = 0
-  for (let n = 1; n <= count; n++) sum += recipe[n - 1] * Math.sin(n * r)
+  for (let n = 1; n <= count; n++) sum += recipe[n - 1].size * Math.sin(n * r + recipe[n - 1].phase)
   return sum
 }
 
@@ -116,8 +139,9 @@ export function circlesOnCircles(r: number, recipe: Recipe, count: number, unit:
   const points: Dot[] = [{ x: 0, y: 0 }]
   let x = 0, y = 0
   for (let n = 1; n <= count; n++) {
-    x += unit * recipe[n - 1] * Math.cos(n * r)
-    y += unit * recipe[n - 1] * Math.sin(n * r)
+    const { size, phase } = recipe[n - 1]
+    x += unit * size * Math.cos(n * r + phase)
+    y += unit * size * Math.sin(n * r + phase)
     points.push({ x, y })
   }
   return points
@@ -138,14 +162,13 @@ export function complexSwing(r: number, distance: number, recipe: Recipe, count 
 
 /**
  * A string held at both ends, vibrating in its `n`-th harmonic alone: how far the point `along`
- * its length (0 … 1) is from rest, at phase `r`, for a sound in which that harmonic is `size` as
- * big as the fundamental. The n-th harmonic is n half-waves along the string (its ends and n − 1
+ * its length (0 … 1) is from rest, at phase `r`, for a sound in which that harmonic is `sine`. The n-th harmonic is n half-waves along the string (its ends and n − 1
  * points between them never move), n times as fast, and swings size / n as far: the push it gives
- * the bridge — the string's slope at that end — is then `size` (Helmholtz: a sawtooth's 1/n, from
+ * the bridge — the string's slope at that end — is then its size (Helmholtz: a sawtooth's 1/n, from
  * a string swinging 1/n²).
  */
-export function harmonicSwing(r: number, along: number, n: number, size: number): number {
-  return (size / n) * Math.sin(n * Math.PI * along) * Math.sin(n * r)
+export function harmonicSwing(r: number, along: number, n: number, sine: Sine): number {
+  return (sine.size / n) * Math.sin(n * Math.PI * along) * Math.sin(n * r + sine.phase)
 }
 
 /** The string vibrating in the first `count` harmonics of a recipe at once: theirs added up, point by point. */

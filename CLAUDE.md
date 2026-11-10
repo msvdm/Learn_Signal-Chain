@@ -259,7 +259,7 @@ In full in `docs/decisions.md`; the code cites them by number:
 - **D44** — A Phase switch from Intermediate (the On Off Switch's button, Ø, lit light blue: the signal upside down) and a Delay knob at Advanced (Pan's light grey, 0 … 20 ms): levels unchanged; two copies of one signal on a bus cancel out, or stop lining up, in real sound only (the number engine adds them lined up). No acoustics drawn.
 - **D45** — At Advanced, an Effects processor: a 1U rack drawn as the Amplifier (power rocker, a display with its program, four knobs that change nothing, In and Out meters L / R); its signal passes as it is — a place to send an Aux Bus.
 
-- **D46** — Dive deeper, the level stepper's fourth button: another module in the canvas's place — the teacher picks a subject in the drawer and steps through a chain of causes and effects (play / stop, a phase, steps), in the app's colours; the canvas is kept. Its subjects: Acoustic propagation and perception, Transducer and speaker, Complex waves.
+- **D46** — Dive deeper, the level stepper's fourth button: another module in the canvas's place — the teacher picks a subject in the drawer and steps through a chain of causes and effects (play / stop, a phase, steps), in the app's colours; the canvas is kept. Its subjects: Acoustic propagation and perception, Complex waves, Transducer and speaker.
 
 (D2 and D6 were replaced by D8 and D9, D24 — wires coloured by where their sound goes — by D33.)
 

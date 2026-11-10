@@ -692,7 +692,8 @@
       "addingUp": "Adding them up",
       "thirdSine": "A third sine",
       "moreSines": "More sines: a sawtooth",
-      "complexInAir": "The complex wave in the air"
+      "complexInAir": "The complex wave in the air",
+      "piano": "A real piano: C5"
     },
     "stepsLabel": "Steps",
     "step": "Step {n} of {count}",
@@ -743,6 +744,7 @@
       "thirdHarmonic": "3rd harmonic: three times as fast, a third as big",
       "nthHarmonic": "Harmonic {n}",
       "sinesAddedUp": "{n} sines added up",
+      "pianoC5": "A real piano: C5 (523 Hz), measured",
       "sawtooth": "Sawtooth wave",
       "recipe": "The recipe: how big each sine is",
       "inTheAir": "The same shape in the air"

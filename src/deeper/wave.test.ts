@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, K, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, K, PIANO_C5, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -161,10 +161,10 @@ describe('the string, in its harmonics', () => {
   test('its ends never move; the 2nd harmonic leaves its middle still too', () => {
     for (const deg of [0, 40, 90, 200, 333]) {
       for (const n of [1, 2, 3, 10]) {
-        expect(harmonicSwing(rad(deg), 0, n, 1 / n)).toBeCloseTo(0, 9)
-        expect(harmonicSwing(rad(deg), 1, n, 1 / n)).toBeCloseTo(0, 9)
+        expect(harmonicSwing(rad(deg), 0, n, SAWTOOTH[n - 1])).toBeCloseTo(0, 9)
+        expect(harmonicSwing(rad(deg), 1, n, SAWTOOTH[n - 1])).toBeCloseTo(0, 9)
       }
-      expect(harmonicSwing(rad(deg), 0.5, 2, 1 / 2)).toBeCloseTo(0, 9)
+      expect(harmonicSwing(rad(deg), 0.5, 2, SAWTOOTH[2 - 1])).toBeCloseTo(0, 9)
     }
   })
 
@@ -175,7 +175,7 @@ describe('the string, in its harmonics', () => {
   })
 
   test('a sawtooth\'s n-th harmonic swings the string 1/n² as far (a bowed string)', () => {
-    for (const n of [2, 3, 7]) expect(harmonicSwing(rad(90 / n), 0.5 / n, n, 1 / n)).toBeCloseTo(1 / (n * n), 9)
+    for (const n of [2, 3, 7]) expect(harmonicSwing(rad(90 / n), 0.5 / n, n, SAWTOOTH[n - 1])).toBeCloseTo(1 / (n * n), 9)
   })
 
   test('the push on the bridge (the slope at its end) is the recipe\'s sum, π times', () => {
@@ -194,5 +194,25 @@ describe('the string, in its harmonics', () => {
       for (let a = 0; a <= 1; a += 0.01) peak = Math.max(peak, Math.abs(stringSwing(rad(deg), a, SAWTOOTH)))
     }
     expect(peak).toBeLessThan(1.25)
+  })
+})
+
+describe("a real piano's C5", () => {
+  test('is the fundamental almost alone: no other harmonic above a tenth of it', () => {
+    expect(PIANO_C5[0]).toEqual({ size: 1, phase: 0 })
+    for (const sine of PIANO_C5.slice(1)) expect(sine.size).toBeLessThan(0.1)
+    expect(PIANO_C5.length).toBe(10)
+  })
+
+  test('its circles, its sum and its string follow its sizes and its timing', () => {
+    for (const deg of [0, 77, 190]) {
+      const r = rad(deg)
+      const points = circlesOnCircles(r, PIANO_C5, 10, 60)
+      expect(points[10].y).toBeCloseTo(60 * complexWave(r, PIANO_C5), 9)
+      const tiny = 1e-6
+      expect(stringSwing(r, tiny, PIANO_C5) / tiny).toBeCloseTo(Math.PI * complexWave(r, PIANO_C5), 4)
+    }
+    // The 4th starts 3.01 radians ahead: at r = 0 its sine is sin(3.01)
+    expect(complexWave(0, [PIANO_C5[0], { size: 0, phase: 0 }, { size: 0, phase: 0 }, PIANO_C5[3]])).toBeCloseTo(0.0544 * Math.sin(3.01), 9)
   })
 })
