@@ -67,9 +67,9 @@ export const SUBJECTS: readonly Subject[] = [
     steps: [
       { id: 'microphone',   box: [35, 560, 540, 800] },
       { id: 'voltage',      box: [300, 590, 925, 810] },
-      { id: 'recordHead',   box: [35, 790, 1300, 1110] },
-      { id: 'playbackHead', box: [800, 820, 1300, 1138] },
-      { id: 'speaker',      box: [900, 492, 1300, 850] },
+      { id: 'recordHead',   box: [35, 790, 1310, 1110] },
+      { id: 'playbackHead', box: [900, 820, 1310, 1138] },
+      { id: 'speaker',      box: [1010, 492, 1410, 850] },
     ],
   },
 ]

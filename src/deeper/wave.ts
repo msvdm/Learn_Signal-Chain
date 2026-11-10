@@ -185,9 +185,9 @@ export function stringSwing(r: number, along: number, recipe: Recipe, count = re
 // ── Magnetic tape: recording and playback ───────────────────────────────────
 
 /** How far the tape moves in one cycle: one cycle of the recording along it, in a scene's units */
-export const TAPE_WAVELENGTH = 276
-/** From the recording head's gap to the playback head's: 2¼ cycles of the recording (under the microphone, under the speaker) */
-export const HEADS_APART = 2.25 * TAPE_WAVELENGTH
+export const TAPE_WAVELENGTH = 225
+/** From the recording head's gap to the playback head's: 3¼ cycles of the recording (under the microphone, under the speaker) */
+export const HEADS_APART = 3.25 * TAPE_WAVELENGTH
 /** The tape wound on each reel: a reel turns ⅔ of a turn a cycle, so its three spokes look the same at 0° and 360° */
 export const REEL_R = (3 * TAPE_WAVELENGTH) / (4 * Math.PI)
 const TAPE_K = TAU / TAPE_WAVELENGTH
@@ -205,7 +205,7 @@ export function tapeMagnet(r: number, distance: number): number {
 /**
  * The playback head's voltage (−1 … 1 of its biggest): like the microphone's coil, its coil gives a
  * voltage while the magnetism through it changes — biggest where the tape's magnets turn round, none
- * where they are strongest. With the heads 2¼ cycles apart it comes back in step with the recording.
+ * where they are strongest. With the heads 3¼ cycles apart it comes back in step with the recording.
  */
 export function playbackVoltage(r: number): number {
   // The change of the magnetism under the gap, per radian of phase

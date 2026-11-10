@@ -19,7 +19,9 @@ import { Air, Label, Leader, Step } from './sceneParts'
 const DIAPHRAGM_X = 262
 /** The voltage's graph: its left edge, width, middle line and half height (2 mV) */
 const SCOPE_X = 750, SCOPE_W = 290, SCOPE_Y = 374, SCOPE_H = 55
-/** Where the speaker's sound wave starts; how much further its air swings than the microphone's */
+/** How far right of where it was first drawn the speaker stands (the microphone, the graph and the speaker evenly apart) */
+const SPEAKER_DX = 110
+/** Where the speaker's sound wave starts (in the speaker's own drawing); how much further its air swings than the microphone's */
 const SPEAKER_AIR_X = 1140, LOUDER = 1.8
 /** The strips of air before the speaker, darker where the air is pressed together */
 const STRIP = 6
@@ -39,10 +41,10 @@ const AMP_IN_TOP = 828, AMP_OUT_BASE = 902, AMP_H = 50, AMP_HALF = 28
 const AMP_TIP = AMP_H * (1 - PIN / AMP_HALF)
 /** Where the output amplifier's wires end: the speaker's leads start there */
 const PIN_TOP = AMP_OUT_BASE - AMP_H - 18
-/** The reels' middles, at the picture's two sides: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
-const SUPPLY_X = 130, TAKEUP_X = 1220, REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
-/** The tape's little magnets, every MAGNET_GAP along it (18 to a cycle), at most MAGNET_LONG long */
-const MAGNET_GAP = TAPE_WAVELENGTH / 18, MAGNET_LONG = 13
+/** The reels' middles, at the picture's two sides, each as far from its head: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
+const SUPPLY_X = 130, TAKEUP_X = PLAY_X + (REC_X - SUPPLY_X), REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
+/** The tape's little magnets, every MAGNET_GAP along it (15 to a cycle), at most MAGNET_LONG long */
+const MAGNET_GAP = TAPE_WAVELENGTH / 15, MAGNET_LONG = 13
 const MAGNETS = Math.ceil((TAKEUP_X - SUPPLY_X) / MAGNET_GAP) + 1
 /** The magnetic field at a head's gap: its rings */
 const FIELD = [5, 10, 15]
@@ -130,8 +132,8 @@ function makePainter(find: Finder): Painter {
       // The speaker is drawn a little larger than life: its leads follow the coil at that size
       const lead = 1.1 * push
       const a = PLAY_X - PIN, b = PLAY_X + PIN
-      wireD.setAttribute('d', `M${a} ${PIN_TOP} V612 Q${a} 606 ${a + 6} 606 H1018 Q${f(1032.6 + lead)} 608 ${f(1032.6 + lead)} 660`)
-      wireC.setAttribute('d', `M${b} ${PIN_TOP} V620 Q${b} 614 ${b + 6} 614 H1008 Q${f(1023.8 + lead)} 616 ${f(1023.8 + lead)} 660`)
+      wireD.setAttribute('d', `M${a} ${PIN_TOP} V612 Q${a} 606 ${a + 6} 606 H${1018 + SPEAKER_DX} Q${f(1032.6 + SPEAKER_DX + lead)} 608 ${f(1032.6 + SPEAKER_DX + lead)} 660`)
+      wireC.setAttribute('d', `M${b} ${PIN_TOP} V620 Q${b} 614 ${b + 6} 614 H${1008 + SPEAKER_DX} Q${f(1023.8 + SPEAKER_DX + lead)} 616 ${f(1023.8 + SPEAKER_DX + lead)} 660`)
       strips.forEach((strip, i) => {
         const pressed = -Math.sin(r - K * (STRIPS[i] + STRIP / 2 - SPEAKER_AIR_X))
         strip.setAttribute('opacity', (0.04 + 0.22 * Math.max(0, pressed)).toFixed(3))
@@ -211,8 +213,8 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
         </g>
         <Reel x={SUPPLY_X} name="supplyReel" />
         <Reel x={TAKEUP_X} name="takeupReel" />
-        <Label at={[600, TAPE_Y + 54]} anchor="middle" flow>{l.magneticTape}</Label>
-        <line x1={650} y1={TAPE_Y + 50} x2={688} y2={TAPE_Y + 50} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
+        <Label at={[660, TAPE_Y + 54]} anchor="middle" flow>{l.magneticTape}</Label>
+        <line x1={710} y1={TAPE_Y + 50} x2={748} y2={TAPE_Y + 50} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
         <Amp x={REC_X} base={AMP_IN_TOP} way={1} from={800} />
         <Label at={[REC_X + AMP_HALF + 10, AMP_IN_TOP + 22]}>{l.inputAmplifier}</Label>
         <Head x={REC_X} field="recField" top={AMP_IN_TOP + AMP_TIP} />
@@ -236,33 +238,35 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
 
       {/* 5 · the speaker */}
       <Step n={5} step={step}>
-        <Air id="lsc-dd-air-speaker" x={1146} y={521} w={143} h={318} r={70} />
-        <g data-p="strips" mask="url(#lsc-dd-air-speaker)">
-          {STRIPS.map((x) => <rect key={x} x={x} y={515} width={STRIP} height={330} shapeRendering="crispEdges" fill={MOVER} opacity={0.04} />)}
-        </g>
-        <g data-p="speakerAir" mask="url(#lsc-dd-air-speaker)" />
-        <Label at={[1192, 506]} anchor="middle" flow>{l.soundWave}</Label>
-        <line x1={1248} y1={502} x2={1290} y2={502} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
-        <g transform="translate(960,680) scale(1.1) translate(-44,-660)">
-          <path d="M92 612 L112 604 L198 548 M92 708 L112 716 L198 772" fill="none" stroke={PART} strokeWidth={3} strokeLinejoin="round" />
-          <rect x={200} y={538} width={6} height={22} fill={PART_2} />
-          <rect x={200} y={760} width={6} height={22} fill={PART_2} />
-          <rect x={44} y={626} width={14} height={68} fill={PART} />
-          <rect x={58} y={606} width={26} height={108} fill={PART_2} />
-          <rect x={84} y={610} width={8} height={100} fill={PART_3} />
-          <rect x={92} y={647} width={24} height={26} fill={PART} />
-          <path data-p="cap" fill={PART} fillOpacity={0.45} stroke="none" />
-          <g data-p="speakerCoil" fill="none" stroke={INK} strokeWidth={1.5}>
-            {Array.from({ length: 6 }, (_, i) => <ellipse key={i} cy={660} rx={2.5} ry={16} />)}
-          </g>
-          <path data-p="cone" fill="none" stroke={INK} strokeWidth={2.5} strokeLinejoin="round" />
-          <Leader x1={108} y1={738} x2={108} y2={676} />
-        </g>
         <path data-p="wireC" fill="none" stroke={INK} strokeWidth={1.5} />
         <path data-p="wireD" fill="none" stroke={INK} strokeWidth={1.5} />
-        <Label at={[986, 758]} anchor="middle">{l.magnet}</Label>
-        <Label at={[1036, 782]} anchor="middle">{l.voiceCoil}</Label>
-        <Label at={[1112, 834]} anchor="middle">{l.speakerCone}</Label>
+        <g transform={`translate(${SPEAKER_DX},0)`}>
+          <Air id="lsc-dd-air-speaker" x={1146} y={521} w={143} h={318} r={70} />
+          <g data-p="strips" mask="url(#lsc-dd-air-speaker)">
+            {STRIPS.map((x) => <rect key={x} x={x} y={515} width={STRIP} height={330} shapeRendering="crispEdges" fill={MOVER} opacity={0.04} />)}
+          </g>
+          <g data-p="speakerAir" mask="url(#lsc-dd-air-speaker)" />
+          <Label at={[1192, 506]} anchor="middle" flow>{l.soundWave}</Label>
+          <line x1={1248} y1={502} x2={1290} y2={502} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
+          <g transform="translate(960,680) scale(1.1) translate(-44,-660)">
+            <path d="M92 612 L112 604 L198 548 M92 708 L112 716 L198 772" fill="none" stroke={PART} strokeWidth={3} strokeLinejoin="round" />
+            <rect x={200} y={538} width={6} height={22} fill={PART_2} />
+            <rect x={200} y={760} width={6} height={22} fill={PART_2} />
+            <rect x={44} y={626} width={14} height={68} fill={PART} />
+            <rect x={58} y={606} width={26} height={108} fill={PART_2} />
+            <rect x={84} y={610} width={8} height={100} fill={PART_3} />
+            <rect x={92} y={647} width={24} height={26} fill={PART} />
+            <path data-p="cap" fill={PART} fillOpacity={0.45} stroke="none" />
+            <g data-p="speakerCoil" fill="none" stroke={INK} strokeWidth={1.5}>
+              {Array.from({ length: 6 }, (_, i) => <ellipse key={i} cy={660} rx={2.5} ry={16} />)}
+            </g>
+            <path data-p="cone" fill="none" stroke={INK} strokeWidth={2.5} strokeLinejoin="round" />
+            <Leader x1={108} y1={738} x2={108} y2={676} />
+          </g>
+          <Label at={[986, 758]} anchor="middle">{l.magnet}</Label>
+          <Label at={[1036, 782]} anchor="middle">{l.voiceCoil}</Label>
+          <Label at={[1112, 834]} anchor="middle">{l.speakerCone}</Label>
+        </g>
       </Step>
     </g>
   )
