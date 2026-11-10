@@ -1,10 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import {
   ReactFlow,
-  Background,
   Controls,
   type NodeChange,
-  BackgroundVariant,
   SelectionMode,
   useReactFlow,
   useStore,
@@ -35,7 +33,7 @@ import { useCanvasShortcuts }   from '../hooks/useCanvasShortcuts'
 import { usePaletteDrop }       from '../hooks/usePaletteDrop'
 import { useFlowElements }      from '../hooks/useFlowElements'
 import { useStableHandlers }    from '../hooks/useStableHandlers'
-import { GRID, usualSize }      from '../utils/layoutHelpers'
+import { usualSize }            from '../utils/layoutHelpers'
 import type { Pt }              from '../utils/geometry'
 
 const edgeTypes = { chain: ChainEdge }
@@ -63,7 +61,6 @@ const FAR_LEAVE_ZOOM = 0.24
 export function SignalChain() {
   const toolMode        = useSignalStore((s) => s.toolMode)
   const leftTool        = useSignalStore((s) => s.leftTool)
-  const snapToGrid      = useSignalStore((s) => s.snapToGrid)
   const overview        = useSignalStore((s) => s.overview)
   const level           = useSignalStore((s) => s.complexityLevel)
   const capturing       = useSignalStore((s) => s.capturing)
@@ -216,14 +213,6 @@ export function SignalChain() {
         style={FLOW_STYLE}
         {...handlers}
       >
-        {snapToGrid && (
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={GRID}
-            size={2.4}
-            color="var(--lsc-grid)"
-          />
-        )}
         <Controls
           position="bottom-left"
           className="lsc-left-tools"
