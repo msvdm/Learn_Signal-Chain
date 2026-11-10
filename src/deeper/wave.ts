@@ -77,3 +77,54 @@ export function cameraFor(boxes: readonly Box[], width: number, height: number):
 export function wrapPhase(deg: number): number {
   return deg > 360 ? deg % 360 : Math.max(0, deg)
 }
+
+// ── Complex waves: sines added up ───────────────────────────────────────────
+
+/**
+ * The first `count` sines of a sawtooth added up, at phase `r` (radians): the n-th turns n times
+ * as fast and is 1/n as big. One sine is the fundamental; the more sines, the closer the sum comes
+ * to a sawtooth, (π − r) / 2 — overshooting by about 9 % of its jump next to it (Gibbs).
+ */
+export function sawtooth(r: number, count: number): number {
+  let sum = 0
+  for (let n = 1; n <= count; n++) sum += Math.sin(n * r) / n
+  return sum
+}
+
+/**
+ * Whether the first two sines add up at phase `r` (both up or both down: constructive) rather than
+ * partly cancelling (one up, the other down: destructive).
+ */
+export function addsUp(r: number): boolean {
+  return Math.sin(r) * Math.sin(2 * r) >= 0
+}
+
+/**
+ * Circles on circles: the first `count` sines of a sawtooth as turning circles, each riding on the
+ * tip of the one before (the n-th of radius `unit` / n, turning n times as fast). Each circle's
+ * centre and, last, the tip of the last one — from the first centre, y upward. The tip's height is
+ * the sum: `unit` × `sawtooth(r, count)`.
+ */
+export function circlesOnCircles(r: number, count: number, unit: number): Dot[] {
+  const points: Dot[] = [{ x: 0, y: 0 }]
+  let x = 0, y = 0
+  for (let n = 1; n <= count; n++) {
+    x += (unit / n) * Math.cos(n * r)
+    y += (unit / n) * Math.sin(n * r)
+    points.push({ x, y })
+  }
+  return points
+}
+
+/** The complex wave in the air: one cycle of it in a scene's units, and how far its particles swing */
+export const AIR_WAVELENGTH = 600
+export const AIR_SWING = 8
+const AIR_K = TAU / AIR_WAVELENGTH
+
+/**
+ * Where a particle of air is, from where it rests, `distance` from the speaker cone, when the cone
+ * moves in the first `count` sines of a sawtooth.
+ */
+export function complexSwing(r: number, distance: number, count: number): number {
+  return AIR_SWING * sawtooth(r - AIR_K * distance, count)
+}

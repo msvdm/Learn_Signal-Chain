@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { K, SWING, WAVELENGTH, cameraFor, curvePath, rad, scatter, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, K, SWING, WAVELENGTH, addsUp, cameraFor, circlesOnCircles, complexSwing, curvePath, rad, sawtooth, scatter, swing, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -110,5 +110,53 @@ describe('a phase', () => {
     expect(wrapPhase(361)).toBe(1)
     expect(wrapPhase(725)).toBe(5)
     expect(wrapPhase(-3)).toBe(0)
+  })
+})
+
+describe('a complex wave from sines', () => {
+  test('one sine is the fundamental; two add a sine twice as fast and half as big', () => {
+    for (const deg of [0, 30, 100, 250]) {
+      const r = rad(deg)
+      expect(sawtooth(r, 1)).toBeCloseTo(Math.sin(r), 9)
+      expect(sawtooth(r, 2)).toBeCloseTo(Math.sin(r) + Math.sin(2 * r) / 2, 9)
+    }
+  })
+
+  test('many sines come close to a sawtooth, (π − r) / 2', () => {
+    for (const r of [0.5, 1, 2, 3, 4, 5.5]) expect(Math.abs(sawtooth(r, 3000) - (Math.PI - r) / 2)).toBeLessThan(0.01)
+  })
+
+  test('ten sines stay within the drawing: their peak overshoots the sawtooth by its 9 %', () => {
+    let peak = 0
+    for (let deg = 0; deg <= 360; deg += 0.25) peak = Math.max(peak, sawtooth(rad(deg), 10))
+    expect(peak).toBeGreaterThan(Math.PI / 2)
+    expect(peak).toBeLessThan(1.9)
+  })
+
+  test('the first two add up in the first and last quarter, partly cancel in the middle half', () => {
+    for (const deg of [10, 80, 280, 350]) expect(addsUp(rad(deg))).toBe(true)
+    for (const deg of [100, 170, 190, 260]) expect(addsUp(rad(deg))).toBe(false)
+    // And the sum shows it: bigger than the first sine alone, or smaller
+    expect(Math.abs(sawtooth(rad(60), 2))).toBeGreaterThan(Math.abs(Math.sin(rad(60))))
+    expect(Math.abs(sawtooth(rad(120), 2))).toBeLessThan(Math.abs(Math.sin(rad(120))))
+  })
+
+  test('the tip of the last circle is as high as the sum', () => {
+    for (const deg of [0, 45, 133, 270]) {
+      const points = circlesOnCircles(rad(deg), 10, 60)
+      expect(points.length).toBe(11)
+      expect(points[10].y).toBeCloseTo(60 * sawtooth(rad(deg), 10), 9)
+      expect(Math.hypot(points[3].x - points[2].x, points[3].y - points[2].y)).toBeCloseTo(20, 9)
+    }
+  })
+
+  test('in the air, no particle passes the one in front of it', () => {
+    for (let deg = 0; deg < 360; deg += 5) {
+      for (let d = 0; d < AIR_WAVELENGTH; d += 2) {
+        const here = d + complexSwing(rad(deg), d, 10)
+        const next = d + 1 + complexSwing(rad(deg), d + 1, 10)
+        expect(next).toBeGreaterThan(here)
+      }
+    }
   })
 })

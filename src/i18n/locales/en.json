@@ -674,7 +674,8 @@
     "show": "Show the subjects panel",
     "subjects": {
       "acoustic": "Acoustic propagation and perception",
-      "transducer": "Transducer and speaker"
+      "transducer": "Transducer and speaker",
+      "complex": "Complex waves"
     },
     "steps": {
       "string": "String",
@@ -685,7 +686,13 @@
       "sine": "Sine wave",
       "microphone": "Microphone",
       "voltage": "Voltage",
-      "speaker": "Speaker"
+      "speaker": "Speaker",
+      "fundamental": "The first sine",
+      "secondSine": "A second sine",
+      "addingUp": "Adding them up",
+      "circlesOnCircles": "Circles on circles",
+      "moreSines": "More sines: a sawtooth",
+      "complexInAir": "The complex wave in the air"
     },
     "stepsLabel": "Steps",
     "step": "Step {n} of {count}",
@@ -730,7 +737,18 @@
       "voltage": "Voltage",
       "time": "Time →",
       "mv": "mV",
-      "speakerCone": "Speaker cone"
+      "speakerCone": "Speaker cone",
+      "fundamental": "Fundamental: the 1st harmonic",
+      "secondHarmonic": "2nd harmonic: twice as fast, half as big",
+      "sum": "The two added up: a complex wave",
+      "addUp": "add up",
+      "cancel": "partly cancel",
+      "constructive": "Constructive: they add up",
+      "destructive": "Destructive: they partly cancel",
+      "tenSines": "10 sines added up",
+      "sawtooth": "Sawtooth wave",
+      "recipe": "The recipe: how big each sine is",
+      "inTheAir": "The same shape in the air"
     }
   }
 }

@@ -1,11 +1,12 @@
 import type { ComponentType } from 'react'
-import { Ear, Speaker } from 'lucide-react'
+import { AudioWaveform, Ear, Speaker } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
 import type { SceneProps } from './scenes/painter'
 import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
+import { ComplexScene } from './scenes/ComplexScene'
 
 // Dive deeper's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -53,6 +54,19 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'microphone', box: [35, 560, 540, 800] },
       { id: 'voltage',    box: [530, 590, 925, 800] },
       { id: 'speaker',    box: [925, 492, 1300, 850] },
+    ],
+  },
+  {
+    id: 'complex',
+    icon: AudioWaveform,
+    Scene: ComplexScene,
+    steps: [
+      { id: 'fundamental',      box: [30, 35, 620, 225] },
+      { id: 'secondSine',       box: [30, 235, 620, 340] },
+      { id: 'addingUp',         box: [30, 370, 620, 590] },
+      { id: 'circlesOnCircles', box: [30, 370, 620, 590] },
+      { id: 'moreSines',        box: [690, 150, 1365, 590] },
+      { id: 'complexInAir',     box: [10, 570, 1370, 815] },
     ],
   },
 ]
