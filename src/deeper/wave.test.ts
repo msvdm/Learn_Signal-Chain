@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, GUITAR_LOW_E, K, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, GUITAR_LOW_E, HEADS_APART, K, REEL_R, TAPE_WAVELENGTH, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, playbackVoltage, rad, reelTurn, sawtooth, scatter, stringSwing, swing, tapeMagnet, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -222,5 +222,35 @@ describe("a real guitar's low E", () => {
     }
     // The 4th starts 0.32 radians behind: at r = 0 its sine is sin(−0.32)
     expect(complexWave(0, [GUITAR_LOW_E[0], { size: 0, phase: 0 }, { size: 0, phase: 0 }, GUITAR_LOW_E[3]])).toBeCloseTo(0.1186 * Math.sin(-0.32), 9)
+  })
+})
+
+describe('magnetic tape', () => {
+  test('at the recording head the tape takes the current of the moment; before it, it is blank', () => {
+    for (const deg of [0, 60, 90, 200, 330]) {
+      expect(tapeMagnet(rad(deg), 0)).toBeCloseTo(Math.cos(rad(deg)), 9)
+      expect(tapeMagnet(rad(deg), -5)).toBe(0)
+    }
+  })
+
+  test('a bit of tape keeps its magnetism as it moves on: one cycle later, one tape wavelength further', () => {
+    for (const deg of [10, 135, 250]) {
+      expect(tapeMagnet(rad(deg + 360), TAPE_WAVELENGTH + 40)).toBeCloseTo(tapeMagnet(rad(deg), 40), 9)
+      expect(tapeMagnet(rad(deg + 90), TAPE_WAVELENGTH / 4 + 40)).toBeCloseTo(tapeMagnet(rad(deg), 40), 9)
+    }
+  })
+
+  test('the playback voltage follows the change of the magnetism, and comes back in step with the recording', () => {
+    for (let deg = 0; deg <= 360; deg += 30) {
+      expect(playbackVoltage(rad(deg))).toBeCloseTo(Math.cos(rad(deg)), 6)
+    }
+    // Biggest where the magnetism under the playback head passes zero, none where it is strongest
+    expect(Math.abs(tapeMagnet(rad(0), HEADS_APART))).toBeLessThan(1e-9)
+    expect(Math.abs(tapeMagnet(rad(90), HEADS_APART))).toBeCloseTo(1, 9)
+  })
+
+  test('a reel turns as far as the tape moves, ⅔ of a turn a cycle: its three spokes look the same at 0° and 360°', () => {
+    expect(reelTurn(2 * Math.PI) * REEL_R).toBeCloseTo(TAPE_WAVELENGTH, 9)
+    expect(reelTurn(2 * Math.PI) / (2 * Math.PI)).toBeCloseTo(2 / 3, 9)
   })
 })

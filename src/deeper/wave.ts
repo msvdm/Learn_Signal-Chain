@@ -181,3 +181,39 @@ export function stringSwing(r: number, along: number, recipe: Recipe, count = re
   for (let n = 1; n <= count; n++) sum += harmonicSwing(r, along, n, recipe[n - 1])
   return sum
 }
+
+// ── Magnetic tape: recording and playback ───────────────────────────────────
+
+/** How far the tape moves in one cycle: one cycle of the recording along it, in a scene's units */
+export const TAPE_WAVELENGTH = 240
+/** From the recording head's gap to the playback head's: 1¼ cycles of the recording */
+export const HEADS_APART = 1.25 * TAPE_WAVELENGTH
+/** The tape wound on each reel: a reel turns ⅔ of a turn a cycle, so its three spokes look the same at 0° and 360° */
+export const REEL_R = (3 * TAPE_WAVELENGTH) / (4 * Math.PI)
+const TAPE_K = TAU / TAPE_WAVELENGTH
+
+/**
+ * How strongly the tape is magnetised (−1 … 1; the sign is which way) `distance` past the recording
+ * head's gap, at phase `r`: the current in the head's coil when that bit of tape passed its gap. The
+ * current follows the microphone's voltage (cos r), so the tape holds the voltage graph laid out along
+ * it. Before the gap the tape is blank (0).
+ */
+export function tapeMagnet(r: number, distance: number): number {
+  return distance < 0 ? 0 : Math.cos(r - TAPE_K * distance)
+}
+
+/**
+ * The playback head's voltage (−1 … 1 of its biggest): like the microphone's coil, its coil gives a
+ * voltage while the magnetism through it changes — biggest where the tape's magnets turn round, none
+ * where they are strongest. With the heads 1¼ cycles apart it comes back in step with the recording.
+ */
+export function playbackVoltage(r: number): number {
+  // The change of the magnetism under the gap, per radian of phase
+  const h = 1e-4
+  return (tapeMagnet(r + h, HEADS_APART) - tapeMagnet(r - h, HEADS_APART)) / (2 * h)
+}
+
+/** How far a reel has turned at phase `r` (radians; positive: anticlockwise on screen, the tape leaving at its bottom to the right) */
+export function reelTurn(r: number): number {
+  return (r / TAU) * TAPE_WAVELENGTH / REEL_R
+}
