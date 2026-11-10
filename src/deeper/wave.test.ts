@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, K, SWING, WAVELENGTH, addsUp, harmonicSwing, stringSwing, cameraFor, circlesOnCircles, complexSwing, curvePath, rad, sawtooth, scatter, swing, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, K, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing, swing, wrapPhase } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -117,8 +117,9 @@ describe('a complex wave from sines', () => {
   test('one sine is the fundamental; two add a sine twice as fast and half as big', () => {
     for (const deg of [0, 30, 100, 250]) {
       const r = rad(deg)
-      expect(sawtooth(r, 1)).toBeCloseTo(Math.sin(r), 9)
-      expect(sawtooth(r, 2)).toBeCloseTo(Math.sin(r) + Math.sin(2 * r) / 2, 9)
+      expect(complexWave(r, SAWTOOTH, 1)).toBeCloseTo(Math.sin(r), 9)
+      expect(complexWave(r, SAWTOOTH, 2)).toBeCloseTo(Math.sin(r) + Math.sin(2 * r) / 2, 9)
+      expect(complexWave(r, SAWTOOTH)).toBeCloseTo(sawtooth(r, 10), 9)
     }
   })
 
@@ -128,33 +129,28 @@ describe('a complex wave from sines', () => {
 
   test('ten sines stay within the drawing: their peak overshoots the sawtooth by its 9 %', () => {
     let peak = 0
-    for (let deg = 0; deg <= 360; deg += 0.25) peak = Math.max(peak, sawtooth(rad(deg), 10))
+    for (let deg = 0; deg <= 360; deg += 0.25) peak = Math.max(peak, complexWave(rad(deg), SAWTOOTH))
     expect(peak).toBeGreaterThan(Math.PI / 2)
     expect(peak).toBeLessThan(1.9)
   })
 
-  test('the first two add up in the first and last quarter, partly cancel in the middle half', () => {
-    for (const deg of [10, 80, 280, 350]) expect(addsUp(rad(deg))).toBe(true)
-    for (const deg of [100, 170, 190, 260]) expect(addsUp(rad(deg))).toBe(false)
-    // And the sum shows it: bigger than the first sine alone, or smaller
-    expect(Math.abs(sawtooth(rad(60), 2))).toBeGreaterThan(Math.abs(Math.sin(rad(60))))
-    expect(Math.abs(sawtooth(rad(120), 2))).toBeLessThan(Math.abs(Math.sin(rad(120))))
-  })
-
   test('the tip of the last circle is as high as the sum', () => {
     for (const deg of [0, 45, 133, 270]) {
-      const points = circlesOnCircles(rad(deg), 10, 60)
-      expect(points.length).toBe(11)
-      expect(points[10].y).toBeCloseTo(60 * sawtooth(rad(deg), 10), 9)
+      for (const count of [2, 3, 10]) {
+        const points = circlesOnCircles(rad(deg), SAWTOOTH, count, 60)
+        expect(points.length).toBe(count + 1)
+        expect(points[count].y).toBeCloseTo(60 * complexWave(rad(deg), SAWTOOTH, count), 9)
+      }
+      const points = circlesOnCircles(rad(deg), SAWTOOTH, 10, 60)
       expect(Math.hypot(points[3].x - points[2].x, points[3].y - points[2].y)).toBeCloseTo(20, 9)
     }
   })
 
   test('in the air, no particle passes the one in front of it', () => {
     for (let deg = 0; deg < 360; deg += 5) {
-      for (let d = 0; d < AIR_WAVELENGTH; d += 2) {
-        const here = d + complexSwing(rad(deg), d, 10)
-        const next = d + 1 + complexSwing(rad(deg), d + 1, 10)
+      for (let d = 0; d < AIR_WAVELENGTH; d += 1) {
+        const here = d + complexSwing(rad(deg), d, SAWTOOTH)
+        const next = d + 0.5 + complexSwing(rad(deg), d + 0.5, SAWTOOTH)
         expect(next).toBeGreaterThan(here)
       }
     }
@@ -165,31 +161,37 @@ describe('the string, in its harmonics', () => {
   test('its ends never move; the 2nd harmonic leaves its middle still too', () => {
     for (const deg of [0, 40, 90, 200, 333]) {
       for (const n of [1, 2, 3, 10]) {
-        expect(harmonicSwing(rad(deg), 0, n)).toBeCloseTo(0, 9)
-        expect(harmonicSwing(rad(deg), 1, n)).toBeCloseTo(0, 9)
+        expect(harmonicSwing(rad(deg), 0, n, 1 / n)).toBeCloseTo(0, 9)
+        expect(harmonicSwing(rad(deg), 1, n, 1 / n)).toBeCloseTo(0, 9)
       }
-      expect(harmonicSwing(rad(deg), 0.5, 2)).toBeCloseTo(0, 9)
+      expect(harmonicSwing(rad(deg), 0.5, 2, 1 / 2)).toBeCloseTo(0, 9)
     }
   })
 
   test('one harmonic alone is the fundamental: half a sine along the string, swinging with the first sine', () => {
-    expect(stringSwing(rad(90), 0.5, 1)).toBeCloseTo(1, 9)
-    expect(stringSwing(rad(270), 0.5, 1)).toBeCloseTo(-1, 9)
-    expect(stringSwing(rad(90), 0.25, 1)).toBeCloseTo(Math.SQRT1_2, 9)
+    expect(stringSwing(rad(90), 0.5, SAWTOOTH, 1)).toBeCloseTo(1, 9)
+    expect(stringSwing(rad(270), 0.5, SAWTOOTH, 1)).toBeCloseTo(-1, 9)
+    expect(stringSwing(rad(90), 0.25, SAWTOOTH, 1)).toBeCloseTo(Math.SQRT1_2, 9)
   })
 
-  test('the push on the bridge (the slope at its end) is the sawtooth of as many sines', () => {
+  test('a sawtooth\'s n-th harmonic swings the string 1/n² as far (a bowed string)', () => {
+    for (const n of [2, 3, 7]) expect(harmonicSwing(rad(90 / n), 0.5 / n, n, 1 / n)).toBeCloseTo(1 / (n * n), 9)
+  })
+
+  test('the push on the bridge (the slope at its end) is the recipe\'s sum, π times', () => {
     const tiny = 1e-6
     for (const deg of [20, 70, 150, 300]) {
-      const slope = stringSwing(rad(deg), tiny, 10) / tiny
-      expect(slope).toBeCloseTo(Math.PI * sawtooth(rad(deg), 10), 4)
+      for (const count of [2, 3, 10]) {
+        const slope = stringSwing(rad(deg), tiny, SAWTOOTH, count) / tiny
+        expect(slope).toBeCloseTo(Math.PI * complexWave(rad(deg), SAWTOOTH, count), 4)
+      }
     }
   })
 
   test('ten harmonics swing no further than π² / 8 of the first alone: the drawing has room', () => {
     let peak = 0
     for (let deg = 0; deg < 360; deg += 2) {
-      for (let a = 0; a <= 1; a += 0.01) peak = Math.max(peak, Math.abs(stringSwing(rad(deg), a, 10)))
+      for (let a = 0; a <= 1; a += 0.01) peak = Math.max(peak, Math.abs(stringSwing(rad(deg), a, SAWTOOTH)))
     }
     expect(peak).toBeLessThan(1.25)
   })

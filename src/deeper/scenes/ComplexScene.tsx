@@ -1,43 +1,60 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { addsUp, circlesOnCircles, clamp, complexSwing, curvePath, harmonicSwing, rad, sawtooth, scatter, stringSwing } from '../wave'
+import { SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Step } from './sceneParts'
 
-// Complex waves (Dive deeper, D46): a complex wave built from sines, beside a string vibrating in
-// as many harmonics as there are sines (it grows down beside the rows reached). The fundamental, a second
-// sine twice as fast and half as big, the two added up (where both go the same way they add up,
-// where they go opposite ways they partly cancel) and as circles on circles, ten sines
-// coming close to a sawtooth with their recipe, and that shape travelling through the air. The
-// phase is the fundamental's: everything is one function of it.
+// Complex waves (Dive deeper, D46): a string is the result, the harmonics what is added to it. On
+// the left the string, and beside it each harmonic alone, one below the other — a circle turning
+// and its sine: the fundamental (step 1), the 2nd (2), the 3rd (4), the 4th to the 10th (5). On the
+// right what they make together (from step 3): the circles riding on each other, their sum, and the
+// recipe — how big each sine is. Then that shape in the air from a speaker cone (6). The string
+// vibrates in as many harmonics as are added up, and grows down beside the rows reached. The phase
+// is the fundamental's: everything is one function of it.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
-/** The first sine's radius: every other sine is a share of it */
+/** The first sine's radius: every other sine is a share of it (its size in the recipe) */
 const UNIT = 60
-/** The circles on the left, and the three graphs beside them: the first sine, the second, their sum */
-const CIRCLE_X = 110, Y1 = 130, Y2 = 290, Y3 = 480
-const GRAPH_X = 220, GRAPH_W = 360
-/** Ten sines: their circles' first centre, their graph, their recipe's bars */
-const SINES = 10
-const CHAIN_X = 740, CHAIN_Y = 300, RIGHT_X = 960, Y5 = 300
+const SINES = SAWTOOTH.length
+/** The harmonics on the left: their circles' x, their graphs' left edge and width, each row's middle line */
+const CIRCLE_X = 110, GRAPH_X = 220, GRAPH_W = 360
+const ROW_Y = [130, 290, 395, 470, 526, 582, 638, 694, 750, 806]
+/** The step each harmonic's row comes in */
+const ROW_STEP = [1, 2, 4, 5, 5, 5, 5, 5, 5, 5]
+/** How many harmonics are added up at each step: the string's, the circles', the recipe's */
+const COUNT = [1, 2, 2, 3, SINES, SINES]
+/** What they make together: the circles' first centre, the sum's graph, the recipe's bars */
+const CHAIN_X = 740, CHAIN_Y = 300, SUM_X = 960, SUM_Y = 300
 const BAR_X = 966, BAR_STEP = 36, BAR_W = 22, BAR_BOTTOM = 560, BAR_H = 80
-/** The air: where the speaker cone's front rests, how far the air reaches, the wave's shape above it */
-const CONE_X = 104, AIR_FROM = 116, AIR_TO = 1360, SHAPE_Y = 618, SHAPE_SCALE = 1.5
-
+/** The air, lower right: where the cone's front rests, how far the air reaches, its shape above it */
+const CONE_X = 700, AIR_FROM = 712, AIR_TO = 1360, AIR_Y = 690, AIR_H = 110, SHAPE_Y = 650, SHAPE_SCALE = 3
 /**
- * The string on the left: its x at rest, its top end, its bottom end at each step (it grows down
- * beside the rows reached), how far its first harmonic swings, and in how many harmonics it
- * vibrates at each step — as many sines as the graphs have added up
+ * The string: its x at rest, its top end, its bottom end at each step (beside the rows reached),
+ * how far its first harmonic swings
  */
 const STRING_X = -50, STRING_TOP = 60, STRING_SWING = 38
-const STRING_BOTTOM = [205, 335, 575, 575, 575]
-const STRING_HARMONICS = [1, 2, 2, SINES, SINES]
+const STRING_BOTTOM = [205, 335, 335, 425, 826, 826]
 /** The string is drawn 100 units long, stretched to its length (`lsc-dd-grow` glides it) */
 const STRING_UNITS = 100, STRING_POINTS = 100
 
-const AIR_DOTS = scatter(23, 900, { x: AIR_FROM, y: 662, w: AIR_TO - AIR_FROM, h: 116 })
+const AIR_DOTS = scatter(23, 520, { x: AIR_FROM, y: AIR_Y, w: AIR_TO - AIR_FROM, h: AIR_H })
+
+const atStep = <T,>(list: readonly T[], step: number) => list[Math.min(step, list.length) - 1]
+const countAt = (step: number) => atStep(COUNT, step)
+
+const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
+const sumX   = (deg: number) => SUM_X + (GRAPH_W * deg) / 360
+/** The n-th harmonic's radius, and its graph's height at a phase */
+const radiusOf = (n: number) => UNIT * SAWTOOTH[n - 1]
+const ROW_GRAPH = ROW_Y.map((y, i) => (deg: number) => y - radiusOf(i + 1) * Math.sin((i + 1) * rad(deg)))
+const sumOf = (count: number) => (deg: number) => SUM_Y - UNIT * complexWave(rad(deg), SAWTOOTH, count)
+
+/** A line from one point to another */
+function line(el: SVGElement, x1: number, y1: number, x2: number, y2: number) {
+  put(el, 'x1', x1); put(el, 'y1', y1); put(el, 'x2', x2); put(el, 'y2', y2)
+}
 
 /** The string's shape, when the point `along` its length (0 … 1) is `swing` of its first harmonic's from rest */
 function stringPath(swing: (along: number) => number): string {
@@ -48,135 +65,81 @@ function stringPath(swing: (along: number) => number): string {
   }
   return path
 }
-const stretch = (step: number) => {
-  const bottom = STRING_BOTTOM[Math.min(step, STRING_BOTTOM.length) - 1]
-  return `translate(0px, ${STRING_TOP}px) scale(1, ${(bottom - STRING_TOP) / STRING_UNITS})`
-}
-const bottomAt = (step: number) => `translate(0px, ${STRING_BOTTOM[Math.min(step, STRING_BOTTOM.length) - 1]}px)`
-
-const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
-const rightX = (deg: number) => RIGHT_X + (GRAPH_W * deg) / 360
-const first  = (deg: number) => Y1 - UNIT * Math.sin(rad(deg))
-const second = (deg: number) => Y2 - (UNIT / 2) * Math.sin(2 * rad(deg))
-const both   = (deg: number) => Y3 - UNIT * sawtooth(rad(deg), 2)
-const ten    = (deg: number) => Y5 - UNIT * sawtooth(rad(deg), SINES)
-
-/** An arrow from `from` to `to` straight up or down at `x` — hidden while too short to show */
-function arrow(el: SVGElement, x: number, from: number, to: number) {
-  put(el, 'x1', x); put(el, 'x2', x); put(el, 'y1', from); put(el, 'y2', to)
-  el.style.opacity = Math.abs(to - from) < 6 ? '0' : '1'
-}
-
-/** A circle's radius from its centre to its tip */
-function arm(el: SVGElement, x1: number, y1: number, x2: number, y2: number) {
-  put(el, 'x1', x1); put(el, 'y1', y1); put(el, 'x2', x2); put(el, 'y2', y2)
-}
+const stretch  = (step: number) => `translate(0px, ${STRING_TOP}px) scale(1, ${(atStep(STRING_BOTTOM, step) - STRING_TOP) / STRING_UNITS})`
+const bottomAt = (step: number) => `translate(0px, ${atStep(STRING_BOTTOM, step)}px)`
 
 /** The ten sines' shape laid along the air, from the cone outward */
 function shapePath(r: number): string {
   let path = ''
   for (let d = 0; d <= AIR_TO - AIR_FROM; d += 4) {
-    const y = SHAPE_Y - SHAPE_SCALE * complexSwing(r, d, SINES)
+    const y = SHAPE_Y - SHAPE_SCALE * complexSwing(r, d, SAWTOOTH)
     path += `${path ? ' L' : 'M'}${(AIR_FROM + d).toFixed(1)} ${y.toFixed(1)}`
   }
   return path
 }
 
 function makePainter(find: Finder): Painter {
-  const tip1 = find('tip1'), arm1 = find('arm1'), reach1 = find('reach1'), trace1 = find('trace1'), dot1 = find('dot1')
-  const tip2 = find('tip2'), arm2 = find('arm2'), reach2 = find('reach2'), trace2 = find('trace2'), dot2 = find('dot2')
-  const trace3 = find('trace3'), dot3 = find('dot3')
-  const up1 = find('up1'), up2 = find('up2'), sum1 = find('sum1'), sum2 = find('sum2')
-  const adds = find('adds'), cancels = find('cancels')
-  const bigArm = find('bigArm'), small = find('small'), smallArm = find('smallArm'), tip4 = find('tip4'), reach4 = find('reach4')
+  const string = find('string'), mode1 = find('mode1'), mode2 = find('mode2')
+  const rows = ROW_Y.map((y, i) => {
+    const n = i + 1
+    return { n, y, arm: find(`arm${n}`), tip: find(`tip${n}`), reach: find(`reach${n}`), trace: find(`trace${n}`), dot: find(`dot${n}`) }
+  })
   const rings = find.all('rings'), arms = find.all('arms')
-  const tip5 = find('tip5'), reach5 = find('reach5'), trace5 = find('trace5'), dot5 = find('dot5')
+  const tip = find('sumTip'), reach = find('sumReach'), trace = find('sumTrace'), dot = find('sumDot')
   const cone = find('cone'), shape = find('shape')
   const air = find.dots('air', AIR_DOTS, 1.8).map((el, i) => ({ el, x: AIR_DOTS[i].x }))
   for (const { el } of air) el.setAttribute('fill', INK)
-  const string = find('string'), mode1 = find('mode1'), mode2 = find('mode2')
 
   return (deg, step) => {
-    const r = rad(deg), whole = Math.round(deg)
-    const x = graphX(deg)
+    const r = rad(deg), whole = Math.round(deg), x = graphX(deg)
+    const count = countAt(step)
 
-    // The string: in as many harmonics as the sines added up so far — and, while two, each alone
-    const count = STRING_HARMONICS[Math.min(step, STRING_HARMONICS.length) - 1]
-    string.setAttribute('d', stringPath((along) => stringSwing(r, along, count)))
+    // The string: in as many harmonics as are added up — and, while two, each one alone
+    string.setAttribute('d', stringPath((along) => stringSwing(r, along, SAWTOOTH, count)))
     if (step === 2 || step === 3) {
-      mode1.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 1)))
-      mode2.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 2)))
+      mode1.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 1, SAWTOOTH[0])))
+      mode2.setAttribute('d', stringPath((along) => harmonicSwing(r, along, 2, SAWTOOTH[1])))
     }
 
-    // 1 · the first sine: a circle's height, drawn out over the cycle
-    const p1x = CIRCLE_X + UNIT * Math.cos(r), p1y = first(deg)
-    arm(arm1, CIRCLE_X, Y1, p1x, p1y)
-    put(tip1, 'cx', p1x); put(tip1, 'cy', p1y)
-    arm(reach1, p1x, p1y, x, p1y)
-    trace1.setAttribute('d', curvePath(whole, graphX, first))
-    put(dot1, 'cx', x); put(dot1, 'cy', p1y)
-
-    // 2 · the second: twice as fast, half as big
-    if (step >= 2) {
-      const p2x = CIRCLE_X + (UNIT / 2) * Math.cos(2 * r), p2y = second(deg)
-      arm(arm2, CIRCLE_X, Y2, p2x, p2y)
-      put(tip2, 'cx', p2x); put(tip2, 'cy', p2y)
-      arm(reach2, p2x, p2y, x, p2y)
-      trace2.setAttribute('d', curvePath(whole, graphX, second))
-      put(dot2, 'cx', x); put(dot2, 'cy', p2y)
+    // Each harmonic alone: its circle's height, drawn out over the cycle
+    for (const row of rows) {
+      if (step < ROW_STEP[row.n - 1]) continue
+      const radius = radiusOf(row.n), graph = ROW_GRAPH[row.n - 1]
+      const px = CIRCLE_X + radius * Math.cos(row.n * r), py = graph(deg)
+      line(row.arm, CIRCLE_X, row.y, px, py)
+      put(row.tip, 'cx', px); put(row.tip, 'cy', py)
+      line(row.reach, px, py, x, py)
+      row.trace.setAttribute('d', curvePath(whole, graphX, graph))
+      put(row.dot, 'cx', x); put(row.dot, 'cy', py)
     }
 
-    // 3 · their sum: the second's height stacked on the first's
+    // What they make together: each circle riding on the one before, the last one's tip their sum
     if (step >= 3) {
-      const h1 = UNIT * Math.sin(r), h2 = (UNIT / 2) * Math.sin(2 * r)
-      arrow(up1, x, Y1, Y1 - h1)
-      arrow(up2, x, Y2, Y2 - h2)
-      arrow(sum1, x, Y3, Y3 - h1)
-      arrow(sum2, x + 7, Y3 - h1, Y3 - h1 - h2)
-      trace3.setAttribute('d', curvePath(whole, graphX, both))
-      put(dot3, 'cx', x); put(dot3, 'cy', both(deg))
-      const together = addsUp(r)
-      adds.style.opacity = together ? '1' : '0'
-      cancels.style.opacity = together ? '0' : '1'
-    }
-
-    // 3 · the same sum as circles on circles: the small one rides on the big one's tip
-    if (step >= 3) {
-      const [, a, b] = circlesOnCircles(r, 2, UNIT)
-      const ax = CIRCLE_X + a.x, ay = Y3 - a.y, bx = CIRCLE_X + b.x, by = Y3 - b.y
-      arm(bigArm, CIRCLE_X, Y3, ax, ay)
-      put(small, 'cx', ax); put(small, 'cy', ay)
-      arm(smallArm, ax, ay, bx, by)
-      put(tip4, 'cx', bx); put(tip4, 'cy', by)
-      arm(reach4, bx, by, x, by)
-    }
-
-    // 4 · ten sines: ten circles on circles, and their sum close to a sawtooth
-    if (step >= 4) {
-      const points = circlesOnCircles(r, SINES, UNIT)
-      for (let n = 0; n < SINES; n++) {
+      const points = circlesOnCircles(r, SAWTOOTH, count, UNIT)
+      for (let n = 0; n < count; n++) {
         const c = points[n], t = points[n + 1]
         put(rings[n], 'cx', CHAIN_X + c.x); put(rings[n], 'cy', CHAIN_Y - c.y)
-        arm(arms[n], CHAIN_X + c.x, CHAIN_Y - c.y, CHAIN_X + t.x, CHAIN_Y - t.y)
+        line(arms[n], CHAIN_X + c.x, CHAIN_Y - c.y, CHAIN_X + t.x, CHAIN_Y - t.y)
       }
-      const end = points[SINES], tx = CHAIN_X + end.x, ty = CHAIN_Y - end.y, gx = rightX(deg)
-      put(tip5, 'cx', tx); put(tip5, 'cy', ty)
-      arm(reach5, tx, ty, gx, ty)
-      trace5.setAttribute('d', curvePath(whole, rightX, ten))
-      put(dot5, 'cx', gx); put(dot5, 'cy', ty)
+      const end = points[count], tx = CHAIN_X + end.x, ty = CHAIN_Y - end.y, gx = sumX(deg)
+      put(tip, 'cx', tx); put(tip, 'cy', ty)
+      line(reach, tx, ty, gx, ty)
+      trace.setAttribute('d', curvePath(whole, sumX, sumOf(count)))
+      put(dot, 'cx', gx); put(dot, 'cy', ty)
     }
 
-    // 5 · the cone moves in that shape, and the air carries it away
-    if (step >= 5) {
-      const push = complexSwing(r, 0, SINES)
-      cone.setAttribute('d', `M55 700 L${(CONE_X + push).toFixed(1)} 664 L${(CONE_X + push).toFixed(1)} 776 L55 740 Z`)
-      for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, SINES), AIR_FROM - 4, AIR_TO + 2))
+    // The cone moves in that shape, and the air carries it away
+    if (step >= 6) {
+      const push = complexSwing(r, 0, SAWTOOTH)
+      cone.setAttribute('d', `M651 725 L${(CONE_X + push).toFixed(1)} 689 L${(CONE_X + push).toFixed(1)} 801 L651 765 Z`)
+      for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, SAWTOOTH), AIR_FROM - 4, AIR_TO + 2))
       shape.setAttribute('d', shapePath(r))
     }
   }
 }
 
 const DASHED = { fill: 'none', stroke: PART, strokeWidth: 1, strokeDasharray: '6 5' } as const
+const REACH  = { stroke: FLOW, strokeWidth: 1, strokeDasharray: '4 3' } as const
 
 /** A graph's two axes: up at its left edge, time to the right */
 function Axes({ x, y, h }: { x: number; y: number; h: number }) {
@@ -188,51 +151,37 @@ function Axes({ x, y, h }: { x: number; y: number; h: number }) {
   )
 }
 
-/** A sine's graph: all of its cycle faint, the part drawn so far, its dot */
-function Graph({ name, from, to, dot }: { name: string; from: (deg: number) => number; to: (deg: number) => number; dot: string }) {
+/** One harmonic alone: its circle, turning n times as fast, and its sine beside it */
+function Harmonic({ n, name }: { n: number; name: string }) {
+  const y = ROW_Y[n - 1], radius = radiusOf(n), big = n === 1
   return (
     <>
-      <path d={curvePath(360, from, to)} fill="none" stroke={TRACE} strokeWidth={3} opacity={0.3} />
-      <path data-p={name} fill="none" stroke={TRACE} strokeWidth={3.5} strokeLinecap="round" />
-      <circle data-p={dot} r={6} fill={MOVER} />
-    </>
-  )
-}
-
-/** A circle turning with its sine: its round, its radius, its tip, the line over to the graph */
-function Turning({ y, radius, n }: { y: number; radius: number; n: 1 | 2 }) {
-  return (
-    <>
+      <Label at={[GRAPH_X + 8, y - radius - (big ? 18 : 8)]}>{name}</Label>
+      <Axes x={GRAPH_X} y={y} h={radius + (big ? 10 : 6)} />
       <circle cx={CIRCLE_X} cy={y} r={radius} {...DASHED} fill={MOVER} fillOpacity={0.08} />
-      <line data-p={`arm${n}`} stroke={INK} strokeWidth={2.5} />
-      <circle cx={CIRCLE_X} cy={y} r={3.5} fill={INK} />
-      <line data-p={`reach${n}`} stroke={FLOW} strokeWidth={1} strokeDasharray="4 3" />
-      <circle data-p={`tip${n}`} r={7} fill={MOVER} />
+      <line data-p={`arm${n}`} stroke={INK} strokeWidth={big ? 2.5 : 2} />
+      <circle cx={CIRCLE_X} cy={y} r={big ? 3.5 : 2.5} fill={INK} />
+      <line data-p={`reach${n}`} {...REACH} />
+      <circle data-p={`tip${n}`} r={big ? 7 : 5} fill={MOVER} />
+      <path d={curvePath(360, graphX, ROW_GRAPH[n - 1])} fill="none" stroke={TRACE} strokeWidth={big ? 3 : 2} opacity={0.3} />
+      <path data-p={`trace${n}`} fill="none" stroke={TRACE} strokeWidth={big ? 3.5 : 2.5} strokeLinecap="round" />
+      <circle data-p={`dot${n}`} r={big ? 6 : 4.5} fill={MOVER} />
     </>
   )
 }
-
-const ARROW_LINE = { stroke: INK, strokeWidth: 2.5, markerEnd: ARROW_INK } as const
 
 export function ComplexScene({ step, onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
-  const l = useTranslation().t.deeper.labels
-  const third = (n: number) => graphX(n * 90)
+  const { t, fmt } = useTranslation()
+  const l = t.deeper.labels
+  const count = countAt(step)
+  const nameOf = (n: number) =>
+    n === 1 ? l.fundamental : n === 2 ? l.secondHarmonic : n === 3 ? l.thirdHarmonic : fmt(l.nthHarmonic, { n: String(n) })
 
   return (
     <g ref={root}>
-      {/* 3 · where the two add up and where they partly cancel, behind the graphs */}
-      <Step n={3} step={step}>
-        <rect x={third(0)} y={60} width={GRAPH_W / 4} height={525} fill={MOVER} opacity={0.1} />
-        <rect x={third(3)} y={60} width={GRAPH_W / 4} height={525} fill={MOVER} opacity={0.1} />
-        <rect x={third(1)} y={60} width={GRAPH_W / 2} height={525} fill={PART_3} opacity={0.08} />
-        <Label at={[(third(0) + third(1)) / 2, 578]} anchor="middle">{l.addUp}</Label>
-        <Label at={[(third(1) + third(3)) / 2, 578]} anchor="middle">{l.cancel}</Label>
-        <Label at={[(third(3) + third(4)) / 2, 578]} anchor="middle">{l.addUp}</Label>
-      </Step>
-
-      {/* The string, held at both ends: in its harmonics, growing down beside the rows reached */}
+      {/* The string, held at both ends: in the harmonics added up, growing down beside the rows reached */}
       <Step n={1} step={step}>
         <g className="lsc-dd-grow" style={{ transform: stretch(step) }}>
           <Step n={1} until={1} step={step}>
@@ -250,94 +199,69 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         <Label at={[STRING_X, 42]} anchor="middle">{l.string}</Label>
       </Step>
 
-      {/* 1 · the first sine */}
-      <Step n={1} step={step}>
-        <Label at={[GRAPH_X + 8, 52]}>{l.fundamental}</Label>
-        <Axes x={GRAPH_X} y={Y1} h={70} />
-        <Turning y={Y1} radius={UNIT} n={1} />
-        <Graph name="trace1" from={graphX} to={first} dot="dot1" />
-        {([0, 90, 180, 270, 360] as const).map((deg) => (
-          <Label key={deg} at={[graphX(deg), Y1 + 88]} anchor="middle">{deg}°</Label>
-        ))}
-      </Step>
+      {/* Each harmonic alone, one below the other */}
+      {ROW_Y.map((_, i) => (
+        <Step key={i} n={ROW_STEP[i]} step={step}>
+          <Harmonic n={i + 1} name={nameOf(i + 1)} />
+          {i === 0 && ([0, 90, 180, 270, 360] as const).map((deg) => (
+            <Label key={deg} at={[graphX(deg), ROW_Y[0] + 88]} anchor="middle">{deg}°</Label>
+          ))}
+        </Step>
+      ))}
 
-      {/* 2 · the second sine */}
-      <Step n={2} step={step}>
-        <Label at={[GRAPH_X + 8, Y2 - 46]}>{l.secondHarmonic}</Label>
-        <Axes x={GRAPH_X} y={Y2} h={40} />
-        <Turning y={Y2} radius={UNIT / 2} n={2} />
-        <Graph name="trace2" from={graphX} to={second} dot="dot2" />
-      </Step>
-
-      {/* 3 · their sum, and the two heights stacked */}
+      {/* What they make together: circles on circles, their sum, the recipe */}
       <Step n={3} step={step}>
-        <Label at={[GRAPH_X + 8, Y3 - 96]}>{l.sum}</Label>
-        <text data-p="adds" className="lsc-dd-label" x={GRAPH_X + GRAPH_W} y={Y3 - 70} textAnchor="end" style={{ fill: INK }}>{l.constructive}</text>
-        <text data-p="cancels" className="lsc-dd-label" x={GRAPH_X + GRAPH_W} y={Y3 - 70} textAnchor="end" style={{ fill: INK, opacity: 0 }}>{l.destructive}</text>
-        <Axes x={GRAPH_X} y={Y3} h={88} />
-        <Graph name="trace3" from={graphX} to={both} dot="dot3" />
-        <line data-p="up1" {...ARROW_LINE} />
-        <line data-p="up2" {...ARROW_LINE} />
-        <line data-p="sum1" {...ARROW_LINE} />
-        <line data-p="sum2" {...ARROW_LINE} />
-      </Step>
-
-      {/* 3 · the sum as circles on circles */}
-      <Step n={3} step={step}>
-        <circle cx={CIRCLE_X} cy={Y3} r={UNIT} {...DASHED} fill={MOVER} fillOpacity={0.08} />
-        <circle data-p="small" r={UNIT / 2} fill="none" stroke={PART} strokeWidth={1} strokeDasharray="4 4" />
-        <line data-p="bigArm" stroke={INK} strokeWidth={2.5} />
-        <line data-p="smallArm" stroke={INK} strokeWidth={2} />
-        <circle cx={CIRCLE_X} cy={Y3} r={3.5} fill={INK} />
-        <line data-p="reach4" stroke={FLOW} strokeWidth={1} strokeDasharray="4 3" />
-        <circle data-p="tip4" r={7} fill={MOVER} />
-      </Step>
-
-      {/* 4 · ten sines, close to a sawtooth, and their recipe */}
-      <Step n={4} step={step}>
-        <Label at={[RIGHT_X + 8, 172]}>{l.tenSines}</Label>
+        <Label at={[SUM_X + 8, 172]}>{fmt(l.sinesAddedUp, { n: String(count) })}</Label>
         <g data-p="rings">
-          {Array.from({ length: SINES }, (_, i) => (
-            <circle key={i} r={UNIT / (i + 1)} fill="none" stroke={i ? FAINT : PART} strokeWidth={1} strokeDasharray={i ? undefined : '6 5'} />
+          {SAWTOOTH.map((size, i) => (
+            <circle key={i} r={UNIT * size} fill="none" stroke={i ? FAINT : PART} strokeWidth={1}
+              strokeDasharray={i ? undefined : '6 5'} style={i < count ? undefined : { display: 'none' }} />
           ))}
         </g>
         <g data-p="arms">
-          {Array.from({ length: SINES }, (_, i) => <line key={i} stroke={INK} strokeWidth={Math.max(1, 2.5 - i * 0.2)} />)}
+          {SAWTOOTH.map((_, i) => (
+            <line key={i} stroke={INK} strokeWidth={Math.max(1, 2.5 - i * 0.2)} style={i < count ? undefined : { display: 'none' }} />
+          ))}
         </g>
         <circle cx={CHAIN_X} cy={CHAIN_Y} r={3.5} fill={INK} />
-        <line data-p="reach5" stroke={FLOW} strokeWidth={1} strokeDasharray="4 3" />
-        <circle data-p="tip5" r={7} fill={MOVER} />
-        <line x1={RIGHT_X} y1={Y5 - 125} x2={RIGHT_X} y2={Y5 + 125} stroke={INK} strokeWidth={1.5} />
-        <line x1={RIGHT_X} y1={Y5} x2={RIGHT_X + GRAPH_W + 24} y2={Y5} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
-        {/* The sawtooth the sum comes close to */}
-        <path d={`M${RIGHT_X} ${Y5} V${Y5 - (UNIT * Math.PI) / 2} L${RIGHT_X + GRAPH_W} ${Y5 + (UNIT * Math.PI) / 2} V${Y5}`}
-          fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
-        <Label at={[RIGHT_X + GRAPH_W, 432]} anchor="end">{l.sawtooth}</Label>
-        <Graph name="trace5" from={rightX} to={ten} dot="dot5" />
+        <line data-p="sumReach" {...REACH} />
+        <circle data-p="sumTip" r={7} fill={MOVER} />
+        <line x1={SUM_X} y1={SUM_Y - 125} x2={SUM_X} y2={SUM_Y + 125} stroke={INK} strokeWidth={1.5} />
+        <line x1={SUM_X} y1={SUM_Y} x2={SUM_X + GRAPH_W + 24} y2={SUM_Y} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
+        <path d={curvePath(360, sumX, sumOf(count))} fill="none" stroke={TRACE} strokeWidth={3} opacity={0.3} />
+        <path data-p="sumTrace" fill="none" stroke={TRACE} strokeWidth={3.5} strokeLinecap="round" />
+        <circle data-p="sumDot" r={6} fill={MOVER} />
         {/* The recipe: how big each sine is */}
-        <Label at={[RIGHT_X + 8, 466]}>{l.recipe}</Label>
-        {Array.from({ length: SINES }, (_, i) => {
-          const h = BAR_H / (i + 1), x = BAR_X + i * BAR_STEP
+        <Label at={[SUM_X + 8, 466]}>{l.recipe}</Label>
+        {SAWTOOTH.slice(0, count).map((size, i) => {
+          const h = BAR_H * size, x = BAR_X + i * BAR_STEP
           return (
             <g key={i}>
-              <rect x={x} y={BAR_BOTTOM - h} width={BAR_W} height={h} rx={2} fill={TRACE} opacity={i < 2 ? 1 : 0.6} />
+              <rect x={x} y={BAR_BOTTOM - h} width={BAR_W} height={h} rx={2} fill={TRACE} />
               <Label at={[x + BAR_W / 2, BAR_BOTTOM + 16]} anchor="middle">{i + 1}</Label>
             </g>
           )
         })}
       </Step>
 
-      {/* 5 · the complex wave in the air */}
+      {/* With ten: the sawtooth the sum comes close to */}
       <Step n={5} step={step}>
-        <Air id="lsc-dd-air-complex" x={AIR_FROM} y={662} w={AIR_TO - AIR_FROM} h={116} r={58} />
+        <path d={`M${SUM_X} ${SUM_Y} V${SUM_Y - (UNIT * Math.PI) / 2} L${SUM_X + GRAPH_W} ${SUM_Y + (UNIT * Math.PI) / 2} V${SUM_Y}`}
+          fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
+        <Label at={[SUM_X + GRAPH_W, 432]} anchor="end">{l.sawtooth}</Label>
+      </Step>
+
+      {/* The complex wave in the air, lower right */}
+      <Step n={6} step={step}>
+        <Air id="lsc-dd-air-complex" x={AIR_FROM} y={AIR_Y} w={AIR_TO - AIR_FROM} h={AIR_H} r={55} />
         <g data-p="air" mask="url(#lsc-dd-air-complex)" />
-        <rect x={28} y={694} width={27} height={52} rx={3} fill={PART_3} />
-        <path data-p="cone" d={`M55 700 L${CONE_X} 664 L${CONE_X} 776 L55 740 Z`} fill={PART} fillOpacity={0.35} stroke={PART} strokeWidth={1.5} />
-        <Label at={[66, 800]} anchor="middle">{l.speakerCone}</Label>
+        <rect x={624} y={719} width={27} height={52} rx={3} fill={PART_3} />
+        <path data-p="cone" d={`M651 725 L${CONE_X} 689 L${CONE_X} 801 L651 765 Z`} fill={PART} fillOpacity={0.35} stroke={PART} strokeWidth={1.5} />
+        <Label at={[662, 828]} anchor="middle">{l.speakerCone}</Label>
         <line x1={AIR_FROM} y1={SHAPE_Y} x2={AIR_TO} y2={SHAPE_Y} stroke={FAINT} strokeWidth={0.75} />
         <path data-p="shape" fill="none" stroke={TRACE} strokeWidth={2.5} strokeLinejoin="round" />
-        <Label at={[AIR_TO - 70, 804]} anchor="end" flow>{l.inTheAir} · {l.speedOfSound}</Label>
-        <line x1={AIR_TO - 62} y1={800} x2={AIR_TO - 4} y2={800} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
+        <Label at={[AIR_TO - 70, 832]} anchor="end" flow>{l.inTheAir} · {l.speedOfSound}</Label>
+        <line x1={AIR_TO - 62} y1={828} x2={AIR_TO - 4} y2={828} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
       </Step>
     </g>
   )

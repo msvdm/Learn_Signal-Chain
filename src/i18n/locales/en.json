@@ -690,6 +690,7 @@
       "fundamental": "The first sine",
       "secondSine": "A second sine",
       "addingUp": "Adding them up",
+      "thirdSine": "A third sine",
       "moreSines": "More sines: a sawtooth",
       "complexInAir": "The complex wave in the air"
     },
@@ -739,12 +740,9 @@
       "speakerCone": "Speaker cone",
       "fundamental": "Fundamental: the 1st harmonic",
       "secondHarmonic": "2nd harmonic: twice as fast, half as big",
-      "sum": "The two added up: a complex wave",
-      "addUp": "add up",
-      "cancel": "partly cancel",
-      "constructive": "Constructive: they add up",
-      "destructive": "Destructive: they partly cancel",
-      "tenSines": "10 sines added up",
+      "thirdHarmonic": "3rd harmonic: three times as fast, a third as big",
+      "nthHarmonic": "Harmonic {n}",
+      "sinesAddedUp": "{n} sines added up",
       "sawtooth": "Sawtooth wave",
       "recipe": "The recipe: how big each sine is",
       "inTheAir": "The same shape in the air"

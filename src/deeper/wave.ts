@@ -81,9 +81,24 @@ export function wrapPhase(deg: number): number {
 // ── Complex waves: sines added up ───────────────────────────────────────────
 
 /**
- * The first `count` sines of a sawtooth added up, at phase `r` (radians): the n-th turns n times
- * as fast and is 1/n as big. One sine is the fundamental; the more sines, the closer the sum comes
- * to a sawtooth, (π − r) / 2 — overshooting by about 9 % of its jump next to it (Gibbs).
+ * A recipe: how big each sine is, the 1st (the fundamental) first, as a share of the fundamental's.
+ * The n-th sine turns n times as fast.
+ */
+export type Recipe = readonly number[]
+
+/** A sawtooth's: every sine, the n-th 1/n as big */
+export const SAWTOOTH: Recipe = Array.from({ length: 10 }, (_, i) => 1 / (i + 1))
+
+/** The first `count` sines of a recipe added up, at phase `r` (radians). */
+export function complexWave(r: number, recipe: Recipe, count = recipe.length): number {
+  let sum = 0
+  for (let n = 1; n <= count; n++) sum += recipe[n - 1] * Math.sin(n * r)
+  return sum
+}
+
+/**
+ * The first `count` sines of a sawtooth added up. The more sines, the closer the sum comes to a
+ * sawtooth, (π − r) / 2 — overshooting by about 9 % of its jump next to it (Gibbs).
  */
 export function sawtooth(r: number, count: number): number {
   let sum = 0
@@ -92,57 +107,50 @@ export function sawtooth(r: number, count: number): number {
 }
 
 /**
- * Whether the first two sines add up at phase `r` (both up or both down: constructive) rather than
- * partly cancelling (one up, the other down: destructive).
+ * Circles on circles: the first `count` sines of a recipe as turning circles, each riding on the
+ * tip of the one before (the n-th of radius `unit` × its size, turning n times as fast). Each
+ * circle's centre and, last, the tip of the last one — from the first centre, y upward. The tip's
+ * height is the sum: `unit` × `complexWave(r, recipe, count)`.
  */
-export function addsUp(r: number): boolean {
-  return Math.sin(r) * Math.sin(2 * r) >= 0
-}
-
-/**
- * Circles on circles: the first `count` sines of a sawtooth as turning circles, each riding on the
- * tip of the one before (the n-th of radius `unit` / n, turning n times as fast). Each circle's
- * centre and, last, the tip of the last one — from the first centre, y upward. The tip's height is
- * the sum: `unit` × `sawtooth(r, count)`.
- */
-export function circlesOnCircles(r: number, count: number, unit: number): Dot[] {
+export function circlesOnCircles(r: number, recipe: Recipe, count: number, unit: number): Dot[] {
   const points: Dot[] = [{ x: 0, y: 0 }]
   let x = 0, y = 0
   for (let n = 1; n <= count; n++) {
-    x += (unit / n) * Math.cos(n * r)
-    y += (unit / n) * Math.sin(n * r)
+    x += unit * recipe[n - 1] * Math.cos(n * r)
+    y += unit * recipe[n - 1] * Math.sin(n * r)
     points.push({ x, y })
   }
   return points
 }
 
 /** The complex wave in the air: one cycle of it in a scene's units, and how far its particles swing */
-export const AIR_WAVELENGTH = 600
-export const AIR_SWING = 8
+export const AIR_WAVELENGTH = 320
+export const AIR_SWING = 4
 const AIR_K = TAU / AIR_WAVELENGTH
 
 /**
  * Where a particle of air is, from where it rests, `distance` from the speaker cone, when the cone
- * moves in the first `count` sines of a sawtooth.
+ * moves in the first `count` sines of a recipe.
  */
-export function complexSwing(r: number, distance: number, count: number): number {
-  return AIR_SWING * sawtooth(r - AIR_K * distance, count)
+export function complexSwing(r: number, distance: number, recipe: Recipe, count = recipe.length): number {
+  return AIR_SWING * complexWave(r - AIR_K * distance, recipe, count)
 }
 
 /**
  * A string held at both ends, vibrating in its `n`-th harmonic alone: how far the point `along`
- * its length (0 … 1) is from rest, at phase `r`. The n-th harmonic is n half-waves along the string
- * (its ends and n − 1 points between them never move), n times as fast, and 1/n² as far — a bowed
- * string's own recipe (Helmholtz): the push its swing gives the bridge, the string's slope at that
- * end, then has the sawtooth's 1/n.
+ * its length (0 … 1) is from rest, at phase `r`, for a sound in which that harmonic is `size` as
+ * big as the fundamental. The n-th harmonic is n half-waves along the string (its ends and n − 1
+ * points between them never move), n times as fast, and swings size / n as far: the push it gives
+ * the bridge — the string's slope at that end — is then `size` (Helmholtz: a sawtooth's 1/n, from
+ * a string swinging 1/n²).
  */
-export function harmonicSwing(r: number, along: number, n: number): number {
-  return (Math.sin(n * Math.PI * along) * Math.sin(n * r)) / (n * n)
+export function harmonicSwing(r: number, along: number, n: number, size: number): number {
+  return (size / n) * Math.sin(n * Math.PI * along) * Math.sin(n * r)
 }
 
-/** The string vibrating in its first `count` harmonics at once: theirs added up, point by point. */
-export function stringSwing(r: number, along: number, count: number): number {
+/** The string vibrating in the first `count` harmonics of a recipe at once: theirs added up, point by point. */
+export function stringSwing(r: number, along: number, recipe: Recipe, count = recipe.length): number {
   let sum = 0
-  for (let n = 1; n <= count; n++) sum += harmonicSwing(r, along, n)
+  for (let n = 1; n <= count; n++) sum += harmonicSwing(r, along, n, recipe[n - 1])
   return sum
 }

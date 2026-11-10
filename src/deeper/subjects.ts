@@ -63,9 +63,10 @@ export const SUBJECTS: readonly Subject[] = [
     steps: [
       { id: 'fundamental',      box: [-110, 30, 620, 225] },
       { id: 'secondSine',       box: [-110, 235, 620, 345] },
-      { id: 'addingUp',         box: [-110, 370, 620, 590] },
-      { id: 'moreSines',        box: [690, 150, 1365, 590] },
-      { id: 'complexInAir',     box: [10, 570, 1370, 815] },
+      { id: 'addingUp',         box: [690, 150, 1365, 590] },
+      { id: 'thirdSine',        box: [-110, 355, 620, 420] },
+      { id: 'moreSines',        box: [-110, 430, 620, 830] },
+      { id: 'complexInAir',     box: [600, 620, 1370, 850] },
     ],
   },
 ]
