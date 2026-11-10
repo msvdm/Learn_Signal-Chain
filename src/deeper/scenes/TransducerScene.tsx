@@ -44,12 +44,13 @@ const PIN_TOP = AMP_OUT_BASE - AMP_H - 18
 /** The reels' middles, at the picture's two sides, each as far from its head: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
 const SUPPLY_X = 130, TAKEUP_X = PLAY_X + (REC_X - SUPPLY_X)
 /**
- * A reel's middle: the tape wound on it (REEL_R round) rests on the tape's bottom edge, so the tape
- * leaves it — and winds onto it — along its bottom. Its flanges are as big as the microphone.
+ * A reel's middle: the tape wound on it (REEL_R round, hidden behind its flange) rests on the tape's
+ * bottom edge, so the tape leaves it — and winds onto it — along its bottom. The flange is as big as
+ * the microphone: a metal reel, solid, with three windows (WINDOW_IN … WINDOW_OUT from its middle).
  */
-const REEL_Y = TAPE_Y + TAPE_H - REEL_R, FLANGE_R = 75, HUB_R = 16
-/** How close to a reel's middle the tape's magnets are still drawn: nearer, they are wound under the next turn */
-const WOUND = Math.sqrt(REEL_R ** 2 - (TAPE_Y + TAPE_H / 2 - REEL_Y) ** 2)
+const REEL_Y = TAPE_Y + TAPE_H - REEL_R, FLANGE_R = 75, WINDOW_IN = 25, WINDOW_OUT = 56
+/** Where the tape comes out from behind a reel: under its rim, so no window ever shows the tape behind it */
+const TAPE_OUT = 52
 /** The tape's little magnets, every MAGNET_GAP along it (15 to a cycle), at most MAGNET_LONG long */
 const MAGNET_GAP = TAPE_WAVELENGTH / 15, MAGNET_LONG = 13
 const MAGNETS = Math.ceil((TAKEUP_X - SUPPLY_X) / MAGNET_GAP) + 1
@@ -111,7 +112,7 @@ function makePainter(find: Finder): Painter {
         const x = SUPPLY_X + i * MAGNET_GAP + (moved % MAGNET_GAP)
         const m = tapeMagnet(r, x - REC_X)
         const long = MAGNET_LONG * Math.abs(m)
-        if (long < 0.6 || x > TAKEUP_X - WOUND) { magnet.setAttribute('d', ''); return }
+        if (long < 0.6) { magnet.setAttribute('d', ''); return }
         const way = Math.sign(m), tip = x + (way * long) / 2, head = Math.min(5, long * 0.5), y = TAPE_Y + TAPE_H / 2
         const back = tip - way * head
         magnet.setAttribute('d',
@@ -214,14 +215,12 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
 
       {/* 3 · the recording head and the tape, from one side of the picture to the other */}
       <Step n={3} step={step}>
-        <ReelBack x={SUPPLY_X} />
-        <ReelBack x={TAKEUP_X} />
-        <rect x={SUPPLY_X} y={TAPE_Y} width={TAKEUP_X - SUPPLY_X} height={TAPE_H} fill={PART_3} />
+        <rect x={SUPPLY_X + TAPE_OUT} y={TAPE_Y} width={TAKEUP_X - SUPPLY_X - 2 * TAPE_OUT} height={TAPE_H} fill={PART_3} />
         <g data-p="magnets" fill={INK} stroke={INK} strokeWidth={1.8} strokeLinejoin="round">
           {Array.from({ length: MAGNETS }, (_, i) => <path key={i} />)}
         </g>
-        <ReelFront x={SUPPLY_X} name="supplyReel" />
-        <ReelFront x={TAKEUP_X} name="takeupReel" />
+        <Reel x={SUPPLY_X} name="supplyReel" />
+        <Reel x={TAKEUP_X} name="takeupReel" />
         <Label at={[660, TAPE_Y + 54]} anchor="middle" flow>{l.magneticTape}</Label>
         <line x1={710} y1={TAPE_Y + 50} x2={748} y2={TAPE_Y + 50} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
         <Amp x={REC_X} base={AMP_IN_TOP} way={1} from={800} />
@@ -338,37 +337,47 @@ function Head({ x, field, top }: { x: number; field: string; top: number }) {
   )
 }
 
-/**
- * A reel's back: its flange, and the tape wound on it — in the tape's colour, so the tape running to
- * the heads leaves it (or winds onto it) along its bottom; faint rings, the turns of tape.
- */
-function ReelBack({ x }: { x: number }) {
-  return (
-    <>
-      <circle cx={x} cy={REEL_Y} r={FLANGE_R} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
-      <circle cx={x} cy={REEL_Y} r={REEL_R} fill={PART_3} />
-      <g fill="none" stroke={PART_2} strokeWidth={0.75} opacity={0.35}>
-        {[24, 32, 40, 47].map((r) => <circle key={r} cx={x} cy={REEL_Y} r={r} />)}
-      </g>
-    </>
-  )
+/** A point `r` from a reel's middle at angle `deg` (0: right, clockwise on screen), as SVG writes it */
+function polar(x: number, r: number, deg: number): string {
+  const a = rad(deg)
+  return `${(x + r * Math.cos(a)).toFixed(1)} ${(REEL_Y + r * Math.sin(a)).toFixed(1)}`
 }
 
-/** A reel's front, turning (`name`): three spokes from its hub to its rim, the tape seen between them */
-function ReelFront({ x, name }: { x: number; name: string }) {
-  const spoke = (deg: number) => {
-    const at = (r: number, side: number) => {
-      const a = rad(deg), w = 5 * side
-      return `${(x + r * Math.cos(a) - w * Math.sin(a)).toFixed(1)} ${(REEL_Y + r * Math.sin(a) + w * Math.cos(a)).toFixed(1)}`
-    }
-    return `M${at(HUB_R - 2, -1)} L${at(FLANGE_R - 2, -1)} L${at(FLANGE_R - 2, 1)} L${at(HUB_R - 2, 1)} Z`
-  }
+/** A small circle at a point `polar` gave */
+function Dot({ at, r, fill }: { at: string; r: number; fill: string }) {
+  const [cx, cy] = at.split(' ')
+  return <circle cx={cx} cy={cy} r={r} fill={fill} />
+}
+
+/** A reel's window at angle `deg`: wider outside than in, its corners rounded */
+function reelWindow(x: number, deg: number): string {
+  const OUT = 30, IN = 20, ROUND = 5
+  const outer = (a: number) => polar(x, WINDOW_OUT, deg + a), inner = (a: number) => polar(x, WINDOW_IN, deg + a)
+  const o = (ROUND / WINDOW_OUT) * (180 / Math.PI), i = (ROUND / WINDOW_IN) * (180 / Math.PI)
+  const along = (r: number, a: number, toward: number) => polar(x, r + toward * ROUND, deg + a)
+  return `M${outer(-OUT + o)} A${WINDOW_OUT} ${WINDOW_OUT} 0 0 1 ${outer(OUT - o)} ` +
+    `Q${outer(OUT)} ${along(WINDOW_OUT, OUT * 0.97, -1)} L${along(WINDOW_IN, IN * 1.05, 1)} Q${inner(IN)} ${inner(IN - i)} ` +
+    `A${WINDOW_IN} ${WINDOW_IN} 0 0 0 ${inner(-IN + i)} Q${inner(-IN)} ${along(WINDOW_IN, -IN * 1.05, 1)} ` +
+    `L${along(WINDOW_OUT, -OUT * 0.97, -1)} Q${outer(-OUT)} ${outer(-OUT + o)} Z`
+}
+
+/**
+ * A reel, turning (`name`): a solid metal flange as big as the microphone, its three windows, the
+ * deck's spindle in its middle with the reel's three key notches, three screws. The tape wound on it
+ * is behind the flange; the tape comes out from behind its rim.
+ */
+function Reel({ x, name }: { x: number; name: string }) {
+  const R = FLANGE_R
+  const disc = `M${x - R} ${REEL_Y.toFixed(1)} A${R} ${R} 0 1 0 ${x + R} ${REEL_Y.toFixed(1)} A${R} ${R} 0 1 0 ${x - R} ${REEL_Y.toFixed(1)} Z`
+  const windows = [90, 210, 330].map((deg) => reelWindow(x, deg)).join(' ')
   return (
     <g data-p={name}>
-      <path d={[90, 210, 330].map(spoke).join(' ')} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.2} strokeLinejoin="round" />
-      <circle cx={x} cy={REEL_Y} r={FLANGE_R} fill="none" stroke={PART} strokeWidth={3} />
-      <circle cx={x} cy={REEL_Y} r={HUB_R} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
-      <circle cx={x} cy={REEL_Y} r={6} fill={PART} />
+      <path d={`${disc} ${windows}`} fill={FAINT} fillRule="evenodd" stroke={PART} strokeWidth={1.5} strokeLinejoin="round" />
+      <circle cx={x} cy={REEL_Y} r={17} fill={PART} />
+      {/* The key notches point at the windows, the screws sit between them */}
+      {[90, 210, 330].map((deg) => <Dot key={deg} at={polar(x, 17, deg)} r={3.5} fill={PART} />)}
+      <circle cx={x} cy={REEL_Y} r={6} fill={FAINT} />
+      {[30, 150, 270].map((deg) => <Dot key={deg} at={polar(x, 36, deg)} r={2.5} fill={PART_2} />)}
     </g>
   )
 }
