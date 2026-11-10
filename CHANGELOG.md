@@ -2,6 +2,15 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.7.0
+
+- **Tape recording in *Transducer and speaker*** — the microphone's voltage is now recorded on magnetic tape and played back into the speaker: the electro-magnetic side of sound, complete, before the digital one. Five steps, in the order the signal travels: the microphone; its voltage; the recording head and the tape; the playback head; the speaker.
+- **The recording head** writes the voltage onto the tape as little magnets. Which way each one points and how strong it is follow the voltage, so the tape carries the voltage graph laid out along it. The tape runs across the whole picture between two turning metal reels.
+- **The playback head** gives a voltage only while the magnetism passing it changes — biggest where the tape's magnets turn round, just as the microphone's coil gives one only while it moves. What it reads comes back the same as what was recorded.
+- **Two amplifiers**, drawn as triangles: one between the microphone and the recording head, one between the playback head and the speaker.
+- The heads are drawn as real tape heads: a ferrite core in its case, a coil round it, and a narrow gap touching the tape.
+- The voltage readings no longer show "−0.00 mV".
+
 ## 1.6.0
 
 - **A third subject in Dive deeper: *Complex waves*** — how a real sound is built from simple sine waves. On the left a string held at both ends, and beside it each harmonic on its own: a circle turning, and the sine wave it draws. On the right, what they make together — circles riding on each other, the sum they trace, and the recipe: how big each sine is. The string vibrates in as many harmonics as have been added, so you watch it turn from a plain arc into a real string's shape.
