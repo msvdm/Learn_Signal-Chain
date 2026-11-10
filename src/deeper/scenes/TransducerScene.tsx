@@ -12,8 +12,8 @@ import { Air, Label, Leader, Step } from './sceneParts'
 // tape's magnets running past a playback head give the voltage again, which moves a speaker's coil
 // and cone, and they move the air. The phase is the
 // diaphragm's: at 0° it passes its middle, moving fastest — and the voltage, which follows its
-// speed, is at its highest. No amplifiers are drawn: the microphone's own voltage is the head's
-// current, and the playback head's moves the speaker.
+// speed, is at its highest. The amplifiers between the rows are named triangles only: their gain is
+// not drawn, so every reading is the graph's ±2 mV.
 
 /** Where the microphone's diaphragm rests, along its sound wave */
 const DIAPHRAGM_X = 262
@@ -26,10 +26,19 @@ const STRIP = 6
 const STRIPS = Array.from({ length: 26 }, (_, i) => SPEAKER_AIR_X + i * STRIP)
 
 /** The tape: its top (where the heads touch it), how thick it is drawn; the recording head's gap (under the microphone's coil), the playback head's (under the speaker's leads) */
-const TAPE_Y = 990, TAPE_H = 26
+const TAPE_Y = 1050, TAPE_H = 26
 const REC_X = 317, PLAY_X = REC_X + HEADS_APART
-/** A head's two terminals, either side of its middle; where the playback head's end (the speaker's leads start there) */
-const PIN = 8, PIN_TOP = 855
+/** A head's two terminals, either side of its middle */
+const PIN = 8
+/**
+ * The amplifiers between the rows, drawn as triangles only (no circuit): the input one between the
+ * microphone and the recording head, pointing down; the output one between the playback head and the
+ * speaker, pointing up. Their base, how tall, half as wide; where the two wires cross the sloping sides.
+ */
+const AMP_IN_TOP = 828, AMP_OUT_BASE = 902, AMP_H = 50, AMP_HALF = 28
+const AMP_TIP = AMP_H * (1 - PIN / AMP_HALF)
+/** Where the output amplifier's wires end: the speaker's leads start there */
+const PIN_TOP = AMP_OUT_BASE - AMP_H - 18
 /** The reels' middles, at the picture's two sides: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
 const SUPPLY_X = 130, TAKEUP_X = 1220, REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
 /** The tape's little magnets, every MAGNET_GAP along it (18 to a cycle), at most MAGNET_LONG long */
@@ -162,8 +171,6 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
           <Label at={[712, 276]} anchor="end">{l.voiceCoil}</Label>
           <Leader x1={874} y1={175} x2={836} y2={175} />
           <Label at={[880, 179]}>{l.magnet}</Label>
-          <Leader x1={874} y1={234} x2={852} y2={234} />
-          <Label at={[880, 238]}>{l.magneticStructure}</Label>
         </g>
       </Step>
 
@@ -204,21 +211,25 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
         </g>
         <Reel x={SUPPLY_X} name="supplyReel" />
         <Reel x={TAKEUP_X} name="takeupReel" />
-        <Label at={[600, 1044]} anchor="middle" flow>{l.magneticTape}</Label>
-        <line x1={650} y1={1040} x2={688} y2={1040} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
-        <Head x={REC_X} field="recField" top={800} />
-        <Leader x1={REC_X + 17} y1={890} x2={REC_X + 62} y2={905} />
-        <Label at={[REC_X + 66, 909]}>{l.coil}</Label>
-        <Label at={[REC_X, 1044]} anchor="middle">{l.recordingHead}</Label>
+        <Label at={[600, TAPE_Y + 54]} anchor="middle" flow>{l.magneticTape}</Label>
+        <line x1={650} y1={TAPE_Y + 50} x2={688} y2={TAPE_Y + 50} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
+        <Amp x={REC_X} base={AMP_IN_TOP} way={1} from={800} />
+        <Label at={[REC_X + AMP_HALF + 10, AMP_IN_TOP + 22]}>{l.inputAmplifier}</Label>
+        <Head x={REC_X} field="recField" top={AMP_IN_TOP + AMP_TIP} />
+        <Leader x1={REC_X + 17} y1={TAPE_Y - 100} x2={REC_X + 62} y2={TAPE_Y - 85} />
+        <Label at={[REC_X + 66, TAPE_Y - 81]}>{l.coil}</Label>
+        <Label at={[REC_X, TAPE_Y + 54]} anchor="middle">{l.recordingHead}</Label>
       </Step>
 
       {/* 4 · the playback head, and the voltage it gives */}
       <Step n={4} step={step}>
-        <Head x={PLAY_X} field="playField" top={PIN_TOP} />
+        <Head x={PLAY_X} field="playField" top={AMP_OUT_BASE} />
+        <Amp x={PLAY_X} base={AMP_OUT_BASE} way={-1} from={PIN_TOP} />
+        <Label at={[PLAY_X - AMP_HALF - 10, AMP_OUT_BASE - 18]} anchor="end">{l.outputAmplifier}</Label>
         <circle cx={PLAY_X - PIN} cy={PIN_TOP} r={3} fill={INK} />
         <circle cx={PLAY_X + PIN} cy={PIN_TOP} r={3} fill={INK} />
-        <Label at={[PLAY_X, 1044]} anchor="middle">{l.playbackHead}</Label>
-        <text className="lsc-dd-reading" x={PLAY_X} y={1070} textAnchor="middle">
+        <Label at={[PLAY_X, TAPE_Y + 54]} anchor="middle">{l.playbackHead}</Label>
+        <text className="lsc-dd-reading" x={PLAY_X} y={TAPE_Y + 80} textAnchor="middle">
           {l.playbackVoltage}: <tspan data-p="playReading">+0.00</tspan> {l.mv}
         </text>
       </Step>
@@ -254,6 +265,24 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
         <Label at={[1112, 834]} anchor="middle">{l.speakerCone}</Label>
       </Step>
     </g>
+  )
+}
+
+/**
+ * An amplifier, a triangle only: its `base` (where the signal comes in) at that height, its tip `way`
+ * (1: down, −1: up). The two wires above it, from `from`: into its base (pointing down), or out of
+ * its sloping sides near the tip (pointing up); the head below draws the other two.
+ */
+function Amp({ x, base, way, from }: { x: number; base: number; way: 1 | -1; from: number }) {
+  const end = way === 1 ? base : base + way * AMP_TIP
+  return (
+    <>
+      <g fill="none" stroke={INK} strokeWidth={1.5}>
+        {[-1, 1].map((side) => <line key={side} x1={x + side * PIN} y1={from} x2={x + side * PIN} y2={end} />)}
+      </g>
+      <path d={`M${x - AMP_HALF} ${base} H${x + AMP_HALF} L${x} ${base + way * AMP_H} Z`}
+        fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} strokeLinejoin="round" />
+    </>
   )
 }
 
