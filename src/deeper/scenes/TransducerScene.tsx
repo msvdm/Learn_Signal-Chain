@@ -7,9 +7,10 @@ import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Leader, Step } from './sceneParts'
 
 // Transducer and speaker (Dive deeper, D46): a sound wave moves a dynamic microphone's diaphragm,
-// its coil moves around a magnet and gives a voltage; the voltage's current in a recording head
-// magnetises the tape running past its gap; the tape's magnets running past a playback head give
-// the voltage again, which moves a speaker's coil and cone, and they move the air. The phase is the
+// its coil moves around a magnet and gives a voltage (the graph beside it shows it, wired to
+// nothing); the voltage's current in a recording head magnetises the tape running past its gap; the
+// tape's magnets running past a playback head give the voltage again, which moves a speaker's coil
+// and cone, and they move the air. The phase is the
 // diaphragm's: at 0° it passes its middle, moving fastest — and the voltage, which follows its
 // speed, is at its highest. No amplifiers are drawn: the microphone's own voltage is the head's
 // current, and the playback head's moves the speaker.
@@ -24,13 +25,15 @@ const SPEAKER_AIR_X = 1140, LOUDER = 1.8
 const STRIP = 6
 const STRIPS = Array.from({ length: 26 }, (_, i) => SPEAKER_AIR_X + i * STRIP)
 
-/** The tape: its top (where the heads touch it), how thick it is drawn; the recording head's gap, the playback head's */
+/** The tape: its top (where the heads touch it), how thick it is drawn; the recording head's gap (under the microphone's coil), the playback head's (under the speaker's leads) */
 const TAPE_Y = 990, TAPE_H = 26
-const REC_X = 794, PLAY_X = REC_X + HEADS_APART
-/** The reels' middles: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
-const SUPPLY_X = 650, TAKEUP_X = 1230, REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
-/** The tape's little magnets, every MAGNET_GAP along it, at most MAGNET_LONG long */
-const MAGNET_GAP = 15, MAGNET_LONG = 13
+const REC_X = 317, PLAY_X = REC_X + HEADS_APART
+/** A head's two terminals, either side of its middle; where the playback head's end (the speaker's leads start there) */
+const PIN = 8, PIN_TOP = 855
+/** The reels' middles, at the picture's two sides: the tape leaves the supply reel's bottom and winds onto the take-up reel's */
+const SUPPLY_X = 130, TAKEUP_X = 1220, REEL_Y = TAPE_Y + TAPE_H / 2 - REEL_R
+/** The tape's little magnets, every MAGNET_GAP along it (18 to a cycle), at most MAGNET_LONG long */
+const MAGNET_GAP = TAPE_WAVELENGTH / 18, MAGNET_LONG = 13
 const MAGNETS = Math.ceil((TAKEUP_X - SUPPLY_X) / MAGNET_GAP) + 1
 /** The magnetic field at a head's gap: its rings */
 const FIELD = [5, 10, 15]
@@ -73,18 +76,18 @@ function makePainter(find: Finder): Painter {
 
     // 2 · the voltage: highest while the coil moves fastest, none while it turns back
     if (step >= 2) {
-      wireA.setAttribute('d', `M${f(776 + u)} 194 V282 Q${f(776 + u)} 288 782 288 H1020 Q1026 288 1026 282 V263 Q1026 257 1032 257 H1042`)
-      wireB.setAttribute('d', `M${f(781 + u)} 194 V274 Q${f(781 + u)} 280 787 280 H1012 Q1018 280 1018 274 V256 Q1018 250 1024 250 H1042`)
+      // The leads hang from the coil (moving with it) down to the microphone's two terminals
+      wireA.setAttribute('d', `M${f(314 + u)} 689 V760 L${REC_X - PIN} 780 V800`)
+      wireB.setAttribute('d', `M${f(319 + u)} 689 V760 L${REC_X + PIN} 780 V800`)
       trace.setAttribute('d', curvePath(Math.round(deg), scopeX, scopeY))
       put(dot, 'cx', scopeX(deg)); put(dot, 'cy', scopeY(deg))
       reading.textContent = millivolts(2 * Math.cos(r))
     }
 
-    // 3 · its current through the recording head's coil: a magnetic field at the gap
-    if (step >= 3) recField.setAttribute('opacity', (0.15 + 0.85 * Math.abs(Math.cos(r))).toFixed(3))
-
-    // 4 · the tape runs past the gap and keeps the field it met there: little magnets, the voltage laid out along it
-    if (step >= 4) {
+    // 3 · its current through the recording head's coil: a magnetic field at the gap; the tape runs
+    // past it and keeps the field it met there — little magnets, the voltage laid out along it
+    if (step >= 3) {
+      recField.setAttribute('opacity', (0.15 + 0.85 * Math.abs(Math.cos(r))).toFixed(3))
       const moved = (deg / 360) * TAPE_WAVELENGTH
       magnets.forEach((magnet, i) => {
         const x = SUPPLY_X + i * MAGNET_GAP + (moved % MAGNET_GAP)
@@ -101,14 +104,14 @@ function makePainter(find: Finder): Painter {
       reels[1].setAttribute('transform', `rotate(${f(turn)} ${TAKEUP_X} ${f(REEL_Y)})`)
     }
 
-    // 5 · the tape's magnets at the playback head's gap: a voltage while they change
-    if (step >= 5) {
+    // 4 · the tape's magnets at the playback head's gap: a voltage while they change
+    if (step >= 4) {
       playField.setAttribute('opacity', (0.15 + 0.85 * Math.abs(tapeMagnet(r, HEADS_APART))).toFixed(3))
       playReading.textContent = millivolts(2 * playbackVoltage(r))
     }
 
-    // 6 · the voltage moves the speaker's coil and cone, and the cone the air
-    if (step >= 6) {
+    // 5 · the voltage moves the speaker's coil and cone, and the cone the air
+    if (step >= 5) {
       const push = 9 * Math.cos(r)
       cone.setAttribute('d',
         `M202 550 Q${f(196 + push / 2)} 548 ${f(194 + push)} 558 C${f(184 + push)} 590 ${f(150 + push)} 624 ${f(118 + push)} 644 ` +
@@ -117,8 +120,9 @@ function makePainter(find: Finder): Painter {
       speakerCoil.forEach((turn, i) => put(turn, 'cx', 96 + i * 4 + push))
       // The speaker is drawn a little larger than life: its leads follow the coil at that size
       const lead = 1.1 * push
-      wireC.setAttribute('d', `M926 870 V620 Q926 614 932 614 H1008 Q${f(1023.8 + lead)} 616 ${f(1023.8 + lead)} 660`)
-      wireD.setAttribute('d', `M918 862 V612 Q918 606 924 606 H1018 Q${f(1032.6 + lead)} 608 ${f(1032.6 + lead)} 660`)
+      const a = PLAY_X - PIN, b = PLAY_X + PIN
+      wireD.setAttribute('d', `M${a} ${PIN_TOP} V612 Q${a} 606 ${a + 6} 606 H1018 Q${f(1032.6 + lead)} 608 ${f(1032.6 + lead)} 660`)
+      wireC.setAttribute('d', `M${b} ${PIN_TOP} V620 Q${b} 614 ${b + 6} 614 H1008 Q${f(1023.8 + lead)} 616 ${f(1023.8 + lead)} 660`)
       strips.forEach((strip, i) => {
         const pressed = -Math.sin(r - K * (STRIPS[i] + STRIP / 2 - SPEAKER_AIR_X))
         strip.setAttribute('opacity', (0.04 + 0.22 * Math.max(0, pressed)).toFixed(3))
@@ -165,11 +169,11 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
 
       {/* 2 · the voltage it gives */}
       <Step n={2} step={step}>
-        <g transform="translate(-462,495)">
-          <path data-p="wireA" fill="none" stroke={INK} strokeWidth={1.5} />
-          <path data-p="wireB" fill="none" stroke={INK} strokeWidth={1.5} />
-          <Label at={[900, 304]} anchor="middle">{l.outputVoltage}</Label>
-        </g>
+        <path data-p="wireA" fill="none" stroke={INK} strokeWidth={1.5} />
+        <path data-p="wireB" fill="none" stroke={INK} strokeWidth={1.5} />
+        <circle cx={REC_X - PIN} cy={800} r={3} fill={INK} />
+        <circle cx={REC_X + PIN} cy={800} r={3} fill={INK} />
+        <Label at={[REC_X + 18, 804]}>{l.outputVoltage}</Label>
         <g transform="translate(-150,304)">
           <rect x={730} y={296} width={330} height={156} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1} />
           <g stroke={FAINT} strokeWidth={0.5} strokeDasharray="3 4">
@@ -178,8 +182,6 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
             <line x1={740} y1={429} x2={1050} y2={429} />
           </g>
           <line x1={740} y1={SCOPE_Y} x2={1050} y2={SCOPE_Y} stroke={PART} strokeWidth={0.75} />
-          <circle cx={730} cy={441} r={3} fill={INK} />
-          <circle cx={730} cy={448} r={3} fill={INK} />
           <Label at={[742, 313]}>{l.voltage}</Label>
           <path d={curvePath(360, scopeX, scopeY)} fill="none" stroke={TRACE} strokeWidth={3} opacity={0.3} />
           <path data-p="trace" fill="none" stroke={TRACE} strokeWidth={3} strokeLinecap="round" />
@@ -194,45 +196,35 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
         </g>
       </Step>
 
-      {/* 4 · the magnetic tape, between its reels (under the heads) */}
-      <Step n={4} step={step}>
+      {/* 3 · the recording head and the tape, from one side of the picture to the other */}
+      <Step n={3} step={step}>
         <rect x={SUPPLY_X} y={TAPE_Y} width={TAKEUP_X - SUPPLY_X} height={TAPE_H} fill={PART_3} />
         <g data-p="magnets" fill={INK} stroke={INK} strokeWidth={1.8} strokeLinejoin="round">
           {Array.from({ length: MAGNETS }, (_, i) => <path key={i} />)}
         </g>
         <Reel x={SUPPLY_X} name="supplyReel" />
         <Reel x={TAKEUP_X} name="takeupReel" />
-        <Label at={[640, 1044]} anchor="middle" flow>{l.magneticTape}</Label>
-        <line x1={690} y1={1040} x2={728} y2={1040} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
-      </Step>
-
-      {/* 3 · the recording head */}
-      <Step n={3} step={step}>
-        <circle cx={790} cy={756} r={3} fill={INK} />
-        <circle cx={798} cy={756} r={3} fill={INK} />
-        <path d="M790 756 V854 Q790 860 784 860 H782 Q776 860 776 866 V885" fill="none" stroke={INK} strokeWidth={1.5} />
-        <path d="M798 756 V854 Q798 860 804 860 H806 Q812 860 812 866 V885" fill="none" stroke={INK} strokeWidth={1.5} />
-        <Head x={REC_X} field="recField" />
-        <Leader x1={817} y1={904} x2={852} y2={926} />
-        <Label at={[856, 931]}>{l.coil}</Label>
+        <Label at={[600, 1044]} anchor="middle" flow>{l.magneticTape}</Label>
+        <line x1={650} y1={1040} x2={688} y2={1040} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
+        <Head x={REC_X} field="recField" top={800} />
+        <Leader x1={REC_X + 17} y1={890} x2={REC_X + 62} y2={905} />
+        <Label at={[REC_X + 66, 909]}>{l.coil}</Label>
         <Label at={[REC_X, 1044]} anchor="middle">{l.recordingHead}</Label>
       </Step>
 
-      {/* 5 · the playback head, and the voltage it gives */}
-      <Step n={5} step={step}>
-        <path d={`M${PLAY_X + 18} 885 V868 Q${PLAY_X + 18} 862 ${PLAY_X + 12} 862 H918`} fill="none" stroke={INK} strokeWidth={1.5} />
-        <path d={`M${PLAY_X - 18} 885 V876 Q${PLAY_X - 18} 870 ${PLAY_X - 24} 870 H926`} fill="none" stroke={INK} strokeWidth={1.5} />
-        <circle cx={918} cy={862} r={3} fill={INK} />
-        <circle cx={926} cy={870} r={3} fill={INK} />
-        <Head x={PLAY_X} field="playField" />
+      {/* 4 · the playback head, and the voltage it gives */}
+      <Step n={4} step={step}>
+        <Head x={PLAY_X} field="playField" top={PIN_TOP} />
+        <circle cx={PLAY_X - PIN} cy={PIN_TOP} r={3} fill={INK} />
+        <circle cx={PLAY_X + PIN} cy={PIN_TOP} r={3} fill={INK} />
         <Label at={[PLAY_X, 1044]} anchor="middle">{l.playbackHead}</Label>
         <text className="lsc-dd-reading" x={PLAY_X} y={1070} textAnchor="middle">
           {l.playbackVoltage}: <tspan data-p="playReading">+0.00</tspan> {l.mv}
         </text>
       </Step>
 
-      {/* 6 · the speaker */}
-      <Step n={6} step={step}>
+      {/* 5 · the speaker */}
+      <Step n={5} step={step}>
         <Air id="lsc-dd-air-speaker" x={1146} y={521} w={143} h={318} r={70} />
         <g data-p="strips" mask="url(#lsc-dd-air-speaker)">
           {STRIPS.map((x) => <rect key={x} x={x} y={515} width={STRIP} height={330} shapeRendering="crispEdges" fill={MOVER} opacity={0.04} />)}
@@ -265,21 +257,38 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
   )
 }
 
+/** A ferrite core, its gap at (0, 0): a bar on top for the coil, its legs narrowing to two tips with the gap between them */
+const CORE: readonly [number, number][] = [
+  [-1.5, 0], [-10, 0], [-10, -12], [-36, -48], [-36, -106], [36, -106], [36, -48], [10, -12], [10, 0], [1.5, 0],
+  [1.5, -24], [4, -24], [24, -50], [24, -92], [-24, -92], [-24, -50], [-4, -24], [-1.5, -24],
+]
+/** The core's top bar, which the coil is wound round; the top of the shield case */
+const BAR_Y = -99, SHIELD_TOP = -122
+
 /**
- * A tape head: a ring of iron with a coil round its top and a narrow gap at its bottom, where it
- * touches the tape; `field`: its magnetic field at the gap (rings reaching into the tape).
+ * A tape head, for recording or playback: a ferrite core in its shield case, a coil round the core's
+ * top, two terminals out of the case (from `top` down), and a narrow gap at the bottom touching the
+ * tape; `field`: its magnetic field at the gap (rings reaching into the tape).
  */
-function Head({ x, field }: { x: number; field: string }) {
-  const bottom = TAPE_Y - 6
+function Head({ x, field, top }: { x: number; field: string; top: number }) {
+  const y = (dy: number) => TAPE_Y + dy
   return (
     <>
       <path
-        d={`M${x - 2} ${bottom} H${x - 35} Q${x - 39} ${bottom} ${x - 39} ${bottom - 4} V900 Q${x - 39} 896 ${x - 35} 896 ` +
-          `H${x + 35} Q${x + 39} 896 ${x + 39} 900 V${bottom - 4} Q${x + 39} ${bottom} ${x + 35} ${bottom} H${x + 2}`}
-        fill="none" stroke={PART} strokeWidth={12} />
+        d={`M${x - 48} ${y(SHIELD_TOP)} V${y(-34)} Q${x - 48} ${y(-8)} ${x - 18} ${y(-4)} ` +
+          `M${x + 48} ${y(SHIELD_TOP)} V${y(-34)} Q${x + 48} ${y(-8)} ${x + 18} ${y(-4)}`}
+        fill="none" stroke={PART_3} strokeWidth={4} strokeLinecap="round" />
+      <line x1={x - 48} y1={y(SHIELD_TOP)} x2={x + 48} y2={y(SHIELD_TOP)} stroke={PART_3} strokeWidth={1.5} />
+      <path d={'M' + CORE.map(([dx, dy]) => `${x + dx} ${y(dy)}`).join(' L') + ' Z'} fill={PART} />
       <g fill="none" stroke={INK} strokeWidth={1.5}>
-        {Array.from({ length: 7 }, (_, i) => <ellipse key={i} cx={x - 18 + i * 6} cy={896} rx={3} ry={11} />)}
+        {Array.from({ length: 7 }, (_, i) => <ellipse key={i} cx={x - 15 + i * 5} cy={y(BAR_Y)} rx={2.5} ry={10} />)}
+        {[-1, 1].map((side) => (
+          <path key={side} d={`M${x + side * 15} ${y(BAR_Y - 9)} L${x + side * PIN} ${y(SHIELD_TOP + 6)} V${top}`} />
+        ))}
       </g>
+      {[-1, 1].map((side) => (
+        <rect key={side} x={x + side * PIN - 3} y={y(SHIELD_TOP - 5)} width={6} height={10} fill={PART_2} />
+      ))}
       <g data-p={field} fill="none" stroke={MOVER} strokeWidth={1.5} opacity={0.15}>
         {FIELD.map((r) => <path key={r} d={`M${x - r} ${TAPE_Y} A${r} ${r} 0 0 0 ${x + r} ${TAPE_Y}`} />)}
       </g>

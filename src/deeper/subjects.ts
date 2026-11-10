@@ -66,10 +66,9 @@ export const SUBJECTS: readonly Subject[] = [
     Scene: TransducerScene,
     steps: [
       { id: 'microphone',   box: [35, 560, 540, 800] },
-      { id: 'voltage',      box: [530, 590, 925, 800] },
-      { id: 'recordHead',   box: [700, 750, 890, 1050] },
-      { id: 'tape',         box: [580, 875, 1300, 1050] },
-      { id: 'playbackHead', box: [900, 850, 1300, 1078] },
+      { id: 'voltage',      box: [300, 590, 925, 810] },
+      { id: 'recordHead',   box: [35, 790, 1300, 1050] },
+      { id: 'playbackHead', box: [840, 840, 1300, 1078] },
       { id: 'speaker',      box: [900, 492, 1300, 850] },
     ],
   },
