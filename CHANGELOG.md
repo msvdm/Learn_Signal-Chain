@@ -2,6 +2,13 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.6.0
+
+- **A third subject in Dive deeper: *Complex waves*** — how a real sound is built from simple sine waves. On the left a string held at both ends, and beside it each harmonic on its own: a circle turning, and the sine wave it draws. On the right, what they make together — circles riding on each other, the sum they trace, and the recipe: how big each sine is. The string vibrates in as many harmonics as have been added, so you watch it turn from a plain arc into a real string's shape.
+- **The seven steps:** the first sine; a second one, twice as fast and half as big; adding them up; a third; then the 4th to the 10th, which together come close to a sawtooth wave; that shape travelling through the air from a speaker cone; and last a real guitar's low E string, measured from a recording.
+- **The real guitar.** Its first three sines are almost as big as each other, which is what makes the sum a shape and not a sine — a sharp peak and a deep trough, the wave a low E really has. Ten sines rebuild the recording to within a thirtieth of its loudness.
+- **The sine wave has its names** in *Acoustic propagation and perception*: amplitude, wavelength, period and frequency. The travelling wave says how fast sound goes — 343 m/s in air at 20 °C.
+
 ## 1.5.0
 
 - **Dive deeper**, a fourth button beside the three levels. It opens a different way of learning: nothing is built there. The teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion. Play the movement or stop it, pick any point of its cycle, and go forward or back a step at a time (the arrow keys and Space work too).
