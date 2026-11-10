@@ -7,6 +7,8 @@ import type { ComplexityLevel } from './data/levels'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { ElementPalette } from './components/ElementPalette'
+import { DeeperView } from './deeper/DeeperView'
+import { SubjectList } from './deeper/SubjectList'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { FileMenu } from './components/FileMenu'
 import { TutorialButton } from './components/Tutorial'
@@ -15,7 +17,7 @@ import { AppLogo } from './components/AppLogo'
 import { Sun, Moon, Globe, Check, Grid3x3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { Lang } from './i18n/translations'
 import { LOCALES } from './i18n/locales/index'
-import { useMediaQuery, WIDE_HEADER_QUERY } from './hooks/useMediaQuery'
+import { useMediaQuery, WIDE_HEADER_QUERY, ROOMY_HEADER_QUERY, HEADER_LABELS_QUERY } from './hooks/useMediaQuery'
 import { usePaletteWidth } from './hooks/usePaletteWidth'
 import { useDismiss } from './hooks/useDismiss'
 
@@ -41,8 +43,12 @@ function App() {
   const setSnapToGrid      = useSignalStore((s) => s.setSnapToGrid)
   const paletteOpen        = useSignalStore((s) => s.paletteOpen)
   const setPaletteOpen     = useSignalStore((s) => s.setPaletteOpen)
+  const deeper             = useSignalStore((s) => s.deeper)
+  const setDeeper          = useSignalStore((s) => s.setDeeper)
   const { t, fmt }       = useTranslation()
   const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
+  const isRoomyHeader      = useMediaQuery(ROOMY_HEADER_QUERY)
+  const showLabels         = useMediaQuery(HEADER_LABELS_QUERY)
   const paletteWidth       = usePaletteWidth()
   const themeLabel         = theme === 'dark' ? t.app.theme.light : t.app.theme.dark
 
@@ -57,7 +63,8 @@ function App() {
   useDismiss(languageRef, () => setShowLanguages(false), { open: showLanguages })
 
   function handleLevelChange(level: ComplexityLevel) {
-    if (level === complexityLevel) return
+    // Back from Dive deeper to the level it was opened from: the canvas is as it was left
+    if (level === complexityLevel) { setDeeper(false); return }
     setPending({ kind: 'level', level })
   }
 
@@ -80,7 +87,7 @@ function App() {
         <header
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-            height: 56, padding: '0 16px', gap: 16,
+            height: 56, padding: '0 16px', gap: isWideHeader ? 16 : 8,
             background: 'var(--lsc-header)', borderBottom: '1px solid var(--lsc-border)',
           }}
         >
@@ -88,7 +95,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               onClick={() => setPaletteOpen(!paletteOpen)}
-              aria-label={paletteOpen ? t.palette.hide : t.palette.show}
+              aria-label={paletteOpen ? (deeper ? t.deeper.hide : t.palette.hide) : (deeper ? t.deeper.show : t.palette.show)}
               aria-expanded={paletteOpen}
               aria-controls="lsc-palette"
               className="lsc-btn-outline"
@@ -109,21 +116,22 @@ function App() {
             </div>
           </div>
 
-          {/* Centre: level stepper */}
-          <nav aria-label={t.app.level} style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
-            {LEVELS.map((id, i) => {
-              const active = complexityLevel === id
+          {/* Centre: level stepper — its last button is Dive deeper, another way of learning (D46).
+              Four buttons: the lines between them are shorter where the header is tight */}
+          <nav aria-label={t.app.level} style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: isRoomyHeader ? 6 : isWideHeader ? 4 : 2 }}>
+            {[...LEVELS, 'deeper' as const].map((id, i) => {
+              const active = id === 'deeper' ? deeper : !deeper && complexityLevel === id
               return (
                 <Fragment key={id}>
-                  {i > 0 && <span style={{ width: 20, height: 1, background: 'var(--lsc-border)' }} />}
+                  {i > 0 && <span style={{ width: isRoomyHeader ? 20 : isWideHeader ? 8 : 4, height: 1, background: 'var(--lsc-border)' }} />}
                   <button
-                    onClick={() => handleLevelChange(id)}
+                    onClick={() => (id === 'deeper' ? setDeeper(true) : handleLevelChange(id))}
                     aria-current={active ? 'step' : undefined}
                     className={active ? undefined : 'lsc-btn-outline'}
                     style={{
-                      height: 36, padding: '0 12px', borderRadius: 8,
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: active ? 'default' : 'pointer',
+                      height: 36, padding: isWideHeader ? '0 12px' : '0 6px', borderRadius: 8,
+                      display: 'flex', alignItems: 'center', gap: isWideHeader ? 8 : 6,
+                      fontSize: isWideHeader ? 13 : 12, fontWeight: 600, whiteSpace: 'nowrap', cursor: active ? 'default' : 'pointer',
                       border: `1px solid ${active ? 'var(--lsc-accent)' : 'transparent'}`,
                       background: active ? 'var(--lsc-accent-bg)' : 'transparent',
                       color: active ? 'var(--lsc-fg)' : 'var(--lsc-fg-muted)',
@@ -140,7 +148,7 @@ function App() {
                     >
                       {i + 1}
                     </span>
-                    {t.levels[id].title}
+                    {id === 'deeper' ? t.deeper.title : t.levels[id].title}
                   </button>
                 </Fragment>
               )
@@ -149,6 +157,8 @@ function App() {
 
           {/* Right: file, snap to grid, theme, language, the tutorial */}
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
+            {/* The canvas's own tools: out of sight in Dive deeper, their room kept (the stepper stays put) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, visibility: deeper ? 'hidden' : 'visible' }}>
             <FileMenu onNew={() => setPending({ kind: 'reset' })} buttonStyle={headerBtn} />
 
             <button
@@ -161,7 +171,7 @@ function App() {
             >
               <Grid3x3 size={15} />
               {/* Narrower screens: icon + switch only, so the header still fits */}
-              {isWideHeader && t.toolbar.snap}
+              {showLabels && t.toolbar.snap}
               <span
                 style={{
                   position: 'relative', width: 30, height: 18, borderRadius: 9999, flexShrink: 0,
@@ -180,16 +190,17 @@ function App() {
                 />
               </span>
             </button>
+            </div>
 
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               aria-label={themeLabel}
               className="lsc-btn-outline"
-              style={isWideHeader ? headerBtn : { ...headerBtn, width: 34, padding: 0, justifyContent: 'center' }}
+              style={showLabels ? headerBtn : { ...headerBtn, width: 34, padding: 0, justifyContent: 'center' }}
             >
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
               {/* Narrower screens: the sun / moon alone, like the snap switch */}
-              {isWideHeader && themeLabel}
+              {showLabels && themeLabel}
             </button>
 
             <div ref={languageRef} style={{ position: 'relative' }}>
@@ -261,9 +272,9 @@ function App() {
               boxShadow: paletteOpen ? 'var(--lsc-shadow-popup)' : 'none',
             }}
           >
-            <ElementPalette />
+            {deeper ? <SubjectList /> : <ElementPalette />}
           </div>
-          <SignalChain />
+          {deeper ? <DeeperView left={paletteWidth} /> : <SignalChain />}
           <NoticeToast />
         </main>
 

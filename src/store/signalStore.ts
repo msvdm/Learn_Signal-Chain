@@ -13,7 +13,7 @@ import type { ToolMode, LeftTool } from '../types'
 import type { NodeGroup } from '../utils/nodeGroup'
 import type { Pt } from '../utils/geometry'
 import type { ChainFile, ParsedChain } from '../utils/chainFile'
-import { parseChainFile, toChainFile } from '../utils/chainFile'
+import { parseChainFile, toChainFile, LINK_PREFIX } from '../utils/chainFile'
 import type { MeasuredChain } from '../signal/measured'
 
 export type { SignalNode, SignalEdge, NodeParamValue, EQBand } from '../data/nodeRegistry'
@@ -50,6 +50,8 @@ const SETTING_KEYS = {
   snapToGrid:      'lsc-snap-to-grid',
   paletteOpen:     'lsc-palette-open',
   complexityLevel: 'lsc-complexity-level',
+  deeper:          'lsc-dive-deeper',
+  deeperSubject:   'lsc-deeper-subject',
 } as const
 
 type Setting = keyof typeof SETTING_KEYS
@@ -81,6 +83,13 @@ function getInitialComplexityLevel(): ComplexityLevel {
   return LEVELS.find((l) => l === level) ?? 'beginner'
 }
 
+/**
+ * Dive deeper was open when the app was left (D46) — but a share link opens its chain, on the canvas.
+ */
+function getInitialDeeper(): boolean {
+  return stored('deeper') === 'true' && !window.location.hash.startsWith(LINK_PREFIX)
+}
+
 /** The autosaved canvas (see the autosave section at the bottom) */
 const CANVAS_KEY = 'lsc-canvas'
 
@@ -104,6 +113,13 @@ export interface SignalChainStore {
   /** The element palette on the left is shown (persisted); collapsed = more room for the canvas. */
   paletteOpen: boolean
   complexityLevel: ComplexityLevel
+  /**
+   * Dive deeper is open in the canvas's place (D46, src/deeper/): the level stepper's fourth button.
+   * Not a level: the canvas and its level stay as they were, and come back with any level's button.
+   */
+  deeper: boolean
+  /** The subject Dive deeper shows (deeper/subjects.ts; persisted) */
+  deeperSubject: string
   /** Selected elements (several with the Select tool, Ctrl+click or Shift+drag) */
   selectedNodeIds: string[]
   toolMode: ToolMode
@@ -144,6 +160,8 @@ export interface SignalChainStore {
   setTheme: (theme: Theme) => void
   setSnapToGrid: (on: boolean) => void
   setPaletteOpen: (open: boolean) => void
+  setDeeper: (on: boolean) => void
+  setDeeperSubject: (id: string) => void
   setSelectedNode: (id: string | null) => void
   setSelection: (ids: string[]) => void
   setLeftTool: (tool: LeftTool) => void
@@ -203,6 +221,8 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
   theme: initialTheme,
   snapToGrid: stored('snapToGrid') !== 'false',
   paletteOpen: stored('paletteOpen') !== 'false',
+  deeper: getInitialDeeper(),
+  deeperSubject: stored('deeperSubject') ?? '',
   selectedNodeIds: [],
   toolMode: 'select',
   leftTool: 'drag',
@@ -231,6 +251,10 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
   setPaletteOpen: (open) => set({ paletteOpen: open }),
 
+  // The canvas leaves the screen: nothing is being wired on it
+  setDeeper: (on) => set(on ? { deeper: true, ...NO_WIRE } : { deeper: false }),
+
+  setDeeperSubject: (id) => set({ deeperSubject: id }),
 
   setSelectedNode: (id) => set({ selectedNodeIds: id ? [id] : [] }),
 
@@ -266,7 +290,7 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
     // A new level starts a new history: its palette has other elements
     withoutHistory(() => set((s) => ({
       ...commitGraph(s, EMPTY_GRAPH, { newCanvas: true }),
-      complexityLevel: level, past: [], future: [], chainName: '',
+      complexityLevel: level, past: [], future: [], chainName: '', deeper: false,
     })))
   },
 
@@ -289,7 +313,8 @@ export const useSignalStore = create<SignalChainStore>((set, get) => ({
 
   setChainName: (name) => set({ chainName: name }),
 
-  offerChain: (offer) => set({ chainOffer: offer }),
+  // A chain to open is opened on the canvas: Dive deeper gives way (the tutorial's examples)
+  offerChain: (offer) => set(offer ? { chainOffer: offer, deeper: false } : { chainOffer: null }),
 
   loadChain: (chain) => {
     const apply = () => set((s) => ({

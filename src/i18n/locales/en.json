@@ -527,7 +527,7 @@
       "welcome": "What it's for",
       "start": "Your first chain",
       "build": "Working on the canvas",
-      "levels": "The three levels",
+      "levels": "The levels",
       "meters": "Reading the meters",
       "wires": "Connections and colours",
       "save": "Saving and sharing",
@@ -564,7 +564,8 @@
       "points": [
         "**Beginner** is about the room: microphones, instruments, a mixing desk, speakers and a computer. You learn what connects to what. There are no numbers yet. Each speaker, recorder or stream tells you whether sound reaches it.",
         "**Intermediate** opens up the mixing desk. You build a channel yourself, control by control, from the microphone to the speakers. Meters appear and show the signal level at every step.",
-        "**Advanced** unlocks the rest of the elements. Levels are also worked out digitally, on the dBFS scale, so more complex routing and conversions along the chain can be shown."
+        "**Advanced** unlocks the rest of the elements. Levels are also worked out digitally, on the dBFS scale, so more complex routing and conversions along the chain can be shown.",
+        "**Dive deeper**, the fourth button, is a different way of learning. Nothing is built there: the teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage. Play the movement or stop it at any point. Your canvas stays as you left it: any level's button brings it back."
       ]
     },
     "meters": {
@@ -665,5 +666,67 @@
     "playsWav": "WAV file → PCM",
     "recordsTrack": "Records {n} track → WAV",
     "recordsTracks": "Records {n} tracks → WAV"
+  },
+  "deeper": {
+    "title": "Dive deeper",
+    "subjectsTitle": "Subjects",
+    "hide": "Hide the subjects panel (more room for the picture)",
+    "show": "Show the subjects panel",
+    "subjects": {
+      "acoustic": "Acoustic propagation and perception",
+      "transducer": "Transducer and speaker"
+    },
+    "steps": {
+      "string": "String",
+      "air": "Air around the string",
+      "ear": "Sound wave to the ear and brain",
+      "pendulum": "Pendulum",
+      "circle": "Phase circle",
+      "sine": "Sine wave",
+      "microphone": "Microphone",
+      "voltage": "Voltage",
+      "speaker": "Speaker"
+    },
+    "stepsLabel": "Steps",
+    "step": "Step {n} of {count}",
+    "back": "Previous step",
+    "next": "Next step",
+    "play": "Play",
+    "pause": "Pause",
+    "phase": "Phase",
+    "ofCycle": "{pct}% of a cycle",
+    "jump": "Jump to",
+    "credit": "Credits",
+    "credits": {
+      "ear": "Ear adapted from “{work}” by Lars Chittka and Axel Brockmann, {licence}. Simplified and recoloured."
+    },
+    "labels": {
+      "string": "String",
+      "sameMotion": "Same motion as the pendulum",
+      "longitudinal": "Longitudinal sound wave",
+      "displacement": "Displacement",
+      "centreRight": "centre →",
+      "rightPeak": "right peak",
+      "centreLeft": "centre ←",
+      "leftPeak": "left peak",
+      "backHome": "back home",
+      "auricle": "Auricle",
+      "earCanal": "Ear canal",
+      "eardrum": "Eardrum",
+      "ossicles": "Ossicles",
+      "cochlea": "Cochlea",
+      "auditoryNerve": "Auditory nerve",
+      "brainCell": "Brain cell",
+      "soundWave": "Sound wave",
+      "diaphragm": "Diaphragm",
+      "voiceCoil": "Voice coil",
+      "magnet": "Magnet",
+      "magneticStructure": "Magnetic structure",
+      "outputVoltage": "Output voltage",
+      "voltage": "Voltage",
+      "time": "Time →",
+      "mv": "mV",
+      "speakerCone": "Speaker cone"
+    }
   }
 }

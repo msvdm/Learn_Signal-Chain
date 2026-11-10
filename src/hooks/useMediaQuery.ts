@@ -15,8 +15,20 @@ export function useMediaQuery(query: string): boolean {
 /** Tablet layout: palette collapses to an icon rail. */
 export const TABLET_QUERY = '(max-width: 1024px)'
 
+// The header's widths, measured on its longest text (Bulgarian, four level buttons since Dive
+// deeper — D46): each step leaves it some 45px to spare.
+
 /**
- * Wide enough for the header's tagline and every button's text label (the longest is Bulgarian,
- * about 1250px). Narrower, the tagline goes and Snap to grid / Light-Dark show only their icons.
+ * Wide enough for the header's tagline and the level stepper's usual letters (Bulgarian needs
+ * 1232px). Narrower, the tagline goes, the title wraps and the stepper's buttons are smaller.
  */
 export const WIDE_HEADER_QUERY = '(min-width: 1280px)'
+
+/** Wide enough for the long lines between the stepper's buttons (1280px); narrower, short ones. */
+export const ROOMY_HEADER_QUERY = '(min-width: 1340px)'
+
+/**
+ * Wide enough for Snap to grid's and Light / Dark's words too (1476px). Narrower, they show only
+ * their icons.
+ */
+export const HEADER_LABELS_QUERY = '(min-width: 1520px)'

@@ -1,0 +1,63 @@
+import type { ComponentType } from 'react'
+import { Ear, Speaker } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { Translations } from '../i18n/translations'
+import type { Box } from './wave'
+import type { SceneProps } from './scenes/painter'
+import { AcousticScene } from './scenes/AcousticScene'
+import { TransducerScene } from './scenes/TransducerScene'
+
+// Dive deeper's subjects (D46): each a chain of causes and effects the teacher steps through — one
+// picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
+// (deeper/scenes/, a picture and its painter), its entry here, and its name and its steps' names
+// in the locales (`deeper.subjects`, `deeper.steps`).
+
+export type SubjectId = keyof Translations['deeper']['subjects']
+export type StepId    = keyof Translations['deeper']['steps']
+
+export interface Subject {
+  id: SubjectId
+  icon: LucideIcon
+  /** The picture and what moves in it */
+  Scene: ComponentType<SceneProps>
+  /**
+   * Its steps in order: each one's name and the part of the picture it adds (in the scene's units —
+   * the camera shows every part reached so far)
+   */
+  steps: readonly { id: StepId; box: Box }[]
+  /** Whose work the picture uses, said under it (`deeper.credits`) */
+  credit?: keyof Translations['deeper']['credits']
+}
+
+/** In the drawer's order */
+export const SUBJECTS: readonly Subject[] = [
+  {
+    id: 'acoustic',
+    icon: Ear,
+    Scene: AcousticScene,
+    steps: [
+      { id: 'string',   box: [15, 38, 215, 312] },
+      { id: 'air',      box: [15, 38, 215, 312] },
+      { id: 'ear',      box: [15, 35, 1300, 312] },
+      { id: 'pendulum', box: [30, 300, 230, 552] },
+      { id: 'circle',   box: [230, 325, 460, 510] },
+      { id: 'sine',     box: [460, 325, 860, 535] },
+    ],
+    credit: 'ear',
+  },
+  {
+    id: 'transducer',
+    icon: Speaker,
+    Scene: TransducerScene,
+    steps: [
+      { id: 'microphone', box: [35, 560, 540, 800] },
+      { id: 'voltage',    box: [530, 590, 925, 800] },
+      { id: 'speaker',    box: [925, 492, 1300, 850] },
+    ],
+  },
+]
+
+/** The subject with this id — the first one for an id the app does not know (an older visit's). */
+export function subjectOf(id: string): Subject {
+  return SUBJECTS.find((s) => s.id === id) ?? SUBJECTS[0]
+}

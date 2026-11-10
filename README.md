@@ -39,6 +39,8 @@ Turn the Preamp up too far and you see what goes wrong: the meter hits the red, 
 
 ![Advanced: a singing voice through a microphone, Preamp and compressor into an active speaker](docs/screenshots/advanced.png)
 
+**Dive deeper — why it works.** The fourth button opens a different way of learning: nothing is built there. The teacher picks a subject and shows, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage and a speaker turns it back into sound. Play the movement, or stop it at any point of its cycle.
+
 The app does not explain what each element is — that is the teacher's part. It shows what the chain does, as truthfully as it can. Click **?** next to the language button for a short tutorial on how the app works, with example chains to open.
 
 ## Features
@@ -47,6 +49,7 @@ The app does not explain what each element is — that is the teacher's part. It
 - **The numbers come from real sound.** Every source plays a short loop made for the app — a speaking voice, a singing voice, drums, a guitar, music — and the whole chain is played silently in your browser and measured element by element: real filters, a real compressor, noise gate, limiter and de-esser. Nothing is heard, and nothing leaves your computer.
 - **Meters like a recording program's.** Coloured along their scale (green, yellow as it gets hot, red at the very top), the solid bar the average, a pale part the peaks, a thin line the loudest moment. From Intermediate on they move with the sound, with their Peak, RMS and Noise numbers; the grey part at the bottom is the noise — what you hear when the music stops.
 - **Clipping comes from the peaks.** A drum hit distorts long before its average reaches the top: the element turns red as soon as its loudest moments clip, and a speaker after it says *Bad sound*, however green the meters in between.
+- **Dive deeper** — the fourth button, beside the levels: moving pictures a teacher steps through, each a chain of causes and effects. *Acoustic propagation and perception*: a string, the air around it, the sound wave on its way to the ear and the brain, and the same movement as a pendulum, a turn of the phase circle and a sine wave. *Transducer and speaker*: a microphone's diaphragm and coil, the voltage it gives, and a speaker turning it back into sound. Play or stop, pick a phase, go step by step. Your canvas stays as you left it.
 - **Noise like a real mixing desk.** Every powered element adds a little noise of its own, at the levels real gear has (see *Sources* below). Set the preamp too low and make the level up later, and the speaker ends up noisier — that is why the gain is set at the preamp.
 - **The microphone is not the sound.** A singer, a drum kit, an acoustic instrument or a guitar amp makes sound in the air, drawn as waves spreading to the microphone. A condenser microphone gives more signal than a dynamic one, but stays silent until Phantom Power (48V) is switched on before its Preamp.
 - **Wires show their signal's health**, like the meters: blue too quiet, green good, yellow hot, red clipping, grey with no signal. Each kind of connection looks different: sound in the air as waves, an analog cable a line with light flowing along it, a digital one dots and dashes, a stereo one two lines side by side.
@@ -72,7 +75,7 @@ Each level shows the sound system at its own scale, from the room down to the pa
 | Intermediate — a small desk | You build the desk's channel strip yourself (the mixer and stage box leave): + DI box, phantom power (48V), gain (the preamp after a microphone), high-pass filter, pad, equalizer (three knobs), compressor (one knob), fader, on / off switch, phase switch (the same signal twice on a bus, one upside down: the sound disappears), relay switch, pan / balance, master bus, aux bus, PFL bus; the audio interface and DAW record and play back. On every meter the peaks, the noise and the Peak / RMS / Noise numbers, moving with the sound |
 | Advanced — the parts and the digital picture | + signal generator, parametric equalizer, the full compressor, noise gate, limiter, de-esser, graphic equalizer, ADC / DAC, codec (MP3, AAC, Opus), digital interface (AES/EBU, AES50), matrix bus, an effects processor in a rack (somewhere for an aux bus to send — it makes no effect), a delay knob (two copies of one signal a little apart in time stop lining up — with the phase switch, line them up again); the DAW records the tracks wired into it and mixes them (a digital summing bus). Converters choose their sample rate and bit depth, the codec its codec and bitrate, the digital interface its protocol and clock; the computer has an analog and a digital output; Stream / Broadcast sends to a codec that unpacks it, as the listeners receive it, and says how loud it is (LUFS). The recorder, audio interface and studio monitor leave: the converters and the codec take their place |
 
-Switch levels from the header at any time.
+Switch levels from the header at any time. **Dive deeper**, the fourth button, is not a level: it opens the moving pictures described above and keeps your canvas for when you come back.
 
 ## Run Locally
 
@@ -121,6 +124,8 @@ Sources for the digital side — what PCM, a file, a codec and a protocol are, h
 * [Transloadit: what is an audio codec](https://transloadit.com/blog/2026/01/what-is-an-audio-codec/): PCM as it is, a codec squeezing it
 * [Microsoft: USB Audio 2.0 drivers](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/usb-2-0-audio-drivers): a computer's audio over USB
 * [Audient: clocking explained](https://support.audient.com/hc/en-us/articles/202587353), [Mix: digital audio clocks](https://www.mixonline.com/technology/digital-audio-clocks-how-they-work-and-why-you-need-them-383737), [AudioTechnology: word clock explained](https://audiotechnology.com/PDF/14/AT14_Word_Clock_Explained.pdf): one device leads the clock (internal), the others follow it (external); two free-running clocks drift apart and lose samples — clicks and dropouts
+
+The ear in Dive deeper is adapted from [“Anatomy of the Human Ear”](https://commons.wikimedia.org/wiki/File:Anatomy_of_the_Human_Ear.svg) by Lars Chittka and Axel Brockmann, [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/) — simplified and recoloured.
 
 ## Contributing
 
