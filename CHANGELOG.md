@@ -2,6 +2,16 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.5.0
+
+- **Dive deeper**, a fourth button beside the three levels. It opens a different way of learning: nothing is built there. The teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion. Play the movement or stop it, pick any point of its cycle, and go forward or back a step at a time (the arrow keys and Space work too).
+- **Two subjects to start with:**
+  - *Acoustic propagation and perception*: a string, the air around it, the sound wave on its way to the ear and the brain, then the same movement as a pendulum, a turn of the phase circle and a sine wave;
+  - *Transducer and speaker*: a sound wave moves a microphone's diaphragm and coil, the coil gives a voltage, and the voltage moves a speaker that makes sound again.
+- **Your canvas is kept** while you are in Dive deeper: the button of the level you were on brings it back as you left it.
+- **No more grid dots on the canvas.** *Snap to grid* works as before.
+- **The header on smaller screens:** with four buttons to fit, *Snap to grid* and *Light / Dark* show only their icons on screens narrower than 1520 pixels.
+
 ## 1.2.0
 
 - **Phase switch** (from Intermediate): press it and the signal leaves upside down. Send the same signal twice to a bus with one of them upside down, and the sound disappears.
