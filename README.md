@@ -39,7 +39,9 @@ Turn the Preamp up too far and you see what goes wrong: the meter hits the red, 
 
 ![Advanced: a singing voice through a microphone, Preamp and compressor into an active speaker](docs/screenshots/advanced.png)
 
-**Dive deeper — why it works.** The fourth button opens a different way of learning: nothing is built there. The teacher picks a subject and shows, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage and a speaker turns it back into sound. Play the movement, or stop it at any point of its cycle.
+**Dive deeper — why it works.** The fourth button opens a different way of teaching. You can pick a subject and show, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage and a speaker turns it back into sound. Play the movement, or stop it at any point of its cycle. Show how everything is a signal chain and how energy is never created or destroyed — only transformed.
+
+![Dive deeper: a string, the air carrying the sound wave away from it, and the ear from the auricle through the eardrum, ossicles and cochlea to a brain cell](docs/screenshots/dive-deeper.png)
 
 The app does not explain what each element is — that is the teacher's part. It shows what the chain does, as truthfully as it can. Click **?** next to the language button for a short tutorial on how the app works, with example chains to open.
 
