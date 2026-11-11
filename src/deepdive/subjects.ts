@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Ear, Speaker, Zap } from 'lucide-react'
+import { AudioWaveform, Ear, Mic, Speaker, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -8,6 +8,7 @@ import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
 import { AmplifierScene } from './scenes/AmplifierScene'
+import { PreampScene } from './scenes/PreampScene'
 
 // Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -78,6 +79,19 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'playbackHead', box: [900, 820, 1310, 1138] },
       { id: 'speaker',      box: [1010, 492, 1410, 850] },
     ],
+  },
+  {
+    id: 'preamp',
+    icon: Mic,
+    Scene: PreampScene,
+    steps: [
+      { id: 'weakSignal',       box: [0, 330, 520, 590] },
+      { id: 'powerSupply',      box: [-300, 40, 700, 780] },
+      { id: 'transistor',       box: [-300, 40, 1260, 780] },
+      { id: 'currentToVoltage', box: [-300, 40, 1340, 780] },
+      { id: 'gainKnob',         box: [-300, 40, 1340, 780] },
+    ],
+    shapes: { step: 5, ids: ['gain10', 'gain54', 'gain70', 'gain80'] },
   },
   {
     id: 'amplification',

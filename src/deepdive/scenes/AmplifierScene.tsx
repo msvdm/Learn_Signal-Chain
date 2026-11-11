@@ -8,6 +8,9 @@ import { ARROW, FAINT, FLOW, INK, MOVER, PART, PART_2, PART_3, TRACE } from './l
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Leader, Step } from './sceneParts'
+import { Ground, Plug, Transistor } from './circuitParts'
+import { lengthOf, pointAlong } from './circuit'
+import type { Pt } from './circuit'
 
 // Analogue amplification (Deep dive, D46): the microphone's ±2 mV, too weak to move a speaker (1);
 // a power supply's ±12 V, steady, waiting (2); a transistor between the + side and the speaker —
@@ -24,7 +27,7 @@ import { Air, Label, Leader, Step } from './sceneParts'
 const PSU_X = -80, PSU_Y = 30, PSU_W = 280, PSU_H = 120
 const PLUS_Y = 70, ZERO_Y = 112, MINUS_X = -30, MINUS_Y = 760
 /** The transistors' column: where the current runs; each transistor's middle; the output, between them */
-const COL_X = 652, Q1_Y = 300, Q2_Y = 540, Q_R = 34, NODE_Y = 420
+const COL_X = 652, Q1_Y = 300, Q2_Y = 540, NODE_Y = 420
 /** Where the sides end while there is no transistor yet */
 const PLUS_END = 230, MINUS_END = 610
 /** The bases' bar, and the line driving them */
@@ -58,22 +61,10 @@ const A_STEP = 4, B_STEP = 5, AB_STEP = 6, SHAPE_STEP = 7
 /** The charges on the wires, every DOT_GAP; how far a coulomb-ish of charge moves them (spacings a cycle, per ampere on average) */
 const DOT_GAP = 26, GAPS_PER_AMP = 8, SPEAKER_TO_AND_FRO = 32
 
-type Pt = readonly [number, number]
 /** The wires the charges move on: from the + side through the upper transistor to the output; from the output through the lower one to the − side; from the output to the speaker */
 const UPPER_WIRE: readonly Pt[] = [[PSU_X + PSU_W, PLUS_Y], [COL_X, PLUS_Y], [COL_X, NODE_Y]]
 const LOWER_WIRE: readonly Pt[] = [[COL_X, NODE_Y], [COL_X, MINUS_Y], [MINUS_X, MINUS_Y], [MINUS_X, PSU_Y + PSU_H]]
 const SPEAKER_WIRE: readonly Pt[] = [[COL_X, NODE_Y], [WIRE_UP_X, NODE_Y], [WIRE_UP_X, WIRE_TOP], [LEAD_B, WIRE_TOP], [LEAD_B, SPK_Y]]
-
-const lengthOf = (wire: readonly Pt[]) => wire.slice(1).reduce((sum, p, i) => sum + Math.hypot(p[0] - wire[i][0], p[1] - wire[i][1]), 0)
-/** The point `s` along a wire */
-function pointAlong(wire: readonly Pt[], s: number): Pt {
-  for (let i = 1; i < wire.length; i++) {
-    const [x0, y0] = wire[i - 1], [x1, y1] = wire[i], seg = Math.hypot(x1 - x0, y1 - y0)
-    if (s <= seg) return [x0 + ((x1 - x0) * s) / seg, y0 + ((y1 - y0) * s) / seg]
-    s -= seg
-  }
-  return wire[wire.length - 1]
-}
 
 const UPPER_LEN = lengthOf(UPPER_WIRE), LOWER_LEN = lengthOf(LOWER_WIRE), SPEAKER_LEN = lengthOf(SPEAKER_WIRE)
 /** Before the transistors come, only the sides' part of their wires is drawn */
@@ -342,7 +333,7 @@ export function AmplifierScene({ step, shape, onPainter }: SceneProps) {
         <path d={`M${TRI_TIP} ${IN_Y} H${DRIVE_X} V${Q1_Y} H${BAR_X}`} fill="none" stroke={INK} strokeWidth={1.5} />
         <path d={`M${COL_X} ${PLUS_END} V${Q1_Y - 28} L${BAR_X} ${Q1_Y - 8} M${BAR_X} ${Q1_Y + 8} L${COL_X} ${Q1_Y + 28} V${NODE_Y}`}
           fill="none" stroke={INK} strokeWidth={2} />
-        <Transistor y={Q1_Y} fill="q1Fill" pnp={false} />
+        <Transistor x={COL_X} y={Q1_Y} fill="q1Fill" pnp={false} />
         <circle cx={COL_X} cy={NODE_Y} r={4} fill={INK} />
         <Label at={[COL_X - 50, Q1_Y - 46]} anchor="end">{step >= A_STEP ? l.pushes : l.transistor}</Label>
         <Step n={3} until={3} step={step}>
@@ -386,7 +377,7 @@ export function AmplifierScene({ step, shape, onPainter }: SceneProps) {
         <path d={`M${DRIVE_X} ${IN_Y} V${Q2_Y} H${BAR_X}`} fill="none" stroke={INK} strokeWidth={1.5} />
         <path d={`M${COL_X} ${NODE_Y} V${Q2_Y - 28} L${BAR_X} ${Q2_Y - 8} M${BAR_X} ${Q2_Y + 8} L${COL_X} ${Q2_Y + 28} V${MINUS_END}`}
           fill="none" stroke={INK} strokeWidth={2} />
-        <Transistor y={Q2_Y} fill="q2Fill" pnp />
+        <Transistor x={COL_X} y={Q2_Y} fill="q2Fill" pnp />
         <Label at={[COL_X - 50, Q2_Y + 56]} anchor="end">{l.pulls}</Label>
         <rect x={DRIVE_X - 12} y={BIAS_TOP} width={24} height={BIAS_BOTTOM - BIAS_TOP} rx={4} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
         <Leader x1={DRIVE_X - 14} y1={BIAS_BOTTOM - 6} x2={DRIVE_X - 30} y2={BIAS_BOTTOM + 22} />
@@ -469,23 +460,6 @@ export function AmplifierScene({ step, shape, onPainter }: SceneProps) {
   )
 }
 
-/** A transistor's circle and its base bar; `fill` opens as far as its current (named for the painter). The emitter's arrow: out of it (the upper one) or into it (the lower one). */
-function Transistor({ y, fill, pnp }: { y: number; fill: string; pnp: boolean }) {
-  // The emitter's lead runs from the bar (BAR_X, y ± 8) to the column (COL_X, y ± 28): its arrow sits along it
-  const [x0, y0, x1, y1] = pnp ? [COL_X, y - 28, BAR_X, y - 8] : [BAR_X, y + 8, COL_X, y + 28]
-  const mx = x0 + (x1 - x0) * 0.75, my = y0 + (y1 - y0) * 0.75
-  const a = Math.atan2(y1 - y0, x1 - x0), s = 7
-  const head = `M${mx} ${my} L${(mx - s * Math.cos(a - 0.45)).toFixed(1)} ${(my - s * Math.sin(a - 0.45)).toFixed(1)} ` +
-    `L${(mx - s * Math.cos(a + 0.45)).toFixed(1)} ${(my - s * Math.sin(a + 0.45)).toFixed(1)} Z`
-  return (
-    <>
-      <circle data-p={fill} cx={COL_X - 12} cy={y} r={Q_R} fill={MOVER} fillOpacity={0.06} stroke={PART} strokeWidth={2} />
-      <line x1={BAR_X} y1={y - 18} x2={BAR_X} y2={y + 18} stroke={INK} strokeWidth={4} />
-      <path d={head} fill={INK} />
-    </>
-  )
-}
-
 /** A heat sink right of a transistor: a plate and its fins; the heat rising off it (`waves`, named for the painter) */
 function HeatSink({ y, waves }: { y: number; waves: string }) {
   const top = y - SINK_H / 2, clip = `lsc-dd-heat-${waves}`
@@ -501,28 +475,6 @@ function HeatSink({ y, waves }: { y: number; waves: string }) {
         </g>
       </g>
     </>
-  )
-}
-
-/** The 0 V sign: three lines, shorter and shorter */
-function Ground({ x, y }: { x: number; y: number }) {
-  return (
-    <g stroke={INK} strokeWidth={1.5} strokeLinecap="round">
-      <line x1={x - 12} y1={y} x2={x + 12} y2={y} />
-      <line x1={x - 8} y1={y + 5} x2={x + 8} y2={y + 5} />
-      <line x1={x - 4} y1={y + 10} x2={x + 4} y2={y + 10} />
-    </g>
-  )
-}
-
-/** A mains plug, its cable leaving to the right from (x, y) */
-function Plug({ x, y }: { x: number; y: number }) {
-  return (
-    <g>
-      <rect x={x - 34} y={y - 16} width={34} height={32} rx={6} fill={PART_2} />
-      <rect x={x - 48} y={y - 10} width={14} height={4} rx={1} fill={PART} />
-      <rect x={x - 48} y={y + 6} width={14} height={4} rx={1} fill={PART} />
-    </g>
   )
 }
 

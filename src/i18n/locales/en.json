@@ -676,7 +676,8 @@
       "acoustic": "Acoustic propagation and perception",
       "transducer": "Magnetic induction",
       "complex": "Complex waves",
-      "amplification": "Analogue amplification"
+      "amplification": "Analogue amplification",
+      "preamp": "Mic preamp"
     },
     "steps": {
       "string": "String",
@@ -702,7 +703,9 @@
       "classA": "Class A: always open",
       "classB": "Class B: push and pull",
       "classAB": "Class AB: a little open",
-      "distortion": "Distortion: new harmonics"
+      "distortion": "Distortion: new harmonics",
+      "currentToVoltage": "Current into voltage",
+      "gainKnob": "The gain knob"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -723,7 +726,11 @@
       "rounded": "Rounded tops",
       "oneSided": "One side bends",
       "flat": "Flat tops",
-      "notch": "Notch at zero"
+      "notch": "Notch at zero",
+      "gain10": "+10 dB",
+      "gain54": "+54 dB",
+      "gain70": "+70 dB",
+      "gain80": "+80 dB"
     },
     "credit": "Credits",
     "credits": {
@@ -819,7 +826,21 @@
       "oneSide": "One side bends more than the other: a 2nd harmonic is added",
       "flatTops": "Too loud: nothing gets past ±{v} — the tops are cut off (clipping)",
       "notchAtZero": "Class B: nothing comes out near zero — new sines, even when quiet",
-      "shouldGive": "What it should give"
+      "shouldGive": "What it should give",
+      "plus9": "+9 V",
+      "minus9": "−9 V",
+      "tooWeakForDesk": "Far too weak for the desk: it works around 0 dBu",
+      "throughIt": "Through it",
+      "milliamps": "mA",
+      "smallChange": "A small change at its base (±{v}) changes the current through it (±{i})",
+      "resistor": "Resistor",
+      "intoVoltage": "The resistor turns the current’s changes into a voltage: ±{v}",
+      "upsideDown": "Upside down: as the input goes up, the output goes down (the desk’s Ø button turns it back)",
+      "gainKnob": "Gain knob",
+      "gainKnobNote": "The less the resistor under the transistor holds back, the more it gains",
+      "lineOut": "Line out: to the desk",
+      "lineOutReading": "Line out",
+      "clipAt": "Peaks at +20 dBu: clipping"
     }
   }
 }

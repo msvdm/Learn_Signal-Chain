@@ -253,3 +253,10 @@ export function playbackVoltage(r: number): number {
 export function reelTurn(r: number): number {
   return (r / TAU) * TAPE_WAVELENGTH / REEL_R
 }
+
+/** A table over one cycle (its last point 360°, the same as its first) read at a phase (degrees), between its samples. */
+export function tableAt(table: ArrayLike<number>, deg: number): number {
+  const last = table.length - 1
+  const x = clamp(deg, 0, 360) * (last / 360), i = Math.min(Math.floor(x), last - 1), f = x - i
+  return table[i] + (table[i + 1] - table[i]) * f
+}
