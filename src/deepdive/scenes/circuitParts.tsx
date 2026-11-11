@@ -2,7 +2,7 @@ import { dbToPercent, meterZones, zoneColor } from '../../signal/levels'
 import { BASE_GAP } from './circuit'
 import { FAINT, INK, MOVER, PART, PART_2 } from './look'
 
-// The parts the amplification subjects draw (Deep dive, D46): a wire the charges move along, the
+// The parts Analogue amplification draws (Deep dive, D46): a wire the charges move along, the
 // 0 V sign, a mains plug, a transistor and a level meter as the canvas's (their geometry: circuit.ts).
 
 /** The 0 V sign: three lines, shorter and shorter */
@@ -30,15 +30,14 @@ export function Plug({ x, y }: { x: number; y: number }) {
 /**
  * A transistor whose current runs along the column at `x`: its circle and its base bar (BASE_GAP
  * left of the column, its middle at `y`); `fill` opens as far as its current (named for the painter).
- * The emitter's arrow: out of it (pnp false: below the bar) or into it (pnp: above); `upsideDown`
- * puts an NPN's emitter above the bar, its collector below. Its leads to the column — from y − 28
- * and to y + 28 — are the scene's.
+ * The emitter's arrow: out of it (pnp false: below the bar) or into it (pnp: above). Its leads to
+ * the column — from y − 28 and to y + 28 — are the scene's.
  */
-export function Transistor({ x, y, fill, pnp, upsideDown = false }: { x: number; y: number; fill: string; pnp: boolean; upsideDown?: boolean }) {
+export function Transistor({ x, y, fill, pnp }: { x: number; y: number; fill: string; pnp: boolean }) {
   const bar = x - BASE_GAP
   // The emitter's lead runs between the bar (bar, y ± 8) and the column (x, y ± 28): its arrow sits
   // along it, pointing out of the transistor (NPN) or into it (PNP)
-  const side = pnp || upsideDown ? -1 : 1
+  const side = pnp ? -1 : 1
   const [bx, by, cx, cy] = [bar, y + side * 8, x, y + side * 28]
   const [x0, y0, x1, y1] = pnp ? [cx, cy, bx, by] : [bx, by, cx, cy]
   const mx = x0 + (x1 - x0) * 0.75, my = y0 + (y1 - y0) * 0.75

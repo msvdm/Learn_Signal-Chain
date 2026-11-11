@@ -1,9 +1,9 @@
 import type { SignalHealth } from '../../signal/levels'
 import { getHealth } from '../../signal/levels'
 
-// The amplification subjects' circuit geometry (Deep dive, D46): wires the charges move along, a
+// Analogue amplification's circuit geometry (Deep dive, D46): wires the charges move along, a
 // transistor's leads, a resistor's zigzag, a level's health as the canvas judges it. Drawn by
-// circuitParts.tsx and the scenes.
+// circuitParts.tsx and the scene.
 
 export type Pt = readonly [number, number]
 

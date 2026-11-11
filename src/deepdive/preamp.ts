@@ -1,10 +1,11 @@
-// Mic preamp's maths (Deep dive, D46), pure: one transistor on a ±9 V power supply makes the
-// microphone's ±2 mV (Magnetic induction's: +2 mV at 0°) into line level. A small change at its base
-// changes the current through it; a resistor above it (COLLECTOR_OHMS) turns the current's changes
-// into a voltage — upside down; the gain knob, the resistor under it, sets how much bigger. The levels
+// Analogue amplification's first stage (Deep dive, D46), pure: a mic preamp. One transistor on a
+// ±9 V power supply makes the microphone's ±2 mV (Magnetic induction's: +2 mV at 0°) into line level.
+// A resistor pulls the output up to the + side, the transistor pulls it down to the − side as far as
+// its base says, so the output comes out upside down; the gain knob sets how much bigger. The levels
 // are the canvas's: dBu of the average, clipping judged on the peaks (+20 dBu: signal/levels.ts), so
 // the output stops at ±7.75 V, where a peak reaches +20 dBu. Everything is worked out over one cycle
-// of the phase, so the scene's painter only reads tables (`preampCycle`).
+// of the phase, so the scene's painter only reads tables (`preampCycle`). The power stage after it
+// is amp.ts.
 
 import { CLIP_DBU } from '../signal/levels'
 import { TAU, clamp } from './wave'
@@ -17,7 +18,7 @@ export const DBU_VOLTS = Math.sqrt(0.6)
 export const IN_PEAK = 0.002
 /** As far as the output goes: a peak of +20 dBu (the canvas's clip level), 1.25 V short of each side */
 export const SWING_MAX = DBU_VOLTS * Math.pow(10, CLIP_DBU / 20)
-/** The resistor above the transistor: its current's changes × this are the output's voltage */
+/** The resistor on the + side: the transistor's current through it is how far the output is pulled down from that side */
 export const COLLECTOR_OHMS = 9000
 /** The current through the transistor while nothing plays: the + side over that resistor, 1 mA */
 export const RESTING = RAIL / COLLECTOR_OHMS
@@ -35,25 +36,9 @@ export const gainOf = (db: number) => Math.round(clamp(db, GAIN_MIN, GAIN_MAX))
 /** How many times bigger a gain makes the voltage */
 export const timesOf = (gainDb: number) => Math.pow(10, gainDb / 20)
 
-/**
- * The gain resistor's value at a gain, ohms: the resistor on the + side ÷ the gain resistor is how
- * many times bigger the voltage comes out (the rule of thumb for this circuit; it leaves out the
- * transistor's own resistance, some 25 Ω at 1 mA, with which one transistor here would stop near
- * +51 dB — a real preamp reaches +60 and more with several). 9 kΩ at 0 dB, 18 Ω at line level, 0.9 Ω at +80.
- */
-export const gainResistorOf = (gainDb: number) => COLLECTOR_OHMS / timesOf(gainDb)
-
-/** A resistor's value as its label says it: kΩ from 1000 Ω (two decimals under 10 kΩ), whole Ω from 10, one decimal under */
-export function ohmsText(ohms: number): { value: string; kilo: boolean } {
-  if (ohms >= 999.5) return { value: (ohms / 1000).toFixed(ohms < 9995 ? 2 : 1).replace(/\.?0+$/, ''), kilo: true }
-  return { value: ohms >= 9.95 ? String(Math.round(ohms)) : ohms.toFixed(1), kilo: false }
-}
-
-const times = (db: number) => Math.pow(10, db / 20)
-
 /** What the transistor should give at phase `r` (radians) with this gain: the input × the gain, upside down */
 export function wantedAt(r: number, gainDb: number): number {
-  return -times(gainDb) * IN_PEAK * Math.cos(r)
+  return -timesOf(gainDb) * IN_PEAK * Math.cos(r)
 }
 
 /** The output's voltage: the wanted one, but never past ±SWING_MAX (the tops cut off: clipping) */

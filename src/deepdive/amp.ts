@@ -1,23 +1,27 @@
-// Analogue amplification's maths (Deep dive, D46), pure: one amplifier from a microphone to an
-// 8 Ω speaker on a ±12 V power supply. Its last stage is two transistors, one from the + side to the
-// speaker (it pushes), one from the speaker to the − side (it pulls); the classes differ only in the
-// current they let through while nothing plays (`RESTING`). Everything is worked out over one cycle
-// of the phase, so the scene's painter only reads tables (`ampCycle`).
+// Analogue amplification's power stage (Deep dive, D46), pure: the line level the preamp gives
+// (preamp.ts: the microphone's ±2 mV made ±1 V, upside down) made into an 8 Ω speaker's ±10 V on a
+// ±12 V power supply. First the voltage, 10 times bigger and upside down again — the speaker moves as
+// the microphone's diaphragm did; then two transistors that add the current: one from the + side to
+// the speaker (it pushes), one from the speaker to the − side (it pulls). The classes differ only in
+// the current they let through while nothing plays (`RESTING`). It follows the preamp's gain knob: a
+// hotter line level is cut off a volt short of the sides. Everything is worked out over one cycle of
+// the phase, so the scene's painter only reads tables (`ampCycle`).
 
 import { TAU, clamp } from './wave'
+import { IN_PEAK as MIC_PEAK, LINE_GAIN, SAMPLES, preampCycle, timesOf } from './preamp'
 
 /** The power supply's two sides, ± volts */
 export const RAIL = 12
 /** The speaker, ohms */
 export const LOAD = 8
-/** The microphone's voltage at its peak, as in Magnetic induction (±2 mV) */
-export const IN_PEAK = 0.002
-/** The speaker's voltage at its peak when the amplifier copies it cleanly */
+/** The line level it is made for: the preamp's output with its knob at line level, ±1 V at its peak */
+export const LINE_PEAK = MIC_PEAK * timesOf(LINE_GAIN)
+/** The speaker's voltage at its peak, fed that line level */
 export const OUT_PEAK = 10
-/** How many times bigger the voltage comes out: 10 V / 2 mV */
-export const GAIN = OUT_PEAK / IN_PEAK
+/** How many times bigger the voltage comes out: 10 V / 1 V (said as × 10, +20 dB) */
+export const GAIN = OUT_PEAK / LINE_PEAK
 export const GAIN_DB = 20 * Math.log10(GAIN)
-/** The speaker's current at the peak */
+/** The speaker's current at that peak */
 export const PEAK_CURRENT = OUT_PEAK / LOAD
 /** What a transistor's base needs above its emitter before it lets anything through */
 export const VBE = 0.6
@@ -26,52 +30,27 @@ export const SWING_MAX = RAIL - 1
 /** A microphone preamp's input (a usual 2 kΩ): the microphone's power goes into it */
 export const MIC_INPUT_OHMS = 2000
 
-/** `one`: a transistor alone, pushing only (the transistor's step); then the three classes */
-export type AmpClass = 'one' | 'a' | 'b' | 'ab'
+export type AmpClass = 'a' | 'b' | 'ab'
 
 /**
  * The current through both transistors while nothing plays, amperes. Class A: half the peak
- * current, the least that keeps both open all the way round; class AB a usual 50 mA; one and B none.
+ * current, the least that keeps both open all the way round at line level; class AB a usual 50 mA;
+ * B none.
  */
-export const RESTING: Record<AmpClass, number> = { one: 0, a: PEAK_CURRENT / 2, b: 0, ab: 0.05 }
+export const RESTING: Record<AmpClass, number> = { a: PEAK_CURRENT / 2, b: 0, ab: 0.05 }
 
-/** What the last step can show: the amplifier pushed, or class B's notch */
-export type Distortion = 'clean' | 'rounded' | 'oneSided' | 'flat' | 'notch'
-
-/** How much harder the input is pushed for rounded and flat tops */
-const PUSH: Partial<Record<Distortion, number>> = { rounded: 1.4, flat: 2 }
-/** One side bending: the output's square, a share of it — its 2nd harmonic 6 % of the first */
-const BEND = 0.12
-
-/** The class the last step's shape is played in: class B for the notch, AB for the rest */
-export const classOf = (distortion: Distortion): AmpClass => (distortion === 'notch' ? 'b' : 'ab')
-
-/** What the amplifier should give at phase `r` (radians): the input × the gain (pushed harder for rounded and flat tops) */
-export function wantedAt(r: number, distortion: Distortion = 'clean'): number {
-  return (PUSH[distortion] ?? 1) * OUT_PEAK * Math.cos(r)
-}
+/** What the amplifier should give for a line voltage: 10 times bigger, upside down again */
+export const wantedFor = (line: number) => -GAIN * line
 
 /**
- * The speaker's voltage at phase `r` (radians; the microphone's voltage is IN_PEAK × cos r). A
- * transistor alone or two in class B open only past VBE — their drive is that much bigger, so the
- * peaks still reach OUT_PEAK — and give nothing in between (the notch); A and AB copy cleanly.
+ * The speaker's voltage for the voltage wanted. Two transistors in class B open only past VBE —
+ * their drive is that much bigger, so the peaks still reach what was wanted — and give nothing in
+ * between (the notch); A and AB copy it. None goes past SWING_MAX (the tops cut off: clipping).
  */
-export function outputAt(r: number, cls: AmpClass, distortion: Distortion = 'clean'): number {
-  if (cls === 'one' || cls === 'b') {
-    const drive = (OUT_PEAK + VBE) * Math.cos(r)
-    const open = Math.max(0, Math.abs(drive) - VBE)
-    return cls === 'one' ? (drive > 0 ? open : 0) : Math.sign(drive) * open
-  }
-  const w = wantedAt(r, distortion)
-  switch (distortion) {
-    // The transistors' curve bends as they near a side: the tops round off
-    case 'rounded':  return SWING_MAX * Math.tanh(w / SWING_MAX)
-    // One side bends more than the other (its average taken away: no steady voltage reaches the speaker)
-    case 'oneSided': return w - (BEND * (w * w - (OUT_PEAK * OUT_PEAK) / 2)) / OUT_PEAK
-    // No further than the sides: flat tops
-    case 'flat':     return clamp(w, -SWING_MAX, SWING_MAX)
-    default:         return w
-  }
+export function outputFor(wanted: number, cls: AmpClass): number {
+  if (cls !== 'b') return clamp(wanted, -SWING_MAX, SWING_MAX)
+  const drive = (wanted * (OUT_PEAK + VBE)) / OUT_PEAK
+  return clamp(Math.sign(drive) * Math.max(0, Math.abs(drive) - VBE), -SWING_MAX, SWING_MAX)
 }
 
 /**
@@ -85,12 +64,11 @@ export function transistorCurrents(out: number, resting: number): { upper: numbe
   return { upper: resting + speaker / 2, lower: resting - speaker / 2 }
 }
 
-/** Samples a cycle: a point every half degree, the last one (360°) the same as the first */
-export const SAMPLES = 720
-
-/** One cycle of the amplifier, a point every half degree (SAMPLES + 1 points) */
+/** One cycle of the power stage, a point every half degree (SAMPLES + 1 points) */
 export interface AmpCycle {
   cls: AmpClass
+  /** The preamp's gain knob, dB: the line level it is fed */
+  gainDb: number
   /** The speaker's voltage; what it should have been */
   out: Float64Array
   wanted: Float64Array
@@ -110,16 +88,19 @@ export interface AmpCycle {
   speakerMoved: Float64Array
 }
 
+/** The cycles made, by class and gain: a knob dragged through its range makes many, so only the last few are kept */
 const cycles = new Map<string, AmpCycle>()
+const KEPT = 24
 
-/** The amplifier over one cycle, in this class with this shape (made once, then kept). */
-export function ampCycle(cls: AmpClass, distortion: Distortion = 'clean'): AmpCycle {
-  const key = `${cls}:${distortion}`
+/** The power stage over one cycle, in this class, fed the preamp's output at this gain (line level if none is given). */
+export function ampCycle(cls: AmpClass, gainDb = LINE_GAIN): AmpCycle {
+  const key = `${cls}:${gainDb}`
   const kept = cycles.get(key)
   if (kept) return kept
+  const line = preampCycle(gainDb).out
   const n = SAMPLES + 1
   const c: AmpCycle = {
-    cls,
+    cls, gainDb,
     out: new Float64Array(n), wanted: new Float64Array(n),
     upper: new Float64Array(n), lower: new Float64Array(n),
     upperHeat: new Float64Array(n), lowerHeat: new Float64Array(n),
@@ -127,10 +108,10 @@ export function ampCycle(cls: AmpClass, distortion: Distortion = 'clean'): AmpCy
   }
   const step = TAU / SAMPLES
   for (let i = 0; i < n; i++) {
-    const r = i * step, out = outputAt(r, cls, distortion)
-    const { upper, lower } = cls === 'one' ? { upper: out / LOAD, lower: 0 } : transistorCurrents(out, RESTING[cls])
+    const wanted = wantedFor(line[i]), out = outputFor(wanted, cls)
+    const { upper, lower } = transistorCurrents(out, RESTING[cls])
     c.out[i] = out
-    c.wanted[i] = wantedAt(r, distortion)
+    c.wanted[i] = wanted
     c.upper[i] = upper
     c.lower[i] = lower
     c.upperHeat[i] = (RAIL - out) * upper
@@ -153,6 +134,7 @@ export function ampCycle(cls: AmpClass, distortion: Distortion = 'clean'): AmpCy
   // To and fro: the speaker's current has no average, but a sampled one leaves a trace of it
   const drift = spk / SAMPLES
   for (let i = 0; i < n; i++) c.speakerMoved[i] -= drift * i
+  if (cycles.size >= KEPT) cycles.clear()
   cycles.set(key, c)
   return c
 }
@@ -190,7 +172,7 @@ export function powersOf(c: AmpCycle): Powers {
   return {
     supply, speaker, heat: supply - speaker,
     silentHeat: 2 * RAIL * RESTING[c.cls],
-    microphone: (IN_PEAK * IN_PEAK) / 2 / MIC_INPUT_OHMS,
+    microphone: (MIC_PEAK * MIC_PEAK) / 2 / MIC_INPUT_OHMS,
   }
 }
 
@@ -216,8 +198,8 @@ export function harmonicsOf(table: Float64Array, count = 10): number[] {
   })
 }
 
-/** The harmonics an amplifier added, as a share of the first (THD: their powers added up, against the first's). */
+/** The harmonics an amplifier added, as a share of the first (THD: their powers added up, against the first's) — none for silence. */
 export function distortionOf(harmonics: readonly number[]): number {
   const added = harmonics.slice(1).reduce((sum, h) => sum + h * h, 0)
-  return Math.sqrt(added) / harmonics[0]
+  return harmonics[0] > 0 ? Math.sqrt(added) / harmonics[0] : 0
 }

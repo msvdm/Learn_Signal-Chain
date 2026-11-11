@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, currentFor, gainOf, gainResistorOf, levelsOf, ohmsText, timesOf, outputAt, preampCycle } from './preamp'
+import { COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, currentFor, gainOf, levelsOf, timesOf, outputAt, preampCycle } from './preamp'
 import { getHealth } from '../signal/levels'
 import { rad } from './wave'
 
-// The numbers Mic preamp's picture says (Deep dive, D46), judged as the canvas judges a signal
+// The numbers Analogue amplification's preamp says (Deep dive, D46), judged as the canvas judges a signal
 // (signal/levels.ts getHealth): a change that moves one of them changes a text — update both.
 
 const round1 = (db: number) => Math.round(db * 10) / 10
@@ -68,25 +68,7 @@ describe('the knob turned anywhere: where the canvas changes its verdict', () =>
     expect(gainOf(-5)).toBe(GAIN_MIN)
     expect(gainOf(95)).toBe(GAIN_MAX)
     expect(LINE_GAIN).toBe(54)
-  })
-})
-
-describe('the gain resistor, the knob', () => {
-  test('9 kΩ ÷ the gain resistor is the gain: 9 kΩ at 0 dB, 18 Ω at line level, 0.9 Ω at +80', () => {
-    expect(gainResistorOf(0)).toBeCloseTo(9000, 6)
-    expect(gainResistorOf(54)).toBeCloseTo(17.96, 2)
-    expect(gainResistorOf(80)).toBeCloseTo(0.9, 6)
-    for (const g of [0, 10, 37, 54, 72, 80]) expect(COLLECTOR_OHMS / gainResistorOf(g)).toBeCloseTo(timesOf(g), 6)
     expect(Math.round(timesOf(54))).toBe(501)
-  })
-
-  test('its value as the label writes it', () => {
-    expect(ohmsText(9000)).toEqual({ value: '9', kilo: true })
-    expect(ohmsText(gainResistorOf(10))).toEqual({ value: '2.85', kilo: true })
-    expect(ohmsText(gainResistorOf(20))).toEqual({ value: '900', kilo: false })
-    expect(ohmsText(gainResistorOf(54))).toEqual({ value: '18', kilo: false })
-    expect(ohmsText(gainResistorOf(72))).toEqual({ value: '2.3', kilo: false })
-    expect(ohmsText(gainResistorOf(80))).toEqual({ value: '0.9', kilo: false })
   })
 })
 

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Ear, Mic, Speaker, Zap } from 'lucide-react'
+import { AudioWaveform, Ear, Speaker, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -7,8 +7,7 @@ import type { SceneProps } from './scenes/painter'
 import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
-import { AmplifierScene } from './scenes/AmplifierScene'
-import { PreampScene } from './scenes/PreampScene'
+import { AmplificationScene } from './scenes/AmplificationScene'
 
 // Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -81,31 +80,19 @@ export const SUBJECTS: readonly Subject[] = [
     ],
   },
   {
-    id: 'preamp',
-    icon: Mic,
-    Scene: PreampScene,
-    steps: [
-      { id: 'weakSignal',    box: [-20, 340, 380, 590] },
-      { id: 'powerSupply',   box: [-20, 20, 760, 590] },
-      { id: 'transistor',    box: [-20, 20, 760, 650] },
-      { id: 'gainResistors', box: [-20, 20, 1290, 700] },
-      { id: 'capacitors',    box: [-20, 20, 1290, 700] },
-    ],
-  },
-  {
     id: 'amplification',
     icon: Zap,
-    Scene: AmplifierScene,
+    Scene: AmplificationScene,
     steps: [
-      { id: 'weakSignal',  box: [0, 330, 1360, 620] },
-      { id: 'powerSupply', box: [-220, 20, 1360, 790] },
-      { id: 'transistor',  box: [-220, 20, 1360, 790] },
-      { id: 'classA',      box: [-220, 20, 1360, 990] },
-      { id: 'classB',      box: [-220, 20, 1360, 990] },
-      { id: 'classAB',     box: [-220, 20, 1360, 990] },
-      { id: 'distortion',  box: [-220, 20, 1360, 1005] },
+      { id: 'weakSignal',  box: [120, 205, 345, 410] },
+      { id: 'powerSupply', box: [-10, 25, 520, 505] },
+      { id: 'transistor',  box: [-10, 25, 610, 505] },
+      { id: 'lineLevel',   box: [-10, 25, 875, 505] },
+      { id: 'pushPull',    box: [-10, 25, 1325, 510] },
+      { id: 'speaker',     box: [-10, 25, 1725, 510] },
+      { id: 'classes',     box: [-10, 25, 1725, 745] },
     ],
-    shapes: { step: 7, ids: ['clean', 'rounded', 'oneSided', 'flat', 'notch'] },
+    shapes: { step: 7, ids: ['classA', 'classB', 'classAB'] },
   },
 ]
 

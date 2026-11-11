@@ -1,49 +1,81 @@
 import { describe, expect, test } from 'bun:test'
-import { GAIN, GAIN_DB, LOAD, OUT_PEAK, PEAK_CURRENT, RAIL, RESTING, SAMPLES, SWING_MAX, VBE, ampCycle, at, classOf, distortionOf, harmonicsOf, meanCurrents, outputAt, powersOf, transistorCurrents } from './amp'
-import type { Distortion } from './amp'
+import { GAIN, GAIN_DB, LINE_PEAK, LOAD, OUT_PEAK, PEAK_CURRENT, RAIL, RESTING, SWING_MAX, VBE, ampCycle, at, distortionOf, harmonicsOf, meanCurrents, outputFor, powersOf, transistorCurrents, wantedFor } from './amp'
+import { LINE_GAIN, SAMPLES, preampCycle } from './preamp'
 import { rad } from './wave'
 
-// The numbers Analogue amplification's picture says (Deep dive, D46): a change that moves one of
-// them changes a text — update both, with the reason.
+// The numbers Analogue amplification's power stage says (Deep dive, D46): a change that moves one of
+// them changes a text — update both, with the reason. Its first stage, the preamp: preamp.test.ts.
+
+const round1 = (w: number) => Math.round(w * 10) / 10
+const thd = (c: ReturnType<typeof ampCycle>) => Math.round(distortionOf(harmonicsOf(c.out)) * 1000) / 10
 
 describe('the gain', () => {
-  test('±2 mV in, ±10 V out: 5000 times, 74 dB', () => {
-    expect(GAIN).toBeCloseTo(5000, 6)
-    expect(Math.round(GAIN_DB)).toBe(74)
+  test('line level in (±1 V), ±10 V out: 10 times, +20 dB', () => {
+    expect(LINE_PEAK).toBeCloseTo(1.002, 3)
+    expect(Math.round(GAIN)).toBe(10)
+    expect(Math.round(GAIN_DB)).toBe(20)
     expect(PEAK_CURRENT).toBeCloseTo(1.25, 9)
+  })
+
+  test('upside down again: the speaker moves as the microphone did (+2 mV → −1 V → +10 V)', () => {
+    expect(preampCycle(LINE_GAIN).out[0]).toBeCloseTo(-1.002, 3)
+    expect(wantedFor(-LINE_PEAK)).toBeCloseTo(OUT_PEAK, 9)
+    expect(ampCycle('a').out[0]).toBeCloseTo(10, 9)
+    expect(at(ampCycle('a').out, 180)).toBeCloseTo(-10, 9)
   })
 })
 
-describe('the output', () => {
+describe('the output, at line level', () => {
   test('class A and AB copy the input cleanly', () => {
     for (const deg of [0, 37, 90, 200, 300]) {
-      expect(outputAt(rad(deg), 'a')).toBeCloseTo(OUT_PEAK * Math.cos(rad(deg)), 9)
-      expect(outputAt(rad(deg), 'ab')).toBeCloseTo(OUT_PEAK * Math.cos(rad(deg)), 9)
+      expect(at(ampCycle('a').out, deg)).toBeCloseTo(OUT_PEAK * Math.cos(rad(deg)), 9)
+      expect(at(ampCycle('ab').out, deg)).toBeCloseTo(OUT_PEAK * Math.cos(rad(deg)), 9)
     }
   })
 
-  test('a transistor alone pushes only: the top half, nothing below 0', () => {
-    expect(outputAt(0, 'one')).toBeCloseTo(OUT_PEAK, 9)
-    expect(outputAt(Math.PI, 'one')).toBe(0)
-    expect(outputAt(rad(120), 'one')).toBe(0)
-  })
-
   test('class B reaches the same peaks, but gives nothing while the drive is under 0.6 V', () => {
-    expect(outputAt(0, 'b')).toBeCloseTo(OUT_PEAK, 9)
-    expect(outputAt(Math.PI, 'b')).toBeCloseTo(-OUT_PEAK, 9)
+    const b = ampCycle('b')
+    expect(at(b.out, 0)).toBeCloseTo(OUT_PEAK, 9)
+    expect(at(b.out, 180)).toBeCloseTo(-OUT_PEAK, 9)
     // The notch: ±3.2° around each crossing
     const half = (Math.acos(VBE / (OUT_PEAK + VBE)) * 180) / Math.PI
     expect(90 - half).toBeCloseTo(3.24, 2)
-    expect(outputAt(rad(88), 'b')).toBe(0)
-    expect(outputAt(rad(272), 'b')).toBe(0)
-    expect(outputAt(rad(85), 'b')).toBeGreaterThan(0)
+    expect(at(b.out, 88)).toBe(0)
+    expect(at(b.out, 272)).toBe(0)
+    expect(at(b.out, 85)).toBeGreaterThan(0)
+  })
+})
+
+describe('the gain knob before it: the stage follows the line level it is fed', () => {
+  test('+48 dB, half the line level: ±5 V, a quarter of the power', () => {
+    const c = ampCycle('ab', 48)
+    expect(c.out[0]).toBeCloseTo(5.012, 3)
+    expect(powersOf(c).speaker).toBeCloseTo(1.57, 2)
   })
 
-  test('flat tops stop a volt short of the sides; rounded tops never reach them', () => {
-    expect(outputAt(0, 'ab', 'flat')).toBe(SWING_MAX)
-    expect(outputAt(Math.PI, 'ab', 'flat')).toBe(-SWING_MAX)
-    for (let deg = 0; deg <= 360; deg += 5) expect(Math.abs(outputAt(rad(deg), 'ab', 'rounded'))).toBeLessThan(SWING_MAX)
+  test('+55 dB, a line level just hot: the tops are cut off a volt short of the sides', () => {
     expect(SWING_MAX).toBe(RAIL - 1)
+    for (const cls of ['a', 'b', 'ab'] as const) {
+      const c = ampCycle(cls, 55)
+      expect(c.wanted[0]).toBeCloseTo(11.22, 2)
+      expect(c.out[0]).toBe(SWING_MAX)
+      expect(at(c.out, 180)).toBe(-SWING_MAX)
+    }
+    expect(outputFor(30, 'a')).toBe(SWING_MAX)
+    expect(outputFor(-30, 'b')).toBe(-SWING_MAX)
+  })
+
+  test('+80 dB, the preamp itself clipping: flat tops at ±11 V nearly all the way round', () => {
+    const c = ampCycle('ab', 80)
+    let flat = 0
+    for (let i = 0; i < SAMPLES; i++) if (Math.abs(c.out[i]) === SWING_MAX) flat++
+    expect(flat / SAMPLES).toBeGreaterThan(0.95)
+  })
+
+  test('nothing in: nothing out, and only the resting current', () => {
+    const c = ampCycle('a', 0)
+    expect(Math.max(...c.out)).toBeCloseTo(0.02, 2)
+    expect(powersOf(c).supply).toBeCloseTo(15, 6)
   })
 })
 
@@ -78,8 +110,6 @@ describe('the transistors', () => {
 })
 
 describe('where the power goes, at ±10 V into 8 Ω', () => {
-  const round1 = (w: number) => Math.round(w * 10) / 10
-
   test('class A: 15 W from the supply, all the time — 6.25 W to the speaker, 8.75 W of heat', () => {
     const p = powersOf(ampCycle('a'))
     expect(p.supply).toBeCloseTo(15, 6)
@@ -106,40 +136,40 @@ describe('where the power goes, at ±10 V into 8 Ω', () => {
     expect(p.silentHeat).toBeCloseTo(1.2, 9)
   })
 
-  test('a transistor alone: 4.6 W, 3.0 W to the speaker', () => {
-    const p = powersOf(ampCycle('one'))
-    expect(round1(p.supply)).toBe(4.6)
-    expect(round1(p.speaker)).toBe(3)
-  })
-
   test('the microphone gives a billionth of a watt into a 2 kΩ preamp', () => {
     expect(powersOf(ampCycle('a')).microphone).toBeCloseTo(1e-9, 15)
+    expect(powersOf(ampCycle('a')).microphone.toFixed(9)).toBe('0.000000001')
   })
 
   test('the heat is the voltage across each transistor × its current', () => {
-    const c = ampCycle('ab')
-    let sum = 0
-    for (let i = 0; i < SAMPLES; i++) sum += c.upperHeat[i] + c.lowerHeat[i]
-    expect(sum / SAMPLES).toBeCloseTo(powersOf(c).heat, 6)
+    for (const gain of [LINE_GAIN, 60]) {
+      const c = ampCycle('ab', gain)
+      let sum = 0
+      for (let i = 0; i < SAMPLES; i++) sum += c.upperHeat[i] + c.lowerHeat[i]
+      expect(sum / SAMPLES).toBeCloseTo(powersOf(c).heat, 6)
+    }
   })
 })
 
 describe('the charges moving', () => {
   test('along a transistor’s wire: 0 at 0°, all of the cycle’s at 360°, never back', () => {
-    for (const cls of ['one', 'a', 'b', 'ab'] as const) {
-      const c = ampCycle(cls)
-      expect(c.upperMoved[0]).toBe(0)
-      expect(c.upperMoved[SAMPLES]).toBeCloseTo(1, 9)
-      for (let i = 1; i <= SAMPLES; i++) expect(c.upperMoved[i]).toBeGreaterThan(c.upperMoved[i - 1] - 1e-12)
+    for (const cls of ['a', 'b', 'ab'] as const) {
+      for (const gain of [LINE_GAIN, 70]) {
+        const c = ampCycle(cls, gain)
+        expect(c.upperMoved[0]).toBe(0)
+        expect(c.upperMoved[SAMPLES]).toBeCloseTo(1, 9)
+        for (let i = 1; i <= SAMPLES; i++) expect(c.upperMoved[i]).toBeGreaterThan(c.upperMoved[i - 1] - 1e-12)
+      }
     }
-    expect(ampCycle('one').lowerMoved[SAMPLES]).toBe(0)
   })
 
   test('to and fro on the speaker’s: back where they were after a cycle', () => {
-    for (const d of ['clean', 'oneSided', 'flat', 'notch'] as const) {
-      const c = ampCycle(classOf(d), d)
-      expect(c.speakerMoved[0]).toBe(0)
-      expect(c.speakerMoved[SAMPLES]).toBeCloseTo(0, 9)
+    for (const cls of ['a', 'b', 'ab'] as const) {
+      for (const gain of [10, LINE_GAIN, 60, 80]) {
+        const c = ampCycle(cls, gain)
+        expect(c.speakerMoved[0]).toBe(0)
+        expect(c.speakerMoved[SAMPLES]).toBeCloseTo(0, 9)
+      }
     }
   })
 
@@ -149,35 +179,31 @@ describe('the charges moving', () => {
   })
 })
 
-describe('the harmonics', () => {
-  const thd = (d: Distortion) => distortionOf(harmonicsOf(ampCycle(classOf(d), d).out))
-
+describe('the sines in the output', () => {
   test('a clean copy has only its first: 10 V', () => {
     const h = harmonicsOf(ampCycle('ab').out)
     expect(h[0]).toBeCloseTo(10, 6)
     for (const x of h.slice(1)) expect(x).toBeLessThan(1e-6)
-    expect(thd('clean')).toBeLessThan(1e-6)
+    expect(thd(ampCycle('ab'))).toBe(0)
   })
 
-  test('both sides bending alike (rounded, flat, the notch) add only the odd harmonics', () => {
-    for (const d of ['rounded', 'flat', 'notch'] as const) {
-      const h = harmonicsOf(ampCycle(classOf(d), d).out)
+  test('both sides bending alike (the notch, flat tops) add only the odd harmonics', () => {
+    for (const c of [ampCycle('b'), ampCycle('ab', 60)]) {
+      const h = harmonicsOf(c.out)
       for (const even of [1, 3, 5, 7, 9]) expect(h[even]).toBeLessThan(1e-6)
       expect(h[2]).toBeGreaterThan(0.1)
     }
   })
 
-  test('one side bending adds the 2nd alone: 6 % of the first', () => {
-    const h = harmonicsOf(ampCycle('ab', 'oneSided').out)
-    expect(h[1] / h[0]).toBeCloseTo(0.06, 6)
-    for (const x of h.slice(2)) expect(x).toBeLessThan(1e-6)
+  test('how much each adds: the notch 3.3 %, flat tops 0.6 % at +55 dB, 5.4 % at +56, 20.8 % at +60', () => {
+    expect(thd(ampCycle('b'))).toBe(3.3)
+    expect(thd(ampCycle('ab', 55))).toBe(0.6)
+    expect(thd(ampCycle('ab', 56))).toBe(5.4)
+    expect(thd(ampCycle('ab', 60))).toBe(20.8)
   })
 
-  test('how much each adds: the notch 3.3 %, one side 6.0 %, rounded 9.7 %, flat 20.9 %', () => {
-    expect(Math.round(thd('notch') * 1000) / 10).toBe(3.3)
-    expect(Math.round(thd('oneSided') * 1000) / 10).toBe(6)
-    expect(Math.round(thd('rounded') * 1000) / 10).toBe(9.7)
-    expect(Math.round(thd('flat') * 1000) / 10).toBe(20.9)
+  test('silence has none', () => {
+    expect(distortionOf([0, 0, 0])).toBe(0)
   })
 })
 
