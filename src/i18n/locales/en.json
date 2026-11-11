@@ -675,7 +675,8 @@
     "subjects": {
       "acoustic": "Acoustic propagation and perception",
       "transducer": "Transducer and speaker",
-      "complex": "Complex waves"
+      "complex": "Complex waves",
+      "amplification": "Analogue amplification"
     },
     "steps": {
       "string": "String",
@@ -694,7 +695,14 @@
       "addingUp": "Adding them up",
       "thirdSine": "A third sine",
       "moreSines": "Ten sines, in the air",
-      "guitar": "A real guitar: low E"
+      "guitar": "A real guitar: low E",
+      "weakSignal": "A weak signal",
+      "powerSupply": "Energy from the wall",
+      "transistor": "The transistor",
+      "classA": "Class A: always open",
+      "classB": "Class B: push and pull",
+      "classAB": "Class AB: a little open",
+      "distortion": "Distortion: new harmonics"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -710,7 +718,12 @@
       "square": "Square",
       "triangle": "Triangle",
       "sameSize": "All the same size",
-      "quietFirst": "Quiet first sine"
+      "quietFirst": "Quiet first sine",
+      "clean": "Clean",
+      "rounded": "Rounded tops",
+      "oneSided": "One side bends",
+      "flat": "Flat tops",
+      "notch": "Notch at zero"
     },
     "credit": "Credits",
     "credits": {
@@ -763,7 +776,50 @@
       "squareWave": "Square wave",
       "triangleWave": "Triangle wave",
       "recipe": "The recipe: how big each sine is",
-      "inTheAir": "The same shape in the air"
+      "inTheAir": "The same shape in the air",
+      "fromMicrophone": "From the microphone",
+      "tooWeak": "±2 mV is far too weak: the cone does not move",
+      "zeroV": "0 V",
+      "wallSocket": "From the wall socket",
+      "powerSupply": "Power supply",
+      "plus12": "+12 V",
+      "minus12": "−12 V",
+      "waiting": "Steady: energy waiting to be used",
+      "voltageGain": "Voltage × {gain} (+{db} dB)",
+      "transistor": "Transistor",
+      "pushes": "Pushes, from the + side",
+      "pulls": "Pulls, to the − side",
+      "base": "Base: a small current steers it",
+      "bigCurrent": "A big current, from the + side",
+      "toSpeaker": "To the speaker",
+      "volts": "V",
+      "amps": "A",
+      "watts": "{w} W",
+      "db": "dB",
+      "oneWay": "It opens one way only: the speaker gets the top half",
+      "classA": "Both always open: current flows even in silence — and turns into heat",
+      "classB": "Each opens for its own half only: nothing flows in silence",
+      "classBNotch": "But each needs {v} before it opens: a notch at zero",
+      "classAB": "Both a little open: no notch, and little heat in silence",
+      "restingCurrent": "Resting current: {a}",
+      "heatSink": "Heat sink",
+      "powerTitle": "Power at full volume (±10 V into the speaker)",
+      "fromSupply": "From the power supply",
+      "intoSpeaker": "To the speaker",
+      "heat": "Heat",
+      "reaches": "{pct} % reaches the speaker",
+      "silentHeat": "In silence: {w} W of heat",
+      "microphonePower": "From the microphone: about 0.000000001 W — it only steers",
+      "zoom": "Around 0 V, 10 times larger",
+      "notch": "The notch",
+      "harmonics": "The sines in the output",
+      "newSines": "New sines: {pct} % of the sound",
+      "cleanCopy": "A clean copy: only the first sine",
+      "roundedTops": "Pushed harder: the transistors bend near the sides — the tops round off",
+      "oneSide": "One side bends more than the other: a 2nd harmonic is added",
+      "flatTops": "Too loud: nothing gets past ±{v} — the tops are cut off (clipping)",
+      "notchAtZero": "Class B: nothing comes out near zero — new sines, even when quiet",
+      "shouldGive": "What it should give"
     }
   }
 }

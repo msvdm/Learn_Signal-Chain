@@ -34,7 +34,7 @@ const TEN_STEP = 5
 /** The guitar's step: every part takes the guitar's recipe */
 const GUITAR_STEP = 6
 /** Each shape's recipe (step 5's) */
-const RECIPES: Record<ShapeId, Recipe> = {
+const RECIPES: Partial<Record<ShapeId, Recipe>> = {
   sawtooth: SAWTOOTH, square: SQUARE, triangle: TRIANGLE, sameSize: SAME_SIZE, quietFirst: QUIET_FIRST,
 }
 /** The shape ten sines of it come close to, drawn dashed behind their sum (none for the others) */
@@ -63,7 +63,7 @@ const atStep = <T,>(list: readonly T[], step: number) => list[Math.min(step, lis
 const countAt = (step: number) => atStep(COUNT, step)
 /** Steps 1 to 4 are the sawtooth's first sines, 5 the shape picked, 6 the guitar's */
 const recipeAt = (step: number, shape: ShapeId | undefined): Recipe =>
-  step >= GUITAR_STEP ? GUITAR_LOW_E : step === TEN_STEP && shape ? RECIPES[shape] : SAWTOOTH
+  step >= GUITAR_STEP ? GUITAR_LOW_E : step === TEN_STEP && shape ? RECIPES[shape] ?? SAWTOOTH : SAWTOOTH
 
 const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
 const sumX   = (deg: number) => SUM_X + (GRAPH_W * deg) / 360

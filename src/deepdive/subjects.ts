@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Ear, Speaker } from 'lucide-react'
+import { AudioWaveform, Ear, Speaker, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -7,6 +7,7 @@ import type { SceneProps } from './scenes/painter'
 import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
+import { AmplifierScene } from './scenes/AmplifierScene'
 
 // Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -77,6 +78,21 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'playbackHead', box: [900, 820, 1310, 1138] },
       { id: 'speaker',      box: [1010, 492, 1410, 850] },
     ],
+  },
+  {
+    id: 'amplification',
+    icon: Zap,
+    Scene: AmplifierScene,
+    steps: [
+      { id: 'weakSignal',  box: [0, 330, 1360, 620] },
+      { id: 'powerSupply', box: [-220, 20, 1360, 790] },
+      { id: 'transistor',  box: [-220, 20, 1360, 790] },
+      { id: 'classA',      box: [-220, 20, 1360, 990] },
+      { id: 'classB',      box: [-220, 20, 1360, 990] },
+      { id: 'classAB',     box: [-220, 20, 1360, 990] },
+      { id: 'distortion',  box: [-220, 20, 1360, 1005] },
+    ],
+    shapes: { step: 7, ids: ['clean', 'rounded', 'oneSided', 'flat', 'notch'] },
   },
 ]
 
