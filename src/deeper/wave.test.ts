@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { AIR_WAVELENGTH, GUITAR_LOW_E, HEADS_APART, K, REEL_R, TAPE_WAVELENGTH, SAWTOOTH, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, playbackVoltage, rad, reelTurn, sawtooth, scatter, stringSwing, swing, tapeMagnet, wrapPhase } from './wave'
+import { AIR_WAVELENGTH, GUITAR_LOW_E, HEADS_APART, K, QUIET_FIRST, REEL_R, SAME_SIZE, SQUARE, TAPE_WAVELENGTH, SAWTOOTH, TRIANGLE, SWING, WAVELENGTH, cameraFor, circlesOnCircles, complexSwing, complexWave, curvePath, harmonicSwing, playbackVoltage, rad, reelTurn, sawtooth, scatter, squareWave, stringSwing, swing, tapeMagnet, triangleWave, wrapPhase } from './wave'
+import type { Recipe } from './wave'
 import type { Box } from './wave'
 
 describe('the wave the particles ride', () => {
@@ -152,6 +153,56 @@ describe('a complex wave from sines', () => {
         const here = d + complexSwing(rad(deg), d, SAWTOOTH)
         const next = d + 0.5 + complexSwing(rad(deg), d + 0.5, SAWTOOTH)
         expect(next).toBeGreaterThan(here)
+      }
+    }
+  })
+})
+
+describe('the shapes to pick', () => {
+  const peakOf = (recipe: Recipe) => {
+    let peak = 0
+    for (let deg = 0; deg <= 360; deg += 0.25) peak = Math.max(peak, Math.abs(complexWave(rad(deg), recipe)))
+    return peak
+  }
+  const reachOf = (recipe: Recipe) => recipe.reduce((sum, { size }) => sum + size, 0)
+  const OTHERS = { SQUARE, TRIANGLE, SAME_SIZE, QUIET_FIRST }
+
+  test('each is ten sines, and fits where the sawtooth does: its sum, its circles on circles', () => {
+    for (const recipe of Object.values(OTHERS)) {
+      expect(recipe.length).toBe(10)
+      expect(peakOf(recipe)).toBeLessThanOrEqual(peakOf(SAWTOOTH))
+      expect(reachOf(recipe)).toBeLessThanOrEqual(reachOf(SAWTOOTH))
+    }
+    // All the same size: a fifth each, their sum 7.6 sines at its peak
+    expect(peakOf(SAME_SIZE)).toBeCloseTo(0.2 * 7.596, 2)
+  })
+
+  test("a square's and a triangle's are their odd sines only, and ten come close to their shape", () => {
+    for (const recipe of [SQUARE, TRIANGLE]) for (const n of [2, 4, 6, 8, 10]) expect(recipe[n - 1].size).toBe(0)
+    expect(TRIANGLE[2].size).toBeCloseTo(1 / 9, 9)
+    // Away from the square's jumps, within its 9 % overshoot; the triangle (no jumps) within 0.05 at its corners: the sines after the 10th
+    for (const deg of [40, 90, 140, 220, 270, 320]) {
+      expect(Math.abs(complexWave(rad(deg), SQUARE) - squareWave(rad(deg)))).toBeLessThan(0.08)
+    }
+    for (let deg = 0; deg <= 360; deg += 5) {
+      expect(Math.abs(complexWave(rad(deg), TRIANGLE) - triangleWave(rad(deg)))).toBeLessThan(0.06)
+    }
+    expect(triangleWave(rad(90))).toBeCloseTo((Math.PI * Math.PI) / 8, 9)
+    expect(triangleWave(rad(270))).toBeCloseTo(-(Math.PI * Math.PI) / 8, 9)
+  })
+
+  test('the quiet first sine changes only the first: the 2nd harmonic is then the biggest', () => {
+    expect(QUIET_FIRST[0].size).toBe(0.25)
+    for (let n = 2; n <= 10; n++) expect(QUIET_FIRST[n - 1]).toEqual(SAWTOOTH[n - 1])
+    expect(Math.max(...QUIET_FIRST.map((s) => s.size))).toBe(QUIET_FIRST[1].size)
+  })
+
+  test('in the air, no particle passes the one in front of it, whatever the shape', () => {
+    for (const recipe of Object.values(OTHERS)) {
+      for (let deg = 0; deg < 360; deg += 5) {
+        for (let d = 0; d < AIR_WAVELENGTH; d += 1) {
+          expect(d + 0.5 + complexSwing(rad(deg), d + 0.5, recipe)).toBeGreaterThan(d + complexSwing(rad(deg), d, recipe))
+        }
       }
     }
   })

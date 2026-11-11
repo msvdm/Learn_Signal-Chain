@@ -693,12 +693,10 @@
       "secondSine": "A second sine",
       "addingUp": "Adding them up",
       "thirdSine": "A third sine",
-      "moreSines": "More sines: a sawtooth",
-      "complexInAir": "The complex wave in the air",
+      "moreSines": "Ten sines, in the air",
       "guitar": "A real guitar: low E"
     },
     "stepsLabel": "Steps",
-    "step": "Step {n} of {count}",
     "back": "Previous step",
     "next": "Next step",
     "play": "Play",
@@ -706,6 +704,14 @@
     "phase": "Phase",
     "ofCycle": "{pct}% of a cycle",
     "jump": "Jump to",
+    "shape": "Wave shape",
+    "shapes": {
+      "sawtooth": "Sawtooth",
+      "square": "Square",
+      "triangle": "Triangle",
+      "sameSize": "All the same size",
+      "quietFirst": "Quiet first sine"
+    },
     "credit": "Credits",
     "credits": {
       "ear": "Ear adapted from “{work}” by Lars Chittka and Axel Brockmann, {licence}. Simplified and recoloured."
@@ -754,6 +760,8 @@
       "sinesAddedUp": "{n} sines added up",
       "guitarLowE": "A real guitar: low E (82 Hz), measured",
       "sawtooth": "Sawtooth wave",
+      "squareWave": "Square wave",
+      "triangleWave": "Triangle wave",
       "recipe": "The recipe: how big each sine is",
       "inTheAir": "The same shape in the air"
     }

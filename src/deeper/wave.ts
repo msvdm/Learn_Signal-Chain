@@ -80,7 +80,7 @@ export function wrapPhase(deg: number): number {
 
 // ── Complex waves: sines added up ───────────────────────────────────────────
 
-/** One sine of a recipe: how big it is, as a share of the fundamental's, and where it starts (radians) */
+/** One sine of a recipe: how big it is, as a share of a sawtooth's first sine, and where it starts (radians) */
 export interface Sine { size: number; phase: number }
 
 /**
@@ -89,8 +89,44 @@ export interface Sine { size: number; phase: number }
  */
 export type Recipe = readonly Sine[]
 
+/** Ten sines, the n-th `size(n)` as big as the first sine of a sawtooth, starting `phase(n)` ahead */
+const recipeOf = (size: (n: number) => number, phase: (n: number) => number = () => 0): Recipe =>
+  Array.from({ length: 10 }, (_, i) => ({ size: size(i + 1), phase: phase(i + 1) }))
+
 /** A sawtooth's: every sine, the n-th 1/n as big, all starting together */
-export const SAWTOOTH: Recipe = Array.from({ length: 10 }, (_, i) => ({ size: 1 / (i + 1), phase: 0 }))
+export const SAWTOOTH: Recipe = recipeOf((n) => 1 / n)
+
+// The other shapes the teacher can pick (Complex waves, its ten sines): sizes as shares of the
+// sawtooth's first sine, so every shape is drawn at the same scale and fits where the sawtooth does.
+
+/** A square wave's: only the odd sines, the n-th 1/n as big — ten come close to ±π/4 */
+export const SQUARE: Recipe = recipeOf((n) => (n % 2 ? 1 / n : 0))
+
+/**
+ * A triangle wave's: only the odd sines, the n-th 1/n² as big, every other one upside down (the
+ * 3rd, the 7th: half a turn ahead) — ten come close to a triangle reaching π²/8 at 90°
+ */
+export const TRIANGLE: Recipe = recipeOf((n) => (n % 2 ? 1 / (n * n) : 0), (n) => (n % 4 === 3 ? Math.PI : 0))
+
+/**
+ * Every sine the same size, all starting together — at a fifth of the sawtooth's first, so their
+ * sum (it peaks at 7.6 sines just after 0°) stays within the picture
+ */
+export const SAME_SIZE: Recipe = recipeOf(() => 0.2)
+
+/** A sawtooth with its first sine a quarter as big: the 2nd harmonic is then the biggest */
+export const QUIET_FIRST: Recipe = recipeOf((n) => (n === 1 ? 0.25 : 1 / n))
+
+/** The square wave the square's sines come close to, at phase r (radians) */
+export function squareWave(r: number): number {
+  const w = ((r % TAU) + TAU) % TAU
+  return w === 0 || w === Math.PI ? 0 : w < Math.PI ? Math.PI / 4 : -Math.PI / 4
+}
+/** The triangle wave the triangle's sines come close to, at phase r (radians) */
+export function triangleWave(r: number): number {
+  const w = ((r % TAU) + TAU) % TAU, top = (Math.PI * Math.PI) / 8
+  return w < Math.PI / 2 ? top * (w / (Math.PI / 2)) : w < (3 * Math.PI) / 2 ? top * (2 - w / (Math.PI / 2)) : top * (w / (Math.PI / 2) - 4)
+}
 
 /**
  * A real guitar's low E (82 Hz), measured from a recording (FreePats' electric guitar sampled

@@ -1,6 +1,7 @@
 import { useLayoutEffect } from 'react'
 import type { RefObject } from 'react'
 import type { Dot } from '../wave'
+import type { ShapeId } from '../subjects'
 
 // How a Dive deeper scene moves (D46): its painter, made from its picture once it is in the page
 // and handed to the player, which calls it on every picture — outside React.
@@ -8,13 +9,15 @@ import type { Dot } from '../wave'
 /**
  * Draws a scene at a phase (degrees, 0 … 360) — called by the player on every picture, outside
  * React (movement never goes through React). `step`: the step shown; what a later step adds is not
- * on screen, so it is not moved.
+ * on screen, so it is not moved. `shape`: the shape picked, at the step that has them.
  */
-export type Painter = (deg: number, step: number) => void
+export type Painter = (deg: number, step: number, shape?: ShapeId) => void
 
 export interface SceneProps {
   /** The step shown (from 1): its parts and every earlier step's are on screen */
   step: number
+  /** The shape picked, at the step that has them (`Subject.shapes`) */
+  shape?: ShapeId
   /** The scene hands the player its painter once its picture is in the page (null when it leaves) */
   onPainter: (painter: Painter | null) => void
 }

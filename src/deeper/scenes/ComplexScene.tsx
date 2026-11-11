@@ -1,7 +1,8 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { GUITAR_LOW_E, SAWTOOTH, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, stringSwing } from '../wave'
+import { GUITAR_LOW_E, QUIET_FIRST, SAME_SIZE, SAWTOOTH, SQUARE, TRIANGLE, circlesOnCircles, clamp, complexSwing, complexWave, curvePath, harmonicSwing, rad, scatter, squareWave, stringSwing, triangleWave } from '../wave'
 import type { Recipe } from '../wave'
+import type { ShapeId } from '../subjects'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
@@ -11,10 +12,11 @@ import { Air, Label, Step } from './sceneParts'
 // the left the string, and beside it each harmonic alone, one below the other — a circle turning
 // and its sine: the fundamental (step 1), the 2nd (2), the 3rd (4), the 4th to the 10th (5). On the
 // right what they make together (from step 3): the circles riding on each other, their sum, and the
-// recipe — how big each sine is. Then that shape in the air from a speaker cone (6), and last a
-// real guitar's low E, measured (7): every part takes its recipe. The string vibrates in as many
-// harmonics as are added up, and grows down beside the rows reached. The phase is the
-// fundamental's: everything is one function of it.
+// recipe — how big each sine is — and with ten (5) that shape in the air from a speaker cone. Steps
+// 1 to 4 are a sawtooth's first sines; at 5 every part takes the shape picked (a sawtooth, a square,
+// a triangle, all the same size, a quiet first sine — buttons in the steps' row), and last a real guitar's low E, measured (6).
+// The string vibrates in as many harmonics as are added up, and grows down beside the rows
+// reached. The phase is the fundamental's: everything is one function of it.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
 /** The first sine's radius: every other sine is a share of it (its size in the recipe) */
@@ -26,9 +28,21 @@ const ROW_Y = [130, 290, 395, 470, 526, 582, 638, 694, 750, 806]
 /** The step each harmonic's row comes in */
 const ROW_STEP = [1, 2, 4, 5, 5, 5, 5, 5, 5, 5]
 /** How many harmonics are added up at each step: the string's, the circles', the recipe's */
-const COUNT = [1, 2, 2, 3, SINES, SINES, SINES]
-/** The guitar's step: from it on, every part takes the guitar's recipe instead of the sawtooth's */
-const GUITAR_STEP = 7
+const COUNT = [1, 2, 2, 3, SINES, SINES]
+/** The step of ten sines, the shapes and the air */
+const TEN_STEP = 5
+/** The guitar's step: every part takes the guitar's recipe */
+const GUITAR_STEP = 6
+/** Each shape's recipe (step 5's) */
+const RECIPES: Record<ShapeId, Recipe> = {
+  sawtooth: SAWTOOTH, square: SQUARE, triangle: TRIANGLE, sameSize: SAME_SIZE, quietFirst: QUIET_FIRST,
+}
+/** The shape ten sines of it come close to, drawn dashed behind their sum (none for the others) */
+const IDEALS: Partial<Record<ShapeId, { wave: (r: number) => number; label: 'sawtooth' | 'squareWave' | 'triangleWave' }>> = {
+  sawtooth: { wave: (r) => (Math.PI - r) / 2, label: 'sawtooth' },
+  square:   { wave: squareWave, label: 'squareWave' },
+  triangle: { wave: triangleWave, label: 'triangleWave' },
+}
 /** What they make together: the circles' first centre, the sum's graph, the recipe's bars */
 const CHAIN_X = 740, CHAIN_Y = 300, SUM_X = 960, SUM_Y = 300
 const BAR_X = 966, BAR_STEP = 36, BAR_W = 22, BAR_BOTTOM = 560, BAR_H = 80
@@ -39,7 +53,7 @@ const CONE_X = 700, AIR_FROM = 712, AIR_TO = 1360, AIR_Y = 690, AIR_H = 110, SHA
  * how far its first harmonic swings
  */
 const STRING_X = -50, STRING_TOP = 60, STRING_SWING = 38
-const STRING_BOTTOM = [205, 335, 335, 425, 826, 826, 826]
+const STRING_BOTTOM = [205, 335, 335, 425, 826, 826]
 /** The string is drawn 100 units long, stretched to its length (`lsc-dd-grow` glides it) */
 const STRING_UNITS = 100, STRING_POINTS = 100
 
@@ -47,7 +61,9 @@ const AIR_DOTS = scatter(23, 520, { x: AIR_FROM, y: AIR_Y, w: AIR_TO - AIR_FROM,
 
 const atStep = <T,>(list: readonly T[], step: number) => list[Math.min(step, list.length) - 1]
 const countAt = (step: number) => atStep(COUNT, step)
-const recipeAt = (step: number): Recipe => (step >= GUITAR_STEP ? GUITAR_LOW_E : SAWTOOTH)
+/** Steps 1 to 4 are the sawtooth's first sines, 5 the shape picked, 6 the guitar's */
+const recipeAt = (step: number, shape: ShapeId | undefined): Recipe =>
+  step >= GUITAR_STEP ? GUITAR_LOW_E : step === TEN_STEP && shape ? RECIPES[shape] : SAWTOOTH
 
 const graphX = (deg: number) => GRAPH_X + (GRAPH_W * deg) / 360
 const sumX   = (deg: number) => SUM_X + (GRAPH_W * deg) / 360
@@ -56,6 +72,20 @@ const radiusOf = (n: number, recipe: Recipe) => UNIT * recipe[n - 1].size
 const rowGraph = (n: number, recipe: Recipe) => (deg: number) =>
   ROW_Y[n - 1] - radiusOf(n, recipe) * Math.sin(n * rad(deg) + recipe[n - 1].phase)
 const sumOf = (recipe: Recipe, count: number) => (deg: number) => SUM_Y - UNIT * complexWave(rad(deg), recipe, count)
+
+/**
+ * A shape over one cycle on the sum's graph, from its axis and back to it: its jumps straight up
+ * and down (a point every 2°, and either side of 0°, 180° and 360°)
+ */
+function idealPath(wave: (r: number) => number): string {
+  const at = (deg: number) => `${sumX(deg).toFixed(1)} ${(SUM_Y - UNIT * wave(rad(deg))).toFixed(1)}`
+  let path = `M${SUM_X} ${SUM_Y}`
+  for (let d = 0; d <= 360; d += 2) {
+    const edge = d === 0 ? [1e-6] : d === 180 ? [180 - 1e-6, 180 + 1e-6] : d === 360 ? [360 - 1e-6] : [d]
+    for (const e of edge) path += ` L${at(e)}`
+  }
+  return `${path} L${sumX(360).toFixed(1)} ${SUM_Y}`
+}
 
 /** A line from one point to another */
 function line(el: SVGElement, x1: number, y1: number, x2: number, y2: number) {
@@ -92,13 +122,13 @@ function makePainter(find: Finder): Painter {
   })
   const rings = find.all('rings'), arms = find.all('arms')
   const tip = find('sumTip'), reach = find('sumReach'), trace = find('sumTrace'), dot = find('sumDot')
-  const cone = find('cone'), shape = find('shape')
+  const cone = find('cone'), airShape = find('shape')
   const air = find.dots('air', AIR_DOTS, 1.8).map((el, i) => ({ el, x: AIR_DOTS[i].x }))
   for (const { el } of air) el.setAttribute('fill', INK)
 
-  return (deg, step) => {
+  return (deg, step, shape) => {
     const r = rad(deg), whole = Math.round(deg), x = graphX(deg)
-    const count = countAt(step), recipe = recipeAt(step)
+    const count = countAt(step), recipe = recipeAt(step, shape)
 
     // The string: in as many harmonics as are added up — and, while two, each one alone
     string.setAttribute('d', stringPath((along) => stringSwing(r, along, recipe, count)))
@@ -135,11 +165,11 @@ function makePainter(find: Finder): Painter {
     }
 
     // The cone moves in that shape, and the air carries it away
-    if (step >= 6) {
+    if (step >= TEN_STEP) {
       const push = complexSwing(r, 0, recipe)
       cone.setAttribute('d', `M651 725 L${(CONE_X + push).toFixed(1)} 689 L${(CONE_X + push).toFixed(1)} 801 L651 765 Z`)
       for (const p of air) put(p.el, 'cx', clamp(p.x + complexSwing(r, p.x - CONE_X, recipe), AIR_FROM - 4, AIR_TO + 2))
-      shape.setAttribute('d', shapePath(r, recipe))
+      airShape.setAttribute('d', shapePath(r, recipe))
     }
   }
 }
@@ -159,8 +189,9 @@ function Axes({ x, y, h }: { x: number; y: number; h: number }) {
 
 /** One harmonic alone: its circle, turning n times as fast, and its sine beside it */
 function Harmonic({ n, name, recipe }: { n: number; name: string; recipe: Recipe }) {
-  // Its label and axes keep the sawtooth's place: the row stays put when the guitar's sizes come in
-  const y = ROW_Y[n - 1], room = radiusOf(n, SAWTOOTH), radius = radiusOf(n, recipe), big = n === 1
+  // Its label and axes keep the sawtooth's place, the row staying put when another shape comes in —
+  // further out only for a sine bigger than the sawtooth's (all the same size: the 6th to the 10th)
+  const radius = radiusOf(n, recipe), y = ROW_Y[n - 1], room = Math.max(radiusOf(n, SAWTOOTH), radius), big = n === 1
   return (
     <>
       <Label at={[GRAPH_X + 8, y - room - (big ? 18 : 8)]}>{name}</Label>
@@ -177,17 +208,19 @@ function Harmonic({ n, name, recipe }: { n: number; name: string; recipe: Recipe
   )
 }
 
-export function ComplexScene({ step, onPainter }: SceneProps) {
+export function ComplexScene({ step, shape, onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
   const { t, fmt } = useTranslation()
   const l = t.deeper.labels
-  const count = countAt(step), recipe = recipeAt(step), guitar = step >= GUITAR_STEP
-  // The guitar's harmonics are not "half as big", "a third as big": only their numbers then
+  const count = countAt(step), recipe = recipeAt(step, shape), guitar = step >= GUITAR_STEP
+  const ideal = step === TEN_STEP && shape ? IDEALS[shape] : undefined
+  // "Half as big", "a third as big" are the sawtooth's: another shape's harmonics only their numbers
+  const sawtooth = recipe === SAWTOOTH
   const nameOf = (n: number) =>
     n === 1 ? l.fundamental
-    : n === 2 && !guitar ? l.secondHarmonic
-    : n === 3 && !guitar ? l.thirdHarmonic
+    : n === 2 && sawtooth ? l.secondHarmonic
+    : n === 3 && sawtooth ? l.thirdHarmonic
     : fmt(l.nthHarmonic, { n: String(n) })
 
   return (
@@ -255,15 +288,18 @@ export function ComplexScene({ step, onPainter }: SceneProps) {
         })}
       </Step>
 
-      {/* With ten: the sawtooth the sum comes close to (not the guitar's) */}
-      <Step n={5} until={GUITAR_STEP - 1} step={step}>
-        <path d={`M${SUM_X} ${SUM_Y} V${SUM_Y - (UNIT * Math.PI) / 2} L${SUM_X + GRAPH_W} ${SUM_Y + (UNIT * Math.PI) / 2} V${SUM_Y}`}
-          fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
-        <Label at={[SUM_X + GRAPH_W, 432]} anchor="end">{l.sawtooth}</Label>
+      {/* With ten: the shape the sum comes close to (a sawtooth, a square, a triangle) */}
+      <Step n={TEN_STEP} until={TEN_STEP} step={step}>
+        {ideal && (
+          <>
+            <path d={idealPath(ideal.wave)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="5 4" />
+            <Label at={[SUM_X + GRAPH_W, 432]} anchor="end">{l[ideal.label]}</Label>
+          </>
+        )}
       </Step>
 
       {/* The complex wave in the air, lower right */}
-      <Step n={6} step={step}>
+      <Step n={TEN_STEP} step={step}>
         <Air id="lsc-dd-air-complex" x={AIR_FROM} y={AIR_Y} w={AIR_TO - AIR_FROM} h={AIR_H} r={55} />
         <g data-p="air" mask="url(#lsc-dd-air-complex)" />
         <rect x={624} y={719} width={27} height={52} rx={3} fill={PART_3} />

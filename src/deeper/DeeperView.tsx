@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ChevronLeft, ChevronRight, Info, Pause, Play } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
@@ -9,7 +9,7 @@ import { StableText } from '../components/controls/StableText'
 import { pressedInside, typingInField } from '../utils/shortcut'
 import { cameraFor, wrapPhase } from './wave'
 import { subjectOf } from './subjects'
-import type { Subject } from './subjects'
+import type { ShapeId, Subject } from './subjects'
 import { FLOW, INK } from './scenes/look'
 import type { Painter } from './scenes/painter'
 
@@ -51,16 +51,21 @@ export function DeeperView({ left }: { left: number }) {
 }
 
 function Player({ subject, left }: { subject: Subject; left: number }) {
-  const { t, fmt } = useTranslation()
+  const { t } = useTranslation()
   const [step, setStep]       = useState(1)
   const [playing, setPlaying] = useState(true)
   const [size, setSize]       = useState<{ w: number; h: number } | null>(null)
+  /** The shape picked, if the subject has shapes (the first until another is) */
+  const [picked, setPicked]   = useState<ShapeId | undefined>(subject.shapes?.ids[0])
   const count = subject.steps.length
+  const shapes = subject.shapes
+  const shape = shapes && step === shapes.step ? picked : undefined
 
   const stage   = useRef<HTMLDivElement>(null)
   const phase   = useRef(0)
   const painter = useRef<Painter | null>(null)
   const stepNow = useLatestRef(step)
+  const shapeNow = useLatestRef(shape)
   const degrees = useRef<HTMLSpanElement>(null)
   const slider  = useRef<HTMLInputElement>(null)
   const percent = useRef<HTMLSpanElement>(null)
@@ -68,11 +73,11 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
   /** The picture and the readouts at the phase reached. */
   const paint = useCallback(() => {
     const deg = phase.current, whole = Math.round(deg)
-    painter.current?.(deg, stepNow.current)
+    painter.current?.(deg, stepNow.current, shapeNow.current)
     if (degrees.current) degrees.current.textContent = `${whole}°`
     if (percent.current) percent.current.textContent = String(Math.round(deg / 3.6))
     if (slider.current) slider.current.value = String(whole)
-  }, [stepNow])
+  }, [stepNow, shapeNow])
 
   const onPainter = useCallback((made: Painter | null) => {
     painter.current = made
@@ -95,8 +100,8 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
     return () => cancelAnimationFrame(frame)
   }, [playing, paint])
 
-  // A step's new parts stand at the phase reached, stopped too
-  useEffect(paint, [step, paint])
+  // A step's new parts, a shape's, stand at the phase reached, stopped too
+  useEffect(paint, [step, shape, paint])
 
   // The camera fits the stage, whatever its shape
   useEffect(() => {
@@ -154,7 +159,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           </defs>
           {camera && (
             <g className="lsc-dd-camera" style={{ transform: `translate(${camera.x.toFixed(1)}px, ${camera.y.toFixed(1)}px) scale(${camera.scale.toFixed(3)})` }}>
-              <subject.Scene step={step} onPainter={onPainter} />
+              <subject.Scene step={step} shape={shape} onPainter={onPainter} />
             </g>
           )}
         </svg>
@@ -212,12 +217,35 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           >
             <ChevronRight size={16} />
           </button>
-          <div aria-live="polite" style={{ flex: 1, minWidth: 0, marginLeft: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 15, fontWeight: 600 }}>
-            <span style={{ ...caption, fontWeight: 500, marginRight: 8 }}>
-              {fmt(t.deeper.step, { n: String(step), count: String(count) })}
-            </span>
-            {t.deeper.steps[subject.steps[step - 1].id]}
-          </div>
+          <StepTitle name={t.deeper.steps[subject.steps[step - 1].id]} />
+          {shapes && (
+            // The step's shapes, after its name in the same row (a row of their own would take the picture's room)
+            <div role="group" aria-label={t.deeper.shape} style={{ ...row, flexShrink: 0, gap: 6 }}>
+              {shapes.ids.map((id) => {
+                const on = id === shape
+                return (
+                  <button
+                    key={id}
+                    // Picked at another step, it is shown at its own
+                    onClick={() => {
+                      setPicked(id)
+                      setStep(shapes.step)
+                    }}
+                    aria-pressed={on}
+                    className="lsc-btn-outline"
+                    // Both colours always set: dropping `borderColor` would clear the shorthand's too
+                    style={{
+                      ...button, height: 30, padding: '0 9px', fontSize: 12,
+                      borderColor: on ? 'var(--lsc-accent)' : 'var(--lsc-border)',
+                      background: on ? 'var(--lsc-accent-bg)' : 'transparent',
+                    }}
+                  >
+                    {t.deeper.shapes[id]}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           {subject.credit && <Credit text={t.deeper.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deeper.credit} />}
         </div>
 
@@ -262,6 +290,36 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+const visuallyHidden: CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'inset(50%)', whiteSpace: 'nowrap' }
+
+/**
+ * The step's name, in the room the row leaves it: whole, or not at all — never cut short (always
+ * read out; the step's lit circle says which it is). A hidden copy measures it.
+ */
+function StepTitle({ name }: { name: string }) {
+  const box = useRef<HTMLDivElement>(null)
+  const measure = useRef<HTMLSpanElement>(null)
+  const [fits, setFits] = useState(true)
+
+  useLayoutEffect(() => {
+    const el = box.current, copy = measure.current
+    if (!el || !copy) return
+    const fit = () => setFits(copy.getBoundingClientRect().width <= el.clientWidth)
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [name])
+
+  const text: CSSProperties = { whiteSpace: 'nowrap', fontSize: 15, fontWeight: 600 }
+  return (
+    <div ref={box} style={{ flex: 1, minWidth: 0, marginLeft: 6, overflow: 'hidden', position: 'relative', ...text }}>
+      <span ref={measure} aria-hidden style={{ position: 'absolute', visibility: 'hidden', ...text }}>{name}</span>
+      <span aria-live="polite" style={fits ? undefined : visuallyHidden}>{name}</span>
     </div>
   )
 }

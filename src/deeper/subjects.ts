@@ -15,6 +15,7 @@ import { ComplexScene } from './scenes/ComplexScene'
 
 export type SubjectId = keyof Translations['deeper']['subjects']
 export type StepId    = keyof Translations['deeper']['steps']
+export type ShapeId   = keyof Translations['deeper']['shapes']
 
 export interface Subject {
   id: SubjectId
@@ -28,6 +29,11 @@ export interface Subject {
   steps: readonly { id: StepId; box: Box }[]
   /** Whose work the picture uses, said under it (`deeper.credits`) */
   credit?: keyof Translations['deeper']['credits']
+  /**
+   * Shapes the teacher can pick at one step (`deeper.shapes`), buttons in the steps' row in place
+   * of the step's name: the first until another is picked
+   */
+  shapes?: { step: number; ids: readonly ShapeId[] }
 }
 
 /** In the drawer's order */
@@ -55,10 +61,10 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'secondSine',       box: [-110, 235, 620, 345] },
       { id: 'addingUp',         box: [690, 150, 1365, 590] },
       { id: 'thirdSine',        box: [-110, 355, 620, 420] },
-      { id: 'moreSines',        box: [-110, 430, 620, 830] },
-      { id: 'complexInAir',     box: [600, 620, 1370, 850] },
+      { id: 'moreSines',        box: [-110, 430, 1370, 850] },
       { id: 'guitar',           box: [690, 150, 1365, 590] },
     ],
+    shapes: { step: 5, ids: ['sawtooth', 'square', 'triangle', 'sameSize', 'quietFirst'] },
   },
   {
     id: 'transducer',
