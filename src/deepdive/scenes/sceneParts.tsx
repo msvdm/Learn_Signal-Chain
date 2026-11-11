@@ -1,7 +1,7 @@
 import type { ReactNode, SVGProps } from 'react'
 import { AIR, CLOUD, CLOUD_MASK, FLOW, PART } from './look'
 
-// A Dive deeper scene's building blocks (D46): a step's group (it fades in when its step is
+// A Deep dive scene's building blocks (D46): a step's group (it fades in when its step is
 // reached), a name on the picture, a cloud of air.
 
 /**

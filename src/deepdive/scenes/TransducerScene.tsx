@@ -6,7 +6,7 @@ import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Leader, Step } from './sceneParts'
 
-// Transducer and speaker (Dive deeper, D46): a sound wave moves a dynamic microphone's diaphragm,
+// Transducer and speaker (Deep dive, D46): a sound wave moves a dynamic microphone's diaphragm,
 // its coil moves around a magnet and gives a voltage (the graph beside it shows it, wired to
 // nothing); the voltage's current in a recording head magnetises the tape running past its gap; the
 // tape's magnets running past a playback head give the voltage again, which moves a speaker's coil
@@ -158,7 +158,7 @@ function makePainter(find: Finder): Painter {
 export function TransducerScene({ step, onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
-  const l = useTranslation().t.deeper.labels
+  const l = useTranslation().t.deepDive.labels
 
   return (
     <g ref={root}>

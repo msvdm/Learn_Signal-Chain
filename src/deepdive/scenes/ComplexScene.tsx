@@ -8,7 +8,7 @@ import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Step } from './sceneParts'
 
-// Complex waves (Dive deeper, D46): a string is the result, the harmonics what is added to it. On
+// Complex waves (Deep dive, D46): a string is the result, the harmonics what is added to it. On
 // the left the string, and beside it each harmonic alone, one below the other — a circle turning
 // and its sine: the fundamental (step 1), the 2nd (2), the 3rd (4), the 4th to the 10th (5). On the
 // right what they make together (from step 3): the circles riding on each other, their sum, and the
@@ -212,7 +212,7 @@ export function ComplexScene({ step, shape, onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
   const { t, fmt } = useTranslation()
-  const l = t.deeper.labels
+  const l = t.deepDive.labels
   const count = countAt(step), recipe = recipeAt(step, shape), guitar = step >= GUITAR_STEP
   const ideal = step === TEN_STEP && shape ? IDEALS[shape] : undefined
   // "Half as big", "a third as big" are the sawtooth's: another shape's harmonics only their numbers

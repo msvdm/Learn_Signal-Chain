@@ -7,8 +7,8 @@ import type { ComplexityLevel } from './data/levels'
 import { useTranslation } from './i18n/useTranslation'
 import { SignalChain } from './components/SignalChain'
 import { ElementPalette } from './components/ElementPalette'
-import { DeeperView } from './deeper/DeeperView'
-import { SubjectList } from './deeper/SubjectList'
+import { DeepDiveView } from './deepdive/DeepDiveView'
+import { SubjectList } from './deepdive/SubjectList'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { FileMenu } from './components/FileMenu'
 import { TutorialButton } from './components/Tutorial'
@@ -43,8 +43,8 @@ function App() {
   const setSnapToGrid      = useSignalStore((s) => s.setSnapToGrid)
   const paletteOpen        = useSignalStore((s) => s.paletteOpen)
   const setPaletteOpen     = useSignalStore((s) => s.setPaletteOpen)
-  const deeper             = useSignalStore((s) => s.deeper)
-  const setDeeper          = useSignalStore((s) => s.setDeeper)
+  const deepDive           = useSignalStore((s) => s.deepDive)
+  const setDeepDive        = useSignalStore((s) => s.setDeepDive)
   const { t, fmt }       = useTranslation()
   const isWideHeader       = useMediaQuery(WIDE_HEADER_QUERY)
   const isRoomyHeader      = useMediaQuery(ROOMY_HEADER_QUERY)
@@ -63,8 +63,8 @@ function App() {
   useDismiss(languageRef, () => setShowLanguages(false), { open: showLanguages })
 
   function handleLevelChange(level: ComplexityLevel) {
-    // Back from Dive deeper to the level it was opened from: the canvas is as it was left
-    if (level === complexityLevel) { setDeeper(false); return }
+    // Back from Deep dive to the level it was opened from: the canvas is as it was left
+    if (level === complexityLevel) { setDeepDive(false); return }
     setPending({ kind: 'level', level })
   }
 
@@ -95,7 +95,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               onClick={() => setPaletteOpen(!paletteOpen)}
-              aria-label={paletteOpen ? (deeper ? t.deeper.hide : t.palette.hide) : (deeper ? t.deeper.show : t.palette.show)}
+              aria-label={paletteOpen ? (deepDive ? t.deepDive.hide : t.palette.hide) : (deepDive ? t.deepDive.show : t.palette.show)}
               aria-expanded={paletteOpen}
               aria-controls="lsc-palette"
               className="lsc-btn-outline"
@@ -116,16 +116,16 @@ function App() {
             </div>
           </div>
 
-          {/* Centre: level stepper — its last button is Dive deeper, another way of learning (D46).
+          {/* Centre: level stepper — its last button is Deep dive, another way of learning (D46).
               Four buttons: the lines between them are shorter where the header is tight */}
           <nav aria-label={t.app.level} style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: isRoomyHeader ? 6 : isWideHeader ? 4 : 2 }}>
-            {[...LEVELS, 'deeper' as const].map((id, i) => {
-              const active = id === 'deeper' ? deeper : !deeper && complexityLevel === id
+            {[...LEVELS, 'deepDive' as const].map((id, i) => {
+              const active = id === 'deepDive' ? deepDive : !deepDive && complexityLevel === id
               return (
                 <Fragment key={id}>
                   {i > 0 && <span style={{ width: isRoomyHeader ? 20 : isWideHeader ? 8 : 4, height: 1, background: 'var(--lsc-border)' }} />}
                   <button
-                    onClick={() => (id === 'deeper' ? setDeeper(true) : handleLevelChange(id))}
+                    onClick={() => (id === 'deepDive' ? setDeepDive(true) : handleLevelChange(id))}
                     aria-current={active ? 'step' : undefined}
                     className={active ? undefined : 'lsc-btn-outline'}
                     style={{
@@ -148,7 +148,7 @@ function App() {
                     >
                       {i + 1}
                     </span>
-                    {id === 'deeper' ? t.deeper.title : t.levels[id].title}
+                    {id === 'deepDive' ? t.deepDive.title : t.levels[id].title}
                   </button>
                 </Fragment>
               )
@@ -157,8 +157,8 @@ function App() {
 
           {/* Right: file, snap to grid, theme, language, the tutorial */}
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 6 }}>
-            {/* The canvas's own tools: out of sight in Dive deeper, their room kept (the stepper stays put) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, visibility: deeper ? 'hidden' : 'visible' }}>
+            {/* The canvas's own tools: out of sight in Deep dive, their room kept (the stepper stays put) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, visibility: deepDive ? 'hidden' : 'visible' }}>
             <FileMenu onNew={() => setPending({ kind: 'reset' })} buttonStyle={headerBtn} />
 
             <button
@@ -272,9 +272,9 @@ function App() {
               boxShadow: paletteOpen ? 'var(--lsc-shadow-popup)' : 'none',
             }}
           >
-            {deeper ? <SubjectList /> : <ElementPalette />}
+            {deepDive ? <SubjectList /> : <ElementPalette />}
           </div>
-          {deeper ? <DeeperView left={paletteWidth} /> : <SignalChain />}
+          {deepDive ? <DeepDiveView left={paletteWidth} /> : <SignalChain />}
           <NoticeToast />
         </main>
 

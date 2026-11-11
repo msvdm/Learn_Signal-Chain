@@ -16,13 +16,13 @@ export function useMediaQuery(query: string): boolean {
 export const TABLET_QUERY = '(max-width: 1024px)'
 
 /**
- * Dive deeper's drawer is a rail of icons up to here (D46): the steps' row holds a subject's
+ * Deep dive's drawer is a rail of icons up to here (D46): the steps' row holds a subject's
  * shapes too, which Bulgarian needs 1169px for beside the wide drawer.
  */
-export const DEEPER_RAIL_QUERY = '(max-width: 1279px)'
+export const DEEP_DIVE_RAIL_QUERY = '(max-width: 1279px)'
 
 // The header's widths, measured on its longest text (Bulgarian, four level buttons since Dive
-// deeper — D46): each step leaves it some 45px to spare.
+// deepDive — D46): each step leaves it some 45px to spare.
 
 /**
  * Wide enough for the header's tagline and the level stepper's usual letters (Bulgarian needs

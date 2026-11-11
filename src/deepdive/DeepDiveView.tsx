@@ -13,7 +13,7 @@ import type { ShapeId, Subject } from './subjects'
 import { FLOW, INK } from './scenes/look'
 import type { Painter } from './scenes/painter'
 
-// Dive deeper (D46): the fourth button of the level stepper opens it in the canvas's place. The
+// Deep dive (D46): the fourth button of the level stepper opens it in the canvas's place. The
 // teacher picks a subject in the drawer (SubjectList), walks its steps — each adds a part to the
 // picture, and the camera steps back to show them all — and plays one cycle of the movement or
 // stops it at a phase. Like the meters, the movement never goes through React: one animation loop
@@ -24,7 +24,7 @@ const DEGREES_A_SECOND = 60
 /** The phases worth stopping at */
 const JUMPS = [0, 90, 180, 270, 360]
 
-/** Whose work a picture uses: the links in its credit (`deeper.credits`, as {name}) */
+/** Whose work a picture uses: the links in its credit (`deepDive.credits`, as {name}) */
 const CREDIT_LINKS: Record<NonNullable<Subject['credit']>, Record<string, { text: string; href: string }>> = {
   ear: {
     work:    { text: 'Anatomy of the Human Ear', href: 'https://commons.wikimedia.org/wiki/File:Anatomy_of_the_Human_Ear.svg' },
@@ -44,8 +44,8 @@ const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minW
 const caption: CSSProperties = { fontSize: 13, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }
 
 /** `left`: how much of the left side the drawer covers — the picture keeps clear of it. */
-export function DeeperView({ left }: { left: number }) {
-  const subject = subjectOf(useSignalStore((s) => s.deeperSubject))
+export function DeepDiveView({ left }: { left: number }) {
+  const subject = subjectOf(useSignalStore((s) => s.deepDiveSubject))
   // Another subject starts from its first step, at 0°
   return <Player key={subject.id} subject={subject} left={left} />
 }
@@ -140,8 +140,8 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
   const camera = size && size.w > 0 && size.h > 0
     ? cameraFor(subject.steps.slice(0, step).map((s) => s.box), size.w, size.h)
     : null
-  const name = t.deeper.subjects[subject.id]
-  const [beforePercent, afterPercent] = t.deeper.ofCycle.split('{pct}')
+  const name = t.deepDive.subjects[subject.id]
+  const [beforePercent, afterPercent] = t.deepDive.ofCycle.split('{pct}')
 
   return (
     <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -176,13 +176,13 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           <button
             onClick={() => setStep(step - 1)}
             disabled={step === 1}
-            aria-label={t.deeper.back}
+            aria-label={t.deepDive.back}
             className="lsc-btn-outline"
             style={{ ...square, opacity: step === 1 ? 0.4 : 1 }}
           >
             <ChevronLeft size={16} />
           </button>
-          <nav aria-label={t.deeper.stepsLabel} style={{ ...row, gap: 4, flexShrink: 0 }}>
+          <nav aria-label={t.deepDive.stepsLabel} style={{ ...row, gap: 4, flexShrink: 0 }}>
             {subject.steps.map((s, i) => {
               const n = i + 1
               const active = n === step
@@ -191,7 +191,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
                   {i > 0 && <span style={{ width: 10, height: 1, background: n <= step ? 'var(--lsc-accent)' : 'var(--lsc-border)' }} />}
                   <button
                     onClick={() => setStep(n)}
-                    aria-label={`${n} · ${t.deeper.steps[s.id]}`}
+                    aria-label={`${n} · ${t.deepDive.steps[s.id]}`}
                     aria-current={active ? 'step' : undefined}
                     className={active ? undefined : 'lsc-btn-outline'}
                     style={{
@@ -211,16 +211,16 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           <button
             onClick={() => setStep(step + 1)}
             disabled={step === count}
-            aria-label={t.deeper.next}
+            aria-label={t.deepDive.next}
             className="lsc-btn-outline"
             style={{ ...square, opacity: step === count ? 0.4 : 1 }}
           >
             <ChevronRight size={16} />
           </button>
-          <StepTitle name={t.deeper.steps[subject.steps[step - 1].id]} />
+          <StepTitle name={t.deepDive.steps[subject.steps[step - 1].id]} />
           {shapes && (
             // The step's shapes, after its name in the same row (a row of their own would take the picture's room)
-            <div role="group" aria-label={t.deeper.shape} style={{ ...row, flexShrink: 0, gap: 6 }}>
+            <div role="group" aria-label={t.deepDive.shape} style={{ ...row, flexShrink: 0, gap: 6 }}>
               {shapes.ids.map((id) => {
                 const on = id === shape
                 return (
@@ -240,13 +240,13 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
                       background: on ? 'var(--lsc-accent-bg)' : 'transparent',
                     }}
                   >
-                    {t.deeper.shapes[id]}
+                    {t.deepDive.shapes[id]}
                   </button>
                 )
               })}
             </div>
           )}
-          {subject.credit && <Credit text={t.deeper.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deeper.credit} />}
+          {subject.credit && <Credit text={t.deepDive.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deepDive.credit} />}
         </div>
 
         <div style={row}>
@@ -256,9 +256,9 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             style={{ ...button, borderColor: 'var(--lsc-accent)', background: 'var(--lsc-accent-bg)' }}
           >
             {playing ? <Pause size={15} /> : <Play size={15} />}
-            <StableText reserve={[t.deeper.play, t.deeper.pause]}>{playing ? t.deeper.pause : t.deeper.play}</StableText>
+            <StableText reserve={[t.deepDive.play, t.deepDive.pause]}>{playing ? t.deepDive.pause : t.deepDive.play}</StableText>
           </button>
-          <span style={{ ...caption, marginLeft: 6 }}>{t.deeper.phase}</span>
+          <span style={{ ...caption, marginLeft: 6 }}>{t.deepDive.phase}</span>
           <span ref={degrees} style={{ width: 52, fontSize: 20, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>0°</span>
           <input
             ref={slider}
@@ -267,7 +267,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             max={360}
             step={1}
             defaultValue={0}
-            aria-label={t.deeper.phase}
+            aria-label={t.deepDive.phase}
             onChange={(e) => stopAt(Number(e.target.value))}
             className="lsc-dd-slider"
             style={{ flex: 1, minWidth: 120 }}
@@ -277,7 +277,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             <span ref={percent} style={{ display: 'inline-block', minWidth: '3ch', textAlign: 'right' }}>0</span>
             {afterPercent}
           </span>
-          <span style={{ ...caption, marginLeft: 10 }}>{t.deeper.jump}</span>
+          <span style={{ ...caption, marginLeft: 10 }}>{t.deepDive.jump}</span>
           {JUMPS.map((deg) => (
             <button
               key={deg}

@@ -1,5 +1,5 @@
-// Dive deeper's maths (D46), pure: the wave the air's particles ride, a graph over one cycle, and
-// where the camera stands to show the steps reached so far. The scenes (deeper/scenes/) draw with
+// Deep dive's maths (D46), pure: the wave the air's particles ride, a graph over one cycle, and
+// where the camera stands to show the steps reached so far. The scenes (deepdive/scenes/) draw with
 // these; nothing here knows React or the DOM.
 
 export const TAU = 2 * Math.PI

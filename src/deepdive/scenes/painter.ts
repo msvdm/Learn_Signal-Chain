@@ -3,7 +3,7 @@ import type { RefObject } from 'react'
 import type { Dot } from '../wave'
 import type { ShapeId } from '../subjects'
 
-// How a Dive deeper scene moves (D46): its painter, made from its picture once it is in the page
+// How a Deep dive scene moves (D46): its painter, made from its picture once it is in the page
 // and handed to the player, which calls it on every picture — outside React.
 
 /**
@@ -48,7 +48,7 @@ export interface Finder {
 function finderIn(root: SVGGElement): Finder {
   const find = (<T extends SVGElement>(name: string) => {
     const el = root.querySelector<T>(`[data-p="${name}"]`)
-    if (!el) throw new Error(`Dive deeper: no part named ${name}`)
+    if (!el) throw new Error(`Deep dive: no part named ${name}`)
     return el
   }) as Finder
   find.all = <T extends SVGElement>(name: string) => Array.from(find(name).children) as T[]

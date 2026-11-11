@@ -7,7 +7,7 @@ import type { Finder, Painter, SceneProps } from './painter'
 import { Air, AirHaze, Label, Step } from './sceneParts'
 import { EAR_ART } from './earArt'
 
-// Acoustic propagation and perception (Dive deeper, D46): a string moves the air around it, the
+// Acoustic propagation and perception (Deep dive, D46): a string moves the air around it, the
 // wave travels to the ear — canal, eardrum, ossicles, cochlea, nerve, a brain cell —, and under it
 // the same movement as a pendulum, a turn of the phase circle and a sine wave. Everything is one
 // function of the phase: the picture at 90° is the same whenever it is shown.
@@ -146,7 +146,7 @@ const DASHED = { fill: 'none', stroke: PART, strokeWidth: 1.5, strokeDasharray: 
 export function AcousticScene({ step, onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
-  const l = useTranslation().t.deeper.labels
+  const l = useTranslation().t.deepDive.labels
 
   return (
     <g ref={root}>

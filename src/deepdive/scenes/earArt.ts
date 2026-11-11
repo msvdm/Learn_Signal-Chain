@@ -1,4 +1,4 @@
-// The ear, the nerve and a brain cell of the first subject (deeper/scenes/AcousticScene.tsx), as SVG
+// The ear, the nerve and a brain cell of the first subject (deepdive/scenes/AcousticScene.tsx), as SVG
 // markup: adapted from "Anatomy of the Human Ear" by Lars Chittka and Axel Brockmann (CC BY 2.5,
 // https://commons.wikimedia.org/wiki/File:Anatomy_of_the_Human_Ear.svg), simplified and recoloured
 // in the app's colours. The parts that move are marked data-p (the scene's painter finds them).

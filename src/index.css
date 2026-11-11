@@ -509,7 +509,7 @@ kbd {
   .lsc-meter-fill, .lsc-meter-cover, .lsc-meter-hold, .lsc-meter-clip, .lsc-curve-at, .lsc-curve-copy, .lsc-curve-line { transition: none; }
 }
 
-/* ── Dive deeper (D46, src/deeper/) ─────────────────────────────────────── */
+/* ── Deep dive (D46, src/deepdive/) ───────────────────────────────────── */
 
 /* The camera glides to show the steps reached; a step's parts fade in and out */
 .lsc-dd-camera { transition: transform 1s cubic-bezier(.4, 0, .2, 1); }

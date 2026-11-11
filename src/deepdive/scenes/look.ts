@@ -1,4 +1,4 @@
-// The colours a Dive deeper scene is drawn in (D46): the app's own, by what they show — and the
+// The colours a Deep dive scene is drawn in (D46): the app's own, by what they show — and the
 // stage's shared filters and arrow heads.
 
 /** What is drawn in ink: the particles of air, a string, a cone, a wire */
@@ -17,7 +17,7 @@ export const FLOW   = 'var(--lsc-eq-mid)'
 /** A signal drawn over time — the logo's green wave, a good signal's green */
 export const TRACE  = 'var(--signal-good)'
 
-/** The stage's shared filters and arrow heads (DeeperView draws them once) */
+/** The stage's shared filters and arrow heads (DeepDiveView draws them once) */
 export const CLOUD      = 'url(#lsc-dd-cloud)'
 export const CLOUD_MASK = 'url(#lsc-dd-cloud-mask)'
 export const ARROW      = 'url(#lsc-dd-arrow)'

@@ -8,14 +8,14 @@ import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
 
-// Dive deeper's subjects (D46): each a chain of causes and effects the teacher steps through — one
+// Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
-// (deeper/scenes/, a picture and its painter), its entry here, and its name and its steps' names
-// in the locales (`deeper.subjects`, `deeper.steps`).
+// (deepdive/scenes/, a picture and its painter), its entry here, and its name and its steps' names
+// in the locales (`deepDive.subjects`, `deepDive.steps`).
 
-export type SubjectId = keyof Translations['deeper']['subjects']
-export type StepId    = keyof Translations['deeper']['steps']
-export type ShapeId   = keyof Translations['deeper']['shapes']
+export type SubjectId = keyof Translations['deepDive']['subjects']
+export type StepId    = keyof Translations['deepDive']['steps']
+export type ShapeId   = keyof Translations['deepDive']['shapes']
 
 export interface Subject {
   id: SubjectId
@@ -27,10 +27,10 @@ export interface Subject {
    * the camera shows every part reached so far)
    */
   steps: readonly { id: StepId; box: Box }[]
-  /** Whose work the picture uses, said under it (`deeper.credits`) */
-  credit?: keyof Translations['deeper']['credits']
+  /** Whose work the picture uses, said under it (`deepDive.credits`) */
+  credit?: keyof Translations['deepDive']['credits']
   /**
-   * Shapes the teacher can pick at one step (`deeper.shapes`), buttons in the steps' row in place
+   * Shapes the teacher can pick at one step (`deepDive.shapes`), buttons in the steps' row in place
    * of the step's name: the first until another is picked
    */
   shapes?: { step: number; ids: readonly ShapeId[] }

@@ -565,7 +565,7 @@
         "**Beginner** is about the room: microphones, instruments, a mixing desk, speakers and a computer. You learn what connects to what. There are no numbers yet. Each speaker, recorder or stream tells you whether sound reaches it.",
         "**Intermediate** opens up the mixing desk. You build a channel yourself, control by control, from the microphone to the speakers. Meters appear and show the signal level at every step.",
         "**Advanced** unlocks the rest of the elements. Levels are also worked out digitally, on the dBFS scale, so more complex routing and conversions along the chain can be shown.",
-        "**Dive deeper**, the fourth button, is a different way of learning. Nothing is built there: the teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage. Play the movement or stop it at any point. Your canvas stays as you left it: any level's button brings it back."
+        "**Deep dive**, the fourth button, is a different way of learning. Nothing is built there: the teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion — a string moves the air, the air moves the eardrum, a microphone turns the movement into a voltage. Play the movement or stop it at any point. Your canvas stays as you left it: any level's button brings it back."
       ]
     },
     "meters": {
@@ -667,8 +667,8 @@
     "recordsTrack": "Records {n} track → WAV",
     "recordsTracks": "Records {n} tracks → WAV"
   },
-  "deeper": {
-    "title": "Dive deeper",
+  "deepDive": {
+    "title": "Deep dive",
     "subjectsTitle": "Energy transformation",
     "hide": "Hide the subjects panel (more room for the picture)",
     "show": "Show the subjects panel",
