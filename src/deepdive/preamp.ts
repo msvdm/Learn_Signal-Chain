@@ -32,6 +32,23 @@ export const LINE_GAIN = 54
 /** A gain the knob can be at: whole dB, within its range */
 export const gainOf = (db: number) => Math.round(clamp(db, GAIN_MIN, GAIN_MAX))
 
+/** How many times bigger a gain makes the voltage */
+export const timesOf = (gainDb: number) => Math.pow(10, gainDb / 20)
+
+/**
+ * The gain resistor's value at a gain, ohms: the resistor on the + side ÷ the gain resistor is how
+ * many times bigger the voltage comes out (the rule of thumb for this circuit; it leaves out the
+ * transistor's own resistance, some 25 Ω at 1 mA, with which one transistor here would stop near
+ * +51 dB — a real preamp reaches +60 and more with several). 9 kΩ at 0 dB, 18 Ω at line level, 0.9 Ω at +80.
+ */
+export const gainResistorOf = (gainDb: number) => COLLECTOR_OHMS / timesOf(gainDb)
+
+/** A resistor's value as its label says it: kΩ from 1000 Ω (two decimals under 10 kΩ), whole Ω from 10, one decimal under */
+export function ohmsText(ohms: number): { value: string; kilo: boolean } {
+  if (ohms >= 999.5) return { value: (ohms / 1000).toFixed(ohms < 9995 ? 2 : 1).replace(/\.?0+$/, ''), kilo: true }
+  return { value: ohms >= 9.95 ? String(Math.round(ohms)) : ohms.toFixed(1), kilo: false }
+}
+
 const times = (db: number) => Math.pow(10, db / 20)
 
 /** What the transistor should give at phase `r` (radians) with this gain: the input × the gain, upside down */

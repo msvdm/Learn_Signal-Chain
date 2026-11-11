@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
 import { formatDb } from '../../signal/levels'
-import { GAIN_MAX, GAIN_MIN, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, gainOf, levelsOf, preampCycle } from '../preamp'
+import { COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, gainOf, gainResistorOf, levelsOf, ohmsText, preampCycle, timesOf } from '../preamp'
 import type { PreampCycle } from '../preamp'
 import { ARROW_INK, FAINT, INK, MOVER, PART, TRACE } from './look'
 import { KnobFace } from '../../components/controls/KnobFace'
@@ -174,13 +174,16 @@ export function PreampScene({ step, onPainter }: SceneProps) {
   const gain = gainAt(step, knob)
   const c = preampCycle(gain)
   const y = outYAt(step), span = spanAt(step)
-  const out = useMemo(() => levelsOf(c.out), [c])
-  const ghost = useMemo(() => tracePath(c.out, 360, outYAt(step)), [c, step])
-  const wanted = useMemo(() => (step >= GAIN_STEP ? tracePath(c.wanted, 360, outYAt(step)) : ''), [c, step])
+  // One cycle's worth of work each, and only when the step or the knob changes (the React Compiler keeps them)
+  const out = levelsOf(c.out)
+  const ghost = tracePath(c.out, 360, y)
+  const wanted = step >= GAIN_STEP ? tracePath(c.wanted, 360, y) : ''
   const mic = healthOfLevels(MIC_LEVELS.rms, MIC_LEVELS.peak), outHealth = healthOfLevels(out.rms, out.peak)
   const line = preampCycle(LINE_GAIN)
   const change = Math.max(...line.current) - RESTING
   const volts = (v: number) => `${v.toFixed(1)} ${l.volts}`
+  const ohms = (o: number) => { const r = ohmsText(o); return `${r.value} ${r.kilo ? l.kilohms : l.ohms}` }
+  const times = timesOf(gain)
   const bar = MINUS_X - BASE_GAP
 
   return (
@@ -320,7 +323,16 @@ export function PreampScene({ step, onPainter }: SceneProps) {
         </g>
         <Label at={[KNOB_X - KNOB_R - 8, KNOB_Y - 2]} anchor="end">{l.gainKnob}</Label>
         <Label at={[KNOB_X - KNOB_R - 8, KNOB_Y + 16]} anchor="end">+{gain} {l.db}</Label>
+        {/* The two resistors' values: the knob is the gain resistor, and their ratio is the gain */}
+        <text className="lsc-dd-reading" x={MINUS_X + 30} y={(RE_TOP + RE_BOTTOM) / 2 + 5} style={{ fontWeight: 600 }}>{ohms(gainResistorOf(gain))}</text>
+        <text className="lsc-dd-reading" x={PLUS_X + 18} y={(RC_TOP + RC_BOTTOM) / 2 + 24}>{ohms(COLLECTOR_OHMS)}</text>
         <Label at={[NOTE_X, NOTE_Y]}>{l.gainKnobNote}</Label>
+        <Label at={[NOTE_X, NOTE_Y + 20]}>
+          {fmt(l.gainRule, {
+            rc: ohms(COLLECTOR_OHMS), re: ohms(gainResistorOf(gain)),
+            times: times >= 9.95 ? String(Math.round(times)) : times.toFixed(1).replace(/\.0$/, ''), db: `+${gain} ${l.db}`,
+          })}
+        </Label>
       </Step>
     </g>
   )

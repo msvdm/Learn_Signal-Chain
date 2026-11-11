@@ -840,7 +840,10 @@
       "wallAc": "230 V alternating current, from the wall",
       "steadyDc": "Steady (direct) current: ±9 V",
       "capacitor": "Capacitor",
-      "capacitorNote": "The capacitor lets the microphone’s changes through, and keeps the base’s own steady voltage in"
+      "capacitorNote": "The capacitor lets the microphone’s changes through, and keeps the base’s own steady voltage in",
+      "ohms": "Ω",
+      "kilohms": "kΩ",
+      "gainRule": "Gain: {rc} ÷ {re} ≈ {times} times bigger ({db})"
     }
   }
 }
