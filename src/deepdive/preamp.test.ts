@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { COLLECTOR_OHMS, GAIN_STEPS, IN_PEAK, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, currentFor, levelsOf, outputAt, preampCycle } from './preamp'
+import { COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, RESTING, SAMPLES, SWING_MAX, currentFor, gainOf, levelsOf, outputAt, preampCycle } from './preamp'
 import { getHealth } from '../signal/levels'
 import { rad } from './wave'
 
@@ -19,32 +19,55 @@ describe('the microphone', () => {
 
 describe('the gain knob, as the canvas judges what comes out', () => {
   test('+10 dB: −44.8 dBu, still too quiet', () => {
-    const l = at(GAIN_STEPS.gain10)
+    const l = at(10)
     expect(round1(l.rms)).toBe(-44.8)
     expect(getHealth(l.rms, 'analog', l.peak)).toBe('too-quiet')
   })
 
   test('+54 dB: −0.8 dBu, line level — good (±1.0 V)', () => {
-    const l = at(GAIN_STEPS.gain54)
+    const l = at(54)
     expect(round1(l.rms)).toBe(-0.8)
     expect(getHealth(l.rms, 'analog', l.peak)).toBe('good')
     expect(Math.abs(outputAt(0, 54))).toBeCloseTo(1.002, 3)
   })
 
   test('+70 dB: +15.2 dBu, peaks at +18.2 — hot, not clipping yet', () => {
-    const l = at(GAIN_STEPS.gain70)
+    const l = at(70)
     expect(round1(l.rms)).toBe(15.2)
     expect(round1(l.peak)).toBe(18.2)
     expect(getHealth(l.rms, 'analog', l.peak)).toBe('hot')
   })
 
   test('+80 dB: the tops cut off at ±7.75 V, a peak of +20 dBu — clipping', () => {
-    const l = at(GAIN_STEPS.gain80)
+    const l = at(80)
     expect(SWING_MAX).toBeCloseTo(7.746, 3)
     expect(round1(l.peak)).toBe(20)
     expect(getHealth(l.rms, 'analog', l.peak)).toBe('clipping')
     expect(outputAt(0, 80)).toBeCloseTo(-SWING_MAX, 9)
     expect(RAIL - SWING_MAX).toBeCloseTo(1.25, 2)
+  })
+})
+
+describe('the knob turned anywhere: where the canvas changes its verdict', () => {
+  const health = (g: number) => { const l = at(g); return getHealth(l.rms, 'analog', l.peak) }
+
+  test('too quiet up to +14 dB, good from +15 (−39.8 dBu) to +54, hot from +55 (+0.2 dBu)', () => {
+    expect(health(14)).toBe('too-quiet')
+    expect(health(15)).toBe('good')
+    expect(health(54)).toBe('good')
+    expect(health(55)).toBe('hot')
+  })
+
+  test('hot up to +71 dB, clipping from +72 — its peaks at +20.2 dBu', () => {
+    expect(health(71)).toBe('hot')
+    expect(health(72)).toBe('clipping')
+  })
+
+  test('the knob: whole dB, 0 … +80, line level to start', () => {
+    expect(gainOf(54.4)).toBe(54)
+    expect(gainOf(-5)).toBe(GAIN_MIN)
+    expect(gainOf(95)).toBe(GAIN_MAX)
+    expect(LINE_GAIN).toBe(54)
   })
 })
 
@@ -69,7 +92,7 @@ describe('the transistor and its resistor', () => {
   })
 
   test('the charges move on, back where they started after a cycle: 0 … 1', () => {
-    for (const g of Object.values(GAIN_STEPS)) {
+    for (const g of [GAIN_MIN, 10, LINE_GAIN, 70, GAIN_MAX]) {
       const c = preampCycle(g)
       expect(c.moved[0]).toBe(0)
       expect(c.moved[SAMPLES]).toBeCloseTo(1, 9)

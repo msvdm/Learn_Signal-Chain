@@ -726,11 +726,7 @@
       "rounded": "Rounded tops",
       "oneSided": "One side bends",
       "flat": "Flat tops",
-      "notch": "Notch at zero",
-      "gain10": "+10 dB",
-      "gain54": "+54 dB",
-      "gain70": "+70 dB",
-      "gain80": "+80 dB"
+      "notch": "Notch at zero"
     },
     "credit": "Credits",
     "credits": {
@@ -834,13 +830,17 @@
       "milliamps": "mA",
       "smallChange": "A small change at its base (±{v}) changes the current through it (±{i})",
       "resistor": "Resistor",
-      "intoVoltage": "The resistor turns the current’s changes into a voltage: ±{v}",
+      "intoVoltage": "The resistor on the + side turns the current’s changes into a voltage: ±{v}",
       "upsideDown": "Upside down: as the input goes up, the output goes down (the desk’s Ø button turns it back)",
       "gainKnob": "Gain knob",
-      "gainKnobNote": "The less the resistor under the transistor holds back, the more it gains",
+      "gainKnobNote": "The less the gain resistor holds back, the more the transistor gains",
       "lineOut": "Line out: to the desk",
       "lineOutReading": "Line out",
-      "clipAt": "Peaks at +20 dBu: clipping"
+      "clipAt": "Peaks at +20 dBu: clipping",
+      "wallAc": "230 V alternating current, from the wall",
+      "steadyDc": "Steady (direct) current: ±9 V",
+      "capacitor": "Capacitor",
+      "capacitorNote": "The capacitor lets the microphone’s changes through, and keeps the base’s own steady voltage in"
     }
   }
 }

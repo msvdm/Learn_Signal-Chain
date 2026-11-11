@@ -85,13 +85,12 @@ export const SUBJECTS: readonly Subject[] = [
     icon: Mic,
     Scene: PreampScene,
     steps: [
-      { id: 'weakSignal',       box: [0, 330, 520, 590] },
-      { id: 'powerSupply',      box: [-300, 40, 700, 780] },
-      { id: 'transistor',       box: [-300, 40, 1260, 780] },
-      { id: 'currentToVoltage', box: [-300, 40, 1340, 780] },
-      { id: 'gainKnob',         box: [-300, 40, 1340, 780] },
+      { id: 'weakSignal',       box: [0, 340, 400, 590] },
+      { id: 'powerSupply',      box: [0, 20, 760, 590] },
+      { id: 'transistor',       box: [0, 20, 760, 660] },
+      { id: 'currentToVoltage', box: [0, 20, 1290, 690] },
+      { id: 'gainKnob',         box: [0, 20, 1290, 690] },
     ],
-    shapes: { step: 5, ids: ['gain10', 'gain54', 'gain70', 'gain80'] },
   },
   {
     id: 'amplification',

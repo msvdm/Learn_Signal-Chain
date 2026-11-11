@@ -22,11 +22,15 @@ export const COLLECTOR_OHMS = 9000
 /** The current through the transistor while nothing plays: the + side over that resistor, 1 mA */
 export const RESTING = RAIL / COLLECTOR_OHMS
 
-/** The gains the knob can be set to, dB: too little, line level, too much, far too much */
-export const GAIN_STEPS = { gain10: 10, gain54: 54, gain70: 70, gain80: 80 } as const
-export type GainId = keyof typeof GAIN_STEPS
-/** Line level: the gain the steps before the knob show (the microphone's −54.8 dBu to −0.8 dBu) */
-export const LINE_GAIN: GainId = 'gain54'
+/**
+ * The gain knob's range, dB, in whole dB: the canvas's Preamp goes to +60, this one to +80 — with
+ * the microphone's 2 mV it clips only from +72
+ */
+export const GAIN_MIN = 0, GAIN_MAX = 80
+/** Line level: the gain the knob starts at, and the steps before it show (the microphone's −54.8 dBu to −0.8 dBu) */
+export const LINE_GAIN = 54
+/** A gain the knob can be at: whole dB, within its range */
+export const gainOf = (db: number) => Math.round(clamp(db, GAIN_MIN, GAIN_MAX))
 
 const times = (db: number) => Math.pow(10, db / 20)
 
