@@ -17,7 +17,7 @@ import { Air, Label, Leader, Step } from './sceneParts'
 // last, the amplifier pushed: the shapes it can give and the harmonics they add (7). The charges
 // move along the wires as the currents say, the heat sinks give off what the transistors lose, and
 // the power's bars say where the supply's energy goes. The phase is the microphone's voltage, as in
-// Transducer and speaker: at 0° it is +2 mV, and the speaker +10 V. The numbers are amp.ts's.
+// Magnetic induction: at 0° it is +2 mV, and the speaker +10 V. The numbers are amp.ts's.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
 /** The power supply's box; its + terminal (the + side runs right from it), its 0 V terminal; the − side runs down from its bottom */
@@ -526,7 +526,7 @@ function Plug({ x, y }: { x: number; y: number }) {
   )
 }
 
-/** The speaker, as Transducer and speaker draws it: its magnet's back at SPK_X, its middle at SPK_Y */
+/** The speaker, as Magnetic induction draws it: its magnet's back at SPK_X, its middle at SPK_Y */
 function Speaker() {
   return (
     <g transform={`translate(${SPK_X},${SPK_Y}) scale(1.1) translate(-44,-660)`}>

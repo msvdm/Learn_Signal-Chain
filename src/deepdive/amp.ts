@@ -10,7 +10,7 @@ import { TAU, clamp } from './wave'
 export const RAIL = 12
 /** The speaker, ohms */
 export const LOAD = 8
-/** The microphone's voltage at its peak, as in Transducer and speaker (±2 mV) */
+/** The microphone's voltage at its peak, as in Magnetic induction (±2 mV) */
 export const IN_PEAK = 0.002
 /** The speaker's voltage at its peak when the amplifier copies it cleanly */
 export const OUT_PEAK = 10

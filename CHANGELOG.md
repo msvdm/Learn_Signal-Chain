@@ -4,7 +4,7 @@ What changed in each release of Learn Signal Chain. The newest is on top.
 
 ## 1.7.0
 
-- **Tape recording in *Transducer and speaker*** — the microphone's voltage is now recorded on magnetic tape and played back into the speaker: the electro-magnetic side of sound, complete, before the digital one. Five steps, in the order the signal travels: the microphone; its voltage; the recording head and the tape; the playback head; the speaker.
+- **Tape recording in *Magnetic induction*** — the microphone's voltage is now recorded on magnetic tape and played back into the speaker: the electro-magnetic side of sound, complete, before the digital one. Five steps, in the order the signal travels: the microphone; its voltage; the recording head and the tape; the playback head; the speaker.
 - **The recording head** writes the voltage onto the tape as little magnets. Which way each one points and how strong it is follow the voltage, so the tape carries the voltage graph laid out along it. The tape runs across the whole picture between two turning metal reels.
 - **The playback head** gives a voltage only while the magnetism passing it changes — biggest where the tape's magnets turn round, just as the microphone's coil gives one only while it moves. What it reads comes back the same as what was recorded.
 - **Two amplifiers**, drawn as triangles: one between the microphone and the recording head, one between the playback head and the speaker.
@@ -23,7 +23,7 @@ What changed in each release of Learn Signal Chain. The newest is on top.
 - **Deep dive**, a fourth button beside the three levels. It opens a different way of learning: nothing is built there. The teacher picks a subject on the left and shows, step by step, how one thing sets the next in motion. Play the movement or stop it, pick any point of its cycle, and go forward or back a step at a time (the arrow keys and Space work too).
 - **Two subjects to start with:**
   - *Acoustic propagation and perception*: a string, the air around it, the sound wave on its way to the ear and the brain, then the same movement as a pendulum, a turn of the phase circle and a sine wave;
-  - *Transducer and speaker*: a sound wave moves a microphone's diaphragm and coil, the coil gives a voltage, and the voltage moves a speaker that makes sound again.
+  - *Magnetic induction*: a sound wave moves a microphone's diaphragm and coil, the coil gives a voltage, and the voltage moves a speaker that makes sound again.
 - **Your canvas is kept** while you are in Deep dive: the button of the level you were on brings it back as you left it.
 - **No more grid dots on the canvas.** *Snap to grid* works as before.
 - **The header on smaller screens:** with four buttons to fit, *Snap to grid* and *Light / Dark* show only their icons on screens narrower than 1520 pixels.
