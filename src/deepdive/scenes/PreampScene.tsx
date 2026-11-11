@@ -17,12 +17,13 @@ import { BASE_GAP, healthOfLevels, lengthOf, pointAlong, resistorPath, transisto
 import type { Pt } from './circuit'
 
 // Mic preamp (Deep dive, D46): the microphone's ±2 mV, far too weak for the desk (1); the wall's
-// alternating current made into a power supply's steady ±9 V, waiting (2); a transistor, its base fed
-// through a capacitor — the microphone's changes in, the base's own steady voltage kept — and a small
-// change at its base changes the current through it (3); a resistor on the + side turns the current's
-// changes into a voltage, upside down: line level (4); the gain knob, the resistor on the − side,
-// sets how much bigger: the teacher drags it, as the canvas's Preamp knob, and the meter says too
-// quiet, good, hot or clipping (5). The levels are judged as the
+// alternating current made into a power supply's steady ±9 V, waiting (2); a transistor, the
+// microphone wired to its base and to 0 V — a small change at its base changes the current through
+// it (3); a resistor on the + side turns the current's changes into a voltage, upside down, and the
+// gain knob, the resistor on the − side, sets how much bigger: the teacher drags it, as the canvas's
+// Preamp knob, the two resistors' values say the gain, and the meter says too quiet, good, hot or
+// clipping (4); two capacitors, on the base's wire and on the line out: the sound's changes pass,
+// the power supply's direct current does not — none back to the microphone, none on (5). The levels are judged as the
 // canvas judges a signal (dBu, its health words and colours), so the picture says what a Preamp's
 // meter would. The layout is the user's sketch: the microphone on the left, the power supply at the
 // top with its two sides hanging down — −9 V through the gain resistor and the transistor (upside
@@ -31,9 +32,11 @@ import type { Pt } from './circuit'
 // +2 mV at 0°. The numbers are preamp.ts's.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
-/** The power supply at the top: its box; its − terminal (left), 0 V (middle) and + terminal (right), all on its bottom */
+/** The power supply at the top: its box; its − and + terminals on its bottom, its 0 V on its left side (under the plug's cable) */
 const PSU_X = 480, PSU_Y = 40, PSU_W = 260, PSU_H = 120
-const PSU_BOTTOM = PSU_Y + PSU_H, MINUS_X = 520, ZERO_X = 610, PLUS_X = 700
+const PSU_BOTTOM = PSU_Y + PSU_H, MINUS_X = 520, PLUS_X = 700, ZERO_Y = 140
+/** The 0 V wire: its sign on a stub, where the microphone's return wire comes up from its panel */
+const GROUND_X = 400, MIC_RETURN_X = 330
 /** Where the two sides end while there is nothing on them yet */
 const STUB_Y = 220
 /** The − side's leg: the gain resistor on it, the transistor (its emitter above, collector below); the bottom, where both legs meet */
@@ -41,9 +44,9 @@ const RE_TOP = STUB_Y, RE_BOTTOM = 320, Q_Y = 430, BOTTOM_Y = 560
 /** The + side's leg: the resistor on it */
 const RC_TOP = 280, RC_BOTTOM = 380
 /** The microphone's panel: its frame, its graph's left edge and width, middle line (the base's) and half height (2 mV) */
-const IN_X = 10, PANEL_W = 380, SCOPE_W = 290, IN_SCOPE_X = 30, IN_Y = Q_Y, IN_H = 55
-/** The capacitor on the base's wire: its two plates */
-const CAP_X = 440, CAP_GAP = 8, CAP_H = 26
+const IN_X = -10, PANEL_W = 380, SCOPE_W = 290, IN_SCOPE_X = 10, IN_Y = Q_Y, IN_H = 55
+/** The capacitors: the base's (its first plate), the line out's; the gap between the plates, how tall they are */
+const CAP_X = 425, OUT_CAP_X = 784, CAP_GAP = 8, CAP_H = 26
 /** The line out: from the bottom right corner to its terminal; its panel, its graph's left edge, middle line, half height */
 const LINE_END = 876, OUT_X = 900, OUT_SCOPE_X = 920, OUT_Y = BOTTOM_Y, OUT_H = 70
 /**
@@ -54,7 +57,8 @@ const KNOB_X = 440, KNOB_Y = (RE_TOP + RE_BOTTOM) / 2, KNOB_R = 22, DRAG_PX = 15
 /** The captions saying what a step does, under the picture */
 const NOTE_X = IN_X, NOTE_Y = 630
 
-const GAIN_STEP = 5
+/** The knob's step (with the resistor on the + side), the capacitors' */
+const GAIN_STEP = 4, CAP_STEP = 5
 
 /** The charges on the transistor's wire, every DOT_GAP, moving DOT_GAPS spacings a cycle (the current's average, 1 mA, the same at every gain) */
 const DOT_GAP = 26, DOT_GAPS = 4
@@ -67,12 +71,22 @@ const STUB = STUB_Y - PSU_BOTTOM
 const inX = (deg: number) => IN_SCOPE_X + (SCOPE_W * deg) / 360
 const inY = (deg: number) => IN_Y - IN_H * Math.cos(rad(deg))
 const outX = (deg: number) => OUT_SCOPE_X + (SCOPE_W * deg) / 360
-/** The output's graph spans ±1.5 V at line level (step 4), ±9 V — both sides — once the knob turns (5) */
-const spanAt = (step: number) => (step >= GAIN_STEP ? RAIL : 1.5)
-const outYAt = (step: number) => (volts: number) => OUT_Y - (OUT_H * volts) / spanAt(step)
+/** The output's graph spans ±9 V: both sides, so the clip lines and the room left show */
+const span = RAIL
+const outY = (volts: number) => OUT_Y - (OUT_H * volts) / span
 
 /** The gain a step shows: line level, the knob's from the knob's step on */
 const gainAt = (step: number, knob: number) => (step >= GAIN_STEP ? knob : LINE_GAIN)
+
+/** A capacitor's two plates on a level wire, the first at `x` */
+function Capacitor({ x, y }: { x: number; y: number }) {
+  return (
+    <g stroke={INK} strokeWidth={3}>
+      <line x1={x} y1={y - CAP_H / 2} x2={x} y2={y + CAP_H / 2} />
+      <line x1={x + CAP_GAP} y1={y - CAP_H / 2} x2={x + CAP_GAP} y2={y + CAP_H / 2} />
+    </g>
+  )
+}
 
 /** A reading's sign and digits (none shows as +0.00, never −0.00) */
 function signed(value: number, digits: number): string {
@@ -128,12 +142,12 @@ function makePainter(find: Finder, knob: () => number): Painter {
     }
 
     // 4 · the output's voltage, upside down
-    if (step >= 4) {
-      const y = outYAt(step), out = tableAt(c.out, deg)
-      outTrace.setAttribute('d', tracePath(c.out, Math.round(deg), y))
-      put(outDot, 'cx', outX(deg)); put(outDot, 'cy', y(out))
+    if (step >= GAIN_STEP) {
+      const out = tableAt(c.out, deg)
+      outTrace.setAttribute('d', tracePath(c.out, Math.round(deg), outY))
+      put(outDot, 'cx', outX(deg)); put(outDot, 'cy', outY(out))
       outReading.textContent = signed(out, 2)
-      clipTrace.setAttribute('d', clippedPath(c, deg, y))
+      clipTrace.setAttribute('d', clippedPath(c, deg, outY))
     }
   }
 }
@@ -173,7 +187,7 @@ export function PreampScene({ step, onPainter }: SceneProps) {
   const l = t.deepDive.labels
   const gain = gainAt(step, knob)
   const c = preampCycle(gain)
-  const y = outYAt(step), span = spanAt(step)
+  const y = outY
   // One cycle's worth of work each, and only when the step or the knob changes (the React Compiler keeps them)
   const out = levelsOf(c.out)
   const ghost = tracePath(c.out, 360, y)
@@ -222,27 +236,26 @@ export function PreampScene({ step, onPainter }: SceneProps) {
         <text className="lsc-dd-reading" x={PSU_X + PSU_W / 2} y={PSU_Y + 52} textAnchor="middle">{l.powerSupply}</text>
         <Label at={[PSU_X + PSU_W / 2, PSU_Y + 76]} anchor="middle">{l.steadyDc}</Label>
         <path d={`M${MINUS_X} ${PSU_BOTTOM} V${STUB_Y} M${PLUS_X} ${PSU_BOTTOM} V${STUB_Y}`} {...WIRE} />
-        <path d={`M${ZERO_X} ${PSU_BOTTOM} V${PSU_BOTTOM + 16}`} {...WIRE} strokeWidth={1.5} />
-        <Ground x={ZERO_X} y={PSU_BOTTOM + 16} />
-        <Label at={[ZERO_X + 18, PSU_BOTTOM + 28]}>{l.zeroV}</Label>
+        <path d={`M${PSU_X} ${ZERO_Y} H${GROUND_X} V${ZERO_Y + 10}`} {...WIRE} strokeWidth={1.5} />
+        <Ground x={GROUND_X} y={ZERO_Y + 10} />
+        <Label at={[GROUND_X + 18, ZERO_Y + 22]}>{l.zeroV}</Label>
         <Label at={[MINUS_X - 10, PSU_BOTTOM + 30]} anchor="end">{l.minus9}</Label>
         <Label at={[PLUS_X + 10, PSU_BOTTOM + 30]}>{l.plus9}</Label>
         <Step n={2} until={2} step={step}>
-          <Label at={[ZERO_X, STUB_Y + 40]} anchor="middle">{l.waiting}</Label>
+          <Label at={[(MINUS_X + PLUS_X) / 2, STUB_Y + 40]} anchor="middle">{l.waiting}</Label>
         </Step>
         <g data-p="dots" fill={MOVER}>
           {Array.from({ length: Math.floor(LOOP_LEN / DOT_GAP) }, (_, i) => <circle key={i} r={3} />)}
         </g>
       </Step>
 
-      {/* 3 · the transistor on the − side's leg, fed through a capacitor: a small change at its base changes the current through it */}
+      {/* 3 · the transistor on the − side's leg, the microphone wired to its base and back to 0 V: a small change at its base changes the current through it */}
       <Step n={3} step={step}>
         <path d={`M${IN_X + PANEL_W} ${IN_Y} H${CAP_X} M${CAP_X + CAP_GAP} ${IN_Y} H${bar}`} {...WIRE} strokeWidth={1.5} />
-        <g stroke={INK} strokeWidth={3}>
-          <line x1={CAP_X} y1={IN_Y - CAP_H / 2} x2={CAP_X} y2={IN_Y + CAP_H / 2} />
-          <line x1={CAP_X + CAP_GAP} y1={IN_Y - CAP_H / 2} x2={CAP_X + CAP_GAP} y2={IN_Y + CAP_H / 2} />
-        </g>
-        <Label at={[CAP_X + CAP_GAP / 2, IN_Y + CAP_H / 2 + 22]} anchor="middle">{l.capacitor}</Label>
+        <Step n={3} until={CAP_STEP - 1} step={step}>
+          <path d={`M${CAP_X} ${IN_Y} H${CAP_X + CAP_GAP}`} {...WIRE} strokeWidth={1.5} />
+        </Step>
+        <path d={`M${MIC_RETURN_X} ${IN_Y - 78} V${ZERO_Y} H${GROUND_X}`} {...WIRE} strokeWidth={1.5} />
         <path d={resistorPath(MINUS_X, RE_TOP, RE_BOTTOM)} {...WIRE} strokeLinejoin="round" />
         <path d={transistorLeads(MINUS_X, Q_Y, RE_BOTTOM, BOTTOM_Y)} {...WIRE} />
         <path d={`M${MINUS_X} ${BOTTOM_Y} H${PLUS_X} V${RC_BOTTOM} M${PLUS_X} ${RC_TOP} V${STUB_Y}`} {...WIRE} />
@@ -258,7 +271,6 @@ export function PreampScene({ step, onPainter }: SceneProps) {
           <Label at={[NOTE_X, NOTE_Y]}>
             {fmt(l.smallChange, { v: `${IN_PEAK * 1000} ${l.mv}`, i: `${(change * 1000).toFixed(2)} ${l.milliamps}` })}
           </Label>
-          <Label at={[NOTE_X, NOTE_Y + 20]}>{l.capacitorNote}</Label>
         </Step>
       </Step>
 
@@ -266,10 +278,12 @@ export function PreampScene({ step, onPainter }: SceneProps) {
       <Step n={4} step={step}>
         <path d={resistorPath(PLUS_X, RC_TOP, RC_BOTTOM)} {...WIRE} strokeLinejoin="round" />
         <Label at={[PLUS_X + 18, (RC_TOP + RC_BOTTOM) / 2 + 4]}>{l.resistor}</Label>
-        <path d={`M${PLUS_X} ${BOTTOM_Y} H${LINE_END}`} fill="none" stroke={INK} strokeWidth={1.5} />
+        <path d={`M${PLUS_X} ${BOTTOM_Y} H${OUT_CAP_X} M${OUT_CAP_X + CAP_GAP} ${BOTTOM_Y} H${LINE_END}`} fill="none" stroke={INK} strokeWidth={1.5} />
+        <Step n={GAIN_STEP} until={CAP_STEP - 1} step={step}>
+          <path d={`M${OUT_CAP_X} ${BOTTOM_Y} H${OUT_CAP_X + CAP_GAP}`} fill="none" stroke={INK} strokeWidth={1.5} />
+        </Step>
         <circle cx={PLUS_X} cy={BOTTOM_Y} r={4} fill={INK} />
         <circle cx={LINE_END} cy={BOTTOM_Y} r={5} fill="var(--lsc-sunken)" stroke={INK} strokeWidth={1.5} />
-        <Label at={[(PLUS_X + LINE_END) / 2, BOTTOM_Y - 12]} anchor="middle">{l.lineOut}</Label>
 
         <rect x={OUT_X} y={OUT_Y - 96} width={PANEL_W} height={192} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1} />
         <clipPath id="lsc-dd-preamp-out"><rect x={OUT_X} y={OUT_Y - 96} width={PANEL_W} height={192} rx={8} /></clipPath>
@@ -303,14 +317,8 @@ export function PreampScene({ step, onPainter }: SceneProps) {
         <text className="lsc-dd-reading" x={OUT_X + PANEL_W} y={OUT_Y + 118} textAnchor="end">
           {formatDb(out.rms)} · <tspan style={{ fill: outHealth.colour, fontWeight: 600 }}>{t.health[outHealth.health]}</tspan>
         </text>
-        <Step n={4} until={4} step={step}>
-          <Label at={[NOTE_X, NOTE_Y]}>{fmt(l.intoVoltage, { v: volts(Math.abs(line.out[0])) })}</Label>
-          <Label at={[NOTE_X, NOTE_Y + 20]}>{l.upsideDown}</Label>
-        </Step>
-      </Step>
 
-      {/* 5 · the gain knob: the resistor on the − side's leg, turned */}
-      <Step n={GAIN_STEP} step={step}>
+        {/* The gain knob: the resistor on the − side's leg, turned */}
         <line x1={MINUS_X - 22} y1={RE_BOTTOM - 10} x2={MINUS_X + 24} y2={RE_TOP + 10} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
         <Leader x1={KNOB_X + KNOB_R + 2} y1={KNOB_Y} x2={MINUS_X - 14} y2={KNOB_Y} />
         <g
@@ -326,13 +334,29 @@ export function PreampScene({ step, onPainter }: SceneProps) {
         {/* The two resistors' values: the knob is the gain resistor, and their ratio is the gain */}
         <text className="lsc-dd-reading" x={MINUS_X + 30} y={(RE_TOP + RE_BOTTOM) / 2 + 5} style={{ fontWeight: 600 }}>{ohms(gainResistorOf(gain))}</text>
         <text className="lsc-dd-reading" x={PLUS_X + 18} y={(RC_TOP + RC_BOTTOM) / 2 + 24}>{ohms(COLLECTOR_OHMS)}</text>
-        <Label at={[NOTE_X, NOTE_Y]}>{l.gainKnobNote}</Label>
-        <Label at={[NOTE_X, NOTE_Y + 20]}>
-          {fmt(l.gainRule, {
-            rc: ohms(COLLECTOR_OHMS), re: ohms(gainResistorOf(gain)),
-            times: times >= 9.95 ? String(Math.round(times)) : times.toFixed(1).replace(/\.0$/, ''), db: `+${gain} ${l.db}`,
-          })}
-        </Label>
+        <Step n={GAIN_STEP} until={GAIN_STEP} step={step}>
+          <Label at={[NOTE_X, NOTE_Y]}>{fmt(l.intoVoltage, { v: volts(Math.abs(line.out[0])) })}</Label>
+          <Label at={[NOTE_X, NOTE_Y + 20]}>{l.upsideDown}</Label>
+          <Label at={[NOTE_X, NOTE_Y + 40]}>{l.gainKnobNote}</Label>
+          <Label at={[NOTE_X, NOTE_Y + 60]}>
+            {fmt(l.gainRule, {
+              rc: ohms(COLLECTOR_OHMS), re: ohms(gainResistorOf(gain)),
+              times: times >= 9.95 ? String(Math.round(times)) : times.toFixed(1).replace(/\.0$/, ''), db: `+${gain} ${l.db}`,
+            })}
+          </Label>
+        </Step>
+      </Step>
+
+      {/* 5 · the capacitors, on the base's wire and on the line out: the sound's changes pass, the power supply's direct current does not */}
+      <Step n={CAP_STEP} step={step}>
+        <Capacitor x={CAP_X} y={IN_Y} />
+        <Label at={[CAP_X + CAP_GAP / 2, IN_Y + CAP_H / 2 + 22]} anchor="middle">{l.capacitor}</Label>
+        <Label at={[CAP_X + CAP_GAP / 2, IN_Y + CAP_H / 2 + 40]} anchor="middle">{l.noDirectCurrent}</Label>
+        <Capacitor x={OUT_CAP_X} y={BOTTOM_Y} />
+        <Label at={[OUT_CAP_X + CAP_GAP / 2, BOTTOM_Y - CAP_H / 2 - 26]} anchor="middle">{l.capacitor}</Label>
+        <Label at={[OUT_CAP_X + CAP_GAP / 2, BOTTOM_Y - CAP_H / 2 - 8]} anchor="middle">{l.noDirectCurrent}</Label>
+        <Label at={[NOTE_X, NOTE_Y]}>{l.capsNote1}</Label>
+        <Label at={[NOTE_X, NOTE_Y + 20]}>{l.capsNote2}</Label>
       </Step>
     </g>
   )
