@@ -31,10 +31,11 @@ export interface Subject {
   /** Whose work the picture uses, said under it (`deepDive.credits`) */
   credit?: keyof Translations['deepDive']['credits']
   /**
-   * Shapes the teacher can pick at one step (`deepDive.shapes`), buttons in the steps' row in place
-   * of the step's name: the first until another is picked
+   * Shapes the teacher can pick (`deepDive.shapes`): groups of buttons, each shown in the steps' row
+   * after the name of its step, and only there. A group's first counts until another is picked at its
+   * step; the one picked counts from that step on (the scene gets them: `SceneProps.shapes`)
    */
-  shapes?: { step: number; ids: readonly ShapeId[] }
+  shapes?: readonly { step: number; ids: readonly ShapeId[] }[]
 }
 
 /** In the drawer's order */
@@ -65,7 +66,7 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'moreSines',        box: [-110, 430, 1370, 850] },
       { id: 'guitar',           box: [690, 150, 1365, 590] },
     ],
-    shapes: { step: 5, ids: ['sawtooth', 'square', 'triangle', 'sameSize', 'quietFirst'] },
+    shapes: [{ step: 5, ids: ['sawtooth', 'square', 'triangle', 'sameSize', 'quietFirst'] }],
   },
   {
     id: 'transducer',
@@ -84,15 +85,19 @@ export const SUBJECTS: readonly Subject[] = [
     icon: Zap,
     Scene: AmplificationScene,
     steps: [
-      { id: 'weakSignal',  box: [120, 205, 345, 410] },
-      { id: 'powerSupply', box: [-10, 25, 520, 505] },
-      { id: 'transistor',  box: [-10, 25, 610, 505] },
-      { id: 'lineLevel',   box: [-10, 25, 875, 505] },
-      { id: 'pushPull',    box: [-10, 25, 1325, 510] },
-      { id: 'speaker',     box: [-10, 25, 1725, 510] },
-      { id: 'classes',     box: [-10, 25, 1725, 745] },
+      { id: 'weakSignal',       box: [100, -40, 650, 598] },
+      { id: 'powerSupply',      box: [-10, -40, 650, 598] },
+      { id: 'preampChip',       box: [-10, -40, 990, 598] },
+      { id: 'lineLevel',        box: [-10, -40, 1235, 598] },
+      { id: 'pushPull',         box: [-10, -40, 2125, 598] },
+      { id: 'classes',          box: [-10, -40, 2125, 810] },
+      { id: 'transformerInput', box: [-10, -40, 2125, 810] },
     ],
-    shapes: { step: 7, ids: ['classA', 'classB', 'classAB'] },
+    shapes: [
+      { step: 1, ids: ['balanced', 'unbalanced'] },
+      { step: 6, ids: ['classA', 'classB', 'classAB'] },
+      { step: 7, ids: ['cleanChip', 'transformer'] },
+    ],
   },
 ]
 

@@ -698,10 +698,11 @@
       "guitar": "Истинска китара: ниско Е",
       "weakSignal": "Слаб сигнал",
       "powerSupply": "Енергия от контакта",
-      "transistor": "Транзисторът",
       "lineLevel": "Линейно ниво",
-      "pushPull": "Бутане и дърпане",
-      "classes": "Класове усилватели"
+      "pushPull": "Бутане и дърпане: високоговорителят",
+      "classes": "Класове усилватели",
+      "preampChip": "Чипът на предусилвателя",
+      "transformerInput": "Вход с трансформатор"
     },
     "stepsLabel": "Стъпки",
     "back": "Предишна стъпка",
@@ -720,7 +721,11 @@
       "quietFirst": "Тих основен тон",
       "classA": "Клас A",
       "classB": "Клас B",
-      "classAB": "Клас AB"
+      "classAB": "Клас AB",
+      "balanced": "Балансирана",
+      "unbalanced": "Небалансирана",
+      "cleanChip": "Чист чип",
+      "transformer": "Трансформатор"
     },
     "credit": "Източници",
     "credits": {
@@ -807,7 +812,22 @@
       "resistor": "Резистор",
       "gainKnob": "Копче за усилване",
       "lineOutReading": "Линеен изход",
-      "upsideDownAgain": "Отново обърнато"
+      "xlr": "XLR",
+      "pin2": "Пин 2",
+      "pin3": "Пин 3",
+      "pin3TurnedOver": "Пин 3, обърнат",
+      "pin2MinusPin3": "Пин 2 − пин 3",
+      "mainsCable": "Захранващ кабел",
+      "preampChip": "Чип на предусилвателя",
+      "difference": "Разлика",
+      "rg": "RG {r}",
+      "re": "Re {r}",
+      "ohms": "{r} Ω",
+      "kOhms": "{r} кΩ",
+      "volume": "Сила на звука",
+      "volumeOff": "Изкл.",
+      "inputTransformer": "Входен трансформатор",
+      "noPower": "× 10, без собствено захранване"
     }
   }
 }

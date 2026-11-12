@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ChevronLeft, ChevronRight, Info, Pause, Play } from 'lucide-react'
 import { useSignalStore } from '../store/signalStore'
@@ -40,6 +40,7 @@ const button: CSSProperties = {
   whiteSpace: 'nowrap', flexShrink: 0,
 }
 const square: CSSProperties = { ...button, width: 34, padding: 0 }
+const NO_GROUPS: NonNullable<Subject['shapes']> = []
 const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }
 const caption: CSSProperties = { fontSize: 13, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }
 
@@ -55,11 +56,13 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
   const [step, setStep]       = useState(1)
   const [playing, setPlaying] = useState(true)
   const [size, setSize]       = useState<{ w: number; h: number } | null>(null)
-  /** The shape picked, if the subject has shapes (the first until another is) */
-  const [picked, setPicked]   = useState<ShapeId | undefined>(subject.shapes?.ids[0])
+  const groups = subject.shapes ?? NO_GROUPS
+  /** The shape picked in each group of the subject's (each group's first until another is) */
+  const [picked, setPicked]   = useState<readonly ShapeId[]>(() => groups.map((g) => g.ids[0]))
   const count = subject.steps.length
-  const shapes = subject.shapes
-  const shape = shapes && step === shapes.step ? picked : undefined
+  // A group's pick holds from its step on; its buttons are shown only at that step
+  const shape = useMemo(() => groups.flatMap((g, i) => (g.step <= step ? [picked[i]] : [])), [groups, picked, step])
+  const here = groups.findIndex((g) => g.step === step)
 
   const stage   = useRef<HTMLDivElement>(null)
   const phase   = useRef(0)
@@ -159,7 +162,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           </defs>
           {camera && (
             <g className="lsc-dd-camera" style={{ transform: `translate(${camera.x.toFixed(1)}px, ${camera.y.toFixed(1)}px) scale(${camera.scale.toFixed(3)})` }}>
-              <subject.Scene step={step} shape={shape} onPainter={onPainter} />
+              <subject.Scene step={step} shapes={shape} onPainter={onPainter} />
             </g>
           )}
         </svg>
@@ -218,19 +221,15 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             <ChevronRight size={16} />
           </button>
           <StepTitle name={t.deepDive.steps[subject.steps[step - 1].id]} />
-          {shapes && (
+          {here >= 0 && (
             // The step's shapes, after its name in the same row (a row of their own would take the picture's room)
             <div role="group" aria-label={t.deepDive.shape} style={{ ...row, flexShrink: 0, gap: 6 }}>
-              {shapes.ids.map((id) => {
-                const on = id === shape
+              {groups[here].ids.map((id) => {
+                const on = id === picked[here]
                 return (
                   <button
                     key={id}
-                    // Picked at another step, it is shown at its own
-                    onClick={() => {
-                      setPicked(id)
-                      setStep(shapes.step)
-                    }}
+                    onClick={() => setPicked((p) => p.map((was, i) => (i === here ? id : was)))}
                     aria-pressed={on}
                     className="lsc-btn-outline"
                     // Both colours always set: dropping `borderColor` would clear the shorthand's too

@@ -1,14 +1,15 @@
 // Analogue amplification's power stage (Deep dive, D46), pure: the line level the preamp gives
-// (preamp.ts: the microphone's ±2 mV made ±1 V, upside down) made into an 8 Ω speaker's ±10 V on a
-// ±12 V power supply. First the voltage, 10 times bigger and upside down again — the speaker moves as
-// the microphone's diaphragm did; then two transistors that add the current: one from the + side to
-// the speaker (it pushes), one from the speaker to the − side (it pulls). The classes differ only in
-// the current they let through while nothing plays (`RESTING`). It follows the preamp's gain knob: a
-// hotter line level is cut off a volt short of the sides. Everything is worked out over one cycle of
-// the phase, so the scene's painter only reads tables (`ampCycle`).
+// (preamp.ts: the microphone's ±10 mV made ±1 V) made into an 8 Ω speaker's ±10 V on a ±12 V power
+// supply. First its Volume knob, which only turns the line level down (as on the front of a real
+// power amplifier); then the voltage, always 10 times bigger; then two transistors that add the
+// current: one from the + side to the speaker (it pushes), one from the speaker to the − side (it
+// pulls). The classes differ only in the current they let through while nothing plays (`RESTING`).
+// It takes whatever the preamp gives: a hotter line level, or the Volume turned up, is cut off a volt
+// short of the sides; a line out already clipped stays clipped, however low the Volume. Everything is
+// worked out over one cycle of the phase, so the scene's painter only reads tables (`ampCycle`).
 
 import { TAU, clamp } from './wave'
-import { IN_PEAK as MIC_PEAK, LINE_GAIN, SAMPLES, preampCycle, timesOf } from './preamp'
+import { IN_PEAK as MIC_PEAK, LINE_GAIN, SAMPLES, preampCycle, timesOf, toAndFro } from './preamp'
 
 /** The power supply's two sides, ± volts */
 export const RAIL = 12
@@ -16,7 +17,7 @@ export const RAIL = 12
 export const LOAD = 8
 /** The line level it is made for: the preamp's output with its knob at line level, ±1 V at its peak */
 export const LINE_PEAK = MIC_PEAK * timesOf(LINE_GAIN)
-/** The speaker's voltage at its peak, fed that line level */
+/** The speaker's voltage at its peak, fed that line level with the Volume full */
 export const OUT_PEAK = 10
 /** How many times bigger the voltage comes out: 10 V / 1 V (said as × 10, +20 dB) */
 export const GAIN = OUT_PEAK / LINE_PEAK
@@ -30,6 +31,13 @@ export const SWING_MAX = RAIL - 1
 /** A microphone preamp's input (a usual 2 kΩ): the microphone's power goes into it */
 export const MIC_INPUT_OHMS = 2000
 
+/** The Volume knob's range, dB, in whole dB: off at its bottom, full (0 dB: the line level as it comes) at its top */
+export const VOLUME_OFF = -40, VOLUME_FULL = 0
+/** A place the Volume knob can be at: whole dB, within its range */
+export const volumeOf = (db: number) => Math.round(clamp(db, VOLUME_OFF, VOLUME_FULL))
+/** How much of the line level the Volume lets through: none at its bottom */
+export const volumeTimes = (db: number) => (db <= VOLUME_OFF ? 0 : Math.pow(10, db / 20))
+
 export type AmpClass = 'a' | 'b' | 'ab'
 
 /**
@@ -39,8 +47,8 @@ export type AmpClass = 'a' | 'b' | 'ab'
  */
 export const RESTING: Record<AmpClass, number> = { a: PEAK_CURRENT / 2, b: 0, ab: 0.05 }
 
-/** What the amplifier should give for a line voltage: 10 times bigger, upside down again */
-export const wantedFor = (line: number) => -GAIN * line
+/** What the amplifier should give for a line voltage, the Volume at `volumeDb`: that share of it, 10 times bigger */
+export const wantedFor = (line: number, volumeDb = VOLUME_FULL) => GAIN * volumeTimes(volumeDb) * line
 
 /**
  * The speaker's voltage for the voltage wanted. Two transistors in class B open only past VBE —
@@ -67,8 +75,8 @@ export function transistorCurrents(out: number, resting: number): { upper: numbe
 /** One cycle of the power stage, a point every half degree (SAMPLES + 1 points) */
 export interface AmpCycle {
   cls: AmpClass
-  /** The preamp's gain knob, dB: the line level it is fed */
-  gainDb: number
+  /** The Volume knob, dB */
+  volumeDb: number
   /** The speaker's voltage; what it should have been */
   out: Float64Array
   wanted: Float64Array
@@ -88,19 +96,23 @@ export interface AmpCycle {
   speakerMoved: Float64Array
 }
 
-/** The cycles made, by class and gain: a knob dragged through its range makes many, so only the last few are kept */
-const cycles = new Map<string, AmpCycle>()
+/** The cycles made, by the line out they are fed (a preamp's table, itself kept), then by class and Volume — only the last few of each */
+const cycles = new WeakMap<Float64Array, Map<string, AmpCycle>>()
 const KEPT = 24
 
-/** The power stage over one cycle, in this class, fed the preamp's output at this gain (line level if none is given). */
-export function ampCycle(cls: AmpClass, gainDb = LINE_GAIN): AmpCycle {
-  const key = `${cls}:${gainDb}`
-  const kept = cycles.get(key)
+/**
+ * The power stage over one cycle, in this class, fed `line` (a preamp's output, `preampCycle(…).out`:
+ * the clean chip at line level if none is given), its Volume at `volumeDb`.
+ */
+export function ampCycle(cls: AmpClass, line: Float64Array = preampCycle(LINE_GAIN).out, volumeDb = VOLUME_FULL): AmpCycle {
+  const key = `${cls}:${volumeDb}`
+  let made = cycles.get(line)
+  if (!made) cycles.set(line, (made = new Map()))
+  const kept = made.get(key)
   if (kept) return kept
-  const line = preampCycle(gainDb).out
   const n = SAMPLES + 1
   const c: AmpCycle = {
-    cls, gainDb,
+    cls, volumeDb,
     out: new Float64Array(n), wanted: new Float64Array(n),
     upper: new Float64Array(n), lower: new Float64Array(n),
     upperHeat: new Float64Array(n), lowerHeat: new Float64Array(n),
@@ -108,7 +120,7 @@ export function ampCycle(cls: AmpClass, gainDb = LINE_GAIN): AmpCycle {
   }
   const step = TAU / SAMPLES
   for (let i = 0; i < n; i++) {
-    const wanted = wantedFor(line[i]), out = outputFor(wanted, cls)
+    const wanted = wantedFor(line[i], volumeDb), out = outputFor(wanted, cls)
     const { upper, lower } = transistorCurrents(out, RESTING[cls])
     c.out[i] = out
     c.wanted[i] = wanted
@@ -118,24 +130,20 @@ export function ampCycle(cls: AmpClass, gainDb = LINE_GAIN): AmpCycle {
     c.lowerHeat[i] = (out + RAIL) * lower
   }
   // The charges moved: the currents added up over the cycle (trapezoids)
-  let up = 0, low = 0, spk = 0
+  let up = 0, low = 0
   for (let i = 1; i < n; i++) {
     up  += ((c.upper[i] + c.upper[i - 1]) / 2) * step
     low += ((c.lower[i] + c.lower[i - 1]) / 2) * step
-    spk += ((c.out[i] + c.out[i - 1]) / 2 / LOAD) * step
     c.upperMoved[i] = up
     c.lowerMoved[i] = low
-    c.speakerMoved[i] = spk
   }
   for (let i = 0; i < n; i++) {
     c.upperMoved[i] = up > 0 ? c.upperMoved[i] / up : 0
     c.lowerMoved[i] = low > 0 ? c.lowerMoved[i] / low : 0
   }
-  // To and fro: the speaker's current has no average, but a sampled one leaves a trace of it
-  const drift = spk / SAMPLES
-  for (let i = 0; i < n; i++) c.speakerMoved[i] -= drift * i
-  if (cycles.size >= KEPT) cycles.clear()
-  cycles.set(key, c)
+  toAndFro(c.out.map((v) => v / LOAD), c.speakerMoved)
+  if (made.size >= KEPT) made.clear()
+  made.set(key, c)
   return c
 }
 

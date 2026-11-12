@@ -698,10 +698,11 @@
       "guitar": "A real guitar: low E",
       "weakSignal": "A weak signal",
       "powerSupply": "Energy from the wall",
-      "transistor": "The transistor",
       "lineLevel": "Line level",
-      "pushPull": "Push and pull",
-      "classes": "Amplifier classes"
+      "pushPull": "Push and pull: the speaker",
+      "classes": "Amplifier classes",
+      "preampChip": "The preamp chip",
+      "transformerInput": "Transformer input"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -720,7 +721,11 @@
       "quietFirst": "Quiet first sine",
       "classA": "Class A",
       "classB": "Class B",
-      "classAB": "Class AB"
+      "classAB": "Class AB",
+      "balanced": "Balanced",
+      "unbalanced": "Unbalanced",
+      "cleanChip": "Clean chip",
+      "transformer": "Transformer"
     },
     "credit": "Credits",
     "credits": {
@@ -807,7 +812,22 @@
       "resistor": "Resistor",
       "gainKnob": "Gain knob",
       "lineOutReading": "Line out",
-      "upsideDownAgain": "Upside down again"
+      "xlr": "XLR",
+      "pin2": "Pin 2",
+      "pin3": "Pin 3",
+      "pin3TurnedOver": "Pin 3, turned over",
+      "pin2MinusPin3": "Pin 2 − pin 3",
+      "mainsCable": "Mains cable",
+      "preampChip": "Preamp chip",
+      "difference": "Difference",
+      "rg": "RG {r}",
+      "re": "Re {r}",
+      "ohms": "{r} Ω",
+      "kOhms": "{r} kΩ",
+      "volume": "Volume",
+      "volumeOff": "Off",
+      "inputTransformer": "Input transformer",
+      "noPower": "× 10, no power of its own"
     }
   }
 }

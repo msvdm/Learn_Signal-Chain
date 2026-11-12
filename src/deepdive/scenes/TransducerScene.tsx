@@ -5,6 +5,8 @@ import { ARROW, FAINT, FLOW, INK, MOVER, PART, PART_2, PART_3, TRACE } from './l
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
 import { Air, Label, Leader, Step } from './sceneParts'
+import { MicrophoneParts } from './micParts'
+import { moveMicrophone } from './mic'
 
 // Magnetic induction (Deep dive, D46): a sound wave moves a dynamic microphone's diaphragm,
 // its coil moves around a magnet and gives a voltage (the graph beside it shows it, wired to
@@ -89,9 +91,7 @@ function makePainter(find: Finder): Painter {
     // 1 · the sound wave moves the diaphragm, and the coil on it
     for (const p of micAir) put(p.el, 'cx', clamp(p.x + swing(r, p.x - DIAPHRAGM_X), 42, 250))
     const u = 0.5 * SWING * Math.sin(r)
-    diaphragm.setAttribute('d',
-      `M746 112 Q${f(734 + u / 2)} 128 ${f(744 + u)} 146 Q${f(704 + u)} 175 ${f(744 + u)} 204 Q${f(734 + u / 2)} 222 746 238`)
-    coil.forEach((turn, i) => put(turn, 'cx', 748 + u + i * 5))
+    moveMicrophone(diaphragm, coil, u)
 
     // 2 · the voltage: highest while the coil moves fastest, none while it turns back
     if (step >= 2) {
@@ -169,14 +169,7 @@ export function TransducerScene({ step, onPainter }: SceneProps) {
         <Label at={[110, 582]} anchor="middle" flow>{l.soundWave}</Label>
         <line x1={170} y1={578} x2={216} y2={578} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
         <g transform="translate(-462,495)">
-          <rect x={746} y={100} width={8} height={46} fill={PART} />
-          <rect x={746} y={204} width={8} height={46} fill={PART} />
-          <path d="M754 100 H815 Q855 100 855 140 V210 Q855 250 815 250 H754" fill="none" stroke={PART} strokeWidth={8} />
-          <rect x={770} y={162} width={81} height={26} fill={PART_2} />
-          <g data-p="coil" fill="none" stroke={INK} strokeWidth={1.5}>
-            {Array.from({ length: 7 }, (_, i) => <ellipse key={i} cy={175} rx={3} ry={20} />)}
-          </g>
-          <path data-p="diaphragm" fill="none" stroke={INK} strokeWidth={3} strokeLinejoin="round" />
+          <MicrophoneParts />
           <Label at={[723, 76]} anchor="middle">{l.diaphragm}</Label>
           <Leader x1={765} y1={198} x2={716} y2={262} />
           <Label at={[712, 276]} anchor="end">{l.voiceCoil}</Label>

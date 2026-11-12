@@ -126,7 +126,7 @@ function makePainter(find: Finder): Painter {
   const air = find.dots('air', AIR_DOTS, 1.8).map((el, i) => ({ el, x: AIR_DOTS[i].x }))
   for (const { el } of air) el.setAttribute('fill', INK)
 
-  return (deg, step, shape) => {
+  return (deg, step, [shape]) => {
     const r = rad(deg), whole = Math.round(deg), x = graphX(deg)
     const count = countAt(step), recipe = recipeAt(step, shape)
 
@@ -208,7 +208,7 @@ function Harmonic({ n, name, recipe }: { n: number; name: string; recipe: Recipe
   )
 }
 
-export function ComplexScene({ step, shape, onPainter }: SceneProps) {
+export function ComplexScene({ step, shapes: [shape], onPainter }: SceneProps) {
   const root = useRef<SVGGElement>(null)
   usePainter(root, onPainter, makePainter)
   const { t, fmt } = useTranslation()
