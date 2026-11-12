@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
-  CHIP_OHMS, COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, HUM_PEAK, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, SAMPLES, STAGE_CURRENT, SWING_MAX, TURNS, VT,
-  emitterResistor, gainOf, gainResistor, humAt, levelsOf, pinsAt, preampCycle, timesOf, transformerOut, transistorCurrent,
+  CHIP_OHMS, COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, HUM_PEAK, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, SAMPLES, STAGE_CURRENT, SWING_MAX, TRANSISTOR_TIMES, TURNS, VT,
+  gainOf, gainResistor, humAt, levelsOf, pinsAt, preampCycle, timesOf, knobShare, transformerOut, transistorCurrent,
 } from './preamp'
 import type { Input, Wiring } from './preamp'
 import { distortionOf, harmonicsOf } from './amp'
@@ -132,28 +132,41 @@ describe('the clean chip: gain = 1 + 10 kΩ ÷ RG, as the canvas judges what com
 })
 
 describe('the transformer input', () => {
-  test('×10 with no power of its own; one transistor and its resistors give the rest', () => {
+  test('×10 with no power of its own; the knob turns it down; one transistor, nothing below it, gives the rest', () => {
     expect(TURNS).toBe(10)
     expect(transformerOut(0.0001)).toBeCloseTo(0.001, 7)
-    // The gain is the resistor above ÷ (the one below + the transistor’s own 26 Ω), × 10
+    // The transistor's own gain: the resistor above ÷ its own 26 Ω at 1 mA
     expect(VT / STAGE_CURRENT).toBeCloseTo(26, 9)
-    expect(round1(emitterResistor(40))).toBe(874)
-    expect(round1(emitterResistor(60))).toBe(64)
-    expect(TURNS * COLLECTOR_OHMS / (emitterResistor(40) + 26)).toBeCloseTo(100, 9)
+    expect(TRANSISTOR_TIMES).toBeCloseTo(COLLECTOR_OHMS / 26, 9)
+    expect(round1(20 * Math.log10(TURNS * TRANSISTOR_TIMES))).toBe(70.8)
+    // At +40 dB the knob lets 2.9 % of the second coil's voltage through
+    expect(knobShare(40)).toBeCloseTo(0.0289, 4)
+    expect(knobShare(60)).toBeLessThan(1)
   })
 
   test('the transistor’s current: 1 mA at rest, growing faster one way than it shrinks the other', () => {
-    expect(transistorCurrent(0, 874)).toBeCloseTo(STAGE_CURRENT, 12)
-    const up = transistorCurrent(0.1, 200) - STAGE_CURRENT, down = STAGE_CURRENT - transistorCurrent(-0.1, 200)
+    expect(transistorCurrent(0, 0)).toBeCloseTo(STAGE_CURRENT, 12)
+    expect(transistorCurrent(VT, 0)).toBeCloseTo(STAGE_CURRENT * Math.E, 9)
+    const up = transistorCurrent(0.01, 0) - STAGE_CURRENT, down = STAGE_CURRENT - transistorCurrent(-0.01, 0)
     expect(up).toBeGreaterThan(down)
   })
 
-  test('the same verdicts as the chip: line level at +40, clipping from +58 — the right way up', () => {
+  test('the verdicts: line level at +40, hot from +41, clipping from +55 — its stretched side first', () => {
     expect(health(40, 'balanced', 'transformer')).toBe('good')
     expect(health(41, 'balanced', 'transformer')).toBe('hot')
-    expect(health(57, 'balanced', 'transformer')).toBe('hot')
-    expect(health(58, 'balanced', 'transformer')).toBe('clipping')
-    expect(preampCycle(40, 'balanced', 'transformer').out[0]).toBeGreaterThan(0.99)
+    expect(health(54, 'balanced', 'transformer')).toBe('hot')
+    expect(health(55, 'balanced', 'transformer')).toBe('clipping')
+    const c = preampCycle(55, 'balanced', 'transformer')
+    expect(Math.min(...c.out)).toBeCloseTo(-SWING_MAX, 9)
+    expect(Math.max(...c.out)).toBeLessThan(SWING_MAX - 2)
+  })
+
+  test('the right way up, its tops uneven: +0.94 V and −1.05 V at line level, +3.21 and −4.98 at +52 dB', () => {
+    const at40 = preampCycle(40, 'balanced', 'transformer').out, at52 = preampCycle(52, 'balanced', 'transformer').out
+    expect(at40[0]).toBeCloseTo(0.94, 2)
+    expect(Math.min(...at40)).toBeCloseTo(-1.05, 2)
+    expect(at52[0]).toBeCloseTo(3.21, 2)
+    expect(Math.min(...at52)).toBeCloseTo(-4.98, 2)
   })
 
   test('balanced, it cancels the hum too', () => {
@@ -161,12 +174,12 @@ describe('the transformer input', () => {
     expect(h[5] / h[0]).toBeLessThan(1e-6)
   })
 
-  test('the new sines it adds: 0.13 % at line level, 1.38 % at +52 dB, 4.77 % at +57 — the 2nd and 3rd', () => {
-    expect(thd(preampCycle(40, 'balanced', 'transformer').out)).toBe(0.13)
-    expect(thd(preampCycle(52, 'balanced', 'transformer').out)).toBe(1.38)
-    expect(thd(preampCycle(57, 'balanced', 'transformer').out)).toBe(4.77)
+  test('the new sines it adds, mostly the 2nd: 2.76 % at line level, 5.5 % at +46 dB, 10.94 % at +52', () => {
+    expect(thd(preampCycle(40, 'balanced', 'transformer').out)).toBe(2.76)
+    expect(thd(preampCycle(46, 'balanced', 'transformer').out)).toBe(5.5)
+    expect(thd(preampCycle(52, 'balanced', 'transformer').out)).toBe(10.94)
     const h = harmonicsOf(preampCycle(52, 'balanced', 'transformer').out)
-    expect(h[1] / h[0]).toBeGreaterThan(0.01)
-    expect(h[2] / h[0]).toBeGreaterThan(0.002)
+    expect(round1(20 * Math.log10(h[1] / h[0]))).toBe(-19.2)
+    expect(h[2] / h[0]).toBeGreaterThan(0.005)
   })
 })

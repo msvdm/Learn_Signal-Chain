@@ -62,7 +62,8 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
   const count = subject.steps.length
   // A group's pick holds from its step on; its buttons are shown only at that step
   const shape = useMemo(() => groups.flatMap((g, i) => (g.step <= step ? [picked[i]] : [])), [groups, picked, step])
-  const here = groups.findIndex((g) => g.step === step)
+  /** The groups whose buttons this step shows, by their place among the subject's */
+  const here = groups.flatMap((g, i) => (g.step === step ? [i] : []))
 
   const stage   = useRef<HTMLDivElement>(null)
   const phase   = useRef(0)
@@ -221,15 +222,16 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             <ChevronRight size={16} />
           </button>
           <StepTitle name={t.deepDive.steps[subject.steps[step - 1].id]} />
-          {here >= 0 && (
+          {here.map((g) => (
             // The step's shapes, after its name in the same row (a row of their own would take the picture's room)
-            <div role="group" aria-label={t.deepDive.shape} style={{ ...row, flexShrink: 0, gap: 6 }}>
-              {groups[here].ids.map((id) => {
-                const on = id === picked[here]
+            // A second group of the same step a little further off: the two are separate choices
+            <div key={g} role="group" aria-label={t.deepDive.shape} style={{ ...row, flexShrink: 0, gap: 6, marginLeft: g === here[0] ? 0 : 8 }}>
+              {groups[g].ids.map((id) => {
+                const on = id === picked[g]
                 return (
                   <button
                     key={id}
-                    onClick={() => setPicked((p) => p.map((was, i) => (i === here ? id : was)))}
+                    onClick={() => setPicked((p) => p.map((was, i) => (i === g ? id : was)))}
                     aria-pressed={on}
                     className="lsc-btn-outline"
                     // Both colours always set: dropping `borderColor` would clear the shorthand's too
@@ -244,7 +246,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
                 )
               })}
             </div>
-          )}
+          ))}
           {subject.credit && <Credit text={t.deepDive.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deepDive.credit} />}
         </div>
 

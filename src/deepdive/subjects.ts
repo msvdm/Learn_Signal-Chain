@@ -91,12 +91,11 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'lineLevel',        box: [-10, -40, 1235, 598] },
       { id: 'pushPull',         box: [-10, -40, 2125, 598] },
       { id: 'classes',          box: [-10, -40, 2125, 810] },
-      { id: 'transformerInput', box: [-10, -40, 2125, 810] },
     ],
     shapes: [
       { step: 1, ids: ['balanced', 'unbalanced'] },
       { step: 6, ids: ['classA', 'classB', 'classAB'] },
-      { step: 7, ids: ['cleanChip', 'transformer'] },
+      { step: 6, ids: ['cleanChip', 'transformer'] },
     ],
   },
 ]

@@ -7,9 +7,11 @@
 //   · the clean chip (as the THAT1510): its two input transistors, steered by pin 2 and pin 3, and a
 //     resistor between them, the gain knob — gain = 1 + 10 kΩ ÷ RG, exactly, until the output meets
 //     its sides. The ideal amplifier: it adds nothing to the sound.
-//   · the transformer input (as on classic desks): a transformer ×10, then one transistor, a
-//     resistor pulling it up to the + side, the gain knob as the resistor below it. The transformer
-//     bends a little, the transistor more as it is driven harder: new sines in the sound.
+//   · the transformer input (as on classic desks): a transformer ×10, the gain knob a resistor
+//     turning that voltage down, then one transistor, a resistor pulling it up to the + side, and
+//     nothing below it to straighten it (no feedback). The transformer's core bends a little (the
+//     3rd sine), the transistor's own curve more — one side's tops rounding off, the other's
+//     stretching (the 2nd) —, the more the harder it is driven: new sines in the sound.
 // The levels are the canvas's: dBu of the average, clipping judged on the peaks (+20 dBu:
 // signal/levels.ts), so the output stops at ±7.75 V, where a peak reaches +20 dBu. Everything is
 // worked out over one cycle of the phase, so the scene's painter only reads tables
@@ -89,10 +91,17 @@ export const COLLECTOR_OHMS = 9000
 /** The transistor's own voltage scale: its current grows e times for every 26 mV more at its base */
 export const VT = 0.026
 
-/** The gain knob as the resistor below the transistor: the transistor's gain is the resistor above ÷ (it + the transistor's own 26 Ω) */
-export function emitterResistor(gainDb: number): number {
-  return Math.max(0, COLLECTOR_OHMS / (timesOf(gainDb) / TURNS) - VT / STAGE_CURRENT)
-}
+/**
+ * The transistor's own gain, with nothing below it to straighten it: the resistor above ÷ its own
+ * 26 Ω at 1 mA, about 346 times (+50.8 dB) — with the transformer's 10, at most +70.8 dB
+ */
+export const TRANSISTOR_TIMES = (COLLECTOR_OHMS * STAGE_CURRENT) / VT
+
+/**
+ * The gain knob as a resistor from the transformer's second coil to 0 V, its wiper taking the share
+ * of that voltage the transistor gets: what the knob's gain asks of the transformer and the transistor
+ */
+export const knobShare = (gainDb: number) => Math.min(1, timesOf(gainDb) / (TURNS * TRANSISTOR_TIMES))
 
 /** The transformer's second coil for a difference `diff` on its first: 10 times, bending gently near CORE_VOLTS */
 export const transformerOut = (diff: number) => TURNS * CORE_VOLTS * Math.tanh(diff / CORE_VOLTS)
@@ -155,7 +164,7 @@ export function preampCycle(gainDb: number, wiring: Wiring = 'balanced', input: 
     pin2: table(), pin3: table(), diff: table(), out: table(), wanted: table(),
     currentA: table(), currentB: table(), gainCurrent: table(), movedA: table(), movedB: table(), gainMoved: table(),
   }
-  const times = timesOf(gainDb), re = emitterResistor(gainDb)
+  const times = timesOf(gainDb), share = knobShare(gainDb)
   for (let i = 0; i < n; i++) {
     const { pin2, pin3 } = pinsAt(i * step, wiring)
     const diff = pin2 - pin3
@@ -172,8 +181,10 @@ export function preampCycle(gainDb: number, wiring: Wiring = 'balanced', input: 
       c.currentA[i] = STAGE_CURRENT + through
       c.currentB[i] = STAGE_CURRENT - through
     } else {
-      // The second coil wired so the transistor, which turns what it gets upside down, gives it the right way up
-      const current = transistorCurrent(-transformerOut(diff), re)
+      // The second coil wired so the transistor, which turns what it gets upside down, gives it the right
+      // way up; nothing below the transistor, so its current follows its own curve — growing faster
+      // one way than it shrinks the other: the output's tops round off on one side, stretch on the other
+      const current = transistorCurrent(-share * transformerOut(diff), 0)
       c.out[i] = clamp(-(current - STAGE_CURRENT) * COLLECTOR_OHMS, -SWING_MAX, SWING_MAX)
       c.currentA[i] = current
     }

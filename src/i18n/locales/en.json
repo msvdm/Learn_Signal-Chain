@@ -700,9 +700,8 @@
       "powerSupply": "Energy from the wall",
       "lineLevel": "Line level",
       "pushPull": "Push and pull: the speaker",
-      "classes": "Amplifier classes",
-      "preampChip": "The preamp chip",
-      "transformerInput": "Transformer input"
+      "classes": "Classes and inputs",
+      "preampChip": "The preamp chip"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -821,13 +820,13 @@
       "preampChip": "Preamp chip",
       "difference": "Difference",
       "rg": "RG {r}",
-      "re": "Re {r}",
       "ohms": "{r} Ω",
       "kOhms": "{r} kΩ",
       "volume": "Volume",
       "volumeOff": "Off",
       "inputTransformer": "Input transformer",
-      "noPower": "× 10, no power of its own"
+      "noPower": "× 10, no power of its own",
+      "capacitor": "Capacitor"
     }
   }
 }

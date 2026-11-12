@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n/useTranslation'
 import { CLIP_DBU, formatDb } from '../../signal/levels'
 import {
   GAIN_MAX, GAIN_MIN, HUM_PEAK, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL as PRE_RAIL, SAMPLES, STAGE_CURRENT, SWING_MAX as PRE_SWING,
-  emitterResistor, gainOf, gainResistor, humAt, levelsOf, preampCycle,
+  gainOf, gainResistor, humAt, levelsOf, preampCycle,
 } from '../preamp'
 import type { Input, PreampCycle, Wiring } from '../preamp'
 import {
@@ -43,11 +43,13 @@ import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 //     it until the output meets its sides: clipping.
 // (5) The power amplifier: its Volume (only turning down), the voltage 10 times bigger, two
 //     transistors between the ±12 V sides, one pushing and one pulling, and the speaker they move.
-// (6) The classes, picked by buttons — only the current the two let through at rest changes —, with
-//     the heat, where the power goes, class B's notch and the sines an output is made of.
-// (7) The preamp's input, picked by buttons: the clean chip, or a transformer and one transistor —
-//     the new sines that adds, more as it is driven harder.
-// Both knobs stay live from their step on and the whole chain follows them. The phase is the
+// (6) Two choices in one row of buttons, the picture the same: the classes — only the current the two
+//     let through at rest changes —, with the heat, where the power goes, class B's notch and the
+//     sines an output is made of; and the preamp's input — the clean chip, or a transformer, the gain
+//     knob turning its voltage down, and one transistor with nothing to straighten its curve: the
+//     new sines that adds, its tops uneven, more as it is driven harder.
+// The knobs stand below the −12 V side, each with a leader to the resistor it turns; both stay live
+// from their step on and the whole chain follows them. The phase is the
 // microphone's voltage, as in Magnetic induction: +10 mV at 0°. The numbers are preamp.ts's and amp.ts's.
 
 // ── Where things are, in the scene's units ──────────────────────────────────
@@ -87,7 +89,9 @@ const CHIP_X = 610, CHIP_R = 925, CHIP_TOP = 176, CHIP_BOTTOM = 426
 const BOX_X = 640, BOX_R = 900, BOX_TOP = 190, BOX_BOTTOM = 232, PLUS_X = 770
 const COL_A = 665, COL_B = 875, Q_Y = 280, E_Y = 360, SOURCE_Y = 403
 /** The gain resistor between the two, and the knob under it */
-const RG_FROM = 710, RG_TO = 830, KNOB_X = 697, KNOB_Y = SOURCE_Y, KNOB_R = 16
+const RG_FROM = 710, RG_TO = 830
+/** The knobs stand below the −12 V side, each with a leader up to the resistor it turns */
+const KNOBS_Y = 530, KNOB_X = 790, KNOB_R = 16
 /** Where pin 3's wire runs under the first transistor, hopping over its column */
 const PIN3_RUN = 330, PIN3_UP = 815, HOP = 8
 /** Where the output leaves both inputs for the line out */
@@ -96,12 +100,14 @@ const OUT_TURN = 945
 const DIFF_X = 654, DIFF_W = 330, DIFF_SCOPE_X = DIFF_X + 12, LEGEND_X = DIFF_SCOPE_X + SCOPE_W + 14, DIFF_LEADER_X = BOX_X + 170
 /** 7 · the transformer input in the chip's place: its coils and core, its transistor's column */
 const COIL_1 = 622, COIL_2 = 662, COL_T = PLUS_X, QT_Y = 300, RC_TOP = 180, RC_BOTTOM = 230, NODE_T = 250, RE_TOP = 350, RE_BOTTOM = 410
-const KNOB_T_X = 810, KNOB_T_Y = 385
+/** Its second coil; the gain knob's resistor from it to 0 V and its wiper; the capacitor beside the resistor below the transistor; its names' place */
+const COIL_2_TOP = CY - 60, COIL_2_BOTTOM = CY + 40, GPOT_X = 700, GPOT_TOP = 250, GPOT_BOTTOM = 330, GWIPER_X = 716
+const CAP_X = 805, CAP_Y = 380, TR_LABEL_X = 720, KNOB_T_X = GPOT_X + 4
 
 /** 4 · the line out's panel, from side to side: its left edge is where the output's height is read */
 const LINE_X = 965, LINE_W = 200, LINE_SCOPE_X = LINE_X + 14
 /** 5 · the Volume: a resistor from the line to 0 V, its wiper taking a share of it; its knob */
-const POT_X = 1230, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = 1258, VOL_X = 1280, VOL_Y = 392, VOL_R = 18
+const POT_X = 1230, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = 1258, VOL_X = POT_X - 18, VOL_R = 18
 /** The voltage made 10 times bigger: a triangle, as Magnetic induction names an amplifier */
 const TRI_X = 1290, TRI_TIP = TRI_X + 60, TRI_HALF = 30
 /** The speaker's stage: the line driving the two bases, the column, the transistors */
@@ -122,7 +128,7 @@ const HARM_X = 760, HARM_BOTTOM = PANEL_Y + 130, HARM_H = 100, HARM_STEP = 34, H
 const ZOOM_DEG = 9, ZOOM_VOLTS = 0.5, ZOOM_PX_DEG = (10 * SCOPE_W) / 360, ZOOM_PX_V = 10 * PX_V
 const ZOOM_X = OUT_X + 52, ZOOM_W = 2 * ZOOM_DEG * ZOOM_PX_DEG, ZOOM_CY = PANEL_Y + 90, ZOOM_HALF = ZOOM_VOLTS * ZOOM_PX_V + 10
 
-/** The steps: the chip's, the gain knob's, the power amplifier's, the classes', the inputs' */
+/** The steps: the chip's, the gain knob's, the power amplifier's, the classes' and inputs' */
 const CHIP_STEP = 3, GAIN_STEP = 4, POWER_STEP = 5, CLASS_STEP = 6
 
 /** What the buttons pick (`Subject.shapes`): each group's first until another is picked at its step */
@@ -417,9 +423,9 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
   ] : []
   const bar = (x: number) => x - BASE_GAP
   const gainText = `+${shownGain} ${l.db}`
-  const resistance = chip
-    ? fmt(l.rg, { r: ohmsText(gainResistor(shownGain), l, fmt) })
-    : fmt(l.re, { r: ohmsText(emitterResistor(shownGain), l, fmt) })
+  const knobText = chip ? `${gainText} · ${fmt(l.rg, { r: ohmsText(gainResistor(shownGain), l, fmt) })}` : gainText
+  /** The transformer input's gain wiper: the knob's place along its resistor */
+  const gainWiperY = GPOT_BOTTOM - ((GPOT_BOTTOM - GPOT_TOP) * (shownGain - GAIN_MIN)) / (GAIN_MAX - GAIN_MIN)
   const volumeText = volume <= VOLUME_OFF ? l.volumeOff : `${volume < 0 ? '−' : ''}${Math.abs(volume)} ${l.db}`
   /** The wiper's height: the knob's place along the resistor (a volume pot's: dB along its turn) */
   const wiperY = POT_BOTTOM - ((POT_BOTTOM - POT_TOP) * (volume - VOLUME_OFF)) / (VOLUME_FULL - VOLUME_OFF)
@@ -550,26 +556,32 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <Label at={[CHIP_X + 8, CHIP_BOTTOM + 30]}>{l.preampChip}</Label>
         </g>
 
-        {/* The transformer input in its place (step 7): its two coils on one core, one transistor, a resistor above it, the gain knob's below */}
+        {/* The transformer input in its place: its two coils on one core; the gain knob a resistor from the
+            second coil to 0 V, its wiper into one transistor's base; a resistor above it, and below it only
+            what keeps its resting current — a resistor with a capacitor across it — so nothing straightens its curve */}
         <g style={shown(!chip)}>
           <path d={`M${CABLE_END} ${WIRE_2} H${COIL_1 - 12} V${CY - 42} H${COIL_1} M${CABLE_END} ${WIRE_3} H${COIL_1 - 12} V${CY + 42} H${COIL_1}`} {...WIRE} />
           <path d={coilPath(COIL_1, CY - 42, CY + 42, 1)} {...WIRE} />
           <path d={`M${COIL_1 + 18} ${CY - 56} V${CY + 56} M${COIL_1 + 22} ${CY - 56} V${CY + 56}`} stroke={PART} strokeWidth={2} />
-          <path d={coilPath(COIL_2, CY - 60, CY + 60, -1)} {...WIRE} />
-          <path d={`M${COIL_2} ${CY - 60} H${COIL_2 + 48} V${QT_Y} H${bar(COL_T)} M${COIL_2} ${CY + 60} V${CY + 80}`} {...WIRE} />
-          <Ground x={COIL_2} y={CY + 80} />
+          <path d={coilPath(COIL_2, COIL_2_TOP, COIL_2_BOTTOM, -1)} {...WIRE} />
+          <path d={`M${COIL_2} ${COIL_2_TOP} H${GPOT_X} V${GPOT_TOP} M${GPOT_X} ${GPOT_BOTTOM} V${GPOT_BOTTOM + 16} H${COIL_2} M${COIL_2} ${COIL_2_BOTTOM} V${GPOT_BOTTOM + 22}`} {...WIRE} />
+          <path d={resistorPath(GPOT_X, GPOT_TOP, GPOT_BOTTOM)} {...WIRE} strokeLinejoin="round" />
+          <Ground x={COIL_2} y={GPOT_BOTTOM + 22} />
+          <line x1={GWIPER_X} y1={gainWiperY} x2={GPOT_X + 12} y2={gainWiperY} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
+          <path d={`M${GWIPER_X} ${gainWiperY} V${QT_Y} H${bar(COL_T)}`} {...WIRE} />
           <path d={`M${COL_T} ${P9} V${RC_TOP} M${COL_T} ${RC_BOTTOM} V${NODE_T}`} {...WIRE} />
           <path d={resistorPath(COL_T, RC_TOP, RC_BOTTOM)} {...WIRE} strokeLinejoin="round" />
           <path d={transistorLeads(COL_T, QT_Y, NODE_T, RE_TOP)} {...WIRE} />
           <Transistor x={COL_T} y={QT_Y} fill="qTFill" pnp={false} />
           <path d={`${resistorPath(COL_T, RE_TOP, RE_BOTTOM)} V${M9}`} {...WIRE} strokeLinejoin="round" />
-          <line x1={COL_T - 20} y1={RE_BOTTOM - 8} x2={COL_T + 20} y2={RE_TOP + 8} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
+          <path d={`M${COL_T} ${RE_TOP - 6} H${CAP_X} V${CAP_Y - 4} M${CAP_X - 12} ${CAP_Y - 4} H${CAP_X + 12} M${CAP_X - 12} ${CAP_Y + 4} H${CAP_X + 12} M${CAP_X} ${CAP_Y + 4} V${RE_BOTTOM + 8} H${COL_T}`} {...WIRE} />
           <circle cx={COL_T} cy={NODE_T} r={4} fill={INK} />
           <path d={`M${COL_T} ${NODE_T} H${OUT_TURN} V${CY} H${LINE_X}`} {...THIN} />
           <Label at={[COL_T + 18, (RC_TOP + RC_BOTTOM) / 2 + 4]}>{l.resistor}</Label>
-          <Label at={[COL_T - 40, QT_Y + 52]} anchor="end">{l.transistor}</Label>
-          <Label at={[CHIP_X + 8, CHIP_BOTTOM + 26]}>{l.inputTransformer}</Label>
-          <Label at={[CHIP_X + 8, CHIP_BOTTOM + 43]}>{l.noPower}</Label>
+          <Label at={[CAP_X + 18, CAP_Y + 4]}>{l.capacitor}</Label>
+          <Label at={[COL_T + 30, QT_Y - 28]}>{l.transistor}</Label>
+          <Label at={[TR_LABEL_X, CHIP_BOTTOM + 26]}>{l.inputTransformer}</Label>
+          <Label at={[TR_LABEL_X, CHIP_BOTTOM + 43]}>{l.noPower}</Label>
           <Dots name="columnTDots" wire={COLUMN_T} />
         </g>
 
@@ -602,14 +614,15 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           {formatDb(line.rms)} · <tspan style={{ fill: lineHealth.colour, fontWeight: 600 }}>{t.health[lineHealth.health]}</tspan>
         </text>
 
-        {/* The gain knob: the resistor it turns — between the chip's two transistors, or below the transformer input's one */}
+        {/* The gain knob, below the −12 V side: a leader up to the resistor it turns — between the chip's two transistors, or the transformer input's before its transistor */}
+        <Leader x1={chip ? KNOB_X : KNOB_T_X} y1={KNOBS_Y - KNOB_R - 3} x2={chip ? KNOB_X : KNOB_T_X} y2={chip ? E_Y + 13 : GPOT_BOTTOM + 4} />
         <SceneKnob
-          cx={chip ? KNOB_X : KNOB_T_X} cy={chip ? KNOB_Y : KNOB_T_Y} r={KNOB_R} color="var(--lsc-accent)"
+          cx={chip ? KNOB_X : KNOB_T_X} cy={KNOBS_Y} r={KNOB_R} color="var(--lsc-accent)"
           value={gain} min={GAIN_MIN} max={GAIN_MAX} round={gainOf} onChange={setGain}
           label={l.gainKnob} valueText={gainText}
         />
-        <Label at={[(chip ? KNOB_X : KNOB_T_X) + KNOB_R + 6, (chip ? KNOB_Y : KNOB_T_Y) - 4]}>{l.gainKnob}</Label>
-        <Label at={[(chip ? KNOB_X : KNOB_T_X) + KNOB_R + 6, (chip ? KNOB_Y : KNOB_T_Y) + 13]}>{`${gainText} · ${resistance}`}</Label>
+        <Label at={[(chip ? KNOB_X : KNOB_T_X) + KNOB_R + 6, KNOBS_Y - 4]}>{l.gainKnob}</Label>
+        <Label at={[(chip ? KNOB_X : KNOB_T_X) + KNOB_R + 6, KNOBS_Y + 13]}>{knobText}</Label>
       </Step>
 
       {/* 3 again, over the line out's panel: the output's height at this moment */}
@@ -626,18 +639,19 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <Dots name="lowerDots" wire={LOWER_WIRE} />
 
         {/* The Volume: the line across a resistor to 0 V, the wiper taking what the knob says */}
-        <path d={`M${LINE_X + LINE_W} ${CY} H${POT_X - 25} V${POT_TOP - 10} H${POT_X} V${POT_TOP} M${POT_X} ${POT_BOTTOM} V${POT_BOTTOM + 14}`} {...THIN} />
+        <path d={`M${LINE_X + LINE_W} ${CY} H${POT_X - 35} V${POT_TOP - 10} H${POT_X} V${POT_TOP} M${POT_X} ${POT_BOTTOM} V${POT_BOTTOM + 14}`} {...THIN} />
         <path d={resistorPath(POT_X, POT_TOP, POT_BOTTOM)} {...THIN} strokeLinejoin="round" />
         <Ground x={POT_X} y={POT_BOTTOM + 14} />
         <line x1={WIPER_X} y1={wiperY} x2={POT_X + 12} y2={wiperY} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
         <path d={`M${WIPER_X} ${wiperY} V${CY} H${TRI_X}`} {...THIN} />
+        <Leader x1={VOL_X} y1={KNOBS_Y - VOL_R - 3} x2={VOL_X} y2={(POT_TOP + POT_BOTTOM) / 2} />
         <SceneKnob
-          cx={VOL_X} cy={VOL_Y} r={VOL_R} color="var(--lsc-knob-gray)"
+          cx={VOL_X} cy={KNOBS_Y} r={VOL_R} color="var(--lsc-knob-gray)"
           value={volume} min={VOLUME_OFF} max={VOLUME_FULL} round={volumeOf} onChange={setVolume}
           label={l.volume} valueText={volumeText}
         />
-        <Label at={[VOL_X, VOL_Y + VOL_R + 18]} anchor="middle">{l.volume}</Label>
-        <Label at={[VOL_X, VOL_Y + VOL_R + 35]} anchor="middle">{volumeText}</Label>
+        <Label at={[VOL_X + VOL_R + 6, KNOBS_Y - 4]}>{l.volume}</Label>
+        <Label at={[VOL_X + VOL_R + 6, KNOBS_Y + 13]}>{volumeText}</Label>
 
         <path d={`M${TRI_TIP} ${CY} H${DRIVE_X} M${DRIVE_X} ${Q1_Y} H${bar(COL2)} M${DRIVE_X} ${Q2_Y} H${bar(COL2)} M${DRIVE_X} ${Q1_Y} V${Q2_Y}`} {...THIN} />
         <path d={`M${TRI_X} ${CY - TRI_HALF} L${TRI_TIP} ${CY} L${TRI_X} ${CY + TRI_HALF} Z`} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} strokeLinejoin="round" />
