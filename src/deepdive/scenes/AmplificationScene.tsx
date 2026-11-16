@@ -28,21 +28,26 @@ import { MicrophoneParts } from './micParts'
 import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 
 // Analogue amplification (Deep dive, D46): from a microphone to line level to a speaker, in one
-// picture where height is voltage. The power supply's sides are lines across it — +9 V above and
-// −9 V below for the preamp, ±12 V outside them for the speaker's stage — and what an amplifier
-// gives is a point between its two sides, its height drawn over time beside it.
+// picture where height is voltage, the signal running left to right. Each stage has its own power
+// supply above it: its + side drops straight down at its left onto a line along the stage's top —
+// +9 V for the preamp, +12 V for the speaker's stage —, its − side down at its right, past the
+// stage's output (the output hops over it), onto a line along its bottom. Nothing powered runs past
+// the microphone. What an amplifier gives is a point between its two sides, its height drawn over
+// time beside it.
 // (1) The sound moves the microphone's diaphragm (as in Magnetic induction): ±10 mV, too quiet,
-//     between pin 2 and pin 3 of its XLR; a mains cable across the microphone's puts a hum on the
-//     wires — balanced, the same on both; unbalanced (a button), only on the one wire.
-// (2) The power supply's steady sides, waiting.
+//     between pin 2 and pin 3 of its XLR; a hum gets onto the wires — a dim cloud named Noise over
+//     the cable (the teacher says where it comes from) —: balanced, the same on both; unbalanced (a
+//     button), only on the one wire.
+// (2) The preamp's power supply and its steady sides, waiting.
 // (3) The clean preamp chip (as the THAT1510), open: its two input transistors, one steered by each
 //     wire; what they make of the difference between them comes out — pin 3 turned over and added
 //     to pin 2, the hum meets itself upside down and is gone.
 // (4) The gain knob, the resistor between the two transistors: the smaller, the bigger the current
 //     through it and the output — up to line level, judged as the canvas judges a signal, and past
 //     it until the output meets its sides: clipping.
-// (5) The power amplifier: its Volume (only turning down), the voltage 10 times bigger, two
-//     transistors between the ±12 V sides, one pushing and one pulling, and the speaker they move.
+// (5) The power amplifier, its own power supply above it: its Volume (only turning down), the voltage
+//     10 times bigger, two transistors between the ±12 V sides, one pushing and one pulling, and the
+//     speaker they move.
 // (6) Two choices in one row of buttons, the picture the same: the classes — only the current the two
 //     let through at rest changes —, with the heat, where the power goes, class B's notch and the
 //     sines an output is made of; and the preamp's input — the clean chip, or a transformer, the gain
@@ -56,10 +61,15 @@ import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 /** Height is voltage: the picture's middle line is 0 V */
 const CY = 300, PX_V = 15
 const vy = (volts: number) => CY - PX_V * volts
-/** The supply's sides, as lines across the picture */
+/** The supplies' sides, as lines along each stage's top and bottom */
 const P9 = vy(PRE_RAIL), M9 = vy(-PRE_RAIL), P12 = vy(RAIL), M12 = vy(-RAIL)
-/** The power supply at the left, as tall as its sides are apart; they leave its right edge */
-const PSU_W = 100, PSU_TOP = 100, PSU_BOTTOM = 500, RAIL_X = PSU_W
+/** A stage's power supply above it: how tall its box is */
+const PSU_H = 34
+/**
+ * The preamp's power supply, above the line out: its box; its + side dropping onto the +9 V line at its
+ * left (on the line out's top), its − side at its right — right of the line out — down to −9 V
+ */
+const PRE_PSU_L = 1062, PRE_PSU_R = 1250, PRE_PSU_TOP = 100, PRE_PSU_BOTTOM = PRE_PSU_TOP + PSU_H, PRE_PLUS_X = 1072, PRE_MINUS_X = 1240
 
 /** 1 · the air before the microphone; where its diaphragm rests (the drawing's own units moved there) */
 const AIR1_X = 112, AIR1_W = 76, AIR1_Y = CY - 69, AIR1_H = 138
@@ -78,8 +88,9 @@ const IN_X = 230, IN_W = 220, IN_HALF = 56, IN_SCOPE_X = IN_X + 12, SCOPE_W = 15
 const XLR_X = 352, XLR_W = 32, PIN_X = XLR_X + 8, PIN_GAP = 16
 /** The cable: its shield from the socket to the chip, its two wires inside */
 const CABLE_X = XLR_X + XLR_W, CABLE_END = 600, CABLE_HALF = 26, WIRE_2 = CY - 14, WIRE_3 = CY + 14
-/** The mains cable lying across it, and its field */
-const MAINS_X = 425, MAINS_HALF = 100, FIELD = [18, 30, 42]
+/** The noise on it: a dim cloud just above the cable, its puffs (x, y from its middle, radius) */
+const NOISE_X = 470, NOISE_Y = CY - CABLE_HALF - 34
+const NOISE_PUFFS = [[-36, 6, 22], [-12, -8, 28], [16, -4, 26], [38, 8, 20], [0, 12, 24]] as const
 /** Pin 2's graph above the picture, pin 3's below; their scale (3 px a millivolt) */
 const PINS_X = 466, PINS_W = 172, PX_MV = 3, PINS_SCOPE_X = PINS_X + 10
 const LEADER_X = 552, MIC_LEADER_X = PIN_X - 20
@@ -107,17 +118,20 @@ const CAP_X = 805, CAP_Y = 380, TR_LABEL_X = 720, KNOB_T_X = GPOT_X + 4
 /** 4 · the line out's panel, from side to side: its left edge is where the output's height is read */
 const LINE_X = 965, LINE_W = 200, LINE_SCOPE_X = LINE_X + 14
 /** 5 · the Volume: a resistor from the line to 0 V, its wiper taking a share of it; its knob */
-const POT_X = 1230, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = 1258, VOL_X = POT_X - 18, VOL_R = 18
+const POT_X = 1290, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = 1318, VOL_X = POT_X - 18, VOL_R = 18
 /** The voltage made 10 times bigger: a triangle, as Magnetic induction names an amplifier */
-const TRI_X = 1290, TRI_TIP = TRI_X + 60, TRI_HALF = 30
+const TRI_X = 1350, TRI_TIP = TRI_X + 60, TRI_HALF = 30
 /** The speaker's stage: the line driving the two bases, the column, the transistors */
 const DRIVE_X = TRI_TIP + 36, COL2 = DRIVE_X + 60, Q1_Y = 210, Q2_Y = 390
 /** The heat sinks, right of each transistor */
 const SINK_X = COL2 + 34, SINK_W = 60, SINK_H = 76
 /** The speaker's panel, from side to side */
 const OUT_X = COL2 + 130, OUT_W = 170, OUT_SCOPE_X = OUT_X + 10
+/** Its power supply, above it: its box; its + side down onto the +12 V line at its left, its − side right of the speaker's panel down to −12 V */
+const AMP_PSU_L = 1330, AMP_PSU_TOP = 50, AMP_PSU_BOTTOM = AMP_PSU_TOP + PSU_H, AMP_PLUS_X = AMP_PSU_L + 10
+const AMP_MINUS_X = OUT_X + OUT_W + 14, AMP_PSU_R = AMP_MINUS_X + 10
 /** The speaker (as Magnetic induction draws it): its magnet's back, its leads, its wires, its air */
-const SPK_X = OUT_X + OUT_W + 80, SPK_Y = CY, LEAD_A = SPK_X + 63.8, LEAD_B = SPK_X + 72.6
+const SPK_X = OUT_X + OUT_W + 120, SPK_Y = CY, LEAD_A = SPK_X + 63.8, LEAD_B = SPK_X + 72.6
 const WIRE_UP_X = SPK_X - 70, WIRE_TOP = SPK_Y - 80, RETURN_TOP = SPK_Y - 58, RETURN_X = SPK_X - 50, GROUND_Y = SPK_Y + 130
 const AIR_X = SPK_X + 182, AIR_W = 110, AIR_Y = SPK_Y - 130, AIR_H = 262, LOUDER = 1.8
 /** Under the picture, at the classes' step: where the power goes, the output's sines, class B's notch */
@@ -144,19 +158,22 @@ const volumeAt = (step: number, volume: number) => (step >= POWER_STEP ? volume 
 const DOT_GAP = 26, RAIL_GAPS = 4, COLUMN_GAPS = 2, GAPS_PER_AMP = 8, SPEAKER_TO_AND_FRO = 32
 /** Through the gain resistor, to and fro: px per ampere × radian (±15 px at line level) */
 const GAIN_TO_AND_FRO = 150000
-/** The preamp's: the supply's sides as far as the chip; down each input transistor's column; through the gain resistor; the transformer input's one column */
-const PLUS_WIRE: readonly Pt[] = [[RAIL_X, P9], [PLUS_X, P9]]
-const MINUS_WIRE: readonly Pt[] = [[COL_B, M9], [RAIL_X, M9]]
+/** The preamp's: from its supply down its + side to the chip, from the chip along −9 V and back up its − side; down each input transistor's column; through the gain resistor; the transformer input's one column */
+const PLUS_WIRE: readonly Pt[] = [[PRE_PLUS_X, PRE_PSU_BOTTOM], [PRE_PLUS_X, P9], [PLUS_X, P9]]
+const MINUS_WIRE: readonly Pt[] = [[COL_A, M9], [PRE_MINUS_X, M9], [PRE_MINUS_X, PRE_PSU_BOTTOM]]
 const COLUMN_A: readonly Pt[] = [[COL_A, BOX_BOTTOM], [COL_A, M9]]
 const COLUMN_B: readonly Pt[] = [[COL_B, BOX_BOTTOM], [COL_B, M9]]
 const GAIN_WIRE: readonly Pt[] = [[COL_A, E_Y], [COL_B, E_Y]]
 const COLUMN_T: readonly Pt[] = [[COL_T, P9], [COL_T, M9]]
 /** The stage's: from the + side through the upper transistor to the output; from it through the lower one to the − side; from it to the speaker */
-const UPPER_WIRE: readonly Pt[] = [[RAIL_X, P12], [COL2, P12], [COL2, CY]]
-const LOWER_WIRE: readonly Pt[] = [[COL2, CY], [COL2, M12], [RAIL_X, M12]]
+const UPPER_WIRE: readonly Pt[] = [[AMP_PLUS_X, AMP_PSU_BOTTOM], [AMP_PLUS_X, P12], [COL2, P12], [COL2, CY]]
+const LOWER_WIRE: readonly Pt[] = [[COL2, CY], [COL2, M12], [AMP_MINUS_X, M12], [AMP_MINUS_X, AMP_PSU_BOTTOM]]
 const SPEAKER_WIRE: readonly Pt[] = [[COL2, CY], [WIRE_UP_X, CY], [WIRE_UP_X, WIRE_TOP], [LEAD_B, WIRE_TOP], [LEAD_B, SPK_Y]]
 /** The speaker's wire runs through its panel: no charges are drawn over the graph */
 const PANEL_FROM = OUT_X - COL2, PANEL_TO = OUT_X + OUT_W - COL2
+/** Where an output hops over a − side (how far along each wire): no charges are drawn in the hop */
+const PRE_HOP_S = PRE_MINUS_X - COL_A + M9 - CY, AMP_HOP_S = 2 * (M12 - CY) + AMP_MINUS_X - COL2, SPEAKER_HOP_S = AMP_MINUS_X - COL2
+const offHop = (s: number, at: number) => Math.abs(s - at) > HOP + 3
 
 const MIC_AIR = scatter(17, 140, { x: AIR1_X, y: AIR1_Y, w: AIR1_W, h: AIR1_H })
 const AIR_DOTS = scatter(29, 270, { x: AIR_X, y: AIR_Y, w: AIR_W, h: AIR_H })
@@ -233,7 +250,7 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
   for (const { el } of [...micAir, ...air]) el.setAttribute('fill', INK)
   const diaphragm = find('diaphragm'), micCoil = find.all('coil'), lead2 = find('lead2'), lead3 = find('lead3')
   const inTrace = find('inTrace'), inDot = find('inDot'), inReading = find('inReading')
-  const field = find('field')
+  const noise = find('noise')
   const pin2Trace = find('pin2Trace'), pin2Dot = find('pin2Dot'), pin2Reading = find('pin2Reading')
   const pin3Trace = find('pin3Trace'), pin3Dot = find('pin3Dot'), pin3Reading = find('pin3Reading')
   const diff2 = find('diff2'), diff3 = find('diff3'), diffTrace = find('diffTrace'), diffDot = find('diffDot')
@@ -282,7 +299,7 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
     const { pre, amp } = chainAt(step, shapes, gain, volume)
     const chip = pre.input === 'chip'
 
-    // 1 · the sound moves the diaphragm and its coil; the coil's voltage between its two leads; on the wires, the hum after the mains cable
+    // 1 · the sound moves the diaphragm and its coil; the coil's voltage between its two leads; on the wires, the hum (the noise cloud stays dim, a little stronger with it)
     for (const p of micAir) put(p.el, 'cx', clamp(p.x + swing(r, p.x - MIC_X), AIR1_X - 2, AIR1_X + AIR1_W + 2))
     const u = 0.5 * SWING * Math.sin(r)
     moveMicrophone(diaphragm, micCoil, u)
@@ -291,7 +308,7 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
     inTrace.setAttribute('d', curvePath(whole, inX, inY))
     put(inDot, 'cx', inX(deg)); put(inDot, 'cy', inY(deg))
     inReading.textContent = signed(IN_PEAK * 1000 * Math.cos(r), 1)
-    field.setAttribute('opacity', (0.1 + (0.8 * Math.abs(humAt(r))) / HUM_PEAK).toFixed(3))
+    noise.setAttribute('opacity', (0.16 + (0.14 * Math.abs(humAt(r))) / HUM_PEAK).toFixed(3))
     small(pre.pin2, deg, pinsX, TOP_Y, pin2Trace, pin2Dot)
     small(pre.pin3, deg, pinsX, PIN3_Y, pin3Trace, pin3Dot)
     pin2Reading.textContent = signed(1000 * tableAt(pre.pin2, deg), 1)
@@ -301,7 +318,8 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
     if (step >= 2) {
       const moved = step >= CHIP_STEP ? RAIL_GAPS * DOT_GAP * (chip ? deg / 360 : tableAt(pre.movedA, deg)) : 0
       place(PLUS, moved)
-      place(MINUS, moved, chip || step < CHIP_STEP ? undefined : (s) => s >= COL_B - COL_T)
+      // The transformer's one column joins −9 V at COL_T: nothing flows along it left of there
+      place(MINUS, moved, (s) => offHop(s, PRE_HOP_S) && (chip || step < CHIP_STEP || s >= COL_T - COL_A))
     }
     if (step < CHIP_STEP) return
 
@@ -332,8 +350,8 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
     // 5 · the two transistors open as far as their currents; the charges on their wires; the speaker's voltage; its cone and the air before it
     const mean = meansOf(amp), out = tableAt(amp.out, deg)
     place(UPPER, gapsFor(mean.upper) * DOT_GAP * tableAt(amp.upperMoved, deg))
-    place(LOWER, gapsFor(mean.lower) * DOT_GAP * tableAt(amp.lowerMoved, deg))
-    place(SPEAKER, SPEAKER_TO_AND_FRO * tableAt(amp.speakerMoved, deg), (s) => s < PANEL_FROM - 4 || s > PANEL_TO + 4)
+    place(LOWER, gapsFor(mean.lower) * DOT_GAP * tableAt(amp.lowerMoved, deg), (s) => offHop(s, AMP_HOP_S))
+    place(SPEAKER, SPEAKER_TO_AND_FRO * tableAt(amp.speakerMoved, deg), (s) => (s < PANEL_FROM - 4 || s > PANEL_TO + 4) && offHop(s, SPEAKER_HOP_S))
     q1.setAttribute('fill-opacity', (0.06 + (0.6 * tableAt(amp.upper, deg)) / PEAK_CURRENT).toFixed(3))
     q2.setAttribute('fill-opacity', (0.06 + (0.6 * tableAt(amp.lower, deg)) / PEAK_CURRENT).toFixed(3))
     put(outLevel, 'cy', vy(out))
@@ -471,12 +489,11 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         {!balanced && <path d={`M${PIN_X - 3} ${CY + PIN_GAP} Q${PIN_X - 9} ${CY + PIN_GAP / 2} ${PIN_X - 3} ${CY}`} {...THIN} />}
         <Label at={[XLR_X + XLR_W / 2, CY + 52]} anchor="middle">{l.xlr}</Label>
 
-        {/* The mains cable lying across the microphone's, and its field */}
-        <line x1={MAINS_X} y1={CY - MAINS_HALF} x2={MAINS_X} y2={CY + MAINS_HALF} stroke={PART_3} strokeWidth={9} strokeLinecap="round" />
-        <g data-p="field" fill="none" stroke={MOVER} strokeWidth={1.2} opacity={0.1}>
-          {FIELD.map((rr) => <circle key={rr} cx={MAINS_X} cy={CY} r={rr} />)}
+        {/* The noise getting onto the cable: a dim cloud just above it, named — the teacher says where it comes from */}
+        <g data-p="noise" fill={PART} opacity={0.16}>
+          {NOISE_PUFFS.map(([dx, dy, rr]) => <circle key={`${dx} ${dy}`} cx={NOISE_X + dx} cy={NOISE_Y + dy} r={rr} />)}
         </g>
-        <Label at={[MAINS_X - 10, CY - MAINS_HALF + 10]} anchor="end">{l.mainsCable}</Label>
+        <Label at={[NOISE_X, NOISE_Y + 8]} anchor="middle">{l.noise}</Label>
 
         {/* The cable: its shield (pin 1) to 0 V, its wires — one, unbalanced */}
         <rect x={CABLE_X} y={CY - CABLE_HALF} width={CABLE_END - CABLE_X} height={2 * CABLE_HALF} rx={12} fill="none" stroke={PART} strokeWidth={2} />
@@ -485,6 +502,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <path d={`M${PIN_X} ${WIRE_3} H${CABLE_END}`} {...WIRE} style={shown(balanced)} />
         <path d={`M${CABLE_END - 10} ${CY + CABLE_HALF} V${CY + 48}`} {...THIN} />
         <Ground x={CABLE_END - 10} y={CY + 48} />
+        <Label at={[CABLE_END - 28, CY + 60]} anchor="end">{l.zeroV}</Label>
         {!balanced && <path d={`M${CABLE_END} ${CY + CABLE_HALF} V${WIRE_3}`} {...THIN} />}
 
         {/* What each wire carries, after the mains cable */}
@@ -494,23 +512,17 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <Leader x1={LEADER_X} y1={PIN3_Y - PINS_HALF} x2={LEADER_X} y2={WIRE_3 + 3} />
       </Step>
 
-      {/* 2 · the power supply: from the wall, two steady sides — lines across the picture, above and below */}
+      {/* 2 · the preamp's power supply, above it: from the wall, two steady sides dropping straight down —
+          +9 V at its left onto a line along the stage's top, −9 V at its right, past the line out, onto one along its bottom */}
       <Step n={2} step={step}>
-        <g transform={`rotate(90 ${PSU_W / 2} ${PSU_TOP - 22})`}>
-          <path d={`M${PSU_W / 2} ${PSU_TOP - 22} h22`} fill="none" stroke={PART} strokeWidth={4} strokeLinecap="round" />
-          <Plug x={PSU_W / 2} y={PSU_TOP - 22} />
-        </g>
-        <Label at={[PSU_W / 2 + 24, PSU_TOP - 38]}>{l.wallSocket}</Label>
-        <rect x={0} y={PSU_TOP} width={PSU_W} height={PSU_BOTTOM - PSU_TOP} rx={10} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
-        <Label at={[PSU_W / 2, CY - 40]} anchor="middle">{l.powerSupply}</Label>
-        <path d={`M${RAIL_X} ${P9} H${PLUS_X} M${RAIL_X} ${M9} H${COL_B}`} {...WIRE} />
-        <path d={`M${PSU_W / 2} ${PSU_BOTTOM} v14`} {...THIN} />
-        <Ground x={PSU_W / 2} y={PSU_BOTTOM + 14} />
-        <Label at={[PSU_W / 2 + 18, PSU_BOTTOM + 27]}>{l.zeroV}</Label>
-        <Label at={[RAIL_X + 8, P9 - 8]}>{l.plus9}</Label>
-        <Label at={[RAIL_X + 8, M9 + 18]}>{l.minus9}</Label>
+        <PowerSupply left={PRE_PSU_L} right={PRE_PSU_R} top={PRE_PSU_TOP} name={l.powerSupply} socket={l.wallSocket} />
+        {/* −9 V reaches as far left as the first column on it: the chip's first transistor, or the transformer input's one */}
+        <path d={`M${PRE_PLUS_X} ${PRE_PSU_BOTTOM} V${P9} M${PLUS_X} ${P9} H${LINE_X + LINE_W} M${chip ? COL_A : COL_T} ${M9} H${PRE_MINUS_X} V${PRE_PSU_BOTTOM}`} {...WIRE} />
+        <circle cx={PRE_PLUS_X} cy={P9} r={4} fill={INK} />
+        <Label at={[PRE_PLUS_X - 8, PRE_PSU_BOTTOM + 20]} anchor="end">{l.plus9}</Label>
+        <Label at={[PRE_MINUS_X + 8, PRE_PSU_BOTTOM + 20]}>{l.minus9}</Label>
         <Step n={2} until={2} step={step}>
-          <Label at={[RAIL_X + 340, P9 - 8]}>{l.waiting}</Label>
+          <Label at={[PLUS_X, P9 + 24]}>{l.waiting}</Label>
         </Step>
         <Dots name="plusDots" wire={PLUS_WIRE} />
         <Dots name="minusDots" wire={MINUS_WIRE} />
@@ -585,8 +597,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <Dots name="columnTDots" wire={COLUMN_T} />
         </g>
 
-        {/* The sides go on to the line out; its left edge, where the output's height is read */}
-        <path d={`M${PLUS_X} ${P9} H${LINE_X} M${COL_B} ${M9} H${LINE_X}`} {...WIRE} />
+        {/* The line out's left edge, between the two sides: where the output's height is read */}
         <line x1={LINE_X} y1={P9} x2={LINE_X} y2={M9} stroke={PART} strokeWidth={1.5} />
       </Step>
 
@@ -630,16 +641,18 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <circle data-p="lineLevel" cx={LINE_X} cy={CY} r={7} fill={MOVER} />
       </Step>
 
-      {/* 5 · the Volume, the voltage 10 times bigger; two transistors between the ±12 V sides, one pushing, one pulling; the speaker */}
+      {/* 5 · its own power supply above it; the Volume, the voltage 10 times bigger; two transistors between the ±12 V sides, one pushing, one pulling; the speaker */}
       <Step n={POWER_STEP} step={step}>
-        <path d={`M${RAIL_X} ${P12} H${OUT_X} M${RAIL_X} ${M12} H${OUT_X}`} {...WIRE} />
-        <Label at={[RAIL_X + 8, P12 - 8]}>{l.plus12}</Label>
-        <Label at={[RAIL_X + 8, M12 + 18]}>{l.minus12}</Label>
+        <PowerSupply left={AMP_PSU_L} right={AMP_PSU_R} top={AMP_PSU_TOP} name={l.powerSupply} socket={l.wallSocket} />
+        <path d={`M${AMP_PLUS_X} ${AMP_PSU_BOTTOM} V${P12} H${OUT_X} M${COL2} ${M12} H${AMP_MINUS_X} V${AMP_PSU_BOTTOM}`} {...WIRE} />
+        <circle cx={AMP_PLUS_X} cy={P12} r={4} fill={INK} />
+        <Label at={[AMP_PLUS_X - 8, AMP_PSU_BOTTOM + 24]} anchor="end">{l.plus12}</Label>
+        <Label at={[AMP_MINUS_X + 8, AMP_PSU_BOTTOM + 24]}>{l.minus12}</Label>
         <Dots name="upperDots" wire={UPPER_WIRE} />
         <Dots name="lowerDots" wire={LOWER_WIRE} />
 
-        {/* The Volume: the line across a resistor to 0 V, the wiper taking what the knob says */}
-        <path d={`M${LINE_X + LINE_W} ${CY} H${POT_X - 35} V${POT_TOP - 10} H${POT_X} V${POT_TOP} M${POT_X} ${POT_BOTTOM} V${POT_BOTTOM + 14}`} {...THIN} />
+        {/* The Volume: the line — hopping over the preamp's −9 V side — across a resistor to 0 V, the wiper taking what the knob says */}
+        <path d={`M${LINE_X + LINE_W} ${CY} H${PRE_MINUS_X - HOP} a${HOP} ${HOP} 0 0 1 ${2 * HOP} 0 H${POT_X - 35} V${POT_TOP - 10} H${POT_X} V${POT_TOP} M${POT_X} ${POT_BOTTOM} V${POT_BOTTOM + 14}`} {...THIN} />
         <path d={resistorPath(POT_X, POT_TOP, POT_BOTTOM)} {...THIN} strokeLinejoin="round" />
         <Ground x={POT_X} y={POT_BOTTOM + 14} />
         <line x1={WIPER_X} y1={wiperY} x2={POT_X + 12} y2={wiperY} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
@@ -688,7 +701,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <tspan data-p="outReading">+10.0</tspan> {l.volts}
         </text>
 
-        <path d={`M${OUT_X + OUT_W} ${CY} H${WIRE_UP_X} V${WIRE_TOP} H${LEAD_B} V${SPK_Y}`} {...THIN} />
+        <path d={`M${OUT_X + OUT_W} ${CY} H${AMP_MINUS_X - HOP} a${HOP} ${HOP} 0 0 1 ${2 * HOP} 0 H${WIRE_UP_X} V${WIRE_TOP} H${LEAD_B} V${SPK_Y}`} {...THIN} />
         <path d={`M${LEAD_A} ${SPK_Y} V${RETURN_TOP} H${RETURN_X} V${GROUND_Y}`} {...THIN} />
         <Ground x={RETURN_X} y={GROUND_Y} />
         <Label at={[RETURN_X + 18, GROUND_Y + 12]}>{l.zeroV}</Label>
@@ -866,6 +879,22 @@ function Dots({ name, wire }: { name: string; wire: readonly Pt[] }) {
     <g data-p={name} fill={MOVER}>
       {Array.from({ length: Math.floor(lengthOf(wire) / DOT_GAP) }, (_, i) => <circle key={i} r={3} />)}
     </g>
+  )
+}
+
+/** A stage's power supply above it: its plug from the wall socket on top, its box; its sides leave its bottom (the scene's) */
+function PowerSupply({ left, right, top, name, socket }: { left: number; right: number; top: number; name: string; socket: string }) {
+  const cx = (left + right) / 2, plugY = top - 22
+  return (
+    <>
+      <g transform={`rotate(90 ${cx} ${plugY})`}>
+        <path d={`M${cx} ${plugY} h22`} fill="none" stroke={PART} strokeWidth={4} strokeLinecap="round" />
+        <Plug x={cx} y={plugY} />
+      </g>
+      <Label at={[cx + 24, top - 38]}>{socket}</Label>
+      <rect x={left} y={top} width={right - left} height={PSU_H} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
+      <Label at={[cx, top + PSU_H / 2 + 5]} anchor="middle">{name}</Label>
+    </>
   )
 }
 
