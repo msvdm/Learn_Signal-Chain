@@ -1,5 +1,5 @@
 import { dbToPercent, meterZones, zoneColor } from '../../signal/levels'
-import { BASE_GAP } from './circuit'
+import { BASE_GAP, TRANSISTOR_R } from './circuit'
 import { FAINT, INK, MOVER, PART, PART_2 } from './look'
 
 // The parts Analogue amplification draws (Deep dive, D46): a wire the charges move along, the
@@ -46,7 +46,7 @@ export function Transistor({ x, y, fill, pnp }: { x: number; y: number; fill: st
     `L${(mx - s * Math.cos(a + 0.45)).toFixed(1)} ${(my - s * Math.sin(a + 0.45)).toFixed(1)} Z`
   return (
     <>
-      <circle data-p={fill} cx={x - 12} cy={y} r={34} fill={MOVER} fillOpacity={0.06} stroke={PART} strokeWidth={2} />
+      <circle data-p={fill} cx={x - 12} cy={y} r={TRANSISTOR_R}fill={MOVER} fillOpacity={0.06} stroke={PART} strokeWidth={2} />
       <line x1={bar} y1={y - 18} x2={bar} y2={y + 18} stroke={INK} strokeWidth={4} />
       <path d={head} fill={INK} />
     </>

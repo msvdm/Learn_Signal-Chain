@@ -23,6 +23,8 @@ export function pointAlong(wire: readonly Pt[], s: number): Pt {
 
 /** How far left of its column a transistor's base bar stands */
 export const BASE_GAP = 26
+/** A transistor's circle's radius (the scene's knobs are this size too) */
+export const TRANSISTOR_R = 34
 
 /** The path of a transistor's two leads from the column above it (`from`) to the column below it (`to`), through its bar */
 export function transistorLeads(x: number, y: number, from: number, to: number): string {

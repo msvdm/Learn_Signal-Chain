@@ -698,10 +698,9 @@
       "guitar": "A real guitar: low E",
       "weakSignal": "A weak signal",
       "powerSupply": "Energy from the wall",
-      "lineLevel": "Line level",
       "pushPull": "Push and pull: the speaker",
       "classes": "Classes and inputs",
-      "preampChip": "The preamp chip"
+      "preampChip": "The preamp chip: line level"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -816,7 +815,7 @@
       "pin3": "Pin 3",
       "pin3TurnedOver": "Pin 3, turned over",
       "pin2MinusPin3": "Pin 2 − pin 3",
-      "noise": "Noise",
+      "noise": "EMI/RFI Noise",
       "preampChip": "Preamp chip",
       "difference": "Difference",
       "rg": "RG {r}",
