@@ -590,7 +590,10 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <Label at={[PRE_PLUS_X - 8, PSU_BOTTOM + 20]} anchor="end">{l.plus9}</Label>
         <Label at={[PRE_MINUS_X + 8, PSU_BOTTOM + 20]}>{l.minus9}</Label>
         <Step n={2} until={2} step={step}>
-          <Label at={[PLUS_X, P9 + 24]}>{l.waiting}</Label>
+          {/* Its rows (the locale's line breaks), clear of the − side's wire right of it */}
+          <Label at={[PLUS_X, P9 + 24]}>
+            {l.waiting.split('\n').map((row, i) => <tspan key={i} x={PLUS_X} dy={i ? 19 : 0}>{row}</tspan>)}
+          </Label>
         </Step>
         <Dots name="plusDots" wire={PLUS_WIRE} />
         <Dots name="minusDots" wire={MINUS_WIRE} />

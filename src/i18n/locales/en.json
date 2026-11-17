@@ -784,7 +784,7 @@
       "supplySteady": "it never swings",
       "plus12": "+12 V",
       "minus12": "−12 V",
-      "waiting": "Steady: energy waiting to be used",
+      "waiting": "Steady: energy\nwaiting to be used",
       "voltageGain": "Voltage × {gain}",
       "transistor": "Transistor",
       "pushes": "Pushes, from the + side",
