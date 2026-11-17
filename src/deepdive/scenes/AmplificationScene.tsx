@@ -131,8 +131,6 @@ const COIL_1 = 622, COIL_2 = 662, COL_T = PLUS_X, QT_Y = 300, RC_TOP = 180, RC_B
 const COIL_2_TOP = CY - 60, COIL_2_BOTTOM = CY + 40, GPOT_X = 700, GPOT_TOP = 250, GPOT_BOTTOM = 330, GWIPER_X = 716
 const CAP_X = 805, CAP_Y = 380, TR_LABEL_X = 720, KNOB_T_X = GPOT_X + 4
 
-/** How far right the +9 V line runs, past the chip's output */
-const LINE_X = 965
 /**
  * The two outputs' heights over time, each by the wire carrying it: how many px a volt; the line out's
  * graph on the line, between the two stages (its middle line, its name above it; the line runs behind
@@ -151,7 +149,7 @@ const TRI_X = POT_X + 60, TRI_TIP = TRI_X + 60, TRI_HALF = 30
 const DRIVE_X = TRI_TIP + 36, COL2 = DRIVE_X + 60, Q1_Y = 210, Q2_Y = 390
 /** The heat sinks, right of each transistor */
 const SINK_X = COL2 + 34, SINK_W = 60, SINK_H = 76
-/** Where the +12 V line ends, right of the heat sinks; the − side's place follows it */
+/** Right of the heat sinks: where the − side comes down, past the output (which hops over it) */
 const OUT_X = COL2 + 110
 /** Its power supply, above it: its box; its + side down onto the +12 V line at its left, its − side right of the speaker's line down to −12 V */
 const AMP_PSU_L = POT_X + 40, AMP_PLUS_X = AMP_PSU_L + 10, AMP_MINUS_X = OUT_X + 30
@@ -585,8 +583,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
       <Step n={2} step={step}>
         <PowerSupply left={PRE_PSU_L} rail={PRE_RAIL} zeroX={(PRE_PLUS_X + PRE_MINUS_X) / 2} />
         {/* −9 V reaches as far left as the first column on it: the chip's first transistor, or the transformer input's one */}
-        <path d={`M${PRE_PLUS_X} ${PSU_BOTTOM} V${P9} M${PLUS_X} ${P9} H${LINE_X} M${chip ? COL_A : COL_T} ${M9} H${PRE_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
-        <circle cx={PRE_PLUS_X} cy={P9} r={4} fill={INK} />
+        <path d={`M${PRE_PLUS_X} ${PSU_BOTTOM} V${P9} H${PLUS_X} M${chip ? COL_A : COL_T} ${M9} H${PRE_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
         <Label at={[PRE_PLUS_X - 8, PSU_BOTTOM + 20]} anchor="end">{l.plus9}</Label>
         <Label at={[PRE_MINUS_X + 8, PSU_BOTTOM + 20]}>{l.minus9}</Label>
         <Step n={2} until={2} step={step}>
@@ -701,8 +698,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
       {/* 4 · its own power supply above it; the Volume, the voltage 10 times bigger; two transistors between the ±12 V sides, one pushing, one pulling; the speaker */}
       <Step n={POWER_STEP} step={step}>
         <PowerSupply left={AMP_PSU_L} rail={RAIL} zeroX={AMP_PLUS_X + 30} />
-        <path d={`M${AMP_PLUS_X} ${PSU_BOTTOM} V${P12} H${OUT_X} M${COL2} ${M12} H${AMP_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
-        <circle cx={AMP_PLUS_X} cy={P12} r={4} fill={INK} />
+        <path d={`M${AMP_PLUS_X} ${PSU_BOTTOM} V${P12} H${COL2} V${Q1_Y - 30} M${COL2} ${M12} H${AMP_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
         <Label at={[AMP_PLUS_X - 8, PSU_BOTTOM + 22]} anchor="end">{l.plus12}</Label>
         <Label at={[AMP_MINUS_X + 8, PSU_BOTTOM + 22]}>{l.minus12}</Label>
         <Dots name="upperDots" wire={UPPER_WIRE} />
