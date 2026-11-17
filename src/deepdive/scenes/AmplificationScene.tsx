@@ -484,7 +484,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
   const chip = input === 'chip'
   const shownGain = gainAt(step, gain)
   const line = levelsOf(pre.out)
-  const mic = healthOfLevels(MIC_LEVELS.rms, MIC_LEVELS.peak), lineHealth = healthOfLevels(line.rms, line.peak)
+  const lineHealth = healthOfLevels(line.rms, line.peak)
   const lineGhost = tracePath(pre.out, 360, lineX, lineGy), outGhost = tracePath(amp.out, 360, outX, outGy)
   const atClasses = step >= CLASS_STEP
   /** Class D, from the classes' step: its pulses and its filter */
@@ -541,7 +541,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <circle data-p="inDot" r={6} fill={MOVER} />
         <LevelMeter x={IN_X + IN_W - 28} y={TOP_Y - IN_HALF + 10} w={14} h={2 * IN_HALF - 20} rms={MIC_LEVELS.rms} peak={MIC_LEVELS.peak} />
         <text className="lsc-dd-reading" x={IN_X} y={TOP_Y - IN_HALF - 10}>
-          <tspan data-p="inReading">+10.0</tspan> {l.mv} · {formatDb(MIC_LEVELS.rms)} · <tspan style={{ fill: mic.colour, fontWeight: 600 }}>{t.health[mic.health]}</tspan>
+          <tspan data-p="inReading">+10.0</tspan> {l.mv} · {formatDb(MIC_LEVELS.rms)}
         </text>
         {/* What it reads: the voltage between the coil's two leads */}
         <Leader x1={MIC_LEADER_X} y1={TOP_Y + IN_HALF} x2={MIC_LEADER_X} y2={WIRE_2 - 6} />
