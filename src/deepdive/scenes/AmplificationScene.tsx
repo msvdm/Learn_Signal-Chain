@@ -35,7 +35,7 @@ import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 // the microphone. What an amplifier gives is a point between its two sides, its height drawn over
 // time beside it.
 // (1) The sound moves the microphone's diaphragm (as in Magnetic induction): ±10 mV, too quiet,
-//     between pin 2 and pin 3 of its XLR; a hum gets onto the wires — a dim cloud named Noise over
+//     between pin 2 and pin 3 of its cable, an XLR at each end; a hum gets onto the wires — a dim cloud named Noise over
 //     the cable (the teacher says where it comes from) —: balanced, the same on both; unbalanced (a
 //     button), only on the one wire.
 // (2) The preamp's power supply and its steady sides, waiting.
@@ -47,7 +47,7 @@ import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 //     sides: clipping.
 // (4) The power amplifier, its own power supply above it: its Volume (only turning down), the voltage
 //     10 times bigger, two transistors between the ±12 V sides, one pushing and one pulling, and the
-//     speaker they move.
+//     speaker they move, along a speaker cable (a speakON at each end).
 // (5) Two choices in one row of buttons, the picture the same: the classes — only the current the two
 //     let through at rest changes —, with the heat, where the power goes, class B's notch and the
 //     sines an output is made of; and the preamp's input — the clean chip, or a transformer, the gain
@@ -84,23 +84,24 @@ const LEAD_TOP = CY + 20, LEAD_2 = 28, LEAD_3 = 20
 const TOP_Y = 40, PINS_HALF = 48, PIN3_Y = 544
 /** The microphone's voltage panel: its frame, its graph's left edge and width (every graph's), half height (10 mV) */
 const IN_X = 230, IN_W = 220, IN_HALF = 56, IN_SCOPE_X = IN_X + 12, SCOPE_W = 150, IN_H = 26
-/** The XLR socket: its body, its pins (2 above, 1, 3 below) */
+/** The XLR at each end of the cable: its body, its pins (2 above, 1, 3 below) — the microphone's on their left, the preamp's on their right */
 const XLR_X = 352, XLR_W = 32, PIN_X = XLR_X + 8, PIN_GAP = 16
-/** The cable: its shield from the socket to the chip, its two wires inside */
-const CABLE_X = XLR_X + XLR_W, CABLE_END = 600, CABLE_HALF = 26, WIRE_2 = CY - 14, WIRE_3 = CY + 14
+/** The cable: its shield from one XLR to the other, its two wires inside */
+const CABLE_X = XLR_X + XLR_W, CABLE_END = 548, CABLE_HALF = 26, WIRE_2 = CY - 14, WIRE_3 = CY + 14
+const XLR2_X = CABLE_END, PIN2_X = XLR2_X + XLR_W - 8
 /**
  * Balanced, its two wires twist round each other as a real cable's do: TWISTS turns from TWIST_FROM to
  * TWIST_TO, each wire back at its own height at both ends and where the pins' leaders meet them (a
  * whole number of turns in)
  */
-const TWIST_FROM = 392, TWIST_TO = 592, TWISTS = 5
+const TWIST_FROM = 392, TWIST_TO = 532, TWISTS = 4
 /** The noise on it: a still, dim cloud over the cable, its puffs (x, y from its middle, radius); its top, where its name stands above it */
 const NOISE_X = 470, NOISE_Y = CY
 const NOISE_PUFFS = [[-36, 6, 22], [-12, -8, 28], [16, -4, 26], [38, 8, 20], [0, 12, 24]] as const
 const NOISE_TOP = NOISE_Y + Math.min(...NOISE_PUFFS.map(([, dy, r]) => dy - r))
 /** Pin 2's graph above the picture, pin 3's below; their scale (3 px a millivolt) */
 const PINS_X = 466, PINS_W = 172, PX_MV = 3, PINS_SCOPE_X = PINS_X + 10
-const LEADER_X = 552, MIC_LEADER_X = PIN_X - 20
+const LEADER_X = TWIST_TO, MIC_LEADER_X = PIN_X - 20
 
 /** 3 · the chip: its frame, the difference part at its top, its two input transistors' columns */
 const CHIP_X = 610, CHIP_R = 925, CHIP_TOP = 176, CHIP_BOTTOM = 426
@@ -137,8 +138,14 @@ const OUT_X = COL2 + 130, OUT_W = 170, OUT_SCOPE_X = OUT_X + 10
 /** Its power supply, above it: its box; its + side down onto the +12 V line at its left, its − side right of the speaker's panel down to −12 V */
 const AMP_PSU_L = 1330, AMP_PSU_TOP = 50, AMP_PSU_BOTTOM = AMP_PSU_TOP + PSU_H, AMP_PLUS_X = AMP_PSU_L + 10
 const AMP_MINUS_X = OUT_X + OUT_W + 14, AMP_PSU_R = AMP_MINUS_X + 10
+/**
+ * The speaker cable: a speakON at each end (its pins + at 0 V's height, − below — the amplifier's on their
+ * left, the speaker's on their right), the − wire to 0 V at the amplifier's end
+ */
+const SPK_PLUG_W = 28, SPK_PLUG_1 = AMP_MINUS_X + 30, SPK_CABLE_END = SPK_PLUG_1 + SPK_PLUG_W + 80, SPK_PLUG_2 = SPK_CABLE_END
+const SPK_PIN_1 = SPK_PLUG_1 + 8, SPK_PIN_2 = SPK_PLUG_2 + SPK_PLUG_W - 8, RETURN_Y = CY + PIN_GAP, AMP_GROUND_X = AMP_MINUS_X + 18
 /** The speaker (as Magnetic induction draws it): its magnet's back, its leads, its wires, its air */
-const SPK_X = OUT_X + OUT_W + 120, SPK_Y = CY, LEAD_A = SPK_X + 63.8, LEAD_B = SPK_X + 72.6
+const SPK_X = SPK_PLUG_2 + SPK_PLUG_W + 84, SPK_Y = CY, LEAD_A = SPK_X + 63.8, LEAD_B = SPK_X + 72.6
 const WIRE_UP_X = SPK_X - 70, WIRE_TOP = SPK_Y - 80, RETURN_TOP = SPK_Y - 58, RETURN_X = SPK_X - 50, GROUND_Y = SPK_Y + 130
 const AIR_X = SPK_X + 182, AIR_W = 110, AIR_Y = SPK_Y - 130, AIR_H = 262, LOUDER = 1.8
 /** Under the picture, at the classes' step: where the power goes, the output's sines, class B's notch */
@@ -505,32 +512,26 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         {/* What it reads: the voltage between the coil's two leads */}
         <Leader x1={MIC_LEADER_X} y1={TOP_Y + IN_HALF} x2={MIC_LEADER_X} y2={WIRE_2 - 6} />
 
-        {/* The XLR socket: pin 2 and pin 3 the microphone's two sides, pin 1 the shield — unbalanced, pin 3 joined to it */}
-        <rect x={XLR_X} y={CY - 34} width={XLR_W} height={68} rx={6} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
-        {[[2, CY - PIN_GAP], [1, CY], [3, CY + PIN_GAP]].map(([n, y]) => (
-          <g key={n}>
-            <circle cx={PIN_X} cy={y} r={3} fill={INK} />
-            <text className="lsc-dd-label" x={PIN_X + 7} y={y + 4} style={{ fontSize: 11 }}>{n}</text>
-          </g>
-        ))}
-        {!balanced && <path d={`M${PIN_X - 3} ${CY + PIN_GAP} Q${PIN_X - 9} ${CY + PIN_GAP / 2} ${PIN_X - 3} ${CY}`} {...THIN} />}
+        {/* An XLR at each end: pin 2 and pin 3 the microphone's two sides, pin 1 the shield — unbalanced, pin 3 joined to it at both */}
+        <Xlr x={XLR_X} pins={[['2', CY - PIN_GAP], ['1', CY], ['3', CY + PIN_GAP]]} pinX={PIN_X} jumper={!balanced} />
+        <Xlr x={XLR2_X} pins={[['2', CY - PIN_GAP], ['1', CY], ['3', CY + PIN_GAP]]} pinX={PIN2_X} jumper={!balanced} />
         <Label at={[XLR_X + XLR_W / 2, CY + 52]} anchor="middle">{l.xlr}</Label>
+        <Label at={[XLR2_X + XLR_W / 2, CY + 52]} anchor="middle">{l.xlr}</Label>
 
         {/* The cable: its shield (pin 1) to 0 V, its wires — one, unbalanced */}
         <rect x={CABLE_X} y={CY - CABLE_HALF} width={CABLE_END - CABLE_X} height={2 * CABLE_HALF} rx={12} fill="none" stroke={PART} strokeWidth={2} />
-        <path d={`M${PIN_X} ${CY} H${CABLE_X}`} {...THIN} />
-        <path d={`M${PIN_X} ${WIRE_2} H${CABLE_END}`} {...WIRE} style={shown(!balanced)} />
-        {/* Balanced: the two wires twisted round each other — straight into the socket and out to the preamp; where one passes in front, a gap cut round it */}
+        <path d={`M${PIN_X} ${CY} H${CABLE_X} M${CABLE_END} ${CY} H${PIN2_X}`} {...THIN} />
+        <path d={`M${PIN_X} ${WIRE_2} H${PIN2_X}`} {...WIRE} style={shown(!balanced)} />
+        {/* Balanced: the two wires twisted round each other — straight into each XLR; where one passes in front, a gap cut round it */}
         <g style={shown(balanced)}>
-          <path d={`M${PIN_X} ${WIRE_2} H${TWIST_FROM} M${TWIST_TO} ${WIRE_2} H${CABLE_END} M${PIN_X} ${WIRE_3} H${TWIST_FROM} M${TWIST_TO} ${WIRE_3} H${CABLE_END}`} {...WIRE} />
+          <path d={`M${PIN_X} ${WIRE_2} H${TWIST_FROM} M${TWIST_TO} ${WIRE_2} H${PIN2_X} M${PIN_X} ${WIRE_3} H${TWIST_FROM} M${TWIST_TO} ${WIRE_3} H${PIN2_X}`} {...WIRE} />
           <path d={PIN2_TWIST.back + PIN3_TWIST.back} {...WIRE} />
           <path d={PIN2_TWIST.front + PIN3_TWIST.front} fill="none" stroke="var(--lsc-canvas)" strokeWidth={7} />
           <path d={PIN2_TWIST.front + PIN3_TWIST.front} {...WIRE} />
         </g>
-        <path d={`M${CABLE_END - 10} ${CY + CABLE_HALF} V${CY + 48}`} {...THIN} />
-        <Ground x={CABLE_END - 10} y={CY + 48} />
-        <Label at={[CABLE_END - 28, CY + 60]} anchor="end">{l.zeroV}</Label>
-        {!balanced && <path d={`M${CABLE_END} ${CY + CABLE_HALF} V${WIRE_3}`} {...THIN} />}
+        <path d={`M${CABLE_END - 20} ${CY + CABLE_HALF} V${CY + 48}`} {...THIN} />
+        <Ground x={CABLE_END - 20} y={CY + 48} />
+        <Label at={[CABLE_END - 38, CY + 60]} anchor="end">{l.zeroV}</Label>
 
         {/* The noise getting onto the cable: a still, dim cloud over it — the wires show through —, named above it; the teacher says where it comes from */}
         <g fill={PART} opacity={0.3}>
@@ -592,8 +593,8 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <circle cx={COL_A} cy={E_Y} r={4} fill={INK} />
           <circle cx={COL_B} cy={E_Y} r={4} fill={INK} />
           {/* Pin 2 into the first transistor; pin 3 under it, hopping over its column, into the second */}
-          <path d={`M${CABLE_END} ${WIRE_2} H${CHIP_X + 15} V${Q_Y} H${bar(COL_A)}`} {...WIRE} />
-          <path d={`M${CABLE_END} ${WIRE_3} H${CHIP_X + 20} V${PIN3_RUN} H${COL_A - HOP} a${HOP} ${HOP} 0 0 1 ${2 * HOP} 0 H${PIN3_UP} V${Q_Y} H${bar(COL_B)}`} {...WIRE} />
+          <path d={`M${PIN2_X} ${WIRE_2} H${CHIP_X + 15} V${Q_Y} H${bar(COL_A)}`} {...WIRE} />
+          <path d={`M${PIN2_X} ${WIRE_3} H${CHIP_X + 20} V${PIN3_RUN} H${COL_A - HOP} a${HOP} ${HOP} 0 0 1 ${2 * HOP} 0 H${PIN3_UP} V${Q_Y} H${bar(COL_B)}`} {...WIRE} />
           <path d={`M${BOX_R} ${(BOX_TOP + BOX_BOTTOM) / 2} H${OUT_TURN} V${CY} H${LINE_X}`} {...THIN} />
           <Dots name="columnADots" wire={COLUMN_A} />
           <Dots name="columnBDots" wire={COLUMN_B} />
@@ -605,7 +606,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
             second coil to 0 V, its wiper into one transistor's base; a resistor above it, and below it only
             what keeps its resting current — a resistor with a capacitor across it — so nothing straightens its curve */}
         <g style={shown(!chip)}>
-          <path d={`M${CABLE_END} ${WIRE_2} H${COIL_1 - 12} V${CY - 42} H${COIL_1} M${CABLE_END} ${WIRE_3} H${COIL_1 - 12} V${CY + 42} H${COIL_1}`} {...WIRE} />
+          <path d={`M${PIN2_X} ${WIRE_2} H${COIL_1 - 12} V${CY - 42} H${COIL_1} M${PIN2_X} ${WIRE_3} H${COIL_1 - 12} V${CY + 42} H${COIL_1}`} {...WIRE} />
           <path d={coilPath(COIL_1, CY - 42, CY + 42, 1)} {...WIRE} />
           <path d={`M${COIL_1 + 18} ${CY - 56} V${CY + 56} M${COIL_1 + 22} ${CY - 56} V${CY + 56}`} stroke={PART} strokeWidth={2} />
           <path d={coilPath(COIL_2, COIL_2_TOP, COIL_2_BOTTOM, -1)} {...WIRE} />
@@ -734,10 +735,16 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <tspan data-p="outReading">+10.0</tspan> {l.volts}
         </text>
 
+        {/* The speaker cable: + the output, − back to 0 V at the amplifier's end; a speakON at each end (drawn as an XLR) */}
+        <Xlr x={SPK_PLUG_1} w={SPK_PLUG_W} pins={[['+', CY], ['−', RETURN_Y]]} pinX={SPK_PIN_1} above />
+        <Xlr x={SPK_PLUG_2} w={SPK_PLUG_W} pins={[['+', CY], ['−', RETURN_Y]]} pinX={SPK_PIN_2} above />
+        <Label at={[SPK_PLUG_1 + SPK_PLUG_W / 2, RETURN_Y + 38]} anchor="middle">{l.speakon}</Label>
+        <Label at={[SPK_PLUG_2 + SPK_PLUG_W / 2, RETURN_Y + 38]} anchor="middle">{l.speakon}</Label>
+        <rect x={SPK_PLUG_1 + SPK_PLUG_W} y={CY - 12} width={SPK_CABLE_END - SPK_PLUG_1 - SPK_PLUG_W} height={RETURN_Y - CY + 24} rx={10} fill="none" stroke={PART} strokeWidth={2} />
         <path d={`M${OUT_X + OUT_W} ${CY} H${AMP_MINUS_X - HOP} a${HOP} ${HOP} 0 0 1 ${2 * HOP} 0 H${WIRE_UP_X} V${WIRE_TOP} H${LEAD_B} V${SPK_Y}`} {...THIN} />
-        <path d={`M${LEAD_A} ${SPK_Y} V${RETURN_TOP} H${RETURN_X} V${GROUND_Y}`} {...THIN} />
-        <Ground x={RETURN_X} y={GROUND_Y} />
-        <Label at={[RETURN_X + 18, GROUND_Y + 12]}>{l.zeroV}</Label>
+        <path d={`M${LEAD_A} ${SPK_Y} V${RETURN_TOP} H${RETURN_X} V${RETURN_Y} H${SPK_PIN_1} H${AMP_GROUND_X} V${GROUND_Y}`} {...THIN} />
+        <Ground x={AMP_GROUND_X} y={GROUND_Y} />
+        <Label at={[AMP_GROUND_X + 18, GROUND_Y + 12]}>{l.zeroV}</Label>
         <Speaker />
         <Air id="lsc-dd-air-amp" x={AIR_X} y={AIR_Y} w={AIR_W} h={AIR_H} r={55} />
         <g data-p="air" mask="url(#lsc-dd-air-amp)" />
@@ -927,6 +934,27 @@ function PowerSupply({ left, right, top, name, socket }: { left: number; right: 
       <Label at={[cx + 24, top - 38]}>{socket}</Label>
       <rect x={left} y={top} width={right - left} height={PSU_H} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
       <Label at={[cx, top + PSU_H / 2 + 5]} anchor="middle">{name}</Label>
+    </>
+  )
+}
+
+/**
+ * An XLR (or a speakON) at x (`w` wide): its pins (name, height) at pinX — right of its middle, their names on their
+ * left (the far end of a cable) —, `above` them where a wire runs through the plug; `jumper` joins its last pin to the one before it (unbalanced: pin 3 to pin 1)
+ */
+function Xlr({ x, w = XLR_W, pins, pinX, jumper = false, above = false }: { x: number; w?: number; pins: readonly (readonly [string, number])[]; pinX: number; jumper?: boolean; above?: boolean }) {
+  const ys = pins.map(([, y]) => y), top = Math.min(...ys) - 18, bottom = Math.max(...ys) + 18
+  const right = pinX > x + w / 2, side = right ? 1 : -1, last = ys[ys.length - 1], before = ys[ys.length - 2]
+  return (
+    <>
+      <rect x={x} y={top} width={w} height={bottom - top} rx={6} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1.5} />
+      {pins.map(([n, y]) => (
+        <g key={n}>
+          <circle cx={pinX} cy={y} r={3} fill={INK} />
+          <text className="lsc-dd-label" x={pinX - 7 * side} y={above ? y - 5 : y + 4} textAnchor={right ? 'end' : 'start'} style={{ fontSize: 11 }}>{n}</text>
+        </g>
+      ))}
+      {jumper && <path d={`M${pinX + 3 * side} ${last} Q${pinX + 9 * side} ${(last + before) / 2} ${pinX + 3 * side} ${before}`} fill="none" stroke={INK} strokeWidth={1.5} />}
     </>
   )
 }

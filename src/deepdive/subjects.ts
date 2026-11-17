@@ -88,8 +88,8 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'weakSignal',       box: [100, -40, 650, 598] },
       { id: 'powerSupply',      box: [100, -40, 1320, 598] },
       { id: 'preampChip',       box: [100, -40, 1320, 598] },
-      { id: 'pushPull',         box: [100, -40, 2240, 598] },
-      { id: 'classes',          box: [100, -40, 2240, 1010] },
+      { id: 'pushPull',         box: [100, -40, 2384, 598] },
+      { id: 'classes',          box: [100, -40, 2384, 1010] },
     ],
     shapes: [
       { step: 1, ids: ['balanced', 'unbalanced'] },
