@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
-  CHIP_OHMS, COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, HUM_PEAK, IN_PEAK, LINE_GAIN, MIC_LEVELS, RAIL, SAMPLES, STAGE_CURRENT, SWING_MAX, TRANSISTOR_TIMES, TURNS, VT,
+  CHIP_OHMS, COLLECTOR_OHMS, GAIN_MAX, GAIN_MIN, HUM_PEAK, IN_PEAK, LINE_GAIN, LINE_TOP, MIC_LEVELS, RAIL, SAMPLES, STAGE_CURRENT, SWING_MAX, TRANSISTOR_TIMES, TURNS, VT,
   gainOf, gainResistor, humAt, levelsOf, pinsAt, preampCycle, timesOf, knobShare, transformerOut, transistorCurrent,
 } from './preamp'
 import type { Input, Wiring } from './preamp'
@@ -81,6 +81,13 @@ describe('the clean chip: gain = 1 + 10 kΩ ÷ RG, as the canvas judges what com
     expect(health(40)).toBe('good')
     expect(health(41)).toBe('hot')
     expect(round1(at(41).rms)).toBe(0.2)
+  })
+
+  test('line level’s top, ±1.10 V: +40 dB fits inside it (good), +41 goes past it (hot); the headroom above it, 17 dB', () => {
+    expect(LINE_TOP).toBeCloseTo(1.095, 3)
+    expect(Math.max(...preampCycle(40).out)).toBeLessThan(LINE_TOP)
+    expect(Math.max(...preampCycle(41).out)).toBeGreaterThan(LINE_TOP)
+    expect(round1(20 * Math.log10(SWING_MAX / LINE_TOP))).toBe(17)
   })
 
   test('hot up to +57 dB, clipping from +58 — the tops cut off at ±7.75 V, a peak of +20 dBu', () => {

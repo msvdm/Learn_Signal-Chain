@@ -3,7 +3,10 @@
 // supply. First its Volume knob, which only turns the line level down (as on the front of a real
 // power amplifier); then the voltage, always 10 times bigger; then two transistors that add the
 // current: one from the + side to the speaker (it pushes), one from the speaker to the − side (it
-// pulls). The classes differ only in the current they let through while nothing plays (`RESTING`).
+// pulls). Classes A and B differ only in the current they let through while nothing plays
+// (`RESTING`); class D switches them instead — one fully on, the other fully off, PULSES times a
+// cycle —, the pulses' width following the signal, and a filter (a coil and a capacitor) smoothing
+// them into the same voltage. What it loses as heat is a small class D chip's (`D_LOSS`, `D_IDLE`).
 // It takes whatever the preamp gives: a hotter line level, or the Volume turned up, is cut off a volt
 // short of the sides; a line out already clipped stays clipped, however low the Volume. Everything is
 // worked out over one cycle of the phase, so the scene's painter only reads tables (`ampCycle`).
@@ -38,14 +41,29 @@ export const volumeOf = (db: number) => Math.round(clamp(db, VOLUME_OFF, VOLUME_
 /** How much of the line level the Volume lets through: none at its bottom */
 export const volumeTimes = (db: number) => (db <= VOLUME_OFF ? 0 : Math.pow(10, db / 20))
 
-export type AmpClass = 'a' | 'b' | 'ab'
+export type AmpClass = 'a' | 'b' | 'd'
 
 /**
  * The current through both transistors while nothing plays, amperes. Class A: half the peak
- * current, the least that keeps both open all the way round at line level; class AB a usual 50 mA;
- * B none.
+ * current, the least that keeps both open all the way round at line level; B none; D none either —
+ * one of its two is always shut.
  */
-export const RESTING: Record<AmpClass, number> = { a: PEAK_CURRENT / 2, b: 0, ab: 0.05 }
+export const RESTING: Record<AmpClass, number> = { a: PEAK_CURRENT / 2, b: 0, d: 0 }
+
+/** Class D's pulses a cycle, drawn (a real one switches hundreds of thousands of times a second: a few hundred a cycle of a 1 kHz tone) */
+export const PULSES = 12
+/**
+ * What class D loses as heat: a share of what reaches the speaker, and some while nothing plays —
+ * a small class D chip's (about 90 % of the power reaching the speaker at full power, under half a
+ * watt a channel in silence)
+ */
+export const D_LOSS = 0.1, D_IDLE = 0.4
+
+/** Class D's carrier at a point of the cycle (in its sample's middle: as long on as off in silence): a triangle from +1 down to −1 and back, once a pulse */
+function carrier(i: number): number {
+  const x = (((i + 0.5) * PULSES) / SAMPLES) % 1
+  return 2 * Math.abs(2 * x - 1) - 1
+}
 
 /** What the amplifier should give for a line voltage, the Volume at `volumeDb`: that share of it, 10 times bigger */
 export const wantedFor = (line: number, volumeDb = VOLUME_FULL) => GAIN * volumeTimes(volumeDb) * line
@@ -57,6 +75,7 @@ export const wantedFor = (line: number, volumeDb = VOLUME_FULL) => GAIN * volume
  */
 export function outputFor(wanted: number, cls: AmpClass): number {
   if (cls !== 'b') return clamp(wanted, -SWING_MAX, SWING_MAX)
+  // (Class D's filtered output is the wanted voltage too: its pulses average to it)
   const drive = (wanted * (OUT_PEAK + VBE)) / OUT_PEAK
   return clamp(Math.sign(drive) * Math.max(0, Math.abs(drive) - VBE), -SWING_MAX, SWING_MAX)
 }
@@ -80,6 +99,12 @@ export interface AmpCycle {
   /** The speaker's voltage; what it should have been */
   out: Float64Array
   wanted: Float64Array
+  /**
+   * Class D: which switch is on (+1 the upper, −1 the lower) and the voltage between them, before
+   * the filter — a side's whole voltage, in pulses; 0 in classes A and B
+   */
+  switched: Float64Array
+  pulses: Float64Array
   /** The transistors' currents */
   upper: Float64Array
   lower: Float64Array
@@ -114,6 +139,7 @@ export function ampCycle(cls: AmpClass, line: Float64Array = preampCycle(LINE_GA
   const c: AmpCycle = {
     cls, volumeDb,
     out: new Float64Array(n), wanted: new Float64Array(n),
+    switched: new Float64Array(n), pulses: new Float64Array(n),
     upper: new Float64Array(n), lower: new Float64Array(n),
     upperHeat: new Float64Array(n), lowerHeat: new Float64Array(n),
     upperMoved: new Float64Array(n), lowerMoved: new Float64Array(n), speakerMoved: new Float64Array(n),
@@ -121,9 +147,21 @@ export function ampCycle(cls: AmpClass, line: Float64Array = preampCycle(LINE_GA
   const step = TAU / SAMPLES
   for (let i = 0; i < n; i++) {
     const wanted = wantedFor(line[i], volumeDb), out = outputFor(wanted, cls)
-    const { upper, lower } = transistorCurrents(out, RESTING[cls])
     c.out[i] = out
     c.wanted[i] = wanted
+    if (cls === 'd') {
+      // The upper switch on while the signal stands above the carrier: wider pulses the higher it is;
+      // the speaker's current through whichever is on; the loss in it
+      const on = out / RAIL > carrier(i) ? 1 : -1, current = Math.abs(out) / LOAD, heat = (D_LOSS * out * out) / LOAD + D_IDLE
+      c.switched[i] = on
+      c.pulses[i] = on * RAIL
+      c.upper[i] = on > 0 ? current : 0
+      c.lower[i] = on < 0 ? current : 0
+      c.upperHeat[i] = on > 0 ? heat : 0
+      c.lowerHeat[i] = on < 0 ? heat : 0
+      continue
+    }
+    const { upper, lower } = transistorCurrents(out, RESTING[cls])
     c.upper[i] = upper
     c.lower[i] = lower
     c.upperHeat[i] = (RAIL - out) * upper
@@ -175,11 +213,12 @@ export interface Powers {
 }
 
 export function powersOf(c: AmpCycle): Powers {
-  const supply = RAIL * (mean(c.upper) + mean(c.lower))
   const speaker = mean(c.out.map((v) => v * v)) / LOAD
+  // Class D: the supply gives what reaches the speaker and what the switches lose
+  const supply = c.cls === 'd' ? speaker + mean(c.upperHeat) + mean(c.lowerHeat) : RAIL * (mean(c.upper) + mean(c.lower))
   return {
     supply, speaker, heat: supply - speaker,
-    silentHeat: 2 * RAIL * RESTING[c.cls],
+    silentHeat: c.cls === 'd' ? D_IDLE : 2 * RAIL * RESTING[c.cls],
     microphone: (MIC_PEAK * MIC_PEAK) / 2 / MIC_INPUT_OHMS,
   }
 }

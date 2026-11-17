@@ -33,6 +33,11 @@ export const IN_PEAK = 0.01
 export const HUM_PEAK = 0.002, HUM_TIMES = 6
 /** As far as the output goes: a peak of +20 dBu (the canvas's clip level), 1.25 V short of each side */
 export const SWING_MAX = DBU_VOLTS * Math.pow(10, CLIP_DBU / 20)
+/**
+ * Line level's top: the peak of a sine averaging 0 dBu (±1.1 V), where the canvas's good ends and hot
+ * begins. The room between it and SWING_MAX is the headroom (+3 dBu to +20 dBu at the peaks)
+ */
+export const LINE_TOP = DBU_VOLTS * Math.SQRT2
 
 /** Balanced: a wire for each side of the microphone; unbalanced: one wire, and the shield for the other side */
 export type Wiring = 'balanced' | 'unbalanced'
