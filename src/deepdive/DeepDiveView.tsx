@@ -162,7 +162,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
             ))}
           </defs>
           {camera && (
-            <g className="lsc-dd-camera" style={{ transform: `translate(${camera.x.toFixed(1)}px, ${camera.y.toFixed(1)}px) scale(${camera.scale.toFixed(3)})` }}>
+            <g className="lsc-dd-camera" data-subject={subject.id} style={{ transform: `translate(${camera.x.toFixed(1)}px, ${camera.y.toFixed(1)}px) scale(${camera.scale.toFixed(3)})` }}>
               <subject.Scene step={step} shapes={shape} onPainter={onPainter} />
             </g>
           )}

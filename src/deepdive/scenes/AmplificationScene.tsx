@@ -177,12 +177,12 @@ const AIR_X = SPK_X + 182, AIR_W = 110, AIR_Y = SPK_Y - 130, AIR_H = 262, LOUDER
 /** At the classes' step: where the power goes, right of the power amplifier's supply */
 const PANEL_Y = -32, POWER_X = 2041, BAR0 = POWER_X + 200, PX_PER_W = 16
 /** The output's sines, under the line out's graph */
-const HARM_X = 1100, HARM_Y = 395, HARM_BOTTOM = HARM_Y + 130, HARM_H = 100, HARM_STEP = 34, HARM_W = 22
+const HARM_X = 1100, HARM_Y = 395, HARM_BOTTOM = HARM_Y + 150, HARM_H = 100, HARM_STEP = 34, HARM_W = 22
 
 /** Class D's filter: a coil on the output's line, then a capacitor from it to 0 V */
 const FCOIL_FROM = COL2 + 12, FCOIL_TO = COL2 + 62, FCAP_X = COL2 + 82, FCAP_Y = CY + 18
-/** Class D's words under the speaker: the graph's key, the pulses' real speed */
-const D_KEY_X = 2242, D_KEY_Y = 575
+/** Class D's words under the speaker's graph: its key, the pulses' real speed */
+const D_KEY_X = OUT_G_X, D_KEY_Y = 630
 
 /** The steps: the chip's with its gain knob and line out, the power amplifier's, the classes' and inputs' */
 const CHIP_STEP = 3, GAIN_STEP = CHIP_STEP, POWER_STEP = 4, CLASS_STEP = 5
@@ -670,7 +670,10 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         {/* Line level, the green band (the canvas's good: up to an average of 0 dBu); the headroom above it, up to the clipping line */}
         <path d={`M${LINE_G_X - 4} ${lineGy(PRE_SWING)} H${ROOM_X} V${lineGy(LINE_TOP)} H${LINE_G_X - 4}`} fill="none" stroke={PART} strokeWidth={1.5} />
         <Label at={[ROOM_X - 8, (lineGy(PRE_SWING) + lineGy(LINE_TOP)) / 2 + 4]} anchor="end">{l.headroom}</Label>
-        <Label at={[ROOM_X - 8, LINE_MID + 4]} anchor="end">{l.lineLevel}</Label>
+        {/* On two rows, clear of the − side's wire left of it */}
+        <Label at={[ROOM_X - 8, LINE_MID - 5]} anchor="end">
+          {l.lineLevel.split(' ').map((word, i) => <tspan key={i} x={ROOM_X - 8} dy={i ? 18 : 0}>{word}</tspan>)}
+        </Label>
         <Label at={[LINE_G_X + LINE_W + 6, lineGy(PRE_SWING) + 4]}>{`+${CLIP_DBU} dBu`}</Label>
         <LevelMeter x={LINE_G_X + LINE_W - 28} y={lineGy(PRE_RAIL) + 10} w={14} h={2 * PRE_RAIL * G_PX_V - 20} rms={line.rms} peak={line.peak} />
         <Label at={[LINE_G_X, lineGy(PRE_RAIL) - 6]}>{l.lineOutReading}</Label>
@@ -689,12 +692,12 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           label={l.gainKnob} valueText={gainText}
         />
         <Label at={[chip ? KNOB_X : KNOB_T_X, KNOB_Y + KNOB_R + 24]} anchor="middle">{l.gainKnob}</Label>
-        <Label at={[chip ? KNOB_X : KNOB_T_X, KNOB_Y + KNOB_R + 41]} anchor="middle">{knobText}</Label>
+        <Label at={[chip ? KNOB_X : KNOB_T_X, KNOB_Y + KNOB_R + 44]} anchor="middle">{knobText}</Label>
       </Step>
 
       {/* 4 · its own power supply above it; the Volume, the voltage 10 times bigger; two transistors between the ±12 V sides, one pushing, one pulling; the speaker */}
       <Step n={POWER_STEP} step={step}>
-        <PowerSupply left={AMP_PSU_L} rail={RAIL} zeroX={AMP_PLUS_X + 45} />
+        <PowerSupply left={AMP_PSU_L} rail={RAIL} zeroX={AMP_PLUS_X + 30} />
         <path d={`M${AMP_PLUS_X} ${PSU_BOTTOM} V${P12} H${OUT_X} M${COL2} ${M12} H${AMP_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
         <circle cx={AMP_PLUS_X} cy={P12} r={4} fill={INK} />
         <Label at={[AMP_PLUS_X - 8, PSU_BOTTOM + 22]} anchor="end">{l.plus12}</Label>
@@ -714,8 +717,8 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           value={volume} min={VOLUME_OFF} max={VOLUME_FULL} round={volumeOf} onChange={setVolume}
           label={l.volume} valueText={volumeText}
         />
-        <Label at={[VOL_X + VOL_R + 6, VOL_Y - 4]}>{l.volume}</Label>
-        <Label at={[VOL_X + VOL_R + 6, VOL_Y + 13]}>{volumeText}</Label>
+        <Label at={[VOL_X + VOL_R + 6, VOL_Y - 6]}>{l.volume}</Label>
+        <Label at={[VOL_X + VOL_R + 6, VOL_Y + 15]}>{volumeText}</Label>
 
         <path d={`M${TRI_TIP} ${CY} H${DRIVE_X} M${DRIVE_X} ${Q1_Y} H${bar(COL2)} M${DRIVE_X} ${Q2_Y} H${bar(COL2)} M${DRIVE_X} ${Q1_Y} V${Q2_Y}`} {...THIN} />
         {/* × 10: a triangle; class D's a box turning the signal into pulses, both switches driven by them */}
@@ -725,7 +728,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           <path d={`M${TRI_X + 8} ${CY + 10} H${TRI_X + 14} V${CY - 10} H${TRI_X + 18} V${CY + 10} H${TRI_X + 26} V${CY - 10} H${TRI_X + 36} V${CY + 10} H${TRI_X + 40} V${CY - 10} H${TRI_X + 46} V${CY + 10} H${TRI_TIP - 8}`} fill="none" stroke={INK} strokeWidth={1.5} />
           <Label at={[(TRI_X + TRI_TIP) / 2, CY + TRI_HALF + 18]} anchor="middle">{l.intoPulses}</Label>
         </g>
-        <Label at={[(TRI_X + TRI_TIP) / 2, CY - TRI_HALF - 28]} anchor="middle">{fmt(l.voltageGain, { gain: String(Math.round(GAIN)) })}</Label>
+        <Label at={[(TRI_X + TRI_TIP) / 2, CY - TRI_HALF - 32]} anchor="middle">{fmt(l.voltageGain, { gain: String(Math.round(GAIN)) })}</Label>
         <Label at={[(TRI_X + TRI_TIP) / 2, CY - TRI_HALF - 12]} anchor="middle">+{Math.round(GAIN_DB)} {l.db}</Label>
 
         <path d={transistorLeads(COL2, Q1_Y, P12, CY)} {...WIRE} />
@@ -739,7 +742,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
 
         {/* The speaker's voltage over time, under the speaker cable */}
         <OverTime x={OUT_G_X} w={OUT_W} rail={RAIL} scope={outX} gy={outGy} parts="out" clipAt={SWING_MAX} ghost={outGhost} />
-        <Label at={[OUT_G_X, outGy(RAIL) - 8]}>{l.toSpeaker}</Label>
+        <Label at={[OUT_G_X + OUT_W / 2, outGy(RAIL) - 8]} anchor="middle">{l.toSpeaker}</Label>
         <text className="lsc-dd-reading" x={OUT_G_X} y={outGy(-RAIL) + 20}>
           <tspan data-p="outReading">+10.0</tspan> {l.volts}
         </text>
@@ -795,12 +798,13 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
                 </g>
               )
             })}
-            <Label at={[POWER_X, PANEL_Y + 160]}>
-              {fmt(l.reaches, { pct: String(Math.round((100 * power.speaker) / power.supply)) })} · {fmt(l.silentHeat, { w: power.silentHeat.toFixed(1) })}{cls === 'd' ? '' : ` · ${fmt(l.restingCurrent, { a: `${RESTING[cls].toFixed(2)} ${l.amps}` })}`}
+            <Label at={[POWER_X, PANEL_Y + 160]}>{fmt(l.reaches, { pct: String(Math.round((100 * power.speaker) / power.supply)) })}</Label>
+            <Label at={[POWER_X, PANEL_Y + 180]}>
+              {fmt(l.silentHeat, { w: power.silentHeat.toFixed(1) })}{cls === 'd' ? '' : ` · ${fmt(l.restingCurrent, { a: `${RESTING[cls].toFixed(2)} ${l.amps}` })}`}
             </Label>
 
             <Label at={[HARM_X, HARM_Y]}>{l.harmonics}</Label>
-            <text className="lsc-dd-reading" x={HARM_X + 400} y={HARM_Y} textAnchor="end">
+            <text className="lsc-dd-reading" x={HARM_X} y={HARM_Y + 22}>
               {fmt(l.newSines, { pct: (100 * distortionOf(harmonics)).toFixed(1) })}
             </text>
             {[0, -20, -40, -60].map((db) => (
@@ -987,8 +991,8 @@ function PowerSupply({ left, rail, zeroX }: { left: number; rail: number; zeroX:
       {/* The wall's voltage over time */}
       <line x1={wallX} y1={mid} x2={wallX + wallW} y2={mid} stroke={FAINT} strokeWidth={1} strokeDasharray="3 4" />
       <path d={wall} {...WIRE} />
-      <Label at={[wallX, PSU_TOP + 126]}>{l.mainsIn}</Label>
-      <Label at={[wallX, PSU_TOP + 143]}>{l.mainsSwings}</Label>
+      <Label at={[wallX, PSU_TOP + 124]}>{l.mainsIn}</Label>
+      <Label at={[wallX, PSU_TOP + 144]}>{l.mainsSwings}</Label>
       <line x1={left + 160} y1={mid} x2={dcX - 12} y2={mid} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
       {/* What it gives: two steady sides */}
       <line x1={dcX + 40} y1={mid} x2={dcX + dcW} y2={mid} stroke={FAINT} strokeWidth={1} strokeDasharray="3 4" />
@@ -996,8 +1000,8 @@ function PowerSupply({ left, rail, zeroX }: { left: number; rail: number; zeroX:
       <Label at={[dcX, mid - side + 4]}>{volts(rail)}</Label>
       <Label at={[dcX, mid + 4]}>{l.zeroV}</Label>
       <Label at={[dcX, mid + side + 4]}>{volts(-rail)}</Label>
-      <Label at={[dcX, PSU_TOP + 126]}>{l.supplyOut}</Label>
-      <Label at={[dcX, PSU_TOP + 143]}>{l.supplySteady}</Label>
+      <Label at={[dcX, PSU_TOP + 124]}>{l.supplyOut}</Label>
+      <Label at={[dcX, PSU_TOP + 144]}>{l.supplySteady}</Label>
       <path d={`M${zeroX} ${PSU_BOTTOM} V${PSU_BOTTOM + 6}`} {...THIN} />
       <Ground x={zeroX} y={PSU_BOTTOM + 6} />
       <Label at={[zeroX + 18, PSU_BOTTOM + 16]}>{l.zeroV}</Label>
@@ -1018,7 +1022,7 @@ function Xlr({ x, w = XLR_W, pins, pinX, above = false }: { x: number; w?: numbe
       {pins.map(([n, y]) => (
         <g key={n}>
           <circle cx={pinX} cy={y} r={3} fill={INK} />
-          <text className="lsc-dd-label" x={pinX - 7 * side} y={above ? y - 5 : y + 4} textAnchor={right ? 'end' : 'start'} style={{ fontSize: 11 }}>{n}</text>
+          <text className="lsc-dd-label" x={pinX - 7 * side} y={above ? y - 5 : y + 4} textAnchor={right ? 'end' : 'start'} style={{ fontSize: 14 }}>{n}</text>
         </g>
       ))}
     </>
