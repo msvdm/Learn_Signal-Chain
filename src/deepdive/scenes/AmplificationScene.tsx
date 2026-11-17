@@ -33,14 +33,14 @@ import { MIC_FACE, MIC_MIDDLE, moveMicrophone } from './mic'
 // +9 V for the preamp, +12 V for the speaker's stage —, its − side down at its right, past the
 // stage's output (the output hops over it), onto a line along its bottom. Nothing powered runs past
 // the microphone; each supply's 0 V goes to ground, as the cable's shield does from pin 1 at the
-// preamp. What an amplifier gives is drawn over time right under the wire that carries it — the line
-// out's under the line, between the two stages; the speaker's under the speaker cable — height is
-// voltage there too.
+// preamp. What an amplifier gives is drawn over time by the wire that carries it — the line out's on
+// the line, between the two stages; the speaker's under the speaker cable — height is voltage there too.
 // (1) The sound moves the microphone's diaphragm (as in Magnetic induction): ±10 mV, too quiet,
 //     between pin 2 and pin 3 of its cable, an XLR at each end; a hum gets onto the wires — a dim cloud named Noise over
 //     the cable (the teacher says where it comes from) —, the same on both: the cable is balanced (the
 //     teacher says why).
-// (2) The preamp's power supply and its steady sides, waiting.
+// (2) The preamp's power supply: the wall's 230 V, swinging both ways 50 times a second, turned into
+//     two steady sides, waiting.
 // (3) The clean preamp chip (as the THAT1510), open: its two input transistors, one steered by each
 //     wire; what they make of the difference between them comes out — pin 3 turned over and added
 //     to pin 2, the hum meets itself upside down and is gone. With it, the gain knob, the resistor
@@ -66,13 +66,16 @@ const CY = 300, PX_V = 15
 const vy = (volts: number) => CY - PX_V * volts
 /** The supplies' sides, as lines along each stage's top and bottom */
 const P9 = vy(PRE_RAIL), M9 = vy(-PRE_RAIL), P12 = vy(RAIL), M12 = vy(-RAIL)
-/** A stage's power supply above it: how tall its box is */
-const PSU_H = 34
+/**
+ * A stage's power supply above it: its box, as wide and tall for both (the wall's voltage over time
+ * inside it, turned into the steady sides), its top and bottom; both bottoms above the +12 V line
+ */
+const PSU_W = 340, PSU_TOP = -70, PSU_BOTTOM = 90
 /**
  * The preamp's power supply, above the line out: its box; its + side dropping onto the +9 V line at its
- * left (on the line out's top), its − side at its right — right of the line out — down to −9 V
+ * left, its − side further right — left of the line out's graph — down to −9 V
  */
-const PRE_PSU_L = 940, PRE_PSU_R = 1060, PRE_PSU_TOP = 100, PRE_PSU_BOTTOM = PRE_PSU_TOP + PSU_H, PRE_PLUS_X = PRE_PSU_L + 10, PRE_MINUS_X = PRE_PSU_R - 10
+const PRE_PSU_L = 928, PRE_PLUS_X = 950, PRE_MINUS_X = 1050
 
 /** 1 · the air before the microphone; where its diaphragm rests (the drawing's own units moved there) */
 const AIR1_X = 112, AIR1_W = 76, AIR1_Y = CY - 69, AIR1_H = 138
@@ -115,7 +118,7 @@ const COL_A = 665, COL_B = 875, Q_Y = 280, E_Y = 360, SOURCE_Y = 403
 /** The gain resistor between the two, and the knob under it */
 const RG_FROM = 710, RG_TO = 830
 /** The gain knob under the chip, a leader up to the resistor it turns, its words under it; as big as a transistor's circle */
-const KNOB_Y = 505, KNOB_X = 739, KNOB_R = TRANSISTOR_R
+const KNOB_Y = 557, KNOB_X = 739, KNOB_R = TRANSISTOR_R
 /** Where pin 3's wire runs under the first transistor, hopping over its column */
 const PIN3_RUN = 330, PIN3_UP = 815, HOP = 8
 /** Where the output leaves both inputs for the line out */
@@ -131,17 +134,17 @@ const CAP_X = 805, CAP_Y = 380, TR_LABEL_X = 720, KNOB_T_X = GPOT_X + 4
 /** How far right the +9 V line runs, past the chip's output */
 const LINE_X = 965
 /**
- * The two outputs' heights over time, each right under the wire carrying it: how many px a volt; the
- * line out's graph under the line, between the two stages (its middle line, its name above it), the
- * speaker's under the speaker cable
+ * The two outputs' heights over time, each by the wire carrying it: how many px a volt; the line out's
+ * graph on the line, between the two stages (its middle line, its name above it; the line runs behind
+ * it), the speaker's under the speaker cable
  */
 const G_PX_V = 9
-const LINE_G_X = 1168, LINE_W = 200, LINE_SCOPE_X = LINE_G_X + 14, LINE_MID = CY + 22 + 9 * G_PX_V
+const LINE_G_X = 1168, LINE_W = 200, LINE_SCOPE_X = LINE_G_X + 14, LINE_MID = CY - 55
 const lineGy = (volts: number) => LINE_MID - G_PX_V * volts
 /** The headroom's bracket, left of the line out's graph: from line level's top up to where it clips */
 const ROOM_X = LINE_G_X - 12
 /** 5 · the Volume: a resistor from the line to 0 V, its wiper taking a share of it; its knob */
-const POT_X = 1553, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = POT_X + 28, VOL_X = POT_X - 18, VOL_Y = 540, VOL_R = TRANSISTOR_R
+const POT_X = 1553, POT_TOP = 236, POT_BOTTOM = 326, WIPER_X = POT_X + 28, VOL_X = POT_X + 36, VOL_Y = 565, VOL_R = TRANSISTOR_R
 /** The voltage made 10 times bigger: a triangle, as Magnetic induction names an amplifier */
 const TRI_X = POT_X + 60, TRI_TIP = TRI_X + 60, TRI_HALF = 30
 /** The speaker's stage: the line driving the two bases, the column, the transistors */
@@ -151,8 +154,7 @@ const SINK_X = COL2 + 34, SINK_W = 60, SINK_H = 76
 /** Where the +12 V line ends, right of the heat sinks; the − side's place follows it */
 const OUT_X = COL2 + 110
 /** Its power supply, above it: its box; its + side down onto the +12 V line at its left, its − side right of the speaker's line down to −12 V */
-const AMP_PSU_L = POT_X + 40, AMP_PSU_TOP = 50, AMP_PSU_BOTTOM = AMP_PSU_TOP + PSU_H, AMP_PLUS_X = AMP_PSU_L + 10
-const AMP_MINUS_X = OUT_X + 30, AMP_PSU_R = AMP_MINUS_X + 10
+const AMP_PSU_L = POT_X + 40, AMP_PLUS_X = AMP_PSU_L + 10, AMP_MINUS_X = OUT_X + 30
 /**
  * The speaker cable: a speakON at each end (its pins + at 0 V's height, − below — the amplifier's on their
  * left, the speaker's on their right), the − wire to 0 V at the amplifier's end
@@ -172,19 +174,15 @@ const outGy = (volts: number) => OUT_MID - G_PX_V * volts
  */
 const SPK_X = SPK_PLUG_2 + SPK_PLUG_W + 20, SPK_Y = CY + 80, LEAD_A = SPK_X + 63.8, LEAD_B = SPK_X + 72.6, GROUND_Y = CY + 130
 const AIR_X = SPK_X + 182, AIR_W = 110, AIR_Y = SPK_Y - 130, AIR_H = 262, LOUDER = 1.8
-/** At the classes' step: where the power goes, under the power amplifier */
-const PANEL_Y = 631, POWER_X = 1734, BAR0 = POWER_X + 200, PX_PER_W = 16
-/** The zoom on the notch: 10 times larger both ways, ±ZOOM_DEG around 90° and ±ZOOM_VOLTS */
-const ZOOM_DEG = 9, ZOOM_VOLTS = 0.5, ZOOM_PX_DEG = (10 * SCOPE_W) / 360, ZOOM_PX_V = 10 * G_PX_V
-/** Class B's notch, under the speaker (a leader from the notch to it) */
-const ZOOM_X = 2250, ZOOM_W = 2 * ZOOM_DEG * ZOOM_PX_DEG, ZOOM_CY = 600, ZOOM_HALF = ZOOM_VOLTS * ZOOM_PX_V + 10
-/** The output's sines, under the preamp */
-const HARM_X = 577, HARM_Y = 650, HARM_BOTTOM = HARM_Y + 130, HARM_H = 100, HARM_STEP = 34, HARM_W = 22
+/** At the classes' step: where the power goes, right of the power amplifier's supply */
+const PANEL_Y = -32, POWER_X = 2041, BAR0 = POWER_X + 200, PX_PER_W = 16
+/** The output's sines, under the line out's graph */
+const HARM_X = 1100, HARM_Y = 395, HARM_BOTTOM = HARM_Y + 130, HARM_H = 100, HARM_STEP = 34, HARM_W = 22
 
 /** Class D's filter: a coil on the output's line, then a capacitor from it to 0 V */
 const FCOIL_FROM = COL2 + 12, FCOIL_TO = COL2 + 62, FCAP_X = COL2 + 82, FCAP_Y = CY + 18
-/** Class D's words where class B's notch stands: the graph's key, the pulses' real speed */
-const D_KEY_X = ZOOM_X - 8, D_KEY_Y = 575
+/** Class D's words under the speaker: the graph's key, the pulses' real speed */
+const D_KEY_X = 2242, D_KEY_Y = 575
 
 /** The steps: the chip's with its gain knob and line out, the power amplifier's, the classes' and inputs' */
 const CHIP_STEP = 3, GAIN_STEP = CHIP_STEP, POWER_STEP = 4, CLASS_STEP = 5
@@ -202,15 +200,15 @@ const DOT_GAP = 26, RAIL_GAPS = 4, COLUMN_GAPS = 2, GAPS_PER_AMP = 8, SPEAKER_TO
 /** Through the gain resistor, to and fro: px per ampere × radian (±15 px at line level) */
 const GAIN_TO_AND_FRO = 150000
 /** The preamp's: from its supply down its + side to the chip, from the chip along −9 V and back up its − side; down each input transistor's column; through the gain resistor; the transformer input's one column */
-const PLUS_WIRE: readonly Pt[] = [[PRE_PLUS_X, PRE_PSU_BOTTOM], [PRE_PLUS_X, P9], [PLUS_X, P9]]
-const MINUS_WIRE: readonly Pt[] = [[COL_A, M9], [PRE_MINUS_X, M9], [PRE_MINUS_X, PRE_PSU_BOTTOM]]
+const PLUS_WIRE: readonly Pt[] = [[PRE_PLUS_X, PSU_BOTTOM], [PRE_PLUS_X, P9], [PLUS_X, P9]]
+const MINUS_WIRE: readonly Pt[] = [[COL_A, M9], [PRE_MINUS_X, M9], [PRE_MINUS_X, PSU_BOTTOM]]
 const COLUMN_A: readonly Pt[] = [[COL_A, BOX_BOTTOM], [COL_A, M9]]
 const COLUMN_B: readonly Pt[] = [[COL_B, BOX_BOTTOM], [COL_B, M9]]
 const GAIN_WIRE: readonly Pt[] = [[COL_A, E_Y], [COL_B, E_Y]]
 const COLUMN_T: readonly Pt[] = [[COL_T, P9], [COL_T, M9]]
 /** The stage's: from the + side through the upper transistor to the output; from it through the lower one to the − side; from it to the speaker */
-const UPPER_WIRE: readonly Pt[] = [[AMP_PLUS_X, AMP_PSU_BOTTOM], [AMP_PLUS_X, P12], [COL2, P12], [COL2, CY]]
-const LOWER_WIRE: readonly Pt[] = [[COL2, CY], [COL2, M12], [AMP_MINUS_X, M12], [AMP_MINUS_X, AMP_PSU_BOTTOM]]
+const UPPER_WIRE: readonly Pt[] = [[AMP_PLUS_X, PSU_BOTTOM], [AMP_PLUS_X, P12], [COL2, P12], [COL2, CY]]
+const LOWER_WIRE: readonly Pt[] = [[COL2, CY], [COL2, M12], [AMP_MINUS_X, M12], [AMP_MINUS_X, PSU_BOTTOM]]
 const SPEAKER_WIRE: readonly Pt[] = [[COL2, CY], [LEAD_B, CY], [LEAD_B, SPK_Y]]
 /** Where an output hops over a − side (how far along each wire): no charges are drawn in the hop */
 const PRE_HOP_S = PRE_MINUS_X - COL_A + M9 - CY, AMP_HOP_S = 2 * (M12 - CY) + AMP_MINUS_X - COL2, SPEAKER_HOP_S = AMP_MINUS_X - COL2
@@ -246,8 +244,6 @@ const pinsX = (deg: number) => PINS_SCOPE_X + (SCOPE_W * deg) / 360
 const diffX = (deg: number) => DIFF_SCOPE_X + (SCOPE_W * deg) / 360
 const lineX = (deg: number) => LINE_SCOPE_X + (SCOPE_W * deg) / 360
 const outX = (deg: number) => OUT_SCOPE_X + (SCOPE_W * deg) / 360
-const zoomX = (deg: number) => ZOOM_X + ZOOM_W / 2 + (deg - 90) * ZOOM_PX_DEG
-const zoomY = (volts: number) => ZOOM_CY - ZOOM_PX_V * volts
 
 /** A reading's sign and digits (none shows as +0.0, never −0.0) */
 function signed(value: number, digits: number): string {
@@ -322,7 +318,7 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
   const q1 = find('q1Fill'), q2 = find('q2Fill')
   const outTrace = find('outTrace'), outDot = find('outDot'), outEdge = find('outEdge'), outGuide = find('outGuide'), outReading = find('outReading'), outClip = find('outClip')
   const cone = find('cone'), cap = find('cap'), coil = find.all('speakerCoil')
-  const heat1 = find.all('heat1'), heat2 = find.all('heat2'), zoomDot = find('zoomDot')
+  const heat1 = find.all('heat1'), heat2 = find.all('heat2')
   const wires = ([
     ['plusDots', PLUS_WIRE], ['minusDots', MINUS_WIRE], ['columnADots', COLUMN_A], ['columnBDots', COLUMN_B],
     ['gainDots', GAIN_WIRE], ['columnTDots', COLUMN_T], ['upperDots', UPPER_WIRE], ['lowerDots', LOWER_WIRE], ['speakerDots', SPEAKER_WIRE],
@@ -438,7 +434,7 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
       put(p.el, 'cx', clamp(p.x + (LOUDER * SWING * volts) / OUT_PEAK, AIR_X - 2, AIR_X + AIR_W + 2))
     }
 
-    // 5 · the heat each transistor gives, rising off its heat sink; the moment on the notch's zoom
+    // 5 · the heat each transistor gives, rising off its heat sink
     if (step >= CLASS_STEP) {
       const rise = (((2 * deg) / 360) * HEAT_WAVE) % HEAT_WAVE
       const show = (waves: SVGElement[], y: number, watts: number) => waves.forEach((w, i) => {
@@ -447,9 +443,6 @@ function makePainter(find: Finder, knobs: () => { gain: number; volume: number }
       })
       show(heat1, Q1_Y, tableAt(amp.upperHeat, deg))
       show(heat2, Q2_Y, tableAt(amp.lowerHeat, deg))
-      const near = Math.abs(deg - 90) <= ZOOM_DEG && Math.abs(out) <= ZOOM_VOLTS
-      zoomDot.style.display = near ? '' : 'none'
-      if (near) { put(zoomDot, 'cx', zoomX(deg)); put(zoomDot, 'cy', zoomY(out)) }
     }
   }
 }
@@ -507,11 +500,6 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
   }
   const power = atClasses ? powersOf(amp) : null
   const harmonics = atClasses ? harmonicsOf(amp.out) : []
-  const showZoom = atClasses && cls === 'b'
-  let zoomCurve = ''
-  if (showZoom) {
-    for (let deg = 90 - ZOOM_DEG; deg <= 90 + ZOOM_DEG + 1e-9; deg += 0.25) zoomCurve += `${zoomCurve ? ' L' : 'M'}${zoomX(deg).toFixed(1)} ${zoomY(tableAt(amp.out, deg)).toFixed(1)}`
-  }
   const watts = (w: number, digits = 1) => fmt(l.watts, { w: w.toFixed(digits) })
   const bars = power ? [
     { name: l.fromMicrophone, w: power.microphone, colour: TRACE, digits: 9 },
@@ -595,12 +583,12 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
       {/* 2 · the preamp's power supply, above it: from the wall, two steady sides dropping straight down —
           +9 V at its left onto a line along the stage's top, −9 V at its right, past the line out, onto one along its bottom */}
       <Step n={2} step={step}>
-        <PowerSupply left={PRE_PSU_L} right={PRE_PSU_R} top={PRE_PSU_TOP} name={l.powerSupply} socket={l.wallSocket} zero={l.zeroV} socketLeft />
+        <PowerSupply left={PRE_PSU_L} rail={PRE_RAIL} zeroX={(PRE_PLUS_X + PRE_MINUS_X) / 2} />
         {/* −9 V reaches as far left as the first column on it: the chip's first transistor, or the transformer input's one */}
-        <path d={`M${PRE_PLUS_X} ${PRE_PSU_BOTTOM} V${P9} M${PLUS_X} ${P9} H${LINE_X} M${chip ? COL_A : COL_T} ${M9} H${PRE_MINUS_X} V${PRE_PSU_BOTTOM}`} {...WIRE} />
+        <path d={`M${PRE_PLUS_X} ${PSU_BOTTOM} V${P9} M${PLUS_X} ${P9} H${LINE_X} M${chip ? COL_A : COL_T} ${M9} H${PRE_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
         <circle cx={PRE_PLUS_X} cy={P9} r={4} fill={INK} />
-        <Label at={[PRE_PLUS_X - 8, PRE_PSU_BOTTOM + 20]} anchor="end">{l.plus9}</Label>
-        <Label at={[PRE_MINUS_X + 8, PRE_PSU_BOTTOM + 20]}>{l.minus9}</Label>
+        <Label at={[PRE_PLUS_X - 8, PSU_BOTTOM + 20]} anchor="end">{l.plus9}</Label>
+        <Label at={[PRE_MINUS_X + 8, PSU_BOTTOM + 20]}>{l.minus9}</Label>
         <Step n={2} until={2} step={step}>
           <Label at={[PLUS_X, P9 + 24]}>{l.waiting}</Label>
         </Step>
@@ -706,11 +694,11 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
 
       {/* 4 · its own power supply above it; the Volume, the voltage 10 times bigger; two transistors between the ±12 V sides, one pushing, one pulling; the speaker */}
       <Step n={POWER_STEP} step={step}>
-        <PowerSupply left={AMP_PSU_L} right={AMP_PSU_R} top={AMP_PSU_TOP} name={l.powerSupply} socket={l.wallSocket} zero={l.zeroV} />
-        <path d={`M${AMP_PLUS_X} ${AMP_PSU_BOTTOM} V${P12} H${OUT_X} M${COL2} ${M12} H${AMP_MINUS_X} V${AMP_PSU_BOTTOM}`} {...WIRE} />
+        <PowerSupply left={AMP_PSU_L} rail={RAIL} zeroX={AMP_PLUS_X + 45} />
+        <path d={`M${AMP_PLUS_X} ${PSU_BOTTOM} V${P12} H${OUT_X} M${COL2} ${M12} H${AMP_MINUS_X} V${PSU_BOTTOM}`} {...WIRE} />
         <circle cx={AMP_PLUS_X} cy={P12} r={4} fill={INK} />
-        <Label at={[AMP_PLUS_X - 8, AMP_PSU_BOTTOM + 24]} anchor="end">{l.plus12}</Label>
-        <Label at={[AMP_MINUS_X + 8, AMP_PSU_BOTTOM + 24]}>{l.minus12}</Label>
+        <Label at={[AMP_PLUS_X - 8, PSU_BOTTOM + 22]} anchor="end">{l.plus12}</Label>
+        <Label at={[AMP_MINUS_X + 8, PSU_BOTTOM + 22]}>{l.minus12}</Label>
         <Dots name="upperDots" wire={UPPER_WIRE} />
         <Dots name="lowerDots" wire={LOWER_WIRE} />
 
@@ -720,7 +708,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <Ground x={POT_X} y={POT_BOTTOM + 14} />
         <line x1={WIPER_X} y1={wiperY} x2={POT_X + 12} y2={wiperY} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
         <path d={`M${WIPER_X} ${wiperY} V${CY} H${TRI_X}`} {...THIN} />
-        <Leader x1={VOL_X} y1={VOL_Y - VOL_R - 3} x2={VOL_X} y2={(POT_TOP + POT_BOTTOM) / 2} />
+        <Leader x1={VOL_X} y1={VOL_Y - VOL_R - 3} x2={POT_X + 8} y2={POT_BOTTOM - 6} />
         <SceneKnob
           cx={VOL_X} cy={VOL_Y} r={VOL_R} color="var(--lsc-accent)"
           value={volume} min={VOLUME_OFF} max={VOLUME_FULL} round={volumeOf} onChange={setVolume}
@@ -780,7 +768,7 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
         <line x1={AIR_X + 84} y1={AIR_Y + AIR_H + 18} x2={AIR_X + 114} y2={AIR_Y + AIR_H + 18} stroke={FLOW} strokeWidth={2} markerEnd={ARROW} />
       </Step>
 
-      {/* 5 · the classes: the heat, where the power goes, the sines in the output, class B's notch */}
+      {/* 5 · the classes: the heat, where the power goes, the sines in the output */}
       <Step n={CLASS_STEP} step={step}>
         <HeatSink y={Q1_Y} waves="heat1" />
         <HeatSink y={Q2_Y} waves="heat2" />
@@ -835,18 +823,6 @@ export function AmplificationScene({ step, shapes, onPainter }: SceneProps) {
           </>
         )}
 
-        {/* Class B's notch, ten times larger */}
-        <g style={shown(showZoom)}>
-          <rect x={outX(90) - ZOOM_DEG * (SCOPE_W / 360)} y={outGy(ZOOM_VOLTS)} width={2 * ZOOM_DEG * (SCOPE_W / 360)} height={2 * ZOOM_VOLTS * G_PX_V} fill="none" stroke={INK} strokeWidth={1} />
-          <Leader x1={outX(90) + ZOOM_DEG * (SCOPE_W / 360)} y1={OUT_MID} x2={ZOOM_X - 8} y2={ZOOM_CY} />
-          <rect x={ZOOM_X - 8} y={ZOOM_CY - ZOOM_HALF} width={ZOOM_W + 16} height={2 * ZOOM_HALF} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={1} />
-          <clipPath id="lsc-dd-amp-zoom"><rect x={ZOOM_X - 8} y={ZOOM_CY - ZOOM_HALF} width={ZOOM_W + 16} height={2 * ZOOM_HALF} rx={8} /></clipPath>
-          <line x1={ZOOM_X - 2} y1={ZOOM_CY} x2={ZOOM_X + ZOOM_W + 2} y2={ZOOM_CY} stroke={PART} strokeWidth={0.75} />
-          <path d={zoomCurve} clipPath="url(#lsc-dd-amp-zoom)" fill="none" stroke={TRACE} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-          <circle data-p="zoomDot" r={6} fill={MOVER} />
-          <Label at={[ZOOM_X + ZOOM_W + 18, ZOOM_CY - ZOOM_HALF + 14]}>{l.zoom}</Label>
-          <Label at={[ZOOM_X + ZOOM_W + 18, ZOOM_CY + 4]}>{l.notch}</Label>
-        </g>
       </Step>
     </g>
   )
@@ -987,21 +963,44 @@ function Dots({ name, wire }: { name: string; wire: readonly Pt[] }) {
   )
 }
 
-/** A stage's power supply above it: its plug from the wall socket on top (its name right of it, or left: `socketLeft`), its box, its 0 V from its bottom's middle; its sides leave its bottom (the scene's) */
-function PowerSupply({ left, right, top, name, socket, zero, socketLeft = false }: { left: number; right: number; top: number; name: string; socket: string; zero: string; socketLeft?: boolean }) {
-  const cx = (left + right) / 2, plugY = top - 22, bottom = top + PSU_H
+/**
+ * A stage's power supply above it (PSU_W wide, from PSU_TOP to PSU_BOTTOM): its plug from the wall socket
+ * on top, over the wall's voltage — 230 V, swinging both ways 50 times a second (two of its cycles,
+ * still: they are not the sound's) —, an arrow, and what it gives: its two steady sides, `rail` volts
+ * either side of 0 V. Its 0 V goes down to ground from its bottom at `zeroX`; its sides leave its bottom (the scene's)
+ */
+function PowerSupply({ left, rail, zeroX }: { left: number; rail: number; zeroX: number }) {
+  const l = useTranslation().t.deepDive.labels
+  const mid = PSU_TOP + 74, wallX = left + 14, wallW = 140, dcX = left + 190, dcW = 136, swing = 26, side = 22
+  const plugX = wallX + wallW / 2, plugY = PSU_TOP - 22
+  let wall = ''
+  for (let x = 0; x <= wallW + 1e-9; x += 2) wall += `${wall ? ' L' : 'M'}${(wallX + x).toFixed(1)} ${(mid - swing * Math.sin((4 * Math.PI * x) / wallW)).toFixed(1)}`
+  const volts = (v: number) => `${v > 0 ? '+' : '−'}${Math.abs(v)} ${l.volts}`
   return (
     <>
-      <g transform={`rotate(90 ${cx} ${plugY})`}>
-        <path d={`M${cx} ${plugY} h22`} fill="none" stroke={PART} strokeWidth={4} strokeLinecap="round" />
-        <Plug x={cx} y={plugY} />
+      <g transform={`rotate(90 ${plugX} ${plugY})`}>
+        <path d={`M${plugX} ${plugY} h22`} fill="none" stroke={PART} strokeWidth={4} strokeLinecap="round" />
+        <Plug x={plugX} y={plugY} />
       </g>
-      <Label at={[socketLeft ? cx - 24 : cx + 24, top - 38]} anchor={socketLeft ? 'end' : undefined}>{socket}</Label>
-      <rect x={left} y={top} width={right - left} height={PSU_H} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
-      <Label at={[cx, top + PSU_H / 2 + 5]} anchor="middle">{name}</Label>
-      <path d={`M${cx} ${bottom} V${bottom + 6}`} {...THIN} />
-      <Ground x={cx} y={bottom + 6} />
-      <Label at={[cx + 18, bottom + 16]}>{zero}</Label>
+      <rect x={left} y={PSU_TOP} width={PSU_W} height={PSU_BOTTOM - PSU_TOP} rx={8} fill="var(--lsc-sunken)" stroke={PART} strokeWidth={2} />
+      <Label at={[left + PSU_W / 2, PSU_TOP + 20]} anchor="middle">{l.powerSupply}</Label>
+      {/* The wall's voltage over time */}
+      <line x1={wallX} y1={mid} x2={wallX + wallW} y2={mid} stroke={FAINT} strokeWidth={1} strokeDasharray="3 4" />
+      <path d={wall} {...WIRE} />
+      <Label at={[wallX, PSU_TOP + 126]}>{l.mainsIn}</Label>
+      <Label at={[wallX, PSU_TOP + 143]}>{l.mainsSwings}</Label>
+      <line x1={left + 160} y1={mid} x2={dcX - 12} y2={mid} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
+      {/* What it gives: two steady sides */}
+      <line x1={dcX + 40} y1={mid} x2={dcX + dcW} y2={mid} stroke={FAINT} strokeWidth={1} strokeDasharray="3 4" />
+      <path d={`M${dcX + 40} ${mid - side} H${dcX + dcW} M${dcX + 40} ${mid + side} H${dcX + dcW}`} {...WIRE} />
+      <Label at={[dcX, mid - side + 4]}>{volts(rail)}</Label>
+      <Label at={[dcX, mid + 4]}>{l.zeroV}</Label>
+      <Label at={[dcX, mid + side + 4]}>{volts(-rail)}</Label>
+      <Label at={[dcX, PSU_TOP + 126]}>{l.supplyOut}</Label>
+      <Label at={[dcX, PSU_TOP + 143]}>{l.supplySteady}</Label>
+      <path d={`M${zeroX} ${PSU_BOTTOM} V${PSU_BOTTOM + 6}`} {...THIN} />
+      <Ground x={zeroX} y={PSU_BOTTOM + 6} />
+      <Label at={[zeroX + 18, PSU_BOTTOM + 16]}>{l.zeroV}</Label>
     </>
   )
 }

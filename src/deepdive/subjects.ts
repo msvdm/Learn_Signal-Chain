@@ -86,10 +86,10 @@ export const SUBJECTS: readonly Subject[] = [
     Scene: AmplificationScene,
     steps: [
       { id: 'weakSignal',       box: [100, -40, 650, 530] },
-      { id: 'powerSupply',      box: [100, -40, 1110, 530] },
-      { id: 'preampChip',       box: [100, -40, 1440, 600] },
-      { id: 'pushPull',         box: [100, -40, 2530, 610] },
-      { id: 'classes',          box: [100, -40, 2560, 810] },
+      { id: 'powerSupply',      box: [100, -110, 1290, 530] },
+      { id: 'preampChip',       box: [100, -110, 1440, 650] },
+      { id: 'pushPull',         box: [100, -110, 2530, 650] },
+      { id: 'classes',          box: [100, -110, 2560, 650] },
     ],
     shapes: [
       { step: 5, ids: ['classA', 'classB', 'classD'] },
