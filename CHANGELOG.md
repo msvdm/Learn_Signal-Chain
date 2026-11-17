@@ -2,6 +2,16 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.8.0
+
+- **A fourth subject in Deep dive: *Analogue amplification*** — from a microphone to line level to a speaker, in one picture where height is voltage. Five steps: the microphone's weak signal; the preamp's power supply; the preamp chip and its gain knob; the power amplifier and the speaker; then the classes and the preamp's input.
+- **The microphone and its cable:** the sound moves the diaphragm, giving 10 mV between pin 2 and pin 3 of an XLR. Noise gets onto the cable, the same on both wires: the cable is balanced, its two wires twisted round each other.
+- **The power supplies:** each stage has its own, above it. Inside, the wall's 230 V swinging both ways 50 times a second, turned into two steady sides: ±9 V for the preamp, ±12 V for the power amplifier.
+- **The preamp chip, opened:** pin 2 steers one input transistor, pin 3 the other, and what comes out is the difference, so the noise on a balanced cable cancels out. Its gain knob is the resistor between the two transistors: turn it and watch the output go from too quiet to line level, hot and clipping, judged in the same words and colours as on the canvas, its graph marking line level and the headroom above it.
+- **The power amplifier:** its own Volume, the voltage made ten times bigger, and two transistors — one pushing, one pulling — moving the speaker along a speaker cable.
+- **Two choices in one row of buttons:** class A, B or D (the heat off the heat sinks, where each watt goes, and the new sines in the sound), and the preamp's input — the clean chip or a transformer, whose uneven tops add new sines of their own.
+- The picture's words are larger than in the other subjects, and its readings bold.
+
 ## 1.7.0
 
 - **Tape recording in *Magnetic induction*** — the microphone's voltage is now recorded on magnetic tape and played back into the speaker: the electro-magnetic side of sound, complete, before the digital one. Five steps, in the order the signal travels: the microphone; its voltage; the recording head and the tape; the playback head; the speaker.
