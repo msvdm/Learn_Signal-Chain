@@ -704,9 +704,7 @@
       "preampChip": "The preamp chip: line level",
       "lineIn": "A line-level signal",
       "clockSamples": "The clock, the samples and the bits",
-      "backToVoltage": "Back to voltage",
-      "nyquist": "Nyquist: half the sample rate",
-      "noHeadroom": "0 dBFS: nothing above it"
+      "backToVoltage": "Back to voltage"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -846,7 +844,6 @@
       "timesASecond": "{n} times a second",
       "wobbleBigger": "The wobble drawn thousands of times bigger",
       "bitsFloor": "{bits}: {db}",
-      "nyquistAt": "Nyquist {f}",
       "peak": "Peak {db}",
       "numbers": "The numbers: {bits} a sample",
       "budgetNoise": "Budget ADC: {db}",

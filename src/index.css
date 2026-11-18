@@ -529,6 +529,10 @@ kbd {
 [data-subject="conversion"] .lsc-dd-reading    { font-size: 21px; font-weight: 600; }
 
 .lsc-dd-slider { accent-color: var(--lsc-accent); cursor: pointer; }
+/* A button drawn on the picture (the conversion's clock): lit on hover as the controls' buttons are */
+.lsc-dd-choice { cursor: pointer; outline: none; }
+.lsc-dd-choice:hover rect { stroke: var(--lsc-accent); fill: var(--lsc-accent-bg); }
+.lsc-dd-choice:focus-visible rect { stroke: var(--lsc-accent); stroke-width: 4px; }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */
 

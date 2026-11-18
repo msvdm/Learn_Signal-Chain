@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
 import { formatDb, getHealth, zoneColor } from '../../signal/levels'
 import type { MeterZoneKind, SignalDomain, SignalHealth } from '../../signal/levels'
@@ -15,31 +16,31 @@ import { Label, Step } from './sceneParts'
 import { LevelMeter } from './circuitParts'
 import { useConversion } from './conversionSettings'
 import { SceneKnob } from './SceneKnob'
+import { StableText } from '../../components/controls/StableText'
 import type { ConversionSettings } from './conversionSettings'
 
 // A/D and D/A conversion (Deep dive, D46): a line-level sine into an A/D converter, its numbers, and
 // out of a D/A converter — modules side by side, in one picture where height is voltage, as in
 // Analogue amplification: full scale (0 dBFS) is a peak of +18 dBu, as the canvas aligns them, its
 // dashed line running through every graph. Each graph is the same 0.5 ms. The picture stands still
-// (a sine is the same moving or not): the controls under it set it (`useConversion`), each from its
-// step, in both rows — the sample rate's and bit depth's buttons after the step's name; the gain knob
-// first in the second, the clock's buttons, the frequency's slider.
+// (a sine is the same moving or not): the controls set it (`useConversion`), each from its step — under
+// it the gain knob and the frequency's slider right of the steps, the sample rate's and bit depth's
+// buttons in two rows at the right; the clock's buttons on the picture, above the clock.
 // (1) Line level: the line's graph, its meter (dBu) — an average of 0 dBu, its peaks far under
 //     the +18 dBu line, the analogue side's own top (+20 dBu, where the canvas clips) above it;
 //     the gain knob turns it up or down.
 // (2) The clock, the samples and the bits: the filter before the converter (always in), the A/D
-//     converter, its clock above ticking at the sample rate; at each tick a sample, rounded to the
+//     converter, its clock above ticking at the sample rate (Steady or Wobbly above it); at each tick a sample, rounded to the
 //     nearest of its bit depth's steps (the steps drawn while far enough apart); a wobbly clock takes
 //     them early or late (drawn thousands of times bigger) — they are played back on time. Its meter
 //     (dBFS) shows the signal, the noise its bits leave, and a budget and a quality converter's own
 //     noise, each with how far under the signal it is. The numbers as their bits, a column a sample.
 // (3) Back to voltage: the D/A converter holds each number until the next (the steps); its filter
 //     smooths them into the line out — never quite the input: the difference (the converters' own
-//     noise, the rounding, the wobble) drawn as many times bigger as it takes to be seen.
-// (4) Nyquist: the tone's frequency; the sines in the output up to 50 kHz, half the sample rate marked:
-//     past it, the filter takes the tone out.
-// (5) 0 dBFS, nothing above it: the gain turned up — the same signal hot in volts, clipping in
-//     numbers: its tops cut flat (red), new sines in the output.
+//     noise, the rounding, the wobble) drawn as many times bigger as it takes to be seen. The tone's
+//     frequency from here: past half the sample rate (Nyquist) the filter takes the tone out; and the
+//     gain turned up shows 0 dBFS with nothing above it — the same signal hot in volts, clipping in
+//     numbers, its tops cut flat (red).
 // The numbers are converter.ts's; the converters are quality ones (their noise in the output).
 
 // ── Where things are, in the scene's units ──────────────────────────────────
@@ -59,12 +60,12 @@ const ADC_L = 520, ADC_X = 560, ADC_R = 1260, METER_X = 980, MARKS_X = 1040
 /** The numbers' box and its grid; the clock above it, its wires into both converters' tops */
 const NUM_L = 1340, NUM_X = 1380, NUM_R = 1780, ROW_MAX = 18, SQUARE_MAX = 24
 const CLOCK_L = 1490, CLOCK_R = 1630, CLOCK_TOP = -60, CLOCK_BOTTOM = -10, CLOCK_WIRE_Y = -35
+/** The clock's buttons above it: their top, their height, the gap between them */
+const CHOICE_TOP = -146, CHOICE_H = 62, CHOICE_GAP = 8
 /** 3 · the D/A converter, its graph; the line out's graph */
 const DAC_L = 1860, DAC_X = 1900, DAC_R = 2300, OUT_X = 2380
-/** 4 · the sines in the output, under the line out (0 … 50 kHz, 0 … −100 dBFS) */
-const SPEC_X = OUT_X, SPEC_TOP = BOX_BOTTOM + 80, SPEC_BOTTOM = BOX_BOTTOM + 180, SPEC_TO = 50000
 
-export const LINE_STEP = 1, SAMPLE_STEP = 2, DAC_STEP = 3, NYQUIST_STEP = 4, CLIP_STEP = 5
+export const LINE_STEP = 1, SAMPLE_STEP = 2, DAC_STEP = 3
 /** The tone's phase at the graphs' left edge */
 const PHASE = 0
 /** Points a wave is drawn with */
@@ -81,15 +82,13 @@ function setupAt(step: number, s: ConversionSettings): Setup {
     jitter: sampled && s.wobbly ? JITTER_MAX : 0,
     grade: 'quality',
     filter: true,
-    tone: step >= NYQUIST_STEP ? s.tone : TONE_START,
+    tone: step >= DAC_STEP ? s.tone : TONE_START,
     level: LEVEL_START + s.gain,
   }
 }
 
 const timeX = (left: number) => (t: number) => left + (GRAPH_W * t) / WINDOW_S
 const inX = timeX(IN_X), adcX = timeX(ADC_X), dacX = timeX(DAC_X), outX = timeX(OUT_X)
-const specX = (freq: number) => SPEC_X + (GRAPH_W * Math.min(freq, SPEC_TO)) / SPEC_TO
-const specY = (db: number) => SPEC_TOP + Math.min(SPEC_BOTTOM - SPEC_TOP, Math.max(0, -db))
 /** The A/D converter's meter: 0 dBFS at full scale's line, −150 at its bottom one */
 const meterY = (db: number) => FS_TOP + ((FS_BOTTOM - FS_TOP) * Math.min(150, Math.max(0, -db))) / 150
 
@@ -238,6 +237,7 @@ const ZONES: readonly [MeterZoneKind, number][] = [['good', -18], ['hot', -2], [
 
 export function ConversionScene({ step }: SceneProps) {
   const settings = useConversion()
+  const setSettings = settings.set
   const { t, fmt } = useTranslation()
   const l = t.deepDive.labels
 
@@ -264,10 +264,6 @@ export function ConversionScene({ step }: SceneProps) {
 
   const { filled, empty } = gridOf(shown, bits, rate)
   const stairs = stairsOf(shown, rate)
-
-  const kHz = (hz: number) => fmt(t.formats.rate, { n: String(Math.round(hz / 10) / 100) })
-  const nyquist = rate / 2
-  const arriveDb = 20 * Math.log10(c.amplitude / FS_VOLTS)
 
   return (
     <g>
@@ -333,8 +329,8 @@ export function ConversionScene({ step }: SceneProps) {
         ))}
         <Readings x={METER_X} y={FS_BOTTOM + 52} peak={formatDb(c.digital.peak, 'digital')} health={digital} />
 
-        {/* The clock above the numbers, ticking at the sample rate, wired into both converters */}
-        <Label at={[(CLOCK_L + CLOCK_R) / 2, CLOCK_TOP - 10]} anchor="middle">{l.clock}</Label>
+        {/* The clock above the numbers, ticking at the sample rate, wired into both converters; Steady or Wobbly above it */}
+        <ClockChoice reached={step >= SAMPLE_STEP} wobbly={settings.wobbly} onPick={(wobbly) => setSettings({ wobbly })} />
         <rect x={CLOCK_L} y={CLOCK_TOP} width={CLOCK_R - CLOCK_L} height={CLOCK_BOTTOM - CLOCK_TOP} {...BOX} rx={8} />
         <path d={clockPath(jitter / JITTER_MAX)} fill="none" stroke={MOVER} strokeWidth={2} />
         <Label at={[(CLOCK_L + CLOCK_R) / 2, BOX_TOP - 10]} anchor="middle">{fmt(l.timesASecond, { n: numberText(rate) })}</Label>
@@ -373,22 +369,53 @@ export function ConversionScene({ step }: SceneProps) {
         )}
       </Step>
 
-      {/* 4 · Nyquist: the sines in the output, half the sample rate dashed */}
-      <Step n={NYQUIST_STEP} step={step}>
-        <rect x={specX(20000)} y={SPEC_TOP} width={specX(SPEC_TO) - specX(20000)} height={SPEC_BOTTOM - SPEC_TOP} fill={FAINT} opacity={0.35} />
-        <line x1={SPEC_X} y1={SPEC_BOTTOM} x2={specX(SPEC_TO) + 10} y2={SPEC_BOTTOM} stroke={INK} strokeWidth={1.5} />
-        <line x1={specX(nyquist)} y1={SPEC_TOP - 4} x2={specX(nyquist)} y2={SPEC_BOTTOM} stroke={MOVER} strokeWidth={1.5} strokeDasharray="5 4" />
-        <Label at={[Math.min(specX(nyquist) + 6, specX(SPEC_TO) - 150), SPEC_BOTTOM + 24]}>{fmt(l.nyquistAt, { f: kHz(nyquist) })}</Label>
-        <Label at={[SPEC_X, SPEC_BOTTOM + 24]} anchor="middle">0</Label>
-        <Label at={[SPEC_X, SPEC_BOTTOM + 52]}>{l.harmonics}</Label>
-        <Label at={[specX(SPEC_TO), SPEC_BOTTOM + 52]} anchor="end">{kHz(SPEC_TO)}</Label>
-        {/* What came in, outlined; what the numbers hold, solid */}
-        <rect x={specX(c.setup.tone) - 4} y={specY(arriveDb)} width={8} height={SPEC_BOTTOM - specY(arriveDb)} fill="none" stroke={INK} strokeWidth={1} strokeDasharray="3 2" />
-        {c.components.map((s) => (
-          <rect key={s.freq} x={specX(s.freq) - 3} y={specY(s.db)} width={6} height={Math.max(0, SPEC_BOTTOM - specY(s.db))} rx={1}
-            fill={s.kind === 'tone' ? TRACE : CLIPPED} />
-        ))}
-      </Step>
+    </g>
+  )
+}
+
+/**
+ * The clock's buttons, Steady and Wobbly, centred above it after its name: drawn in the picture (they
+ * grow with it), lit as the controls' buttons are; each as wide as its word (measured)
+ */
+function ClockChoice({ reached, wobbly, onPick }: { reached: boolean; wobbly: boolean; onPick: (wobbly: boolean) => void }) {
+  const { t } = useTranslation()
+  const l = t.deepDive.labels
+  const name = useRef<SVGTextElement>(null)
+  const words = useRef<(SVGTextElement | null)[]>([])
+  const [widths, setWidths] = useState<readonly number[]>([0, 0, 0])
+  const options = [false, true] as const
+  const texts = options.map((w) => (w ? l.wobbly : l.steady))
+
+  useLayoutEffect(() => {
+    const measured = [name.current, ...words.current].map((el) => el?.getComputedTextLength() ?? 0)
+    setWidths((was) => (was.every((w, i) => w === measured[i]) ? was : measured))
+  }, [l.clock, l.steady, l.wobbly])
+
+  const PAD = 16
+  const boxes = widths.slice(1).map((w) => w + 2 * PAD)
+  const total = widths[0] + 14 + boxes.reduce((a, b) => a + b + CHOICE_GAP, 0) - CHOICE_GAP
+  const left = (CLOCK_L + CLOCK_R) / 2 - total / 2, mid = CHOICE_TOP + CHOICE_H / 2
+  let x = left + widths[0] + 14
+  return (
+    <g role="group" aria-label={l.clock} style={{ visibility: widths[0] ? undefined : 'hidden' }}>
+      <text ref={name} className="lsc-dd-label" x={left} y={mid + 7}>{l.clock}</text>
+      {options.map((o, i) => {
+        const on = o === wobbly, at = x
+        x += boxes[i] + CHOICE_GAP
+        const pick = () => onPick(o)
+        const onKey = (e: KeyboardEvent) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return
+          e.preventDefault()
+          pick()
+        }
+        return (
+          <g key={String(o)} role="button" tabIndex={reached ? 0 : -1} aria-pressed={on} onClick={pick} onKeyDown={onKey} className="lsc-dd-choice">
+            <rect x={at} y={CHOICE_TOP} width={boxes[i]} height={CHOICE_H} rx={14}
+              fill={on ? 'var(--lsc-accent-bg)' : 'transparent'} stroke={on ? 'var(--lsc-accent)' : 'var(--lsc-border)'} strokeWidth={2} />
+            <text ref={(el) => { words.current[i] = el }} className="lsc-dd-reading" x={at + PAD} y={mid + 8}>{texts[i]}</text>
+          </g>
+        )
+      })}
     </g>
   )
 }
@@ -412,13 +439,12 @@ const choice: CSSProperties = {
   color: 'var(--lsc-fg)', fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
 }
 
-/** A setting's buttons, one a choice (the one in use lit, as the steps' shapes are); its name before them, if it needs one */
-function Choices<T>({ name, shown = true, options, value, text, onPick }: {
-  name: string; shown?: boolean; options: readonly T[]; value: T; text: (v: T) => string; onPick: (v: T) => void
+/** A setting's buttons, one a choice (the one in use lit, as the steps' shapes are) */
+function Choices<T>({ name, options, value, text, onPick }: {
+  name: string; options: readonly T[]; value: T; text: (v: T) => string; onPick: (v: T) => void
 }) {
   return (
     <div role="group" aria-label={name} style={group}>
-      {shown && <span style={caption}>{name}</span>}
       {options.map((o) => {
         const on = o === value
         return (
@@ -435,43 +461,46 @@ function Choices<T>({ name, shown = true, options, value, text, onPick }: {
   )
 }
 
-/** A named control and its value after it */
-function Named({ name, text, children }: { name: string; text: string; children: ReactNode }) {
+/** A named control and its value after it, as wide as its widest (`reserve`); `shrink`: giving way on a narrow screen */
+function Named({ name, text, reserve, shrink = false, children }: {
+  name: string; text: string; reserve: string[]; shrink?: boolean; children: ReactNode
+}) {
   return (
-    <div style={{ ...group, gap: 8 }}>
+    <div style={{ ...group, gap: 8, ...(shrink ? { flexShrink: 1, minWidth: 0 } : null) }}>
       <span style={caption}>{name}</span>
       {children}
-      <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', minWidth: '4.5em' }}>{text}</span>
+      <StableText reserve={reserve} style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{text}</StableText>
     </div>
   )
 }
 
-const KNOB = 34
+/** The gain knob's size: as big as the two rows of buttons beside it allow */
+const KNOB = 40
 
 /**
- * The subject's controls, each from its step, in both rows: after the step's name the sample rate's and
- * bit depth's buttons (their units say what they are); in the second the gain knob first (the line
- * in's), the clock's buttons, the frequency's slider
+ * The subject's controls under the picture, each from its step (the clock's are on it): the `knobs` —
+ * the gain knob first (the line in's), the frequency's slider —, the `choices` — the sample rate's
+ * buttons over the bit depth's (their units say what they are)
  */
-export function ConversionControls({ step, row }: { step: number; row: 1 | 2 }) {
+export function ConversionControls({ step, part }: { step: number; part: 'knobs' | 'choices' }) {
   const s = useConversion()
   const { t, fmt } = useTranslation()
   const l = t.deepDive.labels
-  const sampled = step >= SAMPLE_STEP
-  if (row === 1) {
-    return sampled ? (
-      <div style={{ ...group, gap: 10 }}>
-        <Choices name={l.sampleRate} shown={false} options={RATES} value={s.rate as (typeof RATES)[number]} text={(r) => rateText(t, r)} onPick={(rate) => s.set({ rate })} />
-        <Choices name={l.bitDepth} shown={false} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} />
+  if (part === 'choices') {
+    return step >= SAMPLE_STEP ? (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+        <Choices name={l.sampleRate} options={RATES} value={s.rate as (typeof RATES)[number]} text={(r) => rateText(t, r)} onPick={(rate) => s.set({ rate })} />
+        <Choices name={l.bitDepth} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} />
       </div>
     ) : null
   }
-  const gainText = `${s.gain > 0 ? '+' : s.gain < 0 ? '−' : '±'}${Math.abs(s.gain)} ${l.db}`
+  const dB = (gain: number) => `${gain > 0 ? '+' : gain < 0 ? '−' : '±'}${Math.abs(gain)} ${l.db}`
   const kHz = (k: number) => fmt(t.formats.rate, { n: String(k) })
-  const gainMin = LEVEL_MIN - LEVEL_START, gainMax = LEVEL_MAX - LEVEL_START
+  const gainMin = LEVEL_MIN - LEVEL_START, gainMax = LEVEL_MAX - LEVEL_START, gainText = dB(s.gain)
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 26, rowGap: 6, minHeight: KNOB }}>
-      <Named name={l.gain} text={gainText}>
+    // The slider gives way (down to 100 px) where the panel is narrow: the row then fits from 1024 px
+    <div style={{ display: 'flex', alignItems: 'center', gap: 22, flexShrink: 1, minWidth: 0, marginLeft: 12 }}>
+      <Named name={l.gain} text={gainText} reserve={[dB(gainMin), dB(gainMax)]}>
         <svg width={KNOB} height={KNOB} style={{ flexShrink: 0, overflow: 'visible' }}>
           <SceneKnob
             cx={KNOB / 2} cy={KNOB / 2} r={KNOB / 2 - 1} color="var(--lsc-accent)"
@@ -480,15 +509,12 @@ export function ConversionControls({ step, row }: { step: number; row: 1 | 2 }) 
           />
         </svg>
       </Named>
-      {sampled && (
-        <Choices name={l.clock} options={[false, true] as const} value={s.wobbly} text={(w) => (w ? l.wobbly : l.steady)} onPick={(wobbly) => s.set({ wobbly })} />
-      )}
-      {step >= NYQUIST_STEP && (
-        <Named name={l.frequency} text={kHz(s.tone / 1000)}>
+      {step >= DAC_STEP && (
+        <Named name={l.frequency} text={kHz(s.tone / 1000)} reserve={[kHz(TONE_MAX / 1000)]} shrink>
           <input
             type="range" min={TONE_MIN / 1000} max={TONE_MAX / 1000} step={1} value={s.tone / 1000}
             aria-label={l.frequency} aria-valuetext={kHz(s.tone / 1000)}
-            onChange={(e) => s.set({ tone: Number(e.target.value) * 1000 })} className="lsc-dd-slider" style={{ width: 220 }}
+            onChange={(e) => s.set({ tone: Number(e.target.value) * 1000 })} className="lsc-dd-slider" style={{ flex: '0 1 220px', minWidth: 100 }}
           />
         </Named>
       )}

@@ -43,6 +43,8 @@ const square: CSSProperties = { ...button, width: 34, padding: 0 }
 const NO_GROUPS: NonNullable<Subject['shapes']> = []
 const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }
 const caption: CSSProperties = { fontSize: 13, color: 'var(--lsc-fg-muted)', whiteSpace: 'nowrap' }
+/** A still subject's panel: one row as high as two rows of its buttons (30 px each, 10 apart) */
+const STILL_ROWS = 70
 
 /** `left`: how much of the left side the drawer covers — the picture keeps clear of it. */
 export function DeepDiveView({ left }: { left: number }) {
@@ -171,14 +173,15 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
         </svg>
       </div>
 
-      {/* The controls: the steps, then the phase */}
+      {/* The controls: the steps, then the phase — or, for a subject with controls of its own, one panel two rows high:
+          the steps, its knobs, the step's name where it fits, its choices at the right end */}
       <div
         style={{
           flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 16px 12px',
           background: 'var(--lsc-header)', borderTop: '1px solid var(--lsc-border)',
         }}
       >
-        <div style={row}>
+        <div style={still ? { ...row, minHeight: STILL_ROWS } : row}>
           <button
             onClick={() => setStep(step - 1)}
             disabled={step === 1}
@@ -223,6 +226,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
           >
             <ChevronRight size={16} />
           </button>
+          {subject.Controls && <subject.Controls step={step} part="knobs" />}
           <StepTitle name={t.deepDive.steps[subject.steps[step - 1].id]} />
           {here.map((g) => (
             // The step's shapes, after its name in the same row (a row of their own would take the picture's room)
@@ -249,11 +253,11 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
               })}
             </div>
           ))}
-          {subject.Controls && <subject.Controls step={step} row={1} />}
+          {subject.Controls && <subject.Controls step={step} part="choices" />}
           {subject.credit && <Credit text={t.deepDive.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deepDive.credit} />}
         </div>
 
-        {subject.Controls ? <subject.Controls step={step} row={2} /> : <div style={row}>
+        {!still && <div style={row}>
           <button
             onClick={() => setPlaying(!playing)}
             className="lsc-btn-outline"

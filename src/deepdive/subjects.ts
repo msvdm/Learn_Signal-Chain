@@ -38,11 +38,12 @@ export interface Subject {
    */
   shapes?: readonly { step: number; ids: readonly ShapeId[] }[]
   /**
-   * The subject's own controls, in both rows: `row` 1 after the step's name, 2 in the phase's place.
+   * The subject's own controls, in one panel two rows high: the `knobs` right of the steps, the
+   * `choices` (buttons, in two rows) at its right end, the step's name between them where it fits.
    * With them the picture stands still — no play, no phase — and is a function of them (each shown
    * from the step that uses it)
    */
-  Controls?: ComponentType<{ step: number; row: 1 | 2 }>
+  Controls?: ComponentType<{ step: number; part: 'knobs' | 'choices' }>
 }
 
 /** In the drawer's order */
@@ -109,10 +110,8 @@ export const SUBJECTS: readonly Subject[] = [
     Scene: ConversionScene,
     steps: [
       { id: 'lineIn',        box: [-40, 0, 480, 720] },
-      { id: 'clockSamples',  box: [-40, -100, 1800, 720] },
-      { id: 'backToVoltage', box: [-40, -100, 2840, 720] },
-      { id: 'nyquist',       box: [-40, -100, 2840, 920] },
-      { id: 'noHeadroom',    box: [-40, -100, 2840, 920] },
+      { id: 'clockSamples',  box: [-40, -170, 1800, 720] },
+      { id: 'backToVoltage', box: [-40, -170, 2840, 720] },
     ],
     Controls: ConversionControls,
   },
