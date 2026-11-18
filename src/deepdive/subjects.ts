@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Binary, Ear, Speaker, Zap } from 'lucide-react'
+import { AudioWaveform, Binary, Ear, Zap, createLucideIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -14,6 +14,12 @@ import { ConversionControls, ConversionScene } from './scenes/ConversionScene'
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
 // (deepdive/scenes/, a picture and its painter), its entry here, and its name and its steps' names
 // in the locales (`deepDive.subjects`, `deepDive.steps`).
+
+/**
+ * Magnetic induction's icon: a coil — two legs and three loops, one wire (a trochoid: the loops'
+ * curve made with cubic Béziers). Its line 1.5 wide, not lucide's 2, so the loops stay open at 18 px
+ */
+const Coil = createLucideIcon('coil', [['path', { d: 'M1.75 21V10C1.94 8.3 2.37 6.61 2.97 5.4C3.57 4.2 4.33 3.5 5.1 3.5C5.87 3.5 6.63 4.2 7.23 5.4C7.83 6.61 8.26 8.3 8.45 10C8.64 11.7 8.6 13.39 8.38 14.6C8.17 15.8 7.78 16.5 7.4 16.5C7.02 16.5 6.63 15.8 6.42 14.6C6.2 13.39 6.16 11.7 6.35 10C6.54 8.3 6.97 6.61 7.57 5.4C8.17 4.2 8.93 3.5 9.7 3.5C10.47 3.5 11.23 4.2 11.83 5.4C12.43 6.61 12.86 8.3 13.05 10C13.24 11.7 13.2 13.39 12.98 14.6C12.77 15.8 12.38 16.5 12 16.5C11.62 16.5 11.23 15.8 11.02 14.6C10.8 13.39 10.76 11.7 10.95 10C11.14 8.3 11.57 6.61 12.17 5.4C12.77 4.2 13.53 3.5 14.3 3.5C15.07 3.5 15.83 4.2 16.43 5.4C17.03 6.61 17.46 8.3 17.65 10C17.84 11.7 17.8 13.39 17.58 14.6C17.37 15.8 16.98 16.5 16.6 16.5C16.22 16.5 15.83 15.8 15.62 14.6C15.4 13.39 15.36 11.7 15.55 10C15.74 8.3 16.17 6.61 16.77 5.4C17.37 4.2 18.13 3.5 18.9 3.5C19.67 3.5 20.43 4.2 21.03 5.4C21.63 6.61 22.06 8.3 22.25 10V21', strokeWidth: '1.5', key: 'coil' }]])
 
 export type SubjectId = keyof Translations['deepDive']['subjects']
 export type StepId    = keyof Translations['deepDive']['steps']
@@ -78,7 +84,7 @@ export const SUBJECTS: readonly Subject[] = [
   },
   {
     id: 'transducer',
-    icon: Speaker,
+    icon: Coil,
     Scene: TransducerScene,
     steps: [
       { id: 'microphone',   box: [35, 560, 540, 800] },
