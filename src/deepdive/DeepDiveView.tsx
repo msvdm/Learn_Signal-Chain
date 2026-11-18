@@ -54,11 +54,13 @@ export function DeepDiveView({ left }: { left: number }) {
 function Player({ subject, left }: { subject: Subject; left: number }) {
   const { t } = useTranslation()
   const [step, setStep]       = useState(1)
-  const [playing, setPlaying] = useState(true)
+  /** A subject with controls of its own stands still: its picture is a function of them, not of the phase */
+  const still = !!subject.Controls
+  const [playing, setPlaying] = useState(!still)
   const [size, setSize]       = useState<{ w: number; h: number } | null>(null)
   const groups = subject.shapes ?? NO_GROUPS
-  /** The shape picked in each group of the subject's (each group's first — or its `start` — until another is) */
-  const [picked, setPicked]   = useState<readonly ShapeId[]>(() => groups.map((g) => g.ids[g.start ?? 0]))
+  /** The shape picked in each group of the subject's (each group's first until another is) */
+  const [picked, setPicked]   = useState<readonly ShapeId[]>(() => groups.map((g) => g.ids[0]))
   const count = subject.steps.length
   // A group's pick holds from its step on; its buttons are shown only at that step
   const shape = useMemo(() => groups.flatMap((g, i) => (g.step <= step ? [picked[i]] : [])), [groups, picked, step])
@@ -132,14 +134,14 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
       if (typingInField(e) || pressedInside(e, '[role="dialog"], [role="menu"]')) return
       if (e.key === 'ArrowRight') setStep((s) => Math.min(s + 1, count))
       else if (e.key === 'ArrowLeft') setStep((s) => Math.max(s - 1, 1))
-      else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) {
+      else if (e.key === ' ' && !still && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault()
         setPlaying((p) => !p)
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [count])
+  }, [count, still])
 
   const camera = size && size.w > 0 && size.h > 0
     ? cameraFor(subject.steps.slice(0, step).map((s) => s.box), size.w, size.h)
@@ -247,10 +249,11 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
               })}
             </div>
           ))}
+          {subject.Controls && <subject.Controls step={step} row={1} />}
           {subject.credit && <Credit text={t.deepDive.credits[subject.credit]} links={CREDIT_LINKS[subject.credit]} label={t.deepDive.credit} />}
         </div>
 
-        <div style={row}>
+        {subject.Controls ? <subject.Controls step={step} row={2} /> : <div style={row}>
           <button
             onClick={() => setPlaying(!playing)}
             className="lsc-btn-outline"
@@ -289,7 +292,7 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
               {deg}°
             </button>
           ))}
-        </div>
+        </div>}
       </div>
     </div>
   )

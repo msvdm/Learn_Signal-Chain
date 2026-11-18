@@ -9,6 +9,7 @@ import { TAU, clamp, rad } from './wave'
 // filter after it (inside a real converter: what clipping adds above half the sample rate is taken
 // out too), each sample rounded to the nearest step of its bit depth; and back: each number held
 // until the next (the steps), then smoothed (an ideal reconstruction, as the DAC's filter does).
+// Each converter adds its own noise (its analogue parts'), so what comes out is never what went in.
 // "No filter" is a converter without them: everything is sampled as it is, and folds back.
 // Everything is a function of the phase: the tone's, at the window's left edge.
 
@@ -19,15 +20,19 @@ export const ANALOG_TOP = 0.775 * 10
 /** A sine's peak over its average, in dB */
 export const SINE_CREST_DB = 20 * Math.log10(Math.SQRT2)
 
-/** The sample rates to pick */
-export const RATES = [44100, 48000, 96000] as const
-export type Rate = (typeof RATES)[number]
+/** The sample rates to pick: a telephone's, a voice call's, a CD's, video's, a studio's */
+export const RATES = [8000, 16000, 44100, 48000, 96000] as const
+export type Rate = number
+export const RATE_START = 48000
+/** The bit depths to pick, and the first */
+export const BIT_DEPTHS = [3, 4, 8, 16, 24] as const
+export const BITS_START = 4
 /** How long the picture's windows are: 0.5 ms (24 samples at 48 kHz, one cycle of 2 kHz) */
 export const WINDOW_S = 0.0005
 
-/** The tone: its knob, in whole kHz (2 kHz until the Nyquist step) */
+/** The tone: its slider, in whole kHz (2 kHz until the Nyquist step) */
 export const TONE_MIN = 1000, TONE_MAX = 50000, TONE_START = 2000
-/** The level, the sine's average in dBu: line level until the last step; at most a peak of +19 dBu (the analogue side's hot, not clipping) */
+/** The level, the sine's average in dBu (the gain knob, from line level); at most a peak of +19 dBu (the analogue side's hot, not clipping) */
 export const LEVEL_MIN = -20, LEVEL_MAX = 16, LEVEL_START = 0
 
 /** The converter's own noise (its analogue parts'), rms under full scale: a budget one's, a good one's */
@@ -35,13 +40,13 @@ export const OWN_NOISE = { quality: -120, budget: -100 } as const
 export type Grade = keyof typeof OWN_NOISE
 
 /**
- * A wobbly clock: each sample taken up to this share of a sample's time early or late (a real one's
- * wobble is around a nanosecond — this is thousands of times bigger, to be seen)
+ * A wobbly clock, at its worst: each sample taken up to this share of a sample's time early or late
+ * (a real one's wobble is around a nanosecond — this is thousands of times bigger, to be seen)
  */
-export const JITTER = 0.25
+export const JITTER_MAX = 0.25
 
-/** How many samples either side the reconstruction reaches (a Lanczos window, as good as ideal here) */
-export const RECONSTRUCT_TAPS = 32
+/** How many samples either side the reconstruction reaches (as good as ideal here) */
+export const RECONSTRUCT_TAPS = 48
 
 export interface Setup {
   rate: Rate
@@ -51,10 +56,12 @@ export interface Setup {
   level: number
   /** null: not rounded yet (before the bit depth's step) */
   bits: number | null
+  /** Whose own noise the two converters add */
   grade: Grade
   /** The filters before and inside the converter; false: none (everything folds back) */
   filter: boolean
-  jitter: boolean
+  /** How far the clock wobbles: the most a sample is taken early or late, as a share of a sample's time (0 … JITTER_MAX) */
+  jitter: number
 }
 
 /** A sine's peak in volts at an average of `dbu` */
@@ -100,10 +107,18 @@ export function floorOf(bits: number, grade: Grade): { bits: number; own: number
   return { bits: b, own, total: 10 * Math.log10(10 ** (b / 10) + 10 ** (own / 10)) }
 }
 
-/** How early or late the clock takes sample `n`, as a share of a sample's time (the same every time) */
+/** A number from 0 to 1 for `n`, the same every time */
+const hashOf = (n: number) => Math.abs(Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1
+
+/** How early or late a wobbly clock takes sample `n`: −1 … 1 of its wobble (the same every time) */
 export function jitterOf(n: number): number {
-  const u = Math.abs(Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1
-  return (2 * u - 1) * JITTER
+  return 2 * hashOf(n) - 1
+}
+
+/** Noise for sample `n`, with an rms of 1 (the same every time) */
+export function noiseOf(n: number): number {
+  const u = Math.max(hashOf(n * 2 + 0.5), 1e-12), v = hashOf(n * 2 + 1.5)
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v)
 }
 
 /** A frequency as heard after sampling: folded back below half the sample rate */
@@ -129,6 +144,8 @@ export interface Sample {
   held: number
   /** The number it is written as, in volts */
   value: number
+  /** What the D/A converter makes of it, with its own noise */
+  played: number
 }
 
 export interface Conversion {
@@ -183,11 +200,24 @@ function seriesOf(cycle: ArrayLike<number>): Harmonic[] {
 /** A cycle of a function of the phase */
 const cycleOf = (f: (theta: number) => number) => Float64Array.from({ length: POINTS }, (_, i) => f((TAU * i) / POINTS))
 
-const lanczos = (x: number) => {
+/** The modified Bessel function I0, as a series */
+function besselI0(x: number): number {
+  let sum = 1, term = 1
+  for (let k = 1; k < 40; k++) {
+    term *= (x / (2 * k)) ** 2
+    sum += term
+    if (term < sum * 1e-16) break
+  }
+  return sum
+}
+/** The reconstruction's window: a Kaiser window, its leaks under the converters' own noise */
+const KAISER_BETA = 13, KAISER_NORM = besselI0(KAISER_BETA)
+/** An ideal reconstruction's sinc, windowed */
+const reconstruct = (x: number) => {
   if (x === 0) return 1
   if (Math.abs(x) >= RECONSTRUCT_TAPS) return 0
-  const px = Math.PI * x
-  return (RECONSTRUCT_TAPS * Math.sin(px) * Math.sin(px / RECONSTRUCT_TAPS)) / (px * px)
+  const px = Math.PI * x, r = x / RECONSTRUCT_TAPS
+  return (Math.sin(px) / px) * (besselI0(KAISER_BETA * Math.sqrt(1 - r * r)) / KAISER_NORM)
 }
 
 const dbOf = (volts: number) => 20 * Math.log10(Math.max(volts, 1e-12) / FS_VOLTS)
@@ -221,16 +251,19 @@ export function conversionOf(setup: Setup): Conversion {
   const writes = (theta: number) => clamp(filter ? filtered(theta) : amplitude * Math.sin(theta), -FS_VOLTS, top)
   const thetaAt = (t: number, deg: number) => TAU * tone * t + rad(deg)
 
+  /** Each converter's own noise, in volts rms */
+  const own = FS_VOLTS * 10 ** (OWN_NOISE[setup.grade] / 20)
   const sample = (n: number, deg: number): Sample => {
-    const at = (n + (jitter ? jitterOf(n) : 0)) * period
-    const held = writes(thetaAt(at, deg))
-    return { at, held, value: bits === null ? held : quantize(held, bits) }
+    const at = (n + jitter * jitterOf(n)) * period
+    const held = clamp(writes(thetaAt(at, deg)) + own * noiseOf(n), -FS_VOLTS, top)
+    const value = bits === null ? held : quantize(held, bits)
+    return { at, held, value, played: value + own * noiseOf(n + 0.25) }
   }
 
   const output = (t: number, samples: readonly Sample[], first: number) => {
     const x = t * rate, from = Math.max(first, Math.floor(x) - RECONSTRUCT_TAPS + 1), to = Math.min(first + samples.length - 1, Math.floor(x) + RECONSTRUCT_TAPS)
     let sum = 0
-    for (let n = from; n <= to; n++) sum += samples[n - first].value * lanczos(x - n)
+    for (let n = from; n <= to; n++) sum += samples[n - first].played * reconstruct(x - n)
     return sum
   }
 

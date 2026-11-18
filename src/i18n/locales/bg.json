@@ -703,8 +703,7 @@
       "classes": "Класове и входове",
       "preampChip": "Чипът на предусилвателя: линейно ниво",
       "lineIn": "Сигнал на линейно ниво",
-      "clockSamples": "Тактът: семплите",
-      "bitDepth": "Битова дълбочина: стъпки и шум",
+      "clockSamples": "Тактът, семплите и битовете",
       "backToVoltage": "Обратно към напрежение",
       "nyquist": "Найкуист: половината от честотата на дискретизация",
       "noHeadroom": "0 dBFS: нищо над него"
@@ -728,21 +727,7 @@
       "classB": "Клас B",
       "classD": "Клас D",
       "cleanChip": "Чист чип",
-      "transformer": "Трансформатор",
-      "rate44": "44.1 kHz",
-      "rate48": "48 kHz",
-      "rate96": "96 kHz",
-      "steadyClock": "Стабилен такт",
-      "wobblyClock": "Колеблив такт",
-      "bits3": "3 бита",
-      "bits4": "4 бита",
-      "bits8": "8 бита",
-      "bits16": "16 бита",
-      "bits24": "24 бита",
-      "qualityConverter": "Качествен ADC",
-      "budgetConverter": "Евтин ADC",
-      "filterIn": "С филтър",
-      "noFilter": "Без филтър"
+      "transformer": "Трансформатор"
     },
     "credit": "Източници",
     "credits": {
@@ -861,13 +846,20 @@
       "timesASecond": "{n} пъти в секунда",
       "wobbleBigger": "Колебанието е нарисувано хиляди пъти по-голямо",
       "bitsFloor": "{bits}: {db}",
-      "ownNoise": "Собствен шум: {db}",
-      "dbAbove": "{db} dB",
-      "aboveNoise": "над шума",
-      "tone": "Тон",
-      "level": "Ниво",
       "nyquistAt": "Найкуист {f}",
-      "peak": "Пик {db}"
+      "peak": "Пик {db}",
+      "numbers": "Числата: {bits} на семпъл",
+      "budgetNoise": "Евтин ADC: {db}",
+      "qualityNoise": "Качествен ADC: {db}",
+      "underSignal": "{db} dB под сигнала",
+      "drawnBigger": "Разликата е нарисувана {n} × по-голяма",
+      "difference": "Разлика от входа: {db} dB",
+      "sampleRate": "Честота на дискретизация",
+      "bitDepth": "Битова дълбочина",
+      "steady": "Стабилен",
+      "wobbly": "Колеблив",
+      "frequency": "Честота",
+      "gain": "Усилване"
     }
   }
 }

@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'bun:test'
 import { getHealth } from '../signal/levels'
 import {
-  ANALOG_TOP, FS_VOLTS, JITTER, LEVEL_MAX, OWN_NOISE, TONE_START, WINDOW_S,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, passOf, quantize, samplesOf,
+  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, OWN_NOISE, TONE_START, WINDOW_S,
+  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf,
 } from './converter'
 import type { Setup } from './converter'
 
 // Conversion (D46): the numbers its picture shows, as the canvas would judge them.
 
-const LINE: Setup = { rate: 48000, tone: TONE_START, level: 0, bits: null, grade: 'quality', filter: true, jitter: false }
+const LINE: Setup = { rate: 48000, tone: TONE_START, level: 0, bits: null, grade: 'quality', filter: true, jitter: 0 }
 const at = (s: Partial<Setup>) => conversionOf({ ...LINE, ...s })
 
 /** The largest gap between the DAC's output and a wave over the window, in volts */
 function worstGap(s: Partial<Setup>, wave: (t: number) => number, deg = 37): number {
-  const c = at(s), n = Math.round(WINDOW_S * c.setup.rate), first = -40
-  const samples = samplesOf(c, deg, first, n + 40)
+  const c = at(s), n = Math.round(WINDOW_S * c.setup.rate), first = -60
+  const samples = samplesOf(c, deg, first, n + 60)
   let worst = 0
   for (let i = 0; i <= 100; i++) {
     const t = (WINDOW_S * i) / 100
@@ -97,7 +97,7 @@ describe('the filters and Nyquist', () => {
   test('30 kHz with the filter never reaches the numbers', () => {
     const c = at({ tone: 30000 })
     expect(c.components).toEqual([])
-    expect(c.sample(5, 0).held).toBe(0)
+    expect(Math.abs(c.sample(5, 0).held)).toBeLessThan(FS_VOLTS * 1e-5)
   })
 })
 
@@ -140,16 +140,36 @@ describe('0 dBFS: nothing above it', () => {
   })
 })
 
+describe('never the same', () => {
+  test('the best converters at 24 bits: what comes out differs from line level, 99 dB under it (their own noise, twice)', () => {
+    const c = at({ bits: 24 }), first = -60, samples = samplesOf(c, 0, first, 84)
+    let sq = 0, sig = 0
+    for (let i = 0; i < 200; i++) {
+      const t = (WINDOW_S * i) / 200, want = c.arriving(t, 0)
+      sq += (c.output(t, samples, first) - want) ** 2
+      sig += want ** 2
+    }
+    const db = 10 * Math.log10(sq / sig)
+    expect(db).toBeLessThan(-97)
+    expect(db).toBeGreaterThan(-101)
+  })
+  test('the noise is the same every time, with an rms of 1', () => {
+    const n = Array.from({ length: 4000 }, (_, i) => noiseOf(i))
+    expect(Math.sqrt(n.reduce((a, v) => a + v * v, 0) / n.length)).toBeCloseTo(1, 1)
+    expect(noiseOf(7)).toBe(noiseOf(7))
+  })
+})
+
 describe('the clock', () => {
-  test('a wobbly clock takes each sample at most a quarter of a sample early or late', () => {
+  test('a wobbly clock takes each sample early or late, never past its wobble', () => {
     const offsets = Array.from({ length: 200 }, (_, n) => jitterOf(n))
-    expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(JITTER)
-    expect(Math.max(...offsets)).toBeGreaterThan(0.2)
-    expect(Math.min(...offsets)).toBeLessThan(-0.2)
+    expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(1)
+    expect(Math.max(...offsets)).toBeGreaterThan(0.8)
+    expect(Math.min(...offsets)).toBeLessThan(-0.8)
   })
   test('its error grows with the tone: the steeper the wave, the further off', () => {
     const errorAt = (tone: number) => {
-      const c = at({ tone, jitter: true })
+      const c = at({ tone, jitter: JITTER_MAX })
       let worst = 0
       for (let n = 0; n < 24; n++) worst = Math.max(worst, Math.abs(c.sample(n, 0).held - c.received(n / 48000, 0)))
       return worst / c.amplitude

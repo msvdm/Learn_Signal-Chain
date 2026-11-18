@@ -703,8 +703,7 @@
       "classes": "Classes and inputs",
       "preampChip": "The preamp chip: line level",
       "lineIn": "A line-level signal",
-      "clockSamples": "The clock: samples",
-      "bitDepth": "Bit depth: steps and noise",
+      "clockSamples": "The clock, the samples and the bits",
       "backToVoltage": "Back to voltage",
       "nyquist": "Nyquist: half the sample rate",
       "noHeadroom": "0 dBFS: nothing above it"
@@ -728,21 +727,7 @@
       "classB": "Class B",
       "classD": "Class D",
       "cleanChip": "Clean chip",
-      "transformer": "Transformer",
-      "rate44": "44.1 kHz",
-      "rate48": "48 kHz",
-      "rate96": "96 kHz",
-      "steadyClock": "Steady clock",
-      "wobblyClock": "Wobbly clock",
-      "bits3": "3 bits",
-      "bits4": "4 bits",
-      "bits8": "8 bits",
-      "bits16": "16 bits",
-      "bits24": "24 bits",
-      "qualityConverter": "Quality ADC",
-      "budgetConverter": "Budget ADC",
-      "filterIn": "Filter in",
-      "noFilter": "No filter"
+      "transformer": "Transformer"
     },
     "credit": "Credits",
     "credits": {
@@ -861,13 +846,20 @@
       "timesASecond": "{n} times a second",
       "wobbleBigger": "The wobble drawn thousands of times bigger",
       "bitsFloor": "{bits}: {db}",
-      "ownNoise": "Own noise: {db}",
-      "dbAbove": "{db} dB",
-      "aboveNoise": "above the noise",
-      "tone": "Tone",
-      "level": "Level",
       "nyquistAt": "Nyquist {f}",
-      "peak": "Peak {db}"
+      "peak": "Peak {db}",
+      "numbers": "The numbers: {bits} a sample",
+      "budgetNoise": "Budget ADC: {db}",
+      "qualityNoise": "Quality ADC: {db}",
+      "underSignal": "{db} dB under the signal",
+      "drawnBigger": "The difference drawn {n} × bigger",
+      "difference": "Difference from the input: {db} dB",
+      "sampleRate": "Sample rate",
+      "bitDepth": "Bit depth",
+      "steady": "Steady",
+      "wobbly": "Wobbly",
+      "frequency": "Frequency",
+      "gain": "Gain"
     }
   }
 }
