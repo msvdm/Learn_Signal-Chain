@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
-import { formatDb, getHealth, zoneColor } from '../../signal/levels'
+import { ALIGNMENT_DB, formatDb, getHealth, zoneColor } from '../../signal/levels'
 import type { MeterZoneKind, SignalDomain, SignalHealth } from '../../signal/levels'
 import { bitsText, rateText } from '../../utils/formatText'
 import {
@@ -37,7 +37,9 @@ import type { ConversionSettings } from './conversionSettings'
 //     noise, each with how far under the signal it is. The numbers as their bits, a column a sample.
 // (3) Back to voltage: the D/A converter holds each number until the next (the steps); its filter
 //     smooths them into the line out — never quite the input: the difference (the converters' own
-//     noise, the rounding, the wobble) drawn as many times bigger as it takes to be seen. The tone's
+//     noise, the rounding, the wobble) drawn as many times bigger as it takes to be seen; its meter
+//     (dBu) at the right, framing the picture with the line in's: the numbers' level back in volts
+//     (full scale a peak of +18 dBu — clipped numbers stay clipped, never past it). The tone's
 //     frequency from here: past half the sample rate (Nyquist) the filter takes the tone out; and the
 //     gain turned up shows 0 dBFS with nothing above it — the same signal hot in volts, clipping in
 //     numbers, its tops cut flat (red).
@@ -62,8 +64,8 @@ const NUM_L = 1340, NUM_X = 1380, NUM_R = 1780, ROW_MAX = 18, SQUARE_MAX = 24
 const CLOCK_L = 1490, CLOCK_R = 1630, CLOCK_TOP = -60, CLOCK_BOTTOM = -10, CLOCK_WIRE_Y = -35
 /** The clock's buttons above it: their top, their height, the gap between them */
 const CHOICE_TOP = -146, CHOICE_H = 62, CHOICE_GAP = 8
-/** 3 · the D/A converter, its graph; the line out's graph */
-const DAC_L = 1860, DAC_X = 1900, DAC_R = 2300, OUT_X = 2380
+/** 3 · the D/A converter, its graph; the line out's graph, its meter right of it (as far from it as the line in's is) */
+const DAC_L = 1860, DAC_X = 1900, DAC_R = 2300, OUT_X = 2380, OUT_METER_X = OUT_X + GRAPH_W + (IN_X - IN_METER_X - METER_W)
 
 export const LINE_STEP = 1, SAMPLE_STEP = 2, DAC_STEP = 3
 /** The tone's phase at the graphs' left edge */
@@ -261,6 +263,9 @@ export function ConversionScene({ step }: SceneProps) {
   const placed = stacked(marks)
   const analog = healthOf(c.analog.rms, c.analog.peak, 'analog')
   const digital = healthOf(c.digital.rms, c.digital.peak, 'digital')
+  /** The line out: what the numbers hold, back in dBu (0 dBFS a peak of +18 dBu) */
+  const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
+  const lineOutHealth = healthOf(lineOutLevel.rms, lineOutLevel.peak, 'analog')
 
   const { filled, empty } = gridOf(shown, bits, rate)
   const stairs = stairsOf(shown, rate)
@@ -367,6 +372,8 @@ export function ConversionScene({ step }: SceneProps) {
             {out.bigger > 1 && <Label at={[OUT_X, READ_Y + 30]}>{fmt(l.drawnBigger, { n: numberText(out.bigger) })}</Label>}
           </>
         )}
+        <LevelMeter x={OUT_METER_X} y={AN_TOP} w={METER_W} h={AN_BOTTOM - AN_TOP} rms={lineOutLevel.rms} peak={lineOutLevel.peak} />
+        <Readings x={OUT_METER_X} y={READ_Y} peak={formatDb(lineOutLevel.peak)} health={lineOutHealth} />
       </Step>
 
     </g>

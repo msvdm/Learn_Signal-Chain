@@ -117,7 +117,7 @@ export const SUBJECTS: readonly Subject[] = [
     steps: [
       { id: 'lineIn',        box: [-40, 0, 480, 720] },
       { id: 'clockSamples',  box: [-40, -170, 1800, 720] },
-      { id: 'backToVoltage', box: [-40, -170, 2840, 720] },
+      { id: 'backToVoltage', box: [-40, -170, 2990, 720] },
     ],
     Controls: ConversionControls,
   },
