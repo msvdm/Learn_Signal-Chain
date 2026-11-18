@@ -849,6 +849,8 @@
       "budgetNoise": "Евтин ADC: {db}",
       "qualityNoise": "Качествен ADC: {db}",
       "underSignal": "{db} dB под сигнала",
+      "hz": "{n} Hz",
+      "firstSamples": "Първите {n} от {total} семпъла",
       "drawnBigger": "Разликата е нарисувана {n} × по-голяма",
       "difference": "Разлика от входа: {db} dB",
       "sampleRate": "Честота на дискретизация",

@@ -27,11 +27,18 @@ export const RATE_START = 48000
 /** The bit depths to pick, and the first */
 export const BIT_DEPTHS = [3, 4, 8, 16, 24] as const
 export const BITS_START = 4
-/** How long the picture's windows are: 0.5 ms (24 samples at 48 kHz, one cycle of 2 kHz) */
-export const WINDOW_S = 0.0005
+/** How long the picture's windows are: one cycle of the tone (2 kHz: 0.5 ms, 24 samples at 48 kHz) */
+export const windowOf = (tone: number) => 1 / tone
 
-/** The tone: its slider, in whole kHz (2 kHz until the Nyquist step) */
-export const TONE_MIN = 1000, TONE_MAX = 50000, TONE_START = 2000
+/**
+ * The tone: its slider's steps, the third-octave bands (a graphic equalizer's) from 20 Hz, up to
+ * 30 kHz (past a CD's and video's half sample rate); 2 kHz until the step that shows them
+ */
+export const TONES = [
+  20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800,
+  1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000, 25000, 30000,
+] as const
+export const TONE_START = 2000
 /** The level, the sine's average in dBu (the gain knob, from line level); at most a peak of +19 dBu (the analogue side's hot, not clipping) */
 export const LEVEL_MIN = -20, LEVEL_MAX = 16, LEVEL_START = 0
 

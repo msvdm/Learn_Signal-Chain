@@ -849,6 +849,8 @@
       "budgetNoise": "Budget ADC: {db}",
       "qualityNoise": "Quality ADC: {db}",
       "underSignal": "{db} dB under the signal",
+      "hz": "{n} Hz",
+      "firstSamples": "The first {n} of {total} samples",
       "drawnBigger": "The difference drawn {n} × bigger",
       "difference": "Difference from the input: {db} dB",
       "sampleRate": "Sample rate",

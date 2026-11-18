@@ -6,8 +6,8 @@ import type { MeterZoneKind, SignalDomain, SignalHealth } from '../../signal/lev
 import { bitsText, rateText } from '../../utils/formatText'
 import {
   ANALOG_TOP, BIT_DEPTHS, BITS_START, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, OWN_NOISE, RATES,
-  RATE_START, RECONSTRUCT_TAPS, TONE_MAX, TONE_MIN, TONE_START, WINDOW_S,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf,
+  RATE_START, RECONSTRUCT_TAPS, TONES, TONE_START,
+  bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, windowOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
 import { ARROW_INK, FAINT, INK, MOVER, PART, TRACE } from './look'
@@ -22,7 +22,9 @@ import type { ConversionSettings } from './conversionSettings'
 // A/D and D/A conversion (Deep dive, D46): a line-level sine into an A/D converter, its numbers, and
 // out of a D/A converter — modules side by side, in one picture where height is voltage, as in
 // Analogue amplification: full scale (0 dBFS) is a peak of +18 dBu, as the canvas aligns them, its
-// dashed line running through every graph. Each graph is the same 0.5 ms. The picture stands still
+// dashed line running through every graph. Each graph is one cycle of the tone (`windowOf`: 0.5 ms
+// at 2 kHz, 50 ms at 20 Hz), so how many samples a cycle gets shows at once — a low tone's thousands
+// (drawn as paths, the dots shrinking to fit), a high one's few. The picture stands still
 // (a sine is the same moving or not): the controls set it (`useConversion`), each from its step — under
 // it the gain knob and the frequency's slider right of the steps, the sample rate's and bit depth's
 // buttons in two rows at the right; the clock's buttons on the picture, above the clock.
@@ -34,7 +36,8 @@ import type { ConversionSettings } from './conversionSettings'
 //     nearest of its bit depth's steps (the steps drawn while far enough apart); a wobbly clock takes
 //     them early or late (drawn thousands of times bigger) — they are played back on time. Its meter
 //     (dBFS) shows the signal, the noise its bits leave, and a budget and a quality converter's own
-//     noise, each with how far under the signal it is. The numbers as their bits, a column a sample.
+//     noise, each with how far under the signal it is. The numbers as their bits, a column a sample
+//     (the first GRID_MAX of a cycle with more, said in the box).
 // (3) Back to voltage: the D/A converter holds each number until the next (the steps); its filter
 //     smooths them into the line out — never quite the input: the difference (the converters' own
 //     noise, the rounding, the wobble) drawn as many times bigger as it takes to be seen; its meter
@@ -50,7 +53,7 @@ import type { ConversionSettings } from './conversionSettings'
 const CY = 330, PX_V = 220 / FS_VOLTS
 const vy = (volts: number) => CY - PX_V * volts
 const FS_TOP = vy(FS_VOLTS), FS_BOTTOM = vy(-FS_VOLTS), AN_TOP = vy(ANALOG_TOP), AN_BOTTOM = vy(-ANALOG_TOP)
-/** Each graph's width: 0.5 ms */
+/** Each graph's width: one cycle of the tone */
 const GRAPH_W = 360
 /** The modules' boxes: their top and bottom, their names under them */
 const BOX_TOP = 30, BOX_BOTTOM = 660, NAME_Y = BOX_BOTTOM + 32
@@ -61,6 +64,8 @@ const FILTER_L = 455, FILTER_R = 510
 const ADC_L = 520, ADC_X = 560, ADC_R = 1260, METER_X = 980, MARKS_X = 1040
 /** The numbers' box and its grid; the clock above it, its wires into both converters' tops */
 const NUM_L = 1340, NUM_X = 1380, NUM_R = 1780, ROW_MAX = 18, SQUARE_MAX = 24
+/** The most samples the numbers' grid shows (a cycle with more: its first ones) */
+const GRID_MAX = 64
 const CLOCK_L = 1490, CLOCK_R = 1630, CLOCK_TOP = -60, CLOCK_BOTTOM = -10, CLOCK_WIRE_Y = -35
 /** The clock's buttons above it: their top, their height, the gap between them */
 const CHOICE_TOP = -146, CHOICE_H = 62, CHOICE_GAP = 8
@@ -72,8 +77,8 @@ export const LINE_STEP = 1, SAMPLE_STEP = 2, DAC_STEP = 3
 const PHASE = 0
 /** Points a wave is drawn with */
 const POINTS = 180
-/** The steps' lines are drawn while at least this far apart */
-const STEP_LINES_PX = 4
+/** The steps' lines are drawn while at least this far apart; each sample's faint line while the samples are */
+const STEP_LINES_PX = 4, SAMPLE_LINES_PX = 8
 
 /** What the converter is set to at a step: what a later step adds stays at its start */
 function setupAt(step: number, s: ConversionSettings): Setup {
@@ -89,16 +94,16 @@ function setupAt(step: number, s: ConversionSettings): Setup {
   }
 }
 
-const timeX = (left: number) => (t: number) => left + (GRAPH_W * t) / WINDOW_S
-const inX = timeX(IN_X), adcX = timeX(ADC_X), dacX = timeX(DAC_X), outX = timeX(OUT_X)
+/** A graph's x of a moment, its window `span` long (s) */
+const timeX = (left: number, span: number) => (t: number) => left + (GRAPH_W * t) / span
 /** The A/D converter's meter: 0 dBFS at full scale's line, −150 at its bottom one */
 const meterY = (db: number) => FS_TOP + ((FS_BOTTOM - FS_TOP) * Math.min(150, Math.max(0, -db))) / 150
 
-/** A wave over a graph's 0.5 ms */
-function wavePath(x: (t: number) => number, volts: (t: number) => number): string {
+/** A wave over a graph's window (`span` s) */
+function wavePath(x: (t: number) => number, volts: (t: number) => number, span: number): string {
   let d = ''
   for (let i = 0; i <= POINTS; i++) {
-    const t = (WINDOW_S * i) / POINTS
+    const t = (span * i) / POINTS
     d += `${i ? ' L' : 'M'}${x(t).toFixed(1)} ${vy(volts(t)).toFixed(1)}`
   }
   return d
@@ -116,8 +121,8 @@ function healthOf(rms: number, peak: number, domain: SignalDomain) {
 }
 
 /** The samples a graph shows (0 … its last) and those either side the reconstruction reaches */
-function picture(c: Conversion) {
-  const last = Math.floor(WINDOW_S * c.setup.rate + 1e-9), first = -RECONSTRUCT_TAPS
+function picture(c: Conversion, span: number) {
+  const last = Math.floor(span * c.setup.rate + 1e-9), first = -RECONSTRUCT_TAPS
   const samples = samplesOf(c, PHASE, first, last + RECONSTRUCT_TAPS)
   return { first, samples, shown: samples.slice(-first, -first + last + 1) }
 }
@@ -126,18 +131,18 @@ function picture(c: Conversion) {
  * The line out against what came in: the difference drawn as many times bigger (a power of ten) as it
  * takes to be seen; how far under the signal it is (dB)
  */
-function lineOut(c: Conversion, samples: readonly Sample[], first: number) {
-  const out: number[] = [], want: number[] = []
+function lineOut(c: Conversion, samples: readonly Sample[], first: number, span: number) {
+  const out: number[] = [], want: number[] = [], outX = timeX(OUT_X, span)
   let worst = 0, sq = 0, sig = 0
   for (let i = 0; i <= POINTS; i++) {
-    const t = (WINDOW_S * i) / POINTS, o = c.output(t, samples, first), w = c.arriving(t, PHASE)
+    const t = (span * i) / POINTS, o = c.output(t, samples, first), w = c.arriving(t, PHASE)
     out.push(o); want.push(w)
     worst = Math.max(worst, Math.abs(o - w))
     sq += (o - w) ** 2; sig += w * w
   }
   const room = worst > 0 ? 25 / (PX_V * worst) : 1
   const bigger = room > 1 ? Math.min(1e6, 10 ** Math.floor(Math.log10(room))) : 1
-  const path = out.map((o, i) => `${i ? 'L' : 'M'}${outX((WINDOW_S * i) / POINTS).toFixed(1)} ${vy(want[i] + bigger * (o - want[i])).toFixed(1)}`).join(' ')
+  const path = out.map((o, i) => `${i ? 'L' : 'M'}${outX((span * i) / POINTS).toFixed(1)} ${vy(want[i] + bigger * (o - want[i])).toFixed(1)}`).join(' ')
   return { path, bigger, db: sig > 0 ? 10 * Math.log10(Math.max(sq, 1e-30) / sig) : 0 }
 }
 
@@ -151,12 +156,15 @@ function stacked<T extends { db: number }>(marks: readonly T[]): (T & { y: numbe
   return out
 }
 
-/** The numbers' grid: a column a sample, a row a bit (the sign on top) — its filled squares and its empty ones */
-function gridOf(shown: readonly Sample[], bits: number, rate: number): { filled: string; empty: string } {
-  const rowH = Math.min(ROW_MAX, (FS_BOTTOM - FS_TOP) / bits), colW = GRAPH_W / WINDOW_S / rate
+/**
+ * The numbers' grid: a column a sample, a row a bit (the sign on top) — its filled squares and its empty
+ * ones; a column under each sample's moment, or, past GRID_MAX samples, the first GRID_MAX across the box
+ */
+function gridOf(shown: readonly Sample[], bits: number, perWindow: number): { filled: string; empty: string } {
+  const rowH = Math.min(ROW_MAX, (FS_BOTTOM - FS_TOP) / bits), colW = GRAPH_W / Math.min(perWindow, GRID_MAX)
   const sqH = rowH - 3, sqW = Math.max(1.5, Math.min(colW - 3, SQUARE_MAX)), gridTop = CY - (rowH * bits) / 2
   const filled: string[] = [], empty: string[] = []
-  shown.forEach((s, n) => {
+  shown.slice(0, GRID_MAX + 1).forEach((s, n) => {
     const left = NUM_X + n * colW + (colW - sqW) / 2
     if (left + sqW > NUM_X + GRAPH_W + 1) return
     bitsOf(codeOf(s.value, bits), bits).forEach((on, r) => {
@@ -168,11 +176,32 @@ function gridOf(shown: readonly Sample[], bits: number, rate: number): { filled:
 }
 
 /** The D/A converter's steps: each number held until the next */
-function stairsOf(shown: readonly Sample[], rate: number): string {
+function stairsOf(shown: readonly Sample[], rate: number, span: number): string {
+  const dacX = timeX(DAC_X, span)
   return shown.map((s, i) => {
     const y = vy(s.value).toFixed(1), to = Math.min(dacX((i + 1) / rate), DAC_X + GRAPH_W).toFixed(1)
     return i ? `V${y} H${to}` : `M${DAC_X} ${y} H${to}`
   }).join(' ')
+}
+
+/**
+ * The A/D converter's samples as paths (a cycle can hold thousands): a faint line at each one's moment
+ * while they are SAMPLE_LINES_PX apart, its stem from 0 V and its dot — the dots and stems thinning
+ * with the room between them (`gap`); those stopped at full scale apart, for their colour
+ */
+function dotsOf(shown: readonly Sample[], x: (t: number) => number, stopped: (s: Sample) => boolean, gap: number) {
+  const part = () => ({ stems: '', dots: '' })
+  const kept = part(), held = part()
+  let lines = ''
+  for (const s of shown) {
+    const at = x(s.at), y = vy(s.value)
+    if (at < ADC_X - 0.5 || at > ADC_X + GRAPH_W + 0.5) continue
+    const to = stopped(s) ? held : kept, ax = at.toFixed(1), ay = y.toFixed(1)
+    if (gap >= SAMPLE_LINES_PX) lines += `M${ax} ${FS_TOP.toFixed(1)}V${FS_BOTTOM.toFixed(1)}`
+    to.stems += `M${ax} ${CY}V${ay}`
+    to.dots += `M${ax} ${ay}h0`
+  }
+  return { lines, kept, stopped: held, r: Math.min(5, Math.max(1, gap * 0.35)), stem: Math.min(1.5, Math.max(0.4, gap * 0.4)) }
 }
 
 const FULL_SCALE = { stroke: 'var(--signal-clipping)', strokeWidth: 1.5, strokeDasharray: '8 6' } as const
@@ -246,11 +275,14 @@ export function ConversionScene({ step }: SceneProps) {
   const c = conversionOf(setupAt(step, settings))
   const { rate, jitter } = c.setup
   const bits = c.setup.bits ?? BITS_START
-  const { first, samples, shown } = picture(c)
+  /** One cycle of the tone: how long each graph is, how many samples it holds */
+  const span = windowOf(c.setup.tone), perWindow = span * rate
+  const inX = timeX(IN_X, span), adcX = timeX(ADC_X, span), outX = timeX(OUT_X, span)
+  const { first, samples, shown } = picture(c, span)
   const top = codeRange(bits).top
   /** A sample stopped at full scale (or a few bits' top number) */
   const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : FS_VOLTS)
-  const out = step >= DAC_STEP ? lineOut(c, samples, first) : null
+  const out = step >= DAC_STEP ? lineOut(c, samples, first, span) : null
 
   // The meter's marks: the bits' noise, a budget converter's own and a quality one's — each with how
   // far under the signal it is; their words stacked down the right, a leader to each
@@ -267,8 +299,9 @@ export function ConversionScene({ step }: SceneProps) {
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
   const lineOutHealth = healthOf(lineOutLevel.rms, lineOutLevel.peak, 'analog')
 
-  const { filled, empty } = gridOf(shown, bits, rate)
-  const stairs = stairsOf(shown, rate)
+  const { filled, empty } = gridOf(shown, bits, perWindow)
+  const stairs = stairsOf(shown, rate, span)
+  const dots = dotsOf(shown, adcX, stopped, GRAPH_W / perWindow)
 
   return (
     <g>
@@ -277,7 +310,7 @@ export function ConversionScene({ step }: SceneProps) {
         <Label at={[IN_X + 8, AN_TOP - 30]}>{l.lineLevel}</Label>
         <Axes x={IN_X} />
         <AnalogLines x={IN_X} />
-        <path d={wavePath(inX, (t) => c.arriving(t, PHASE))} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
+        <path d={wavePath(inX, (t) => c.arriving(t, PHASE), span)} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
         <LevelMeter x={IN_METER_X} y={AN_TOP} w={METER_W} h={AN_BOTTOM - AN_TOP} rms={c.analog.rms} peak={c.analog.peak} />
         <Readings x={IN_METER_X} y={READ_Y} peak={formatDb(c.analog.peak)} health={analog} />
       </Step>
@@ -295,18 +328,14 @@ export function ConversionScene({ step }: SceneProps) {
         <Label at={[ADC_X + 8, FS_TOP - 10]}>{l.fullScale}</Label>
         <Axes x={ADC_X} />
         <StepLines x={ADC_X} bits={bits} />
-        {shown.map((s, n) => {
-          const x = adcX(s.at), y = vy(s.value)
-          if (x < ADC_X - 0.5 || x > ADC_X + GRAPH_W + 0.5) return null
-          const colour = stopped(s) ? CLIPPED : MOVER
-          return (
-            <g key={n}>
-              <line x1={x} y1={FS_TOP} x2={x} y2={FS_BOTTOM} stroke={MOVER} strokeWidth={1} opacity={0.3} />
-              <line x1={x} y1={CY} x2={x} y2={y} stroke={colour} strokeWidth={1.5} />
-              <circle cx={x} cy={y} r={5} fill={colour} />
-            </g>
-          )
-        })}
+        {/* The samples: each a faint line at its moment (while far enough apart), a stem from 0 V, a dot */}
+        {dots.lines && <path d={dots.lines} fill="none" stroke={MOVER} strokeWidth={1} opacity={0.3} />}
+        {([[dots.kept, MOVER], [dots.stopped, CLIPPED]] as const).map(([d, colour]) => d.stems && (
+          <g key={colour} stroke={colour} fill="none" strokeLinecap="round">
+            <path d={d.stems} strokeWidth={dots.stem} />
+            <path d={d.dots} strokeWidth={2 * dots.r} />
+          </g>
+        ))}
         {jitter > 0 && <Label at={[ADC_X + 10, BOX_TOP + 34]}>{l.wobbleBigger}</Label>}
 
         {/* Its meter: the signal (its average solid, its peaks pale, a line at the peak), the noise under it grey */}
@@ -347,6 +376,11 @@ export function ConversionScene({ step }: SceneProps) {
         <Label at={[(NUM_L + NUM_R) / 2, NAME_Y]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
         <path d={filled} fill={MOVER} />
         <path d={empty} fill="none" stroke={MOVER} strokeWidth={1} />
+        {perWindow > GRID_MAX + 1 && (
+          <Label at={[(NUM_L + NUM_R) / 2, BOX_BOTTOM - 24]} anchor="middle">
+            {fmt(l.firstSamples, { n: String(GRID_MAX), total: numberText(Math.floor(perWindow)) })}
+          </Label>
+        )}
       </Step>
 
       {/* 3 · Back to voltage: the D/A converter's steps; the line out, never quite what came in */}
@@ -364,7 +398,7 @@ export function ConversionScene({ step }: SceneProps) {
         <Label at={[OUT_X + 8, AN_TOP - 30]}>{l.lineOutReading}</Label>
         <Axes x={OUT_X} />
         <AnalogLines x={OUT_X} />
-        <path d={wavePath(outX, (t) => c.arriving(t, PHASE))} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.5} />
+        <path d={wavePath(outX, (t) => c.arriving(t, PHASE), span)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.5} />
         {out && (
           <>
             <path d={out.path} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
@@ -486,7 +520,7 @@ const KNOB = 40
 
 /**
  * The subject's controls under the picture, each from its step (the clock's are on it): the `knobs` —
- * the gain knob first (the line in's), the frequency's slider —, the `choices` — the sample rate's
+ * the gain knob first (the line in's), the frequency's slider (20 Hz … 30 kHz in third octaves) —, the `choices` — the sample rate's
  * buttons over the bit depth's (their units say what they are)
  */
 export function ConversionControls({ step, part }: { step: number; part: 'knobs' | 'choices' }) {
@@ -502,7 +536,9 @@ export function ConversionControls({ step, part }: { step: number; part: 'knobs'
     ) : null
   }
   const dB = (gain: number) => `${gain > 0 ? '+' : gain < 0 ? '−' : '±'}${Math.abs(gain)} ${l.db}`
-  const kHz = (k: number) => fmt(t.formats.rate, { n: String(k) })
+  /** A tone in Hz below 1 kHz, else in kHz (31.5 Hz, 1.25 kHz) */
+  const toneText = (hz: number) => (hz < 1000 ? fmt(l.hz, { n: String(hz) }) : fmt(t.formats.rate, { n: String(hz / 1000) }))
+  const toneAt = Math.max(0, TONES.indexOf(s.tone as (typeof TONES)[number]))
   const gainMin = LEVEL_MIN - LEVEL_START, gainMax = LEVEL_MAX - LEVEL_START, gainText = dB(s.gain)
   return (
     // The slider gives way (down to 100 px) where the panel is narrow: the row then fits from 1024 px
@@ -517,11 +553,12 @@ export function ConversionControls({ step, part }: { step: number; part: 'knobs'
         </svg>
       </Named>
       {step >= DAC_STEP && (
-        <Named name={l.frequency} text={kHz(s.tone / 1000)} reserve={[kHz(TONE_MAX / 1000)]} shrink>
+        <Named name={l.frequency} text={toneText(s.tone)} reserve={TONES.map(toneText)} shrink>
+          {/* Its steps the third-octave bands: as many in each octave, low or high */}
           <input
-            type="range" min={TONE_MIN / 1000} max={TONE_MAX / 1000} step={1} value={s.tone / 1000}
-            aria-label={l.frequency} aria-valuetext={kHz(s.tone / 1000)}
-            onChange={(e) => s.set({ tone: Number(e.target.value) * 1000 })} className="lsc-dd-slider" style={{ flex: '0 1 220px', minWidth: 100 }}
+            type="range" min={0} max={TONES.length - 1} step={1} value={toneAt}
+            aria-label={l.frequency} aria-valuetext={toneText(s.tone)}
+            onChange={(e) => s.set({ tone: TONES[Number(e.target.value)] })} className="lsc-dd-slider" style={{ flex: '0 1 220px', minWidth: 100 }}
           />
         </Named>
       )}

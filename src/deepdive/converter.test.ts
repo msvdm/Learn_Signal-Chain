@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { getHealth } from '../signal/levels'
 import {
-  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, OWN_NOISE, TONE_START, WINDOW_S,
+  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, OWN_NOISE, TONES, TONE_START, windowOf,
   bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf,
 } from './converter'
 import type { Setup } from './converter'
@@ -10,6 +10,8 @@ import type { Setup } from './converter'
 
 const LINE: Setup = { rate: 48000, tone: TONE_START, level: 0, bits: null, grade: 'quality', filter: true, jitter: 0 }
 const at = (s: Partial<Setup>) => conversionOf({ ...LINE, ...s })
+/** The picture's window at the start: one cycle of 2 kHz */
+const WINDOW_S = windowOf(TONE_START)
 
 /** The largest gap between the DAC's output and a wave over the window, in volts */
 function worstGap(s: Partial<Setup>, wave: (t: number) => number, deg = 37): number {
@@ -22,6 +24,20 @@ function worstGap(s: Partial<Setup>, wave: (t: number) => number, deg = 37): num
   }
   return worst
 }
+
+describe('the picture\'s window', () => {
+  test('one cycle of the tone: 0.5 ms at 2 kHz (24 samples at 48 kHz), 50 ms at 20 Hz', () => {
+    expect(WINDOW_S).toBeCloseTo(0.0005, 9)
+    expect(windowOf(TONE_START) * 48000).toBeCloseTo(24, 6)
+    expect(windowOf(20)).toBeCloseTo(0.05, 9)
+  })
+  test('the tone\'s steps: third octaves from 20 Hz to 30 kHz, rising, 2 kHz among them', () => {
+    expect(TONES[0]).toBe(20)
+    expect(TONES[TONES.length - 1]).toBe(30000)
+    expect(TONES.some((f) => f === TONE_START)).toBe(true)
+    TONES.forEach((f, i) => { if (i) expect(f).toBeGreaterThan(TONES[i - 1]) })
+  })
+})
 
 describe('full scale, as the canvas aligns it', () => {
   test('0 dBFS is a peak of +18 dBu: 6.16 V', () => {
