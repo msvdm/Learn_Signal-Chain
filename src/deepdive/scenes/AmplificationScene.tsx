@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent as ReactPointerEvent, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
 import { CLIP_DBU, formatDb } from '../../signal/levels'
 import {
@@ -15,8 +15,7 @@ import type { AmpClass, AmpCycle } from '../amp'
 import { K, SWING, clamp, curvePath, rad, scatter, swing, tableAt } from '../wave'
 import type { ShapeId } from '../subjects'
 import { ARROW, ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_2, PART_3, TRACE } from './look'
-import { KnobFace } from '../../components/controls/KnobFace'
-import { takePress, usePointerDrag } from '../../hooks/usePointerDrag'
+import { SceneKnob } from './SceneKnob'
 import { useLatestRef } from '../../hooks/useLatestRef'
 import { put, usePainter } from './painter'
 import type { Finder, Painter, SceneProps } from './painter'
@@ -925,35 +924,6 @@ function CurrentSource({ x }: { x: number }) {
       <circle cx={x} cy={SOURCE_Y} r={11} fill="none" stroke={INK} strokeWidth={1.5} />
       <line x1={x} y1={SOURCE_Y - 6} x2={x} y2={SOURCE_Y + 6} stroke={INK} strokeWidth={1.5} markerEnd={ARROW_INK} />
     </>
-  )
-}
-
-/** A knob turned by dragging it up or down (`drag` px for its whole range) or with ↑ ↓ (← → are the steps') */
-function SceneKnob({ cx, cy, r, color, value, min, max, round, onChange, label, valueText, drag = 150 }: {
-  cx: number; cy: number; r: number; color: string
-  value: number; min: number; max: number; round: (v: number) => number; onChange: (v: number) => void
-  label: string; valueText: string; drag?: number
-}) {
-  const dragging = usePointerDrag<{ y: number; value: number }>((e, from) => {
-    onChange(round(from.value + ((from.y - e.clientY) / drag) * (max - min)))
-  })
-  const onDown = (e: ReactPointerEvent) => {
-    if (takePress(e)) dragging.start({ y: e.clientY, value })
-  }
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
-    e.preventDefault()
-    onChange(round(value + (e.key === 'ArrowUp' ? 1 : -1)))
-  }
-  return (
-    <g
-      role="slider" tabIndex={0} aria-label={label}
-      aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={valueText}
-      onPointerDown={onDown} onKeyDown={onKey}
-      style={{ cursor: 'ns-resize', touchAction: 'none', outline: 'none' }}
-    >
-      <KnobFace cx={cx} cy={cy} r={r} value={(value - min) / (max - min)} color={color} />
-    </g>
   )
 }
 

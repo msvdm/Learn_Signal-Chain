@@ -57,8 +57,8 @@ function Player({ subject, left }: { subject: Subject; left: number }) {
   const [playing, setPlaying] = useState(true)
   const [size, setSize]       = useState<{ w: number; h: number } | null>(null)
   const groups = subject.shapes ?? NO_GROUPS
-  /** The shape picked in each group of the subject's (each group's first until another is) */
-  const [picked, setPicked]   = useState<readonly ShapeId[]>(() => groups.map((g) => g.ids[0]))
+  /** The shape picked in each group of the subject's (each group's first — or its `start` — until another is) */
+  const [picked, setPicked]   = useState<readonly ShapeId[]>(() => groups.map((g) => g.ids[g.start ?? 0]))
   const count = subject.steps.length
   // A group's pick holds from its step on; its buttons are shown only at that step
   const shape = useMemo(() => groups.flatMap((g, i) => (g.step <= step ? [picked[i]] : [])), [groups, picked, step])

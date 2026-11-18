@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Ear, Speaker, Zap } from 'lucide-react'
+import { AudioWaveform, Binary, Ear, Speaker, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -8,6 +8,7 @@ import { AcousticScene } from './scenes/AcousticScene'
 import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
 import { AmplificationScene } from './scenes/AmplificationScene'
+import { ConversionScene } from './scenes/ConversionScene'
 
 // Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -32,10 +33,10 @@ export interface Subject {
   credit?: keyof Translations['deepDive']['credits']
   /**
    * Shapes the teacher can pick (`deepDive.shapes`): groups of buttons, each shown in the steps' row
-   * after the name of its step, and only there. A group's first counts until another is picked at its
+   * after the name of its step, and only there. A group's first (or its `start`) counts until another is picked at its
    * step; the one picked counts from that step on (the scene gets them: `SceneProps.shapes`)
    */
-  shapes?: readonly { step: number; ids: readonly ShapeId[] }[]
+  shapes?: readonly { step: number; ids: readonly ShapeId[]; start?: number }[]
 }
 
 /** In the drawer's order */
@@ -94,6 +95,26 @@ export const SUBJECTS: readonly Subject[] = [
     shapes: [
       { step: 5, ids: ['classA', 'classB', 'classD'] },
       { step: 5, ids: ['cleanChip', 'transformer'] },
+    ],
+  },
+  {
+    id: 'conversion',
+    icon: Binary,
+    Scene: ConversionScene,
+    steps: [
+      { id: 'lineIn',        box: [-20, 0, 470, 650] },
+      { id: 'clockSamples',  box: [-20, -90, 1290, 680] },
+      { id: 'bitDepth',      box: [-20, -90, 1290, 680] },
+      { id: 'backToVoltage', box: [-20, -90, 1880, 680] },
+      { id: 'nyquist',       box: [-20, -90, 1880, 880] },
+      { id: 'noHeadroom',    box: [-20, -90, 1880, 880] },
+    ],
+    shapes: [
+      { step: 2, ids: ['rate44', 'rate48', 'rate96'], start: 1 },
+      { step: 2, ids: ['steadyClock', 'wobblyClock'] },
+      { step: 3, ids: ['bits3', 'bits4', 'bits8', 'bits16', 'bits24'] },
+      { step: 3, ids: ['qualityConverter', 'budgetConverter'] },
+      { step: 5, ids: ['filterIn', 'noFilter'] },
     ],
   },
 ]

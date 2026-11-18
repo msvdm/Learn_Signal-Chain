@@ -1,4 +1,5 @@
 import { dbToPercent, meterZones, zoneColor } from '../../signal/levels'
+import type { SignalDomain } from '../../signal/levels'
 import { BASE_GAP, TRANSISTOR_R } from './circuit'
 import { FAINT, INK, MOVER, PART, PART_2 } from './look'
 
@@ -56,15 +57,17 @@ export function Transistor({ x, y, fill, pnp }: { x: number; y: number; fill: st
 /**
  * A level meter as the canvas's (D16, D17): its colours belong to the scale — green up to unity,
  * yellow, red at the top —, the average solid, the peaks pale above it, a thin line at the peak.
- * Upright, its bottom at `y + h`. The loop's levels, dBu.
+ * Upright, its bottom at `y + h`. The loop's levels, dBu (dBFS: `domain` digital).
  */
-export function LevelMeter({ x, y, w, h, rms, peak }: { x: number; y: number; w: number; h: number; rms: number; peak: number }) {
+export function LevelMeter({ x, y, w, h, rms, peak, domain = 'analog' }: {
+  x: number; y: number; w: number; h: number; rms: number; peak: number; domain?: SignalDomain
+}) {
   const top = (pct: number) => y + h - (h * pct) / 100
-  const rmsPct = dbToPercent(rms), peakPct = dbToPercent(peak)
+  const rmsPct = dbToPercent(rms, domain), peakPct = dbToPercent(peak, domain)
   return (
     <g>
       <rect x={x} y={y} width={w} height={h} rx={2} fill={FAINT} opacity={0.5} />
-      {meterZones('analog').map((z) => {
+      {meterZones(domain).map((z) => {
         const lit = Math.min(z.to, peakPct)
         if (lit <= z.from) return null
         const solid = Math.min(z.to, rmsPct)

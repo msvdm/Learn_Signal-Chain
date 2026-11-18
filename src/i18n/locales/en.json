@@ -676,7 +676,8 @@
       "acoustic": "Acoustic propagation and perception",
       "transducer": "Magnetic induction",
       "complex": "Complex waves",
-      "amplification": "Analogue amplification"
+      "amplification": "Analogue amplification",
+      "conversion": "A/D and D/A conversion"
     },
     "steps": {
       "string": "String",
@@ -700,7 +701,13 @@
       "powerSupply": "Energy from the wall",
       "pushPull": "Push and pull: the speaker",
       "classes": "Classes and inputs",
-      "preampChip": "The preamp chip: line level"
+      "preampChip": "The preamp chip: line level",
+      "lineIn": "A line-level signal",
+      "clockSamples": "The clock: samples",
+      "bitDepth": "Bit depth: steps and noise",
+      "backToVoltage": "Back to voltage",
+      "nyquist": "Nyquist: half the sample rate",
+      "noHeadroom": "0 dBFS: nothing above it"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -721,7 +728,21 @@
       "classB": "Class B",
       "classD": "Class D",
       "cleanChip": "Clean chip",
-      "transformer": "Transformer"
+      "transformer": "Transformer",
+      "rate44": "44.1 kHz",
+      "rate48": "48 kHz",
+      "rate96": "96 kHz",
+      "steadyClock": "Steady clock",
+      "wobblyClock": "Wobbly clock",
+      "bits3": "3 bits",
+      "bits4": "4 bits",
+      "bits8": "8 bits",
+      "bits16": "16 bits",
+      "bits24": "24 bits",
+      "qualityConverter": "Quality ADC",
+      "budgetConverter": "Budget ADC",
+      "filterIn": "Filter in",
+      "noFilter": "No filter"
     },
     "credit": "Credits",
     "credits": {
@@ -832,7 +853,21 @@
       "volumeOff": "Off",
       "inputTransformer": "Input transformer",
       "noPower": "× 10, no power of its own",
-      "capacitor": "Capacitor"
+      "capacitor": "Capacitor",
+      "adc": "A/D converter",
+      "dac": "D/A converter",
+      "fullScale": "0 dBFS",
+      "clock": "Clock",
+      "timesASecond": "{n} times a second",
+      "wobbleBigger": "The wobble drawn thousands of times bigger",
+      "bitsFloor": "{bits}: {db}",
+      "ownNoise": "Own noise: {db}",
+      "dbAbove": "{db} dB",
+      "aboveNoise": "above the noise",
+      "tone": "Tone",
+      "level": "Level",
+      "nyquistAt": "Nyquist {f}",
+      "peak": "Peak {db}"
     }
   }
 }

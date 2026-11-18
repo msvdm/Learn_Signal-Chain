@@ -521,9 +521,9 @@ kbd {
 /* Names on the picture, and a reading under it */
 .lsc-dd-label   { font-size: 13px; fill: var(--lsc-fg-muted); }
 .lsc-dd-reading { font-size: 14px; fill: var(--lsc-fg); font-variant-numeric: tabular-nums; }
-/* Analogue amplification: 3 px larger, its readings bold */
-[data-subject="amplification"] .lsc-dd-label   { font-size: 16px; }
-[data-subject="amplification"] .lsc-dd-reading { font-size: 17px; font-weight: 600; }
+/* Analogue amplification and A/D and D/A conversion: 3 px larger, their readings bold */
+[data-subject="amplification"] .lsc-dd-label,   [data-subject="conversion"] .lsc-dd-label   { font-size: 16px; }
+[data-subject="amplification"] .lsc-dd-reading, [data-subject="conversion"] .lsc-dd-reading { font-size: 17px; font-weight: 600; }
 
 .lsc-dd-slider { accent-color: var(--lsc-accent); cursor: pointer; }
 
