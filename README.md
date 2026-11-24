@@ -119,6 +119,14 @@ Sources for Deep dive's *Analogue amplification* — the XLR's pins, the clean p
 * [Sound On Sound: BAE 1073 MPF](https://www.soundonsound.com/reviews/bae-1073-mpf): a classic transformer preamp needs two transistor stages for its +80 dB
 * [ProSoundTraining: amplifier sensitivity](https://www.prosoundtraining.com/?p=44890): a power amplifier is a fixed gain behind an input attenuator, its level knob
 
+Sources for Deep dive's *Microphone types* — each microphone's voltage for the same sound (94 dB SPL, 1 pascal), and what it needs:
+
+* [Shure SM58 spec sheet](https://www.fullcompass.com/common/files/1626-ShureSM58SpecsSheet.pdf): a dynamic microphone, −54.5 dBV/Pa (1.85 mV)
+* [Neumann U 87 Ai](https://www.neumann.com/en/products/microphones/u-87-ai): a condenser, 28 mV/Pa in cardioid
+* [Sound On Sound: Royer R-121](https://www.soundonsound.com/reviews/royer-r121): a ribbon, −54 dBV/Pa (2 mV), its 2.5 µm aluminium ribbon and the transformer stepping its voltage up
+* [Thomann: how a ribbon microphone works](https://www.thomannmusic.com/onlineexpert_page_ribbon_microphones_working_principle.html): the ribbon itself under 1 Ω, its transformer 1:20 to 1:40
+* [Shure 777 user guide](https://www.jt30.com/shure_mics/us_pro_777_ug.pdf): a crystal (piezo) microphone — a bimorph of Rochelle salt behind a diaphragm, 1.05 mV per microbar (10.5 mV/Pa), into 1 to 5 MΩ, no polarizing voltage
+
 The ear in Deep dive is adapted from [“Anatomy of the Human Ear”](https://commons.wikimedia.org/wiki/File:Anatomy_of_the_Human_Ear.svg) by Lars Chittka and Axel Brockmann, [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/) — simplified and recoloured.
 
 The guitar's low E in Deep dive (*Complex waves*, the last step) is measured from [FreePats' electric guitar, direct](https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html) ([CC0](https://creativecommons.org/publicdomain/zero/1.0/)) — a Fender recorded straight into an instrument input, so the ten harmonics are the string's own, with no body and no room over them. A quarter of a second from 60 ms after a soft pluck; rebuilt from those ten, the recording's waveform is within −29 dB.
