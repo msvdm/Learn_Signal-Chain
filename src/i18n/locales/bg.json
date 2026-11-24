@@ -677,7 +677,8 @@
       "transducer": "Магнитна индукция",
       "complex": "Сложни вълни",
       "amplification": "Аналогово усилване",
-      "conversion": "А/Ц и Ц/А преобразуване"
+      "conversion": "А/Ц и Ц/А преобразуване",
+      "microphones": "Видове микрофони"
     },
     "steps": {
       "string": "Струна",
@@ -704,7 +705,11 @@
       "preampChip": "Чипът на предусилвателя: линейно ниво",
       "lineIn": "Сигнал на линейно ниво",
       "clockSamples": "Тактът, семплите и битовете",
-      "backToVoltage": "Обратно към напрежение"
+      "backToVoltage": "Обратно към напрежение",
+      "dynamicMic": "Динамичен: бобина и магнит",
+      "condenserMic": "Кондензаторен: две пластини и 48V",
+      "ribbonMic": "Лентов: фолио между магнити",
+      "piezoMic": "Пиезо: огънат кристал"
     },
     "stepsLabel": "Стъпки",
     "back": "Предишна стъпка",
@@ -858,7 +863,24 @@
       "steady": "Стабилен",
       "wobbly": "Колеблив",
       "frequency": "Честота",
-      "gain": "Усилване"
+      "gain": "Усилване",
+      "micDynamic": "Динамичен",
+      "micCondenser": "Кондензаторен",
+      "micRibbon": "Лентов",
+      "micPiezo": "Пиезо",
+      "soundAt": "Звукова вълна: {db} dB SPL",
+      "onAverage": "{mv} мВ средно",
+      "figuresFrom": "Данни от {model}",
+      "backplate": "Задна пластина",
+      "phantom48": "48V",
+      "impedanceConverter": "Импедансен\nпреобразувател",
+      "ribbonEnd": "Лентата, погледната от края ѝ",
+      "transformerRatio": "Трансформатор 1:{n}",
+      "ribbonAlone": "Само лентата:",
+      "uv": "мкВ",
+      "crystal": "Кристал",
+      "drivePin": "Щифт",
+      "hiZ": "Hi-Z вход, {r} MΩ"
     }
   }
 }

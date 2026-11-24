@@ -527,6 +527,10 @@ kbd {
 /* A/D and D/A conversion: wider still, its words larger again */
 [data-subject="conversion"] .lsc-dd-label      { font-size: 20px; }
 [data-subject="conversion"] .lsc-dd-reading    { font-size: 21px; font-weight: 600; }
+/* Microphone types: four cells, each with its name */
+[data-subject="microphones"] .lsc-dd-label     { font-size: 16px; }
+[data-subject="microphones"] .lsc-dd-reading   { font-size: 17px; font-weight: 600; }
+.lsc-dd-name { font-size: 24px; font-weight: 700; fill: var(--lsc-fg); }
 
 .lsc-dd-slider { accent-color: var(--lsc-accent); cursor: pointer; }
 /* A button drawn on the picture (the conversion's clock): lit on hover as the controls' buttons are */

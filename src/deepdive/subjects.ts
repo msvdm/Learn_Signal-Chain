@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { AudioWaveform, Binary, Ear, Zap, createLucideIcon } from 'lucide-react'
+import { AudioWaveform, Binary, Ear, Mic, Zap, createLucideIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Translations } from '../i18n/translations'
 import type { Box } from './wave'
@@ -9,6 +9,8 @@ import { TransducerScene } from './scenes/TransducerScene'
 import { ComplexScene } from './scenes/ComplexScene'
 import { AmplificationScene } from './scenes/AmplificationScene'
 import { ConversionControls, ConversionScene } from './scenes/ConversionScene'
+import { MicrophonesScene } from './scenes/MicrophonesScene'
+import { cellBox } from './scenes/micCells'
 
 // Deep dive's subjects (D46): each a chain of causes and effects the teacher steps through — one
 // picture, a step adding a part of it, everything moving with one phase. A new subject: its scene
@@ -92,6 +94,17 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'recordHead',   box: [35, 790, 1310, 1110] },
       { id: 'playbackHead', box: [900, 820, 1310, 1138] },
       { id: 'speaker',      box: [1010, 492, 1410, 850] },
+    ],
+  },
+  {
+    id: 'microphones',
+    icon: Mic,
+    Scene: MicrophonesScene,
+    steps: [
+      { id: 'dynamicMic',   box: cellBox('dynamic') },
+      { id: 'condenserMic', box: cellBox('condenser') },
+      { id: 'ribbonMic',    box: cellBox('ribbon') },
+      { id: 'piezoMic',     box: cellBox('piezo') },
     ],
   },
   {

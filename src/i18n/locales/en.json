@@ -677,7 +677,8 @@
       "transducer": "Magnetic induction",
       "complex": "Complex waves",
       "amplification": "Analogue amplification",
-      "conversion": "A/D and D/A conversion"
+      "conversion": "A/D and D/A conversion",
+      "microphones": "Microphone types"
     },
     "steps": {
       "string": "String",
@@ -704,7 +705,11 @@
       "preampChip": "The preamp chip: line level",
       "lineIn": "A line-level signal",
       "clockSamples": "The clock, the samples and the bits",
-      "backToVoltage": "Back to voltage"
+      "backToVoltage": "Back to voltage",
+      "dynamicMic": "Dynamic: a coil and a magnet",
+      "condenserMic": "Condenser: two plates and 48V",
+      "ribbonMic": "Ribbon: foil between magnets",
+      "piezoMic": "Piezo: a bent crystal"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -858,7 +863,24 @@
       "steady": "Steady",
       "wobbly": "Wobbly",
       "frequency": "Frequency",
-      "gain": "Gain"
+      "gain": "Gain",
+      "micDynamic": "Dynamic",
+      "micCondenser": "Condenser",
+      "micRibbon": "Ribbon",
+      "micPiezo": "Piezo",
+      "soundAt": "Sound wave: {db} dB SPL",
+      "onAverage": "{mv} mV on average",
+      "figuresFrom": "Figures from a {model}",
+      "backplate": "Backplate",
+      "phantom48": "48V",
+      "impedanceConverter": "Impedance\nconverter",
+      "ribbonEnd": "Ribbon, seen from its end",
+      "transformerRatio": "Transformer 1:{n}",
+      "ribbonAlone": "The ribbon alone:",
+      "uv": "µV",
+      "crystal": "Crystal",
+      "drivePin": "Drive pin",
+      "hiZ": "Hi-Z input, {r} MΩ"
     }
   }
 }
