@@ -15,8 +15,8 @@ import { CELLS, CELL_H, CELL_W } from './micCells'
 // Microphone types (Deep dive, D46): the same sound — 94 dB SPL — turned into a voltage four ways,
 // one cell of a 2 × 2 grid each, a step adding each: a dynamic microphone (Magnetic induction's: a
 // coil moving round a magnet), a condenser (a diaphragm moving near a backplate charged by the 48V,
-// an impedance converter after it), a ribbon (a strip of foil between a magnet's poles, seen from
-// its end, a transformer after it) and a piezo (a crystal bent by its diaphragm, into a Hi-Z input).
+// an impedance converter after it), a ribbon (a pleated strip of foil hanging between a horseshoe
+// magnet's arms, seen from the front, a transformer after it) and a piezo (a crystal bent by its diaphragm, into a Hi-Z input).
 // Every voltage follows the air's pressure, so the four graphs rise and fall together; the parts
 // move differently (mics.ts says why). Each graph is drawn to its own microphone's peak, which its
 // scale names; the air is darker where it is pressed together.
@@ -24,9 +24,9 @@ import { CELLS, CELL_H, CELL_W } from './micCells'
 /** In a cell: the air (its cloud), the middle line every part sits on */
 const AIR = { x: 22, y: 100, w: 160, h: 216 }, MID = 208
 /** Where each moving part rests: the air's wave is measured from it */
-const REST: Record<MicKind, number> = { dynamic: 200, condenser: 205, ribbon: 250, piezo: 205 }
+const REST: Record<MicKind, number> = { dynamic: 200, condenser: 205, ribbon: 256, piezo: 205 }
 /** How far each part moves at most (px): the dynamic's as Magnetic induction moves it */
-const MOVE: Record<MicKind, number> = { dynamic: 0.5 * SWING, condenser: 9, ribbon: 10, piezo: 9 }
+const MOVE: Record<Exclude<MicKind, 'ribbon'>, number> = { dynamic: 0.5 * SWING, condenser: 9, piezo: 9 }
 /** The two output terminals, left of the graph */
 const OUT_X = 430, OUT_A = MID - 10, OUT_B = MID + 10
 /** The graph: its box; its left edge, width, middle line and half height (the microphone's peak) */
@@ -37,8 +37,16 @@ const STRIP = 6
 const STRIPS = Array.from({ length: Math.ceil(AIR.w / STRIP) }, (_, i) => AIR.x + i * STRIP)
 /** The diaphragm of the condenser and the piezo: clamped at its top and bottom */
 const DIA_TOP = 140, DIA_BOTTOM = 276
+/**
+ * The ribbon, seen from the front: its middle, half its height, its pleats, half its width. Only
+ * moving towards the viewer and away does it cut the field between the magnet's arms, so that is
+ * how it moves — drawn up to RIBBON_NEAR bigger as it comes closer, smaller as it goes
+ */
+const RIB_X = REST.ribbon, RIB_Y = 186, RIB_HALF = 60, PLEATS = 8, RIB_W = 17, RIBBON_NEAR = 0.1
+/** The horseshoe magnet: its arms' inner and outer edges either side of the ribbon, their top, where they turn */
+const ARM_IN = 30, ARM_OUT = 52, ARM_TOP = 110, ARM_TURN = 262
 /** The ribbon's transformer: where its first coil stands */
-const TF = 346
+const TF = 336
 /** The piezo's crystal: its two layers, their clamped bottom and free top; the drive pin's height */
 const CRYSTAL_X = 258, LAYER = 6, CRYSTAL_BASE = 282, CRYSTAL_TOP = 200, PIN_Y = MID
 
@@ -87,7 +95,7 @@ function makePainter(find: Finder): Painter {
   const diaphragm = find('diaphragm'), coil = find.all('coil')
   const dynLeadA = find('dynLeadA'), dynLeadB = find('dynLeadB')
   const condDiaphragm = find('condDiaphragm')
-  const ribbon = find('ribbon'), ribbonLeadA = find('ribbonLeadA'), ribbonLeadB = find('ribbonLeadB'), ribbonEnd = find('ribbonEnd')
+  const ribbon = find('ribbon'), ribbonLeadA = find('ribbonLeadA'), ribbonLeadB = find('ribbonLeadB')
   const ribbonOwn = find('ribbonOwn')
   const piezoDiaphragm = find('piezoDiaphragm'), pin = find('pin'), layers = find.all('layers')
   const chargeA = find('chargeA'), chargeB = find('chargeB')
@@ -118,13 +126,13 @@ function makePainter(find: Finder): Painter {
     // Condenser: the pressure pushes the diaphragm towards the backplate
     if (step >= 2) condDiaphragm.setAttribute('d', diaphragmPath(MOVE.condenser * partAt('condenser', r)))
 
-    // Ribbon: the foil moves with the air between the poles; the leads leave its two ends (one behind)
+    // Ribbon: the foil moves with the air, towards the viewer and away (bigger, smaller); its leads
+    // leave its top and its bottom
     if (step >= 3) {
-      const x = REST.ribbon + MOVE.ribbon * partAt('ribbon', r)
-      put(ribbon, 'x1', x); put(ribbon, 'x2', x)
-      put(ribbonEnd, 'cx', x)
-      ribbonLeadA.setAttribute('d', `M${f(x)} ${MID} L${TF - 6} ${MID - 14} H${TF}`)
-      ribbonLeadB.setAttribute('d', `M${f(x)} ${MID} L${TF - 6} ${MID + 14} H${TF}`)
+      const near = 1 + RIBBON_NEAR * partAt('ribbon', r)
+      ribbon.setAttribute('transform', `translate(${RIB_X} ${RIB_Y}) scale(${near.toFixed(3)}) translate(${-RIB_X} ${-RIB_Y})`)
+      ribbonLeadA.setAttribute('d', `M${RIB_X} ${f(RIB_Y - RIB_HALF * near)} V100 H${TF} V${MID - 14}`)
+      ribbonLeadB.setAttribute('d', `M${RIB_X} ${f(RIB_Y + RIB_HALF * near)} V280 H${TF} V${MID + 14}`)
       ribbonOwn.textContent = signed(ribbonOwnMv(r) * 1000, 0)
     }
 
@@ -258,26 +266,48 @@ function Condenser() {
   )
 }
 
-/** The ribbon, seen from its end: between a magnet's two poles, its leads into the transformer */
+/** A pleated strip, folded like a paper fan: its bands alternately lit and shaded, every other fold further right */
+function ribbonPleats(): { d: string; lit: boolean }[] {
+  const h = (2 * RIB_HALF) / PLEATS
+  const at = (k: number) => ({ y: RIB_Y - RIB_HALF + k * h, dx: k % 2 ? 5 : 0 })
+  return Array.from({ length: PLEATS }, (_, k) => {
+    const top = at(k), bottom = at(k + 1)
+    return {
+      d: `M${RIB_X - RIB_W + top.dx} ${top.y} H${RIB_X + RIB_W + top.dx} L${RIB_X + RIB_W + bottom.dx} ${bottom.y} H${RIB_X - RIB_W + bottom.dx} Z`,
+      lit: k % 2 === 0,
+    }
+  })
+}
+const PLEAT_BANDS = ribbonPleats()
+
+/** Two rows of words, split where the text has a line break */
+function Rows({ x, y, text }: { x: number; y: number; text: string }) {
+  return (
+    <text className="lsc-dd-label" x={x} y={y}>
+      {text.split('\n').map((row, i) => <tspan key={i} x={x} dy={i ? 19 : 0}>{row}</tspan>)}
+    </text>
+  )
+}
+
+/** The ribbon, seen from the front: a pleated strip between a horseshoe magnet's arms, its leads round to the transformer */
 function Ribbon() {
   const l = useTranslation().t.deepDive.labels
-  const x = REST.ribbon
+  const x = RIB_X
   const bumps = (n: number, x0: number, y0: number, h: number, way: 1 | -1) =>
     `M${x0} ${y0}` + Array.from({ length: n }, () => ` a${h / n / 2} ${h / n / 2} 0 0 ${way === 1 ? 1 : 0} 0 ${h / n}`).join('')
+  const magnet = `M${x - ARM_OUT} ${ARM_TOP} H${x - ARM_IN} V${ARM_TURN} A${ARM_IN} ${ARM_IN} 0 0 0 ${x + ARM_IN} ${ARM_TURN} ` +
+    `V${ARM_TOP} H${x + ARM_OUT} V${ARM_TURN} A${ARM_OUT} ${ARM_OUT} 0 0 1 ${x - ARM_OUT} ${ARM_TURN} Z`
   return (
     <>
-      <rect x={x - 26} y={128} width={52} height={56} rx={3} fill={PART_2} />
-      <rect x={x - 26} y={232} width={52} height={56} rx={3} fill={PART_2} />
-      <text x={x} y={164} textAnchor="middle" className="lsc-dd-reading">N</text>
-      <text x={x} y={268} textAnchor="middle" className="lsc-dd-reading">S</text>
-      <g stroke={PART} strokeWidth={0.75} strokeDasharray="3 3">
-        {[-18, 18].map((dx) => <line key={dx} x1={x + dx} y1={186} x2={x + dx} y2={230} />)}
-      </g>
-      <line data-p="ribbon" x1={x} y1={188} x2={x} y2={228} stroke={INK} strokeWidth={3} strokeLinecap="round" />
+      <path d={magnet} fill={PART_2} stroke={PART} strokeWidth={1.5} strokeLinejoin="round" />
+      <text x={x - (ARM_IN + ARM_OUT) / 2} y={ARM_TOP + 20} textAnchor="middle" className="lsc-dd-reading">N</text>
+      <text x={x + (ARM_IN + ARM_OUT) / 2} y={ARM_TOP + 20} textAnchor="middle" className="lsc-dd-reading">S</text>
 
+      <g data-p="ribbon" stroke={PART} strokeWidth={0.75} strokeLinejoin="round">
+        {PLEAT_BANDS.map((band, k) => <path key={k} d={band.d} fill={band.lit ? FAINT : PART_3} />)}
+      </g>
       <path data-p="ribbonLeadA" fill="none" stroke={INK} strokeWidth={1.5} />
-      <path data-p="ribbonLeadB" fill="none" stroke={INK} strokeWidth={1.5} strokeDasharray="4 3" />
-      <circle data-p="ribbonEnd" cx={x} cy={MID} r={3} fill={INK} />
+      <path data-p="ribbonLeadB" fill="none" stroke={INK} strokeWidth={1.5} />
 
       {/* The transformer: a few turns in, thirty times as many out, round one core */}
       <g fill="none" stroke={INK} strokeWidth={1.5}>
@@ -289,11 +319,11 @@ function Ribbon() {
         <line x1={TF + 12} y1={MID - 36} x2={TF + 12} y2={MID + 36} />
         <line x1={TF + 17} y1={MID - 36} x2={TF + 17} y2={MID + 36} />
       </g>
-      <Label at={[x, 120]} anchor="middle">{l.magnet}</Label>
-      <Label at={[x - 28, 316]}>{l.ribbonEnd}</Label>
-      <Label at={[TF + 14, 160]} anchor="middle">{fmt(l.transformerRatio, { n: String(RIBBON_STEP_UP) })}</Label>
-      <text className="lsc-dd-label" x={TF + 14} y={268} textAnchor="middle">{l.ribbonAlone}</text>
-      <text className="lsc-dd-reading" x={TF + 14} y={290} textAnchor="middle">
+      <Label at={[x, 92]} anchor="middle">{l.ribbonStrip}</Label>
+      <Label at={[x, ARM_TURN + ARM_OUT + 22]} anchor="middle">{l.magnet}</Label>
+      <Rows x={x + ARM_OUT + 6} y={140} text={fmt(l.transformerRatio, { n: String(RIBBON_STEP_UP) })} />
+      <text className="lsc-dd-label" x={x + ARM_OUT + 6} y={304}>{l.ribbonAlone}</text>
+      <text className="lsc-dd-reading" x={x + ARM_OUT + 6} y={326}>
         <tspan data-p="ribbonOwn">+0</tspan> {l.uv}
       </text>
     </>
