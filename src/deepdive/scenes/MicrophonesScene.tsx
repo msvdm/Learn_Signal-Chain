@@ -40,9 +40,12 @@ const DIA_TOP = 140, DIA_BOTTOM = 276
 /**
  * The ribbon, seen from the front: its middle, half its height, its pleats, half its width. Only
  * moving towards the viewer and away does it cut the field between the magnet's arms, so that is
- * how it moves — drawn up to RIBBON_NEAR bigger as it comes closer, smaller as it goes
+ * how it moves: clamped at its top and bottom, it bends, its middle furthest. Towards the viewer is
+ * drawn down and to the left (depth on paper, DEPTH_X / DEPTH_Y at the middle), a pleat there up to
+ * NEARER wider as it comes closer
  */
-const RIB_X = REST.ribbon, RIB_Y = 186, RIB_HALF = 60, PLEATS = 8, RIB_W = 17, RIBBON_NEAR = 0.1
+const RIB_X = REST.ribbon, RIB_Y = 186, RIB_HALF = 60, PLEATS = 8, RIB_W = 17
+const DEPTH_X = -7, DEPTH_Y = 4, NEARER = 0.12
 /** The horseshoe magnet: its arms' inner and outer edges either side of the ribbon, their top, where they turn */
 const ARM_IN = 30, ARM_OUT = 52, ARM_TOP = 110, ARM_TURN = 262
 /** The ribbon's transformer: where its first coil stands */
@@ -95,7 +98,7 @@ function makePainter(find: Finder): Painter {
   const diaphragm = find('diaphragm'), coil = find.all('coil')
   const dynLeadA = find('dynLeadA'), dynLeadB = find('dynLeadB')
   const condDiaphragm = find('condDiaphragm')
-  const ribbon = find('ribbon'), ribbonLeadA = find('ribbonLeadA'), ribbonLeadB = find('ribbonLeadB')
+  const pleats = find.all('ribbon')
   const ribbonOwn = find('ribbonOwn')
   const piezoDiaphragm = find('piezoDiaphragm'), pin = find('pin'), layers = find.all('layers')
   const chargeA = find('chargeA'), chargeB = find('chargeB')
@@ -126,13 +129,10 @@ function makePainter(find: Finder): Painter {
     // Condenser: the pressure pushes the diaphragm towards the backplate
     if (step >= 2) condDiaphragm.setAttribute('d', diaphragmPath(MOVE.condenser * partAt('condenser', r)))
 
-    // Ribbon: the foil moves with the air, towards the viewer and away (bigger, smaller); its leads
-    // leave its top and its bottom
+    // Ribbon: the foil moves with the air, bending towards the viewer and away between its clamped ends
     if (step >= 3) {
-      const near = 1 + RIBBON_NEAR * partAt('ribbon', r)
-      ribbon.setAttribute('transform', `translate(${RIB_X} ${RIB_Y}) scale(${near.toFixed(3)}) translate(${-RIB_X} ${-RIB_Y})`)
-      ribbonLeadA.setAttribute('d', `M${RIB_X} ${f(RIB_Y - RIB_HALF * near)} V100 H${TF} V${MID - 14}`)
-      ribbonLeadB.setAttribute('d', `M${RIB_X} ${f(RIB_Y + RIB_HALF * near)} V280 H${TF} V${MID + 14}`)
+      const bands = ribbonPleats(partAt('ribbon', r))
+      pleats.forEach((pleat, k) => pleat.setAttribute('d', bands[k].d))
       ribbonOwn.textContent = signed(ribbonOwnMv(r) * 1000, 0)
     }
 
@@ -266,19 +266,26 @@ function Condenser() {
   )
 }
 
-/** A pleated strip, folded like a paper fan: its bands alternately lit and shaded, every other fold further right */
-function ribbonPleats(): { d: string; lit: boolean }[] {
+/**
+ * A pleated strip, folded like a paper fan: its bands alternately lit and shaded, every other fold
+ * further right. `push` (−1 … 1): how far it is bent towards the viewer — its clamped ends never
+ * move, its middle furthest (half a sine along it), drawn down-left and wider as it comes closer
+ */
+function ribbonPleats(push: number): { d: string; lit: boolean }[] {
   const h = (2 * RIB_HALF) / PLEATS
-  const at = (k: number) => ({ y: RIB_Y - RIB_HALF + k * h, dx: k % 2 ? 5 : 0 })
+  const at = (k: number) => {
+    const z = push * Math.sin((Math.PI * k) / PLEATS)
+    return { x: RIB_X + (k % 2 ? 5 : 0) + DEPTH_X * z, y: RIB_Y - RIB_HALF + k * h + DEPTH_Y * z, w: RIB_W * (1 + NEARER * z) }
+  }
   return Array.from({ length: PLEATS }, (_, k) => {
     const top = at(k), bottom = at(k + 1)
     return {
-      d: `M${RIB_X - RIB_W + top.dx} ${top.y} H${RIB_X + RIB_W + top.dx} L${RIB_X + RIB_W + bottom.dx} ${bottom.y} H${RIB_X - RIB_W + bottom.dx} Z`,
+      d: `M${f(top.x - top.w)} ${f(top.y)} H${f(top.x + top.w)} L${f(bottom.x + bottom.w)} ${f(bottom.y)} H${f(bottom.x - bottom.w)} Z`,
       lit: k % 2 === 0,
     }
   })
 }
-const PLEAT_BANDS = ribbonPleats()
+const PLEAT_BANDS = ribbonPleats(0)
 
 /** Two rows of words, split where the text has a line break */
 function Rows({ x, y, text }: { x: number; y: number; text: string }) {
@@ -306,8 +313,11 @@ function Ribbon() {
       <g data-p="ribbon" stroke={PART} strokeWidth={0.75} strokeLinejoin="round">
         {PLEAT_BANDS.map((band, k) => <path key={k} d={band.d} fill={band.lit ? FAINT : PART_3} />)}
       </g>
-      <path data-p="ribbonLeadA" fill="none" stroke={INK} strokeWidth={1.5} />
-      <path data-p="ribbonLeadB" fill="none" stroke={INK} strokeWidth={1.5} />
+      {/* Its leads, from its clamped top and bottom */}
+      <g fill="none" stroke={INK} strokeWidth={1.5}>
+        <path d={`M${x} ${RIB_Y - RIB_HALF} V100 H${TF} V${MID - 14}`} />
+        <path d={`M${x} ${RIB_Y + RIB_HALF} V280 H${TF} V${MID + 14}`} />
+      </g>
 
       {/* The transformer: a few turns in, thirty times as many out, round one core */}
       <g fill="none" stroke={INK} strokeWidth={1.5}>
