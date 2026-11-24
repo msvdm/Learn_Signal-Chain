@@ -27,8 +27,15 @@ export const RATE_START = 48000
 /** The bit depths to pick, and the first */
 export const BIT_DEPTHS = [3, 4, 8, 16, 24] as const
 export const BITS_START = 4
-/** How long the picture's windows are: one cycle of the tone (2 kHz: 0.5 ms, 24 samples at 48 kHz) */
-export const windowOf = (tone: number) => 1 / tone
+/**
+ * How long the picture's windows are, as a sound editor zooms: 0.1 s at 20 Hz (two cycles) down to
+ * 1 ms at 20 kHz (twenty), evenly on a log scale between — long enough to see the rounding change from
+ * one cycle to the next (the user's call, 2026-11-24); to two figures (2 kHz: 4.6 ms), never under 1 ms
+ */
+export function windowOf(tone: number): number {
+  const s = 0.1 * (20 / Math.min(tone, 20000)) ** (2 / 3), unit = 10 ** (Math.floor(Math.log10(s)) - 1)
+  return Math.round(s / unit) * unit
+}
 
 /**
  * The tone: its slider's steps, the third-octave bands (a graphic equalizer's) from 20 Hz, up to
@@ -246,11 +253,16 @@ export function conversionOf(setup: Setup): Conversion {
   const clipped = reaching > top
 
   /** What the filter after the clipping leaves, at a phase of the tone (its small overs past full scale too) */
+  // Each harmonic's sine and cosine from the one before (a window holds thousands of samples, each up
+  // to 99 harmonics): sin((k+1)θ) = 2 cos θ · sin kθ − sin((k−1)θ), and the same for the cosine
   const filtered = (theta: number) => {
-    let sum = 0
+    const c1 = Math.cos(theta)
+    let sum = 0, sinWas = 0, cosWas = 1, sin = Math.sin(theta), cos = c1
     for (let i = 0; i < kept.length; i++) {
       const h = kept[i]
-      if (h.size > NOTHING) sum += h.sin * Math.sin((i + 1) * theta) + h.cos * Math.cos((i + 1) * theta)
+      if (h.size > NOTHING) sum += h.sin * sin + h.cos * cos
+      const sinNext = 2 * c1 * sin - sinWas, cosNext = 2 * c1 * cos - cosWas
+      sinWas = sin; cosWas = cos; sin = sinNext; cos = cosNext
     }
     return sum
   }

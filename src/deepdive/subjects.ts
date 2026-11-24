@@ -128,9 +128,9 @@ export const SUBJECTS: readonly Subject[] = [
     icon: Binary,
     Scene: ConversionScene,
     steps: [
-      { id: 'lineIn',        box: [-40, 0, 480, 720] },
-      { id: 'clockSamples',  box: [-40, -170, 1800, 720] },
-      { id: 'backToVoltage', box: [-40, -170, 2990, 720] },
+      { id: 'lineIn',        box: [-40, 20, 830, 560] },
+      { id: 'clockSamples',  box: [-40, 20, 2720, 640] },
+      { id: 'backToVoltage', box: [-40, 20, 2720, 1200] },
     ],
     Controls: ConversionControls,
   },

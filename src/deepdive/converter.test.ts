@@ -10,7 +10,7 @@ import type { Setup } from './converter'
 
 const LINE: Setup = { rate: 48000, tone: TONE_START, level: 0, bits: null, grade: 'quality', filter: true, jitter: 0 }
 const at = (s: Partial<Setup>) => conversionOf({ ...LINE, ...s })
-/** The picture's window at the start: one cycle of 2 kHz */
+/** The picture's window at the start: 4.6 ms of 2 kHz */
 const WINDOW_S = windowOf(TONE_START)
 
 /** The largest gap between the DAC's output and a wave over the window, in volts */
@@ -26,10 +26,18 @@ function worstGap(s: Partial<Setup>, wave: (t: number) => number, deg = 37): num
 }
 
 describe('the picture\'s window', () => {
-  test('one cycle of the tone: 0.5 ms at 2 kHz (24 samples at 48 kHz), 50 ms at 20 Hz', () => {
-    expect(WINDOW_S).toBeCloseTo(0.0005, 9)
-    expect(windowOf(TONE_START) * 48000).toBeCloseTo(24, 6)
-    expect(windowOf(20)).toBeCloseTo(0.05, 9)
+  test('as a sound editor zooms: 0.1 s at 20 Hz (two cycles), 1 ms at 20 kHz (twenty), 4.6 ms at 2 kHz — never under 1 ms', () => {
+    expect(windowOf(20)).toBeCloseTo(0.1, 9)
+    expect(windowOf(20000)).toBeCloseTo(0.001, 9)
+    expect(windowOf(30000)).toBeCloseTo(0.001, 9)
+    expect(WINDOW_S).toBeCloseTo(0.0046, 9)
+    expect(windowOf(1000)).toBeCloseTo(0.0074, 9)
+    TONES.forEach((f, i) => { if (i) expect(windowOf(f)).toBeLessThanOrEqual(windowOf(TONES[i - 1])) })
+  })
+  test('the window holds several cycles at every tone, more as it rises', () => {
+    expect(windowOf(20) * 20).toBeCloseTo(2, 6)
+    expect(windowOf(TONE_START) * TONE_START).toBeCloseTo(9.2, 6)
+    expect(windowOf(20000) * 20000).toBeCloseTo(20, 6)
   })
   test('the tone\'s steps: third octaves from 20 Hz to 30 kHz, rising, 2 kHz among them', () => {
     expect(TONES[0]).toBe(20)
@@ -158,10 +166,10 @@ describe('0 dBFS: nothing above it', () => {
 
 describe('never the same', () => {
   test('the best converters at 24 bits: what comes out differs from line level, 99 dB under it (their own noise, twice)', () => {
-    const c = at({ bits: 24 }), first = -60, samples = samplesOf(c, 0, first, 84)
+    const c = at({ bits: 24 }), first = -60, samples = samplesOf(c, 0, first, Math.ceil(WINDOW_S * c.setup.rate) + 60)
     let sq = 0, sig = 0
-    for (let i = 0; i < 200; i++) {
-      const t = (WINDOW_S * i) / 200, want = c.arriving(t, 0)
+    for (let i = 0; i < 1000; i++) {
+      const t = (WINDOW_S * i) / 1000, want = c.arriving(t, 0)
       sq += (c.output(t, samples, first) - want) ** 2
       sig += want ** 2
     }
