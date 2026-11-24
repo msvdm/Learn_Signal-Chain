@@ -38,10 +38,3 @@ export const ROOMY_HEADER_QUERY = '(min-width: 1340px)'
  * their icons.
  */
 export const HEADER_LABELS_QUERY = '(min-width: 1520px)'
-
-/**
- * A/D and D/A conversion's controls: narrower than this, the frequency's name and value stand over
- * its slider (the panel's two rows) — Bulgarian needs 1292px beside the wide drawer, 1132 beside the
- * rail, with the clock's buttons in the row too.
- */
-export const STACKED_SLIDER_QUERY = '(max-width: 1339px)'

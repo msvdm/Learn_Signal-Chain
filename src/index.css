@@ -533,9 +533,12 @@ kbd {
 .lsc-dd-name { font-size: 24px; font-weight: 700; fill: var(--lsc-fg); }
 
 .lsc-dd-slider { accent-color: var(--lsc-accent); cursor: pointer; }
-/* The conversion's numbers: each step's on its level, the samples' words in their box */
+/* A button drawn on the picture (the conversion's clock): lit on hover as the controls' buttons are */
+.lsc-dd-choice { cursor: pointer; outline: none; }
+.lsc-dd-choice:hover rect { stroke: var(--lsc-accent); fill: var(--lsc-accent-bg); }
+.lsc-dd-choice:focus-visible rect { stroke: var(--lsc-accent); stroke-width: 4px; }
+/* The conversion's numbers: each step's on its level, the bits under their samples */
 .lsc-dd-code { font-family: var(--lsc-font-mono); font-size: 15px; fill: var(--lsc-fg-muted); font-variant-numeric: tabular-nums; }
-.lsc-dd-word { font-family: var(--lsc-font-mono); font-size: 18px; fill: var(--lsc-fg); }
 
 /* ── React Flow overrides ───────────────────────────────────────────────── */
 
