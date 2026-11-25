@@ -7,10 +7,10 @@ import { bitsText, rateText } from '../../utils/formatText'
 import {
   ANALOG_TOP, BIT_DEPTHS, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, OWN_NOISE, RATES,
   RECONSTRUCT_TAPS, TONES,
-  bitsOf, codeOf, codeRange, conversionOf, digitsInUse, floorOf, samplesOf, windowOf,
+  bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, topDigitOf, windowOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
-import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
+import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, TRACE } from './look'
 import type { SceneProps } from './painter'
 import { Label, Step } from './sceneParts'
 import { LevelMeter } from './circuitParts'
@@ -341,11 +341,10 @@ const BIT_FONT_MAX = 20, BIT_FONT_GAP = 3, BIT_FONT_PER_COL = 1.25
  * a low sample rate, narrow at a high one), over the wave they were taken from (faint) and the bit
  * depth's steps — as high as on the A/D converter's graph beside it (one scale) —, each one's bits
  * under it, the sign on top, in fours past 4 bits: as big as the room under the wave lets them (24 of
- * them readable, 48 columns of them at 96 kHz), in the middle of it. Its rows coloured by what they do
- * (the user's call, 2026-11-25, instead of shading every other column): the sign's in which-way's
- * orange, those only repeating it over the whole window (`digitsInUse` — room the signal never
- * reaches) dimmed, those the signal uses light blue — judged on the window, not these few samples
- * (at 20 Hz they sit near zero, using the bottom rows only, however loud the signal)
+ * them readable, 48 columns of them at 96 kHz), in the middle of it. The sign's row in which-way's
+ * orange; one digit marked, light blue: the loudest sample's top digit (`topDigitOf` — how far up
+ * the number reaches, those above it only repeating the sign). The user's call, 2026-11-25: no
+ * column shading, no band on every row in use (all of them, loud, and the bands told nothing)
  */
 function Excerpt({ c, shown, from, count, bits, stopped, row }: {
   c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean; row: Row
@@ -363,15 +362,21 @@ function Excerpt({ c, shown, from, count, bits, stopped, row }: {
   const right = COLS_X + count * colW
   const dots = dotsOf(these, x, vy, cy, stopped, colW, [COLS_X, right], [waveTop, waveBottom])
   const font = Math.min(BIT_FONT_MAX, rowH - BIT_FONT_GAP, colW * BIT_FONT_PER_COL)
-  /** The rows the signal leaves unused: 1 … `unused` (under the sign) */
-  const unused = bits - digitsInUse(shown.map((s) => codeOf(s.value, bits)), bits)
-  const band = (r: number, fill: string, opacity: number) => (
-    <rect key={r} x={COLS_X} y={bitsTop + rowY(r) + 1} width={right - COLS_X} height={rowH - 2} rx={3} fill={fill} opacity={opacity} />
-  )
+  /**
+   * The sample shown whose number reaches highest (its top digit nearest the sign — −1, the sign
+   * alone, never: +1 is marked over it), the bigger voltage if several, the first if still several
+   */
+  const tops = these.map((s) => topDigitOf(codeOf(s.value, bits), bits) ?? bits)
+  const peakAt = tops.reduce((best, r, i) => (r < tops[best] || (r === tops[best] && Math.abs(these[i].value) > Math.abs(these[best].value)) ? i : best), 0)
+  const peakRow = these.length && tops[peakAt] < bits ? tops[peakAt] : null
   return (
     <g>
-      {/* The rows: the sign's, the unused (no band), those in use */}
-      {Array.from({ length: bits }, (_, r) => (r === 0 ? band(r, FLOW, 0.22) : r > unused ? band(r, MOVER, 0.18) : null))}
+      {/* The sign's row; the loudest sample's top digit */}
+      <rect x={COLS_X} y={bitsTop + 1} width={right - COLS_X} height={rowH - 2} rx={3} fill={FLOW} opacity={0.22} />
+      {peakRow !== null && (
+        <rect x={COLS_X + peakAt * colW + 1} y={bitsTop + rowY(peakRow) + 1} width={colW - 2} height={rowH - 2} rx={4}
+          fill={MOVER} fillOpacity={0.3} stroke={MOVER} strokeWidth={2.5} />
+      )}
       <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
       <line x1={COLS_X} y1={cy} x2={right} y2={cy} stroke={INK} strokeWidth={1} />
       <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
@@ -381,7 +386,7 @@ function Excerpt({ c, shown, from, count, bits, stopped, row }: {
         return (
           <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : 'var(--lsc-fg)' }} textAnchor="middle">
             {word.map((on, r) => (
-              <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8} style={r > 0 && r <= unused ? { fill: PART_3 } : undefined}>{on ? '1' : '0'}</text>
+              <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8}>{on ? '1' : '0'}</text>
             ))}
           </g>
         )

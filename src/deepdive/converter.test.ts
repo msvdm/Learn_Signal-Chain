@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { getHealth } from '../signal/levels'
 import {
   ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, OWN_NOISE, TONES, TONE_START, windowOf,
-  bitsOf, codeOf, codeRange, conversionOf, digitsInUse, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf,
+  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf, topDigitOf,
 } from './converter'
 import type { Setup } from './converter'
 
@@ -76,16 +76,20 @@ describe('bit depth', () => {
     expect(bitsOf(-1, 4)).toEqual([true, true, true, true])
     expect(bitsOf(-8, 4)).toEqual([true, false, false, false])
   })
-  test('the digits a signal uses: under the sign, those that only repeat it are not', () => {
-    // −2 … +1 in 3 bits (110, 111, 000, 001): the middle digit always repeats the sign
-    expect(digitsInUse([-2, -1, 0, 1], 3)).toBe(2)
-    expect(digitsInUse([0], 24)).toBe(1)
-    expect(digitsInUse([-4, 3], 3)).toBe(3)
-    // Line level at 24 bits (a peak of −15 dBFS): two digits under the sign unused
-    const c = at({ bits: 24 }), codes = samplesOf(c, 0, 0, 200).map((s) => codeOf(s.value, 24))
-    expect(digitsInUse(codes, 24)).toBe(22)
-    // Clipping: every digit
-    expect(digitsInUse(samplesOf(at({ bits: 24, level: 30 }), 0, 0, 200).map((s) => codeOf(s.value, 24)), 24)).toBe(24)
+  test('a number\'s top digit: the first under the sign that is not a copy of it', () => {
+    // 001 (+1) and 110 (−2): the bottom digit; 011 (+3) and 100 (−4): the one under the sign
+    expect(topDigitOf(1, 3)).toBe(2)
+    expect(topDigitOf(-2, 3)).toBe(2)
+    expect(topDigitOf(3, 3)).toBe(1)
+    expect(topDigitOf(-4, 3)).toBe(1)
+    // 000 and 111 (0 and −1): the sign alone
+    expect(topDigitOf(0, 3)).toBeNull()
+    expect(topDigitOf(-1, 3)).toBeNull()
+    // Line level's peak at 24 bits (−15 dBFS): two digits under the sign only repeat it
+    const c = at({ bits: 24 }), peak = Math.max(...samplesOf(c, 0, 0, 200).map((s) => codeOf(s.value, 24)))
+    expect(topDigitOf(peak, 24)).toBe(3)
+    // Clipping: the digit under the sign
+    expect(topDigitOf(codeOf(FS_VOLTS, 24), 24)).toBe(1)
   })
   test('the noise under the numbers: 6 dB a bit, and the converter\'s own', () => {
     expect(floorOf(16, 'quality').bits).toBeCloseTo(-96.3, 1)

@@ -120,16 +120,13 @@ export function bitsOf(code: number, bits: number): boolean[] {
 }
 
 /**
- * How many of a number's digits some numbers use, the sign's included: the rest, under the sign, only
- * repeat it (room the signal never reaches — a loud signal uses them all, a quiet one a few at the
- * bottom; silence the sign alone)
+ * A number's top digit: the first under the sign that is not a copy of it (0 the sign's row) — how
+ * far up the number reaches; those above it only repeat the sign. null for 0 and −1 (the sign alone)
  */
-export function digitsInUse(codes: Iterable<number>, bits: number): number {
-  let used = 1
-  for (const k of codes) {
-    while (used < bits && (k < -(2 ** (used - 1)) || k > 2 ** (used - 1) - 1)) used++
-  }
-  return used
+export function topDigitOf(code: number, bits: number): number | null {
+  const word = bitsOf(code, bits)
+  const r = word.findIndex((on, i) => i > 0 && on !== word[0])
+  return r < 0 ? null : r
 }
 
 /** The noise under a converter's numbers, dBFS: its bit depth's and its own, added as powers */
