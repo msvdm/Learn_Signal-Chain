@@ -855,7 +855,7 @@
       "qualityNoise": "Качествен ADC: {db}",
       "underSignal": "{db} dB под сигнала",
       "hz": "{n} Hz",
-      "someSamples": "Семпли от {from} до {to} от {total}",
+      "someSamples": "{n} семпъла за {ms} ms, увеличени",
       "heard": {
         "loud": "Почти колкото самия звук",
         "clear": "Ясно се чува",

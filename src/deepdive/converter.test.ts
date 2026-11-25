@@ -126,11 +126,23 @@ describe('the filters and Nyquist', () => {
 })
 
 describe('0 dBFS: nothing above it', () => {
-  test('the most the knob gives: hot on the analogue side, clipping in the numbers', () => {
-    const c = at({ level: LEVEL_MAX })
+  test('+16 dBu: hot on the analogue side, clipping in the numbers', () => {
+    const c = at({ level: 16 })
     expect(getHealth(c.analog.rms, 'analog', c.analog.peak)).toBe('hot')
     expect(getHealth(c.digital.rms, 'digital', c.digital.peak)).toBe('clipping')
     expect(c.clipped).toBe(true)
+  })
+  test('the most the knob gives (+40): the line in stopped at +20 dBu, the numbers almost a square wave', () => {
+    const c = at({ level: LEVEL_MAX })
+    expect(LEVEL_MAX).toBe(40)
+    expect(c.analog.peak).toBeCloseTo(20, 5)
+    expect(getHealth(c.analog.rms, 'analog', c.analog.peak)).toBe('clipping')
+    expect(Math.max(...Array.from({ length: 500 }, (_, i) => Math.abs(c.arriving(i / 500 / 2000, 0))))).toBeCloseTo(ANALOG_TOP, 5)
+    // A square wave's average is its peak: here within 1 dB of full scale
+    expect(c.digital.rms).toBeGreaterThan(-1)
+    // At +17 the line in just reaches its top
+    expect(at({ level: 16.9 }).analog.peak).toBeLessThan(20)
+    expect(at({ level: 17.1 }).analog.peak).toBeCloseTo(20, 5)
   })
   test('+15 dBu: its peaks just past full scale', () => {
     expect(at({ level: 14.9 }).clipped).toBe(false)

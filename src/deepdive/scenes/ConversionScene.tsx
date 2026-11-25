@@ -6,7 +6,7 @@ import type { MeterZoneKind } from '../../signal/levels'
 import { bitsText, rateText } from '../../utils/formatText'
 import {
   ANALOG_TOP, BIT_DEPTHS, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, OWN_NOISE, RATES,
-  RECONSTRUCT_TAPS, TONES, TONE_START,
+  RECONSTRUCT_TAPS, TONES,
   bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, windowOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
@@ -21,14 +21,15 @@ import type { ConversionSettings } from './conversionSettings'
 
 // A/D and D/A conversion (Deep dive, D46): a line-level sine into an analog-to-digital converter, its
 // numbers, and out of a digital-to-analog converter — in two rows (the user's call, 2026-11-24), each
-// read left to right: the line in, the A/D converter and its numbers on top; a thin digital line down
-// to the D/A converter, its filter and the line out below. Height is voltage, as in Analogue
+// read left to right: the line in and the A/D converter on top; its digital line straight down to the
+// D/A converter, its filter and the line out below; the numbers' box right of both rows, as tall as
+// both (24 bits readable — 2026-11-25), on a tap of that line. Height is voltage, as in Analogue
 // amplification, every graph on one scale: the analogue side's top (+20 dBu) at its edge, so the gain
 // knob makes the wave bigger or smaller (no zoom — the user's call, 2026-11-25). Every graph covers the same stretch of time (`windowOf`: 0.1 s at 20 Hz, two
 // cycles, down to 1 ms at 20 kHz, twenty — as a sound editor zooms), long enough to see the rounding
 // change from one cycle to the next. The picture stands still (a sine is the same moving or not):
-// the controls under it set it (`useConversion`), each from its step — the gain knob, the frequency's
-// slider, the sample rate's and bit depth's buttons; the clock's are on the picture, beside it.
+// the controls under it set it (`useConversion`) — the gain knob and the frequency's slider at every
+// step (the user's call, 2026-11-25), the sample rate's buttons, the bit depth's from its step; the clock's are on the picture, beside it.
 // (1) Sampling: the line in (its meter in dBu), the filter before the converter (always in), the
 //     A/D converter's graph — the wave it is fed (faint) and at each tick of the clock a sample, not
 //     yet rounded; the clock between the rows, Steady or Wobbly (a wobbly one takes the samples early
@@ -36,14 +37,14 @@ import type { ConversionSettings } from './conversionSettings'
 // (2) Quantization: each sample rounded to the nearest of its bit depth's steps, each step named by
 //     the number it is written as (while there is room); the converter's meter (dBFS) — the signal,
 //     the noise its bits leave, a budget and a quality converter's own noise, how far under the
-//     signal each is; the numbers: EXCERPT samples magnified (around the wave's rising zero one
+//     signal each is; the numbers: EXCERPT_S of samples magnified (around the wave's rising zero one
 //     cycle in: both its halves), over the wave they were taken from, each one's bits under it (the
 //     sign on top) — that stretch lit on the graph.
 // (3) Analogue conversion: the D/A converter holds each number until the next (the steps); the filter
 //     after it smooths them into the line out — at its real size over what came in (dashed), the gap
-//     between them shaded, how far under the signal it is and whether it is heard. The tone's
-//     frequency from here: past half the sample rate (Nyquist) the filter takes the tone out; the
-//     gain turned up shows 0 dBFS with nothing above it.
+//     between them shaded, how far under the signal it is and whether it is heard. Past half
+//     the sample rate (Nyquist) the filter takes the tone out; the gain turned up shows 0 dBFS with
+//     nothing above it.
 // The numbers are converter.ts's; the converters are quality ones (their noise in the output).
 
 // ── Where things are, in the scene's units ──────────────────────────────────
@@ -70,16 +71,22 @@ const GRAPH_W = 720, METER_W = 16
 const IN_METER_X = -20, IN_X = 60
 const FILTER_L = 830, FILTER_R = 885
 const ADC_L = 905, ADC_X = 945, ADC_R = 2130, CODES_X = ADC_X + GRAPH_W + 30, METER_X = 1775, MARKS_X = 1835
-/** The numbers' box: EXCERPT samples, a column each */
-const NUM_L = 2210, NUM_R = 2670, EXCERPT = 12, COL_W = (NUM_R - NUM_L - 60) / EXCERPT, COLS_X = NUM_L + 30
-/** Between the rows · the clock (its buttons left of it), its wires into the A/D converter's bottom and the D/A converter's top; the digital line round to the D/A converter */
+/**
+ * The numbers' box, as tall as both rows, right of them: EXCERPT_S of time, a column a sample — 48 at
+ * 96 kHz, 4 at 8 kHz (the user's call, 2026-11-25: how little the numbers hold at a low rate) —, its
+ * columns `COLS_W` wide in all
+ */
+const NUM_L = 2290, NUM_R = 3130, EXCERPT_S = 0.0005, COLS_X = NUM_L + 30, COLS_W = NUM_R - NUM_L - 60
+/** Between the rows · the clock (its buttons left of it), its wires into the A/D converter's bottom and the D/A converter's top */
 const CLOCK_L = 340, CLOCK_R = 480, CLOCK_TOP = 565, CLOCK_BOTTOM = 615, CLOCK_WIRE_Y = 590, CLOCK_INTO_ADC = 1000
 const CHOICE_H = 50, CHOICE_GAP = 8
-const LOOP_X = 2710, DIGITAL_Y = 640, DIGITAL_INTO_DAC = 700
+/** The digital line out of the A/D converter: on into the numbers' box, and from `TAP_X` down and round into the D/A converter */
+const TAP_X = (ADC_R + NUM_L) / 2, DIGITAL_Y = 640, DIGITAL_INTO_DAC = 700
 /** Row 2 · the D/A converter, its graph; the filter after it; the line out under the A/D converter, as wide, its meter */
 const DAC_L = 20, DAC_X = 60, DAC_R = 840
 const OUT_FILTER_L = 870, OUT_FILTER_R = 925
-const OUT_X = ADC_X, OUT_W = ADC_R - ADC_X - 90, OUT_METER_X = OUT_X + OUT_W + 50
+/** (the line out's graph 50 right of the A/D converter's, so its 0 V clears the filter — 2026-11-25; its meter where it was) */
+const OUT_X = ADC_X + 50, OUT_W = ADC_R - OUT_X - 90, OUT_METER_X = OUT_X + OUT_W + 50
 
 export const SAMPLE_STEP = 1, QUANT_STEP = 2, DAC_STEP = 3
 /** The tone's phase at the graphs' left edge */
@@ -97,7 +104,7 @@ function setupAt(step: number, s: ConversionSettings): Setup {
     jitter: s.wobbly ? JITTER_MAX : 0,
     grade: 'quality',
     filter: true,
-    tone: step >= DAC_STEP ? s.tone : TONE_START,
+    tone: s.tone,
     level: LEVEL_START + s.gain,
   }
 }
@@ -132,9 +139,12 @@ function wordOf(code: number, bits: number): string {
 /** Whether a difference this far under the signal (dB) is heard */
 const heardOf = (db: number) => (db > -20 ? 'loud' : db > -60 ? 'clear' : db > -90 ? 'faint' : 'silent')
 
-/** The samples a graph shows (0 … its last) and those either side the reconstruction reaches */
+/**
+ * The samples a graph shows (0 … its last: those inside its window, one at its right edge the next
+ * window's) and those either side the reconstruction reaches
+ */
 function picture(c: Conversion, span: number) {
-  const last = Math.floor(span * c.setup.rate + 1e-9), first = -RECONSTRUCT_TAPS
+  const last = Math.ceil(span * c.setup.rate - 1e-9) - 1, first = -RECONSTRUCT_TAPS
   const samples = samplesOf(c, PHASE, first, last + RECONSTRUCT_TAPS)
   return { first, samples, shown: samples.slice(-first, -first + last + 1) }
 }
@@ -260,7 +270,7 @@ function AnalogLines({ x, row, w = GRAPH_W }: { x: number; row: Row; w?: number 
       <Label at={[x + w, row.vy(ANALOG_TOP) - 8]} anchor="end">+20 dBu</Label>
       <FullScale from={x} to={x + w} row={row} />
       <Label at={[x + w, row.vy(FS_VOLTS) - 8]} anchor="end">+18 dBu</Label>
-      <Label at={[x - 8, row.cy + 6]} anchor="end">0 V</Label>
+      <Label at={[x - 8, row.cy - 8]} anchor="end">0 V</Label>
     </>
   )
 }
@@ -312,50 +322,63 @@ function Peak({ x, y, peak }: { x: number; y: number; peak: string }) {
   return <text className="lsc-dd-reading" x={x} y={y}>{fmt(t.deepDive.labels.peak, { db: peak })}</text>
 }
 
-/** The first of the samples the numbers' box magnifies: those around the wave's rising zero one cycle in */
-function excerptFrom(c: Conversion, count: number): number {
-  return Math.max(0, Math.min(count - EXCERPT, Math.round(c.setup.rate / c.setup.tone - EXCERPT / 2)))
+/**
+ * The samples the numbers' box magnifies: as many as EXCERPT_S holds, around the wave's rising zero
+ * one cycle in (both its halves, at 2 kHz one whole cycle) — the first and how many
+ */
+function excerptOf(c: Conversion, total: number): { from: number; count: number } {
+  const count = Math.min(total, Math.max(1, Math.floor(EXCERPT_S * c.setup.rate + 1e-9)))
+  return { from: Math.max(0, Math.min(total - count, Math.round(c.setup.rate / c.setup.tone - count / 2))), count }
 }
 
+/** The numbers' box's bits: their room (under the wave, down to the box's words), the most a row of them takes */
+const BITS_TOP = ROW_1 + H + 50, BITS_BOTTOM = ROW_2 + 262 - 60, BIT_ROW_MAX = 40
+/** Their font: at most this, this much under a row's height, and a digit (0.6 of it wide) with room beside it in its column */
+const BIT_FONT_MAX = 20, BIT_FONT_GAP = 3, BIT_FONT_PER_COL = 1.25
+
 /**
- * The numbers' box: samples magnified from `from` (a column each), over the wave they were taken from
- * (faint) and the bit depth's steps, each one's bits under it — the sign on top, in fours past 4 bits;
- * the room the bits leave is the wave's
+ * The numbers' box: EXCERPT_S of time magnified, `count` samples from `from` (a column each — wide at
+ * a low sample rate, narrow at a high one), over the wave they were taken from (faint) and the bit
+ * depth's steps — as high as on the A/D converter's graph beside it (one scale) —, each one's bits
+ * under it, the sign on top, in fours past 4 bits: as big as the room under the wave lets them (24 of
+ * them readable, 48 columns of them at 96 kHz), in the middle of it
  */
-function Excerpt({ c, shown, from, bits, stopped }: {
-  c: Conversion; shown: readonly Sample[]; from: number; bits: number; stopped: (s: Sample) => boolean
+function Excerpt({ c, shown, from, count, bits, stopped, row }: {
+  c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean; row: Row
 }) {
   const { t, fmt } = useTranslation()
-  const these = shown.slice(from, from + EXCERPT), rate = c.setup.rate
-  const rowH = bits <= 4 ? 22 : bits <= 8 ? 16 : bits <= 16 ? 11 : 9, groupGap = bits > 4 ? 4 : 0
+  const these = shown.slice(from, from + count), rate = c.setup.rate
+  /** A sample's column: EXCERPT_S across the box */
+  const colW = COLS_W / (EXCERPT_S * rate)
+  const groupGap = bits > 4 ? 8 : 0, gaps = (Math.ceil(bits / 4) - 1) * groupGap
+  const rowH = Math.min(BIT_ROW_MAX, Math.floor((BITS_BOTTOM - BITS_TOP - gaps) / bits))
   const rowY = (r: number) => r * rowH + Math.floor(r / 4) * groupGap
-  const bitsBottom = ROW_1 + 262 - 56, bitsTop = bitsBottom - rowY(bits - 1) - rowH
-  const waveTop = ROW_1 - 220 + 30, waveBottom = bitsTop - 24
-  const cy = (waveTop + waveBottom) / 2, px = (waveBottom - waveTop) / 2 / ANALOG_TOP
-  const vy = (v: number) => cy - px * v
-  const x = (time: number) => COLS_X + (time * rate - from + 0.5) * COL_W
-  const right = COLS_X + EXCERPT * COL_W
-  const dots = dotsOf(these, x, vy, cy, stopped, COL_W, [COLS_X, right], [waveTop, waveBottom])
-  const font = Math.min(17, rowH - 2)
+  const bitsTop = (BITS_TOP + BITS_BOTTOM - (bits * rowH + gaps)) / 2
+  const { cy, px, vy, top: waveTop, bottom: waveBottom } = row
+  const x = (time: number) => COLS_X + (time * rate - from + 0.5) * colW
+  const right = COLS_X + count * colW
+  const dots = dotsOf(these, x, vy, cy, stopped, colW, [COLS_X, right], [waveTop, waveBottom])
+  const font = Math.min(BIT_FONT_MAX, rowH - BIT_FONT_GAP, colW * BIT_FONT_PER_COL)
+  const bitsH = rowY(bits - 1) + rowH
   return (
     <g>
+      {/* Every other sample's column shaded, so each word stands apart */}
+      <path d={these.map((_, i) => (i % 2 ? `M${(COLS_X + i * colW).toFixed(1)} ${bitsTop - 6}h${colW.toFixed(1)}v${bitsH + 12}h${(-colW).toFixed(1)}Z` : '')).join('')} fill={FAINT} opacity={0.35} />
       <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
       <line x1={COLS_X} y1={cy} x2={right} y2={cy} stroke={INK} strokeWidth={1} />
-      <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + EXCERPT - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
+      <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
       <Dots dots={{ ...dots, r: 5, stem: 1.5 }} />
       {these.map((s, i) => {
         const word = bitsOf(codeOf(s.value, bits), bits)
         return (
           <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : 'var(--lsc-fg)' }} textAnchor="middle">
-            {word.map((on, r) => <text key={r} x={COLS_X + (i + 0.5) * COL_W} y={bitsTop + rowY(r) + rowH * 0.8}>{on ? '1' : '0'}</text>)}
+            {word.map((on, r) => <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8}>{on ? '1' : '0'}</text>)}
           </g>
         )
       })}
-      {shown.length > EXCERPT && (
-        <Label at={[(NUM_L + NUM_R) / 2, ROW_1 + 262 - 20]} anchor="middle">
-          {fmt(t.deepDive.labels.someSamples, { from: numberText(from + 1), to: numberText(from + these.length), total: numberText(shown.length) })}
-        </Label>
-      )}
+      <Label at={[(NUM_L + NUM_R) / 2, ROW_2 + 262 - 20]} anchor="middle">
+        {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_S) })}
+      </Label>
     </g>
   )
 }
@@ -397,8 +420,8 @@ export function ConversionScene({ step }: SceneProps) {
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
 
   const dots = dotsOf(shown, adcX, R1.vy, R1.cy, stopped, GRAPH_W / perWindow, [ADC_X, ADC_X + GRAPH_W], [R1.top, R1.bottom])
-  const from = excerptFrom(c, shown.length)
-  const lit = [Math.max(ADC_X, adcX((from - 0.5) / rate)), Math.min(ADC_X + GRAPH_W, adcX((from + Math.min(EXCERPT, shown.length) - 0.5) / rate))]
+  const { from, count } = excerptOf(c, shown.length)
+  const lit = [Math.max(ADC_X, adcX((from - 0.5) / rate)), Math.min(ADC_X + GRAPH_W, adcX((from + count - 0.5) / rate))]
   const outPaths = out && lineOutPaths(out, span, R2)
   const meterTop = ROW_1 - H, meterBottom = ROW_1 + H
 
@@ -469,16 +492,17 @@ export function ConversionScene({ step }: SceneProps) {
         ))}
         <Peak x={METER_X} y={R1.readY} peak={formatDb(c.digital.peak, 'digital')} />
 
-        {/* The numbers */}
+        {/* The numbers, as tall as both rows */}
         <line x1={ADC_R} y1={R1.cy} x2={NUM_L} y2={R1.cy} {...DIGITAL} />
-        <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R1.boxBottom - R1.boxTop} {...BOX} />
-        <Label at={[(NUM_L + NUM_R) / 2, R1.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
-        <Excerpt c={c} shown={shown} from={from} bits={bits} stopped={stopped} />
+        <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R2.boxBottom - R1.boxTop} {...BOX} />
+        <Label at={[(NUM_L + NUM_R) / 2, R2.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
+        <Excerpt c={c} shown={shown} from={from} count={count} bits={bits} stopped={stopped} row={R1} />
       </Step>
 
-      {/* 3 · Analogue conversion: the digital line round to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
+      {/* 3 · Analogue conversion: the digital line from the A/D converter down to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
       <Step n={DAC_STEP} step={step}>
-        <path d={`M${NUM_R} ${R1.cy} H${LOOP_X} V${DIGITAL_Y} H${DIGITAL_INTO_DAC} V${R2.boxTop}`} {...DIGITAL} />
+        <path d={`M${TAP_X} ${R1.cy} V${DIGITAL_Y} H${DIGITAL_INTO_DAC} V${R2.boxTop}`} {...DIGITAL} />
+        <circle cx={TAP_X} cy={R1.cy} r={6} fill={MOVER} />
         <path d={`M${(CLOCK_L + CLOCK_R) / 2} ${CLOCK_BOTTOM} V${R2.boxTop}`} {...CLOCK_WIRE} />
         <rect x={DAC_L} y={R2.boxTop} width={DAC_R - DAC_L} height={R2.boxBottom - R2.boxTop} {...BOX} />
         <Label at={[(DAC_L + DAC_R) / 2, R2.nameY]} anchor="middle">{l.dac}</Label>
@@ -616,7 +640,7 @@ function Named({ name, text, reserve, shrink = false, children }: {
 const KNOB = 40
 
 /**
- * The subject's controls under the picture, each from its step (the clock's are on it): the `knobs` —
+ * The subject's controls under the picture (the clock's are on it): the `knobs`, at every step —
  * the gain knob first (the line in's), the frequency's slider (20 Hz … 30 kHz in third octaves) —, the
  * `choices` — the sample rate's buttons over the bit depth's (their units say what they are; the bit
  * depth's room kept until its step)
@@ -650,16 +674,14 @@ export function ConversionControls({ step, part }: { step: number; part: 'knobs'
           />
         </svg>
       </Named>
-      {step >= DAC_STEP && (
-        <Named name={l.frequency} text={toneText(s.tone)} reserve={TONES.map(toneText)} shrink>
-          {/* Its steps the third-octave bands: as many in each octave, low or high */}
-          <input
-            type="range" min={0} max={TONES.length - 1} step={1} value={toneAt}
-            aria-label={l.frequency} aria-valuetext={toneText(s.tone)}
-            onChange={(e) => s.set({ tone: TONES[Number(e.target.value)] })} className="lsc-dd-slider" style={{ flex: '0 1 220px', minWidth: 100 }}
-          />
-        </Named>
-      )}
+      <Named name={l.frequency} text={toneText(s.tone)} reserve={TONES.map(toneText)} shrink>
+        {/* Its steps the third-octave bands: as many in each octave, low or high */}
+        <input
+          type="range" min={0} max={TONES.length - 1} step={1} value={toneAt}
+          aria-label={l.frequency} aria-valuetext={toneText(s.tone)}
+          onChange={(e) => s.set({ tone: TONES[Number(e.target.value)] })} className="lsc-dd-slider" style={{ flex: '0 1 220px', minWidth: 100 }}
+        />
+      </Named>
     </div>
   )
 }

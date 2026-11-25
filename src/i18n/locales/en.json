@@ -855,7 +855,7 @@
       "qualityNoise": "Quality ADC: {db}",
       "underSignal": "{db} dB under the signal",
       "hz": "{n} Hz",
-      "someSamples": "Samples {from} to {to} of {total}",
+      "someSamples": "{n} samples in {ms} ms, magnified",
       "heard": {
         "loud": "Almost as loud as the sound itself",
         "clear": "Clearly heard",

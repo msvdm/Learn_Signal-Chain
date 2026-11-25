@@ -46,8 +46,12 @@ export const TONES = [
   1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000, 25000, 30000,
 ] as const
 export const TONE_START = 2000
-/** The level, the sine's average in dBu (the gain knob, from line level); at most a peak of +19 dBu (the analogue side's hot, not clipping) */
-export const LEVEL_MIN = -20, LEVEL_MAX = 16, LEVEL_START = 0
+/**
+ * The level, the sine's average in dBu (the gain knob, from line level): up to +40, a sine 25 dB past
+ * full scale — the line in itself clipped at +20 dBu from +17, the numbers almost a square wave (the
+ * user's call, 2026-11-25: "a fully distorted disaster")
+ */
+export const LEVEL_MIN = -20, LEVEL_MAX = 40, LEVEL_START = 0
 
 /** The converter's own noise (its analogue parts'), rms under full scale: a budget one's, a good one's */
 export const OWN_NOISE = { quality: -120, budget: -100 } as const
@@ -168,9 +172,9 @@ export interface Conversion {
   amplitude: number
   /** One sample's time, s */
   period: number
-  /** What arrives at a moment (s), before the converter's filter */
+  /** What arrives at a moment (s), before the converter's filter — stopped at the analogue side's top */
   arriving: (t: number, deg: number) => number
-  /** What reaches the converter's input at a moment, after its filter — not yet stopped at full scale */
+  /** What reaches the converter's input at a moment, after its filter — not yet stopped at full scale (at the analogue side's top) */
   received: (t: number, deg: number) => number
   /** Sample `n` (n / rate from the window's left edge, if the clock is steady) */
   sample: (n: number, deg: number) => Sample
@@ -312,13 +316,23 @@ export function conversionOf(setup: Setup): Conversion {
   const components = [...byFreq].map(([freq, { power, kind }]) => ({ freq, db: dbOf(Math.sqrt(power)), kind }))
     .sort((a, b) => b.db - a.db)
 
+  // The line in, stopped at the analogue side's top (its rails): past it, its levels are the flat-topped
+  // wave's. What the converter writes needs no such stop — full scale is under it, so the wave is cut
+  // there anyway (the filter between them left out: what it would take of the line's flat tops is what
+  // full scale makes again)
+  const line = (v: number) => clamp(v, -ANALOG_TOP, ANALOG_TOP)
+  let analog = { rms: level, peak: level + SINE_CREST_DB }
+  if (amplitude > ANALOG_TOP) {
+    let lineSq = 0
+    for (const v of SIN) lineSq += line(amplitude * v) ** 2
+    analog = { rms: 20 * Math.log10(Math.sqrt(lineSq / POINTS) / 0.775), peak: 20 * Math.log10(ANALOG_TOP / 0.775) }
+  }
+
   return {
     setup, amplitude, period,
-    arriving: (t, deg) => amplitude * Math.sin(thetaAt(t, deg)),
-    received: (t, deg) => reaching * Math.sin(thetaAt(t, deg)),
-    sample, output, components, clipped,
-    analog: { rms: level, peak: level + SINE_CREST_DB },
-    digital,
+    arriving: (t, deg) => line(amplitude * Math.sin(thetaAt(t, deg))),
+    received: (t, deg) => line(reaching * Math.sin(thetaAt(t, deg))),
+    sample, output, components, clipped, analog, digital,
   }
 }
 
