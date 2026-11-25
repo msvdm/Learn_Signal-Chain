@@ -23,9 +23,8 @@ import type { ConversionSettings } from './conversionSettings'
 // numbers, and out of a digital-to-analog converter — in two rows (the user's call, 2026-11-24), each
 // read left to right: the line in, the A/D converter and its numbers on top; a thin digital line down
 // to the D/A converter, its filter and the line out below. Height is voltage, as in Analogue
-// amplification, every graph zoomed alike so the wave fills it (`viewOf`: full scale over a power of
-// two, or the analogue side's top — where full scale is out of the picture, the top's level is said
-// at its corner). Every graph covers the same stretch of time (`windowOf`: 0.1 s at 20 Hz, two
+// amplification, every graph on one scale: the analogue side's top (+20 dBu) at its edge, so the gain
+// knob makes the wave bigger or smaller (no zoom — the user's call, 2026-11-25). Every graph covers the same stretch of time (`windowOf`: 0.1 s at 20 Hz, two
 // cycles, down to 1 ms at 20 kHz, twenty — as a sound editor zooms), long enough to see the rounding
 // change from one cycle to the next. The picture stands still (a sine is the same moving or not):
 // the controls under it set it (`useConversion`), each from its step — the gain knob, the frequency's
@@ -48,12 +47,10 @@ import type { ConversionSettings } from './conversionSettings'
 // The numbers are converter.ts's; the converters are quality ones (their noise in the output).
 
 // ── Where things are, in the scene's units ──────────────────────────────────
-/** A graph's half-height: its view's voltage above and below its middle line (0 V) */
+/** A graph's half-height: the analogue side's top (+20 dBu) above and below its middle line (0 V) */
 const H = 190
-/** The vertical zooms: full scale over a power of two (−30 … 0 dBFS at the top), or the analogue side's top (+20 dBu) */
-const VIEWS = [...[32, 16, 8, 4, 2, 1].map((d) => FS_VOLTS / d), ANALOG_TOP]
-/** The zoom a peak (V) fits in: the closest that leaves it a little room */
-const viewOf = (peak: number) => VIEWS.find((v) => peak <= 0.92 * v) ?? ANALOG_TOP
+/** Every graph's scale (px a volt) */
+const PX_V = H / ANALOG_TOP
 
 /** A row's heights around its middle line `cy`, its voltage `px` px a volt */
 function rowAt(cy: number, px: number) {
@@ -124,8 +121,6 @@ function wavePath(x: (t: number) => number, volts: (t: number) => number, from: 
 const numberText = (n: number) => `${n < 0 ? '−' : ''}${Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`
 /** A level in whole dB, with a real minus */
 const minus = (db: number) => numberText(Math.round(db))
-/** A level in whole dB with its sign (+6, −12, 0) */
-const signed = (db: number) => `${db > 0 ? '+' : ''}${minus(db)}`
 /** A window's length in ms, to two figures (4.6, 100) */
 const msText = (s: number) => String(Number((s * 1000).toPrecision(2)))
 /** A number's bits as 0s and 1s, the sign first; past 4 bits in fours */
@@ -246,9 +241,8 @@ function TimeEnd({ x, row, span, w = GRAPH_W }: { x: number; row: Row; span: num
   return <Label at={[x + w, row.bottom + 34]} anchor="end">{fmt(t.deepDive.labels.ms, { n: msText(span) })}</Label>
 }
 
-/** Full scale's two dashed lines across a stretch, while in the view */
-function FullScale({ from, to, row, view }: { from: number; to: number; row: Row; view: number }) {
-  if (FS_VOLTS > view * 1.001) return null
+/** Full scale's two dashed lines across a stretch */
+function FullScale({ from, to, row }: { from: number; to: number; row: Row }) {
   return (
     <>
       <line x1={from} y1={row.vy(FS_VOLTS)} x2={to} y2={row.vy(FS_VOLTS)} {...FULL_SCALE} />
@@ -257,44 +251,30 @@ function FullScale({ from, to, row, view }: { from: number; to: number; row: Row
   )
 }
 
-/**
- * An analogue graph's lines, while in the view: the analogue side's top (+20 dBu) and full scale's
- * (+18 dBu), named at their right — zoomed in past them, the level of the graph's top there instead
- */
-function AnalogLines({ x, row, view, w = GRAPH_W }: { x: number; row: Row; view: number; w?: number }) {
-  const top = ANALOG_TOP <= view * 1.001
+/** An analogue graph's lines: the analogue side's top (+20 dBu) and full scale's (+18 dBu), named at their right */
+function AnalogLines({ x, row, w = GRAPH_W }: { x: number; row: Row; w?: number }) {
   return (
     <>
-      {top && (
-        <>
-          <line x1={x} y1={row.vy(ANALOG_TOP)} x2={x + w} y2={row.vy(ANALOG_TOP)} stroke={CLIPPED} strokeWidth={1.5} />
-          <line x1={x} y1={row.vy(-ANALOG_TOP)} x2={x + w} y2={row.vy(-ANALOG_TOP)} stroke={CLIPPED} strokeWidth={1.5} />
-          <Label at={[x + w, row.vy(ANALOG_TOP) - 8]} anchor="end">+20 dBu</Label>
-        </>
-      )}
-      <FullScale from={x} to={x + w} row={row} view={view} />
-      {FS_VOLTS <= view * 1.001
-        ? <Label at={[x + w, row.vy(FS_VOLTS) - 8]} anchor="end">+18 dBu</Label>
-        : <Label at={[x + w, row.top - 8]} anchor="end">{`${signed(dbOfView(view) + ALIGNMENT_DB)} dBu`}</Label>}
+      <line x1={x} y1={row.vy(ANALOG_TOP)} x2={x + w} y2={row.vy(ANALOG_TOP)} stroke={CLIPPED} strokeWidth={1.5} />
+      <line x1={x} y1={row.vy(-ANALOG_TOP)} x2={x + w} y2={row.vy(-ANALOG_TOP)} stroke={CLIPPED} strokeWidth={1.5} />
+      <Label at={[x + w, row.vy(ANALOG_TOP) - 8]} anchor="end">+20 dBu</Label>
+      <FullScale from={x} to={x + w} row={row} />
+      <Label at={[x + w, row.vy(FS_VOLTS) - 8]} anchor="end">+18 dBu</Label>
       <Label at={[x - 8, row.cy + 6]} anchor="end">0 V</Label>
     </>
   )
 }
 
-/** A digital graph's top: 0 dBFS's lines named — or, zoomed in past them, the level of its top */
-function DigitalTop({ x, row, view }: { x: number; row: Row; view: number }) {
+/** A digital graph's top: 0 dBFS's lines, named */
+function DigitalTop({ x, row }: { x: number; row: Row }) {
   const { t } = useTranslation()
-  const shown = FS_VOLTS <= view * 1.001
   return (
     <>
-      <FullScale from={x} to={x + GRAPH_W} row={row} view={view} />
-      <Label at={[x + 8, (shown ? row.vy(FS_VOLTS) : row.top) - 10]}>{shown ? t.deepDive.labels.fullScale : `${signed(dbOfView(view))} dBFS`}</Label>
+      <FullScale from={x} to={x + GRAPH_W} row={row} />
+      <Label at={[x + 8, row.vy(FS_VOLTS) - 10]}>{t.deepDive.labels.fullScale}</Label>
     </>
   )
 }
-
-/** A view's top in dBFS (a peak) */
-const dbOfView = (view: number) => 20 * Math.log10(view / FS_VOLTS)
 
 /** The filter's symbol on a line */
 function Filter({ left, right, row }: { left: number; right: number; row: Row }) {
@@ -309,20 +289,20 @@ function Filter({ left, right, row }: { left: number; right: number; row: Row })
   )
 }
 
-/** The bit depth's steps (those in the view) from `x` to `to`, while far enough apart to be seen */
-function stepLines(x: number, to: number, bits: number, vy: (v: number) => number, px: number, view: number): string {
+/** The bit depth's steps (those inside full scale) from `x` to `to`, while far enough apart to be seen */
+function stepLines(x: number, to: number, bits: number, vy: (v: number) => number, px: number): string {
   const { step } = codeRange(bits), half = 2 ** (bits - 1)
   if (step * px < STEP_LINES_PX) return ''
   let d = ''
-  for (let k = -half; k < half; k++) if (Math.abs(k * step) <= view * 1.001) d += `M${x} ${vy(k * step).toFixed(1)} H${to} `
+  for (let k = -half; k < half; k++) if (Math.abs(k * step) <= FS_VOLTS * 1.001) d += `M${x} ${vy(k * step).toFixed(1)} H${to} `
   return d
 }
 
-/** Each step in the view named by the number it is written as, right of the A/D converter's graph (while there is room) */
-function StepCodes({ bits, row, view }: { bits: number; row: Row; view: number }) {
+/** Each step named by the number it is written as, right of the A/D converter's graph (while there is room) */
+function StepCodes({ bits, row }: { bits: number; row: Row }) {
   const { step } = codeRange(bits), half = 2 ** (bits - 1)
   if (step * row.px < CODE_PX) return null
-  const ks = Array.from({ length: 2 * half }, (_, i) => i - half).filter((k) => Math.abs(k * step) <= view * 1.001)
+  const ks = Array.from({ length: 2 * half }, (_, i) => i - half).filter((k) => Math.abs(k * step) <= FS_VOLTS * 1.001)
   return <g>{ks.map((k) => <text key={k} className="lsc-dd-code" x={CODES_X} y={row.vy(k * step) + 5}>{wordOf(k, bits)}</text>)}</g>
 }
 
@@ -342,8 +322,8 @@ function excerptFrom(c: Conversion, count: number): number {
  * (faint) and the bit depth's steps, each one's bits under it — the sign on top, in fours past 4 bits;
  * the room the bits leave is the wave's
  */
-function Excerpt({ c, shown, from, bits, view, stopped }: {
-  c: Conversion; shown: readonly Sample[]; from: number; bits: number; view: number; stopped: (s: Sample) => boolean
+function Excerpt({ c, shown, from, bits, stopped }: {
+  c: Conversion; shown: readonly Sample[]; from: number; bits: number; stopped: (s: Sample) => boolean
 }) {
   const { t, fmt } = useTranslation()
   const these = shown.slice(from, from + EXCERPT), rate = c.setup.rate
@@ -351,7 +331,7 @@ function Excerpt({ c, shown, from, bits, view, stopped }: {
   const rowY = (r: number) => r * rowH + Math.floor(r / 4) * groupGap
   const bitsBottom = ROW_1 + 262 - 56, bitsTop = bitsBottom - rowY(bits - 1) - rowH
   const waveTop = ROW_1 - 220 + 30, waveBottom = bitsTop - 24
-  const cy = (waveTop + waveBottom) / 2, px = (waveBottom - waveTop) / 2 / view
+  const cy = (waveTop + waveBottom) / 2, px = (waveBottom - waveTop) / 2 / ANALOG_TOP
   const vy = (v: number) => cy - px * v
   const x = (time: number) => COLS_X + (time * rate - from + 0.5) * COL_W
   const right = COLS_X + EXCERPT * COL_W
@@ -359,7 +339,7 @@ function Excerpt({ c, shown, from, bits, view, stopped }: {
   const font = Math.min(17, rowH - 2)
   return (
     <g>
-      <path d={stepLines(COLS_X, right, bits, vy, px, view)} fill="none" stroke={FAINT} strokeWidth={1} />
+      <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
       <line x1={COLS_X} y1={cy} x2={right} y2={cy} stroke={INK} strokeWidth={1} />
       <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + EXCERPT - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
       <Dots dots={{ ...dots, r: 5, stem: 1.5 }} />
@@ -401,9 +381,7 @@ export function ConversionScene({ step }: SceneProps) {
   const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : FS_VOLTS)
   const out = step >= DAC_STEP ? lineOutOf(c, samples, first, span) : null
 
-  // Every graph zoomed alike, so the biggest of what they draw fills it
-  const view = viewOf(Math.max(c.amplitude, out?.peak ?? 0, ...shown.map((s) => Math.abs(s.value))))
-  const px = H / view, R1 = rowAt(ROW_1, px), R2 = rowAt(ROW_2, px)
+  const px = PX_V, R1 = rowAt(ROW_1, px), R2 = rowAt(ROW_2, px)
   const inX = timeX(IN_X, span), adcX = timeX(ADC_X, span), outX = timeX(OUT_X, span, OUT_W)
 
   // The meter's marks: the bits' noise, a budget converter's own and a quality one's — each with how
@@ -430,7 +408,7 @@ export function ConversionScene({ step }: SceneProps) {
       <Step n={SAMPLE_STEP} step={step}>
         <Label at={[IN_X + 8, R1.top - 30]}>{l.lineLevel}</Label>
         <Axes x={IN_X} row={R1} />
-        <AnalogLines x={IN_X} row={R1} view={view} />
+        <AnalogLines x={IN_X} row={R1} />
         <path d={wavePath(inX, (time) => c.arriving(time, PHASE), 0, span, R1.vy)} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
         <TimeEnd x={IN_X} row={R1} span={span} />
         <LevelMeter x={IN_METER_X} y={R1.top} w={METER_W} h={2 * H} rms={c.analog.rms} peak={c.analog.peak} />
@@ -440,8 +418,8 @@ export function ConversionScene({ step }: SceneProps) {
         <Filter left={FILTER_L} right={FILTER_R} row={R1} />
         <rect x={ADC_L} y={R1.boxTop} width={ADC_R - ADC_L} height={R1.boxBottom - R1.boxTop} {...BOX} />
         <Label at={[(ADC_L + ADC_R) / 2, R1.nameY]} anchor="middle">{l.adc}</Label>
-        <FullScale from={IN_X + GRAPH_W} to={ADC_X} row={R1} view={view} />
-        <DigitalTop x={ADC_X} row={R1} view={view} />
+        <FullScale from={IN_X + GRAPH_W} to={ADC_X} row={R1} />
+        <DigitalTop x={ADC_X} row={R1} />
         <Axes x={ADC_X} row={R1} />
         <path d={wavePath(adcX, (time) => c.received(time, PHASE), 0, span, R1.vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.35} />
         <Dots dots={dots} />
@@ -458,8 +436,8 @@ export function ConversionScene({ step }: SceneProps) {
 
       {/* 2 · Quantization: the steps and their numbers, the samples rounded; the meter; the numbers magnified, their bits */}
       <Step n={QUANT_STEP} step={step}>
-        <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1.vy, px, view)} fill="none" stroke={FAINT} strokeWidth={1} />
-        <StepCodes bits={bits} row={R1} view={view} />
+        <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1.vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
+        <StepCodes bits={bits} row={R1} />
         <Label at={[ADC_X + GRAPH_W, R1.top - 10]} anchor="end">
           {fmt(bitStep * px < STEP_LINES_PX ? l.stepsTooClose : l.steps, { n: numberText(2 ** bits) })}
         </Label>
@@ -495,7 +473,7 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={ADC_R} y1={R1.cy} x2={NUM_L} y2={R1.cy} {...DIGITAL} />
         <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R1.boxBottom - R1.boxTop} {...BOX} />
         <Label at={[(NUM_L + NUM_R) / 2, R1.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
-        <Excerpt c={c} shown={shown} from={from} bits={bits} view={view} stopped={stopped} />
+        <Excerpt c={c} shown={shown} from={from} bits={bits} stopped={stopped} />
       </Step>
 
       {/* 3 · Analogue conversion: the digital line round to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
@@ -504,9 +482,9 @@ export function ConversionScene({ step }: SceneProps) {
         <path d={`M${(CLOCK_L + CLOCK_R) / 2} ${CLOCK_BOTTOM} V${R2.boxTop}`} {...CLOCK_WIRE} />
         <rect x={DAC_L} y={R2.boxTop} width={DAC_R - DAC_L} height={R2.boxBottom - R2.boxTop} {...BOX} />
         <Label at={[(DAC_L + DAC_R) / 2, R2.nameY]} anchor="middle">{l.dac}</Label>
-        <DigitalTop x={DAC_X} row={R2} view={view} />
+        <DigitalTop x={DAC_X} row={R2} />
         <Axes x={DAC_X} row={R2} />
-        <path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2.vy, px, view)} fill="none" stroke={FAINT} strokeWidth={1} />
+        <path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2.vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
         <path d={stairsOf(shown, rate, span, R2)} fill="none" stroke={MOVER} strokeWidth={2.5} strokeLinejoin="round" />
         <TimeEnd x={DAC_X} row={R2} span={span} />
 
@@ -515,7 +493,7 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={OUT_FILTER_R} y1={R2.cy} x2={OUT_X} y2={R2.cy} stroke={INK} strokeWidth={2} />
         <Label at={[OUT_X + 8, R2.top - 30]}>{l.lineOutReading}</Label>
         <Axes x={OUT_X} row={R2} w={OUT_W} />
-        <AnalogLines x={OUT_X} row={R2} view={view} w={OUT_W} />
+        <AnalogLines x={OUT_X} row={R2} w={OUT_W} />
         {outPaths && <path d={outPaths.gap} fill={WRONG} opacity={0.5} stroke="none" />}
         <path d={wavePath(outX, (time) => c.arriving(time, PHASE), 0, span, R2.vy)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.6} />
         {outPaths && <path d={outPaths.path} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />}
