@@ -7,10 +7,10 @@ import { bitsText, rateText } from '../../utils/formatText'
 import {
   ANALOG_TOP, BIT_DEPTHS, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, OWN_NOISE, RATES,
   RECONSTRUCT_TAPS, TONES,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, windowOf,
+  bitsOf, codeOf, codeRange, conversionOf, digitsInUse, floorOf, samplesOf, windowOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
-import { ARROW_INK, FAINT, INK, MOVER, PART, TRACE } from './look'
+import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_3, TRACE } from './look'
 import type { SceneProps } from './painter'
 import { Label, Step } from './sceneParts'
 import { LevelMeter } from './circuitParts'
@@ -341,7 +341,11 @@ const BIT_FONT_MAX = 20, BIT_FONT_GAP = 3, BIT_FONT_PER_COL = 1.25
  * a low sample rate, narrow at a high one), over the wave they were taken from (faint) and the bit
  * depth's steps — as high as on the A/D converter's graph beside it (one scale) —, each one's bits
  * under it, the sign on top, in fours past 4 bits: as big as the room under the wave lets them (24 of
- * them readable, 48 columns of them at 96 kHz), in the middle of it
+ * them readable, 48 columns of them at 96 kHz), in the middle of it. Its rows coloured by what they do
+ * (the user's call, 2026-11-25, instead of shading every other column): the sign's in which-way's
+ * orange, those only repeating it over the whole window (`digitsInUse` — room the signal never
+ * reaches) dimmed, those the signal uses light blue — judged on the window, not these few samples
+ * (at 20 Hz they sit near zero, using the bottom rows only, however loud the signal)
  */
 function Excerpt({ c, shown, from, count, bits, stopped, row }: {
   c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean; row: Row
@@ -359,11 +363,15 @@ function Excerpt({ c, shown, from, count, bits, stopped, row }: {
   const right = COLS_X + count * colW
   const dots = dotsOf(these, x, vy, cy, stopped, colW, [COLS_X, right], [waveTop, waveBottom])
   const font = Math.min(BIT_FONT_MAX, rowH - BIT_FONT_GAP, colW * BIT_FONT_PER_COL)
-  const bitsH = rowY(bits - 1) + rowH
+  /** The rows the signal leaves unused: 1 … `unused` (under the sign) */
+  const unused = bits - digitsInUse(shown.map((s) => codeOf(s.value, bits)), bits)
+  const band = (r: number, fill: string, opacity: number) => (
+    <rect key={r} x={COLS_X} y={bitsTop + rowY(r) + 1} width={right - COLS_X} height={rowH - 2} rx={3} fill={fill} opacity={opacity} />
+  )
   return (
     <g>
-      {/* Every other sample's column shaded, so each word stands apart */}
-      <path d={these.map((_, i) => (i % 2 ? `M${(COLS_X + i * colW).toFixed(1)} ${bitsTop - 6}h${colW.toFixed(1)}v${bitsH + 12}h${(-colW).toFixed(1)}Z` : '')).join('')} fill={FAINT} opacity={0.35} />
+      {/* The rows: the sign's, the unused (no band), those in use */}
+      {Array.from({ length: bits }, (_, r) => (r === 0 ? band(r, FLOW, 0.22) : r > unused ? band(r, MOVER, 0.18) : null))}
       <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
       <line x1={COLS_X} y1={cy} x2={right} y2={cy} stroke={INK} strokeWidth={1} />
       <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
@@ -372,7 +380,9 @@ function Excerpt({ c, shown, from, count, bits, stopped, row }: {
         const word = bitsOf(codeOf(s.value, bits), bits)
         return (
           <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : 'var(--lsc-fg)' }} textAnchor="middle">
-            {word.map((on, r) => <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8}>{on ? '1' : '0'}</text>)}
+            {word.map((on, r) => (
+              <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8} style={r > 0 && r <= unused ? { fill: PART_3 } : undefined}>{on ? '1' : '0'}</text>
+            ))}
           </g>
         )
       })}

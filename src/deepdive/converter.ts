@@ -119,6 +119,19 @@ export function bitsOf(code: number, bits: number): boolean[] {
   return Array.from({ length: bits }, (_, i) => Math.floor(word / 2 ** (bits - 1 - i)) % 2 === 1)
 }
 
+/**
+ * How many of a number's digits some numbers use, the sign's included: the rest, under the sign, only
+ * repeat it (room the signal never reaches — a loud signal uses them all, a quiet one a few at the
+ * bottom; silence the sign alone)
+ */
+export function digitsInUse(codes: Iterable<number>, bits: number): number {
+  let used = 1
+  for (const k of codes) {
+    while (used < bits && (k < -(2 ** (used - 1)) || k > 2 ** (used - 1) - 1)) used++
+  }
+  return used
+}
+
 /** The noise under a converter's numbers, dBFS: its bit depth's and its own, added as powers */
 export function floorOf(bits: number, grade: Grade): { bits: number; own: number; total: number } {
   const b = ditherFloorDbfs(bits), own = OWN_NOISE[grade]
