@@ -337,8 +337,10 @@ const EX_TOP = ROW_1 - 220 + 30, EX_BOTTOM = ROW_2 + 262 - 60, EX_CY = (EX_TOP +
 const BIT_ROW_MAX = 40, BIT_GROUP_GAP = 4
 /** Their font: at most this, this much under a row's height, and a digit (0.6 of it wide) with room beside it in its column */
 const BIT_FONT_MAX = 20, BIT_FONT_GAP = 3, BIT_FONT_PER_COL = 1.25
-/** The digits' halo, in the box's colour, so they read over the stems and the wave */
+/** The digits' halo, in the box's colour, so they read over the stems (the wave is drawn over them) */
 const HALO = { paintOrder: 'stroke', stroke: 'var(--lsc-sunken)', strokeWidth: 4, strokeLinejoin: 'round' } as const
+/** The wave over them: a blue standing out of them — dark in the light theme, the Phase button's in the dark one */
+const WAVE_OVER = 'var(--lsc-dd-wave-over)'
 
 /**
  * The numbers' box, one graph (the user's call, 2026-11-25 — "we are sound engineers"): EXCERPT_S of
@@ -394,7 +396,6 @@ function Excerpt({ c, shown, from, count, bits, stopped }: {
         <line x1={COLS_X} y1={vy(FS_VOLTS)} x2={right} y2={vy(FS_VOLTS)} {...FULL_SCALE} />
         <line x1={COLS_X} y1={vy(-FS_VOLTS)} x2={right} y2={vy(-FS_VOLTS)} {...FULL_SCALE} />
         <line x1={COLS_X} y1={EX_CY} x2={right} y2={EX_CY} stroke={INK} strokeWidth={1} />
-        <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
         <Dots dots={{ ...dots, r: 5, stem: 1.5 }} />
       </g>
       {marks.map(({ i, r }) => (
@@ -408,6 +409,9 @@ function Excerpt({ c, shown, from, count, bits, stopped }: {
           ))}
         </g>
       ))}
+      {/* The wave over the digits, in a blue that stands out of them (dark in the light theme) (the user's call, 2026-11-25) */}
+      <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)}
+        fill="none" stroke={WAVE_OVER} strokeWidth={4} strokeLinejoin="round" opacity={0.85} clipPath={`url(#${clip})`} />
       <Label at={[(NUM_L + NUM_R) / 2, ROW_2 + 262 - 20]} anchor="middle">
         {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_S) })}
       </Label>

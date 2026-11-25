@@ -250,6 +250,8 @@
   --lsc-phase:      #7c98d6;
   --lsc-phase-bg:   rgba(124,152,214,0.18);
   --lsc-phase-text: #a9bce6;
+  /* Deep dive: a wave drawn over the numbers' digits (A/D and D/A conversion) — a blue that stands out of them */
+  --lsc-dd-wave-over: #7c98d6;
   --lsc-select-halo: rgba(154,127,212,0.35);  /* glow around a selected element */
   --lsc-select-tint: rgba(154,127,212,0.10);  /* fill of a selected element */
   /* Beginner's wires: one colour, whatever they carry (D20; from Intermediate their health — D33) */
@@ -337,6 +339,7 @@
   --lsc-phase:      #7c98d6;
   --lsc-phase-bg:   rgba(124,152,214,0.18);
   --lsc-phase-text: #3d5a9e;
+  --lsc-dd-wave-over: #3d5a9e;
   --lsc-select-halo: rgba(154,127,212,0.38);
   --lsc-select-tint: rgba(154,127,212,0.12);
   --lsc-wire-neutral: #8a817a;

@@ -2,6 +2,18 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.9.0
+
+- **A new subject in Deep dive: *A/D and D/A conversion*** — the journey from line level into numbers and back, in one still picture you set with its own controls. Three steps: sampling, quantization and analogue conversion.
+- **Sampling:** a clock ticks at the sample rate (8 kHz up to 96 kHz) and takes a sample at each tick. A wobbly clock takes them early or late, drawn thousands of times bigger so you can see it.
+- **Quantization:** each sample is rounded to the nearest step its bit depth has (3-bit up to 24-bit), and each step is named by the number it is written as. A meter shows the signal, the noise the bits leave, and the noise of a budget and a quality converter.
+- **The numbers, magnified:** half a millisecond of samples, each one's number standing on its sample: 48 of them at 96 kHz, only 4 at 8 kHz. The first digit says which side of 0 V the sample is on, and the top digit of the loudest samples is marked: how far up the number reaches.
+- **Analogue conversion:** the D/A converter holds each number until the next, and its filter smooths the steps into the line out, drawn over what came in. The difference between them is shaded, with how far under the signal it is and whether you would hear it.
+- **The controls:** a gain knob, from quiet up to a fully distorted signal at +40 dB (the line in itself stops at +20 dBu), and the tone's frequency from 20 Hz to 30 kHz. Past half the sample rate the filter takes the tone out, and past 0 dBFS there is nothing: the tops are cut off.
+- **A new subject in Deep dive: *Microphone types*** — the same sound (94 dB SPL, one pascal) into four microphones, side by side: a dynamic, a condenser with its 48V, a ribbon with its transformer, and a piezo into a Hi-Z input. Each voltage is shown at its real size and judged as on the canvas: the dynamic and the ribbon too quiet on their own, the condenser and the piezo strong enough.
+- **The ribbon** is seen from the front, a thin strip of aluminium between the poles of a horseshoe magnet, bending between its clamped ends. Every microphone's voltage moves in step with the sound's pressure.
+- *Magnetic induction*'s icon is now a coil.
+
 ## 1.8.0
 
 - **A fourth subject in Deep dive: *Analogue amplification*** — from a microphone to line level to a speaker, in one picture where height is voltage. Five steps: the microphone's weak signal; the preamp's power supply; the preamp chip and its gain knob; the power amplifier and the speaker; then the classes and the preamp's input.
