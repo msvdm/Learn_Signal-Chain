@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from '../../i18n/useTranslation'
 import { ALIGNMENT_DB, formatDb, zoneColor } from '../../signal/levels'
@@ -10,7 +10,7 @@ import {
   bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, topDigitOf, windowOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
-import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, TRACE } from './look'
+import { ARROW_INK, FAINT, INK, MOVER, PART, TRACE } from './look'
 import type { SceneProps } from './painter'
 import { Label, Step } from './sceneParts'
 import { LevelMeter } from './circuitParts'
@@ -331,72 +331,90 @@ function excerptOf(c: Conversion, total: number): { from: number; count: number 
   return { from: Math.max(0, Math.min(total - count, Math.round(c.setup.rate / c.setup.tone - count / 2))), count }
 }
 
-/** The numbers' box's bits: their room (under the wave, down to the box's words), the most a row of them takes */
-const BITS_TOP = ROW_1 + H + 50, BITS_BOTTOM = ROW_2 + 262 - 60, BIT_ROW_MAX = 40
+/** The numbers' box's graph: its top and bottom (the analogue side's top at them), its 0 V line halfway */
+const EX_TOP = ROW_1 - 220 + 30, EX_BOTTOM = ROW_2 + 262 - 60, EX_CY = (EX_TOP + EX_BOTTOM) / 2, EX_HALF = (EX_BOTTOM - EX_TOP) / 2
+/** A digit's row: at most this high; the gap after every four digits past 4 bits */
+const BIT_ROW_MAX = 40, BIT_GROUP_GAP = 4
 /** Their font: at most this, this much under a row's height, and a digit (0.6 of it wide) with room beside it in its column */
 const BIT_FONT_MAX = 20, BIT_FONT_GAP = 3, BIT_FONT_PER_COL = 1.25
+/** The digits' halo, in the box's colour, so they read over the stems and the wave */
+const HALO = { paintOrder: 'stroke', stroke: 'var(--lsc-sunken)', strokeWidth: 4, strokeLinejoin: 'round' } as const
 
 /**
- * The numbers' box: EXCERPT_S of time magnified, `count` samples from `from` (a column each — wide at
- * a low sample rate, narrow at a high one), over the wave they were taken from (faint) and the bit
- * depth's steps — as high as on the A/D converter's graph beside it (one scale) —, each one's bits
- * under it, the sign on top, in fours past 4 bits: as big as the room under the wave lets them (24 of
- * them readable, 48 columns of them at 96 kHz), in the middle of it. The sign's row in which-way's
- * orange; one digit marked, light blue: the loudest sample's top digit (`topDigitOf` — how far up
- * the number reaches, those above it only repeating the sign). The user's call, 2026-11-25: no
- * column shading, no band on every row in use (all of them, loud, and the bands told nothing)
+ * The numbers' box, one graph (the user's call, 2026-11-25 — "we are sound engineers"): EXCERPT_S of
+ * time magnified, `count` samples from `from` (a column each — wide at a low sample rate, narrow at a
+ * high one), over the wave they were taken from (faint) and the bit depth's steps, the analogue side's
+ * top at its edges (taller than the A/D converter's graph: the room is the box's). Each sample's word
+ * stands on the 0 V line in its column: the sign on the line, the other digits away from it, to the
+ * side the sample is on (0… up, 1… down), in fours past 4 bits — as big as half the box lets them
+ * (24 readable), each over a halo. The wave zoomed to its words (the user's call, 2026-11-25): the
+ * loudest sample shown lands on its last digit, the rest drawn to that scale and cut at the box. One digit marked on each side, light blue: the top digit of the
+ * sample reaching furthest above 0 V, and below (`topDigitOf` — those nearer the sign only repeat it;
+ * −1, the sign alone, its last digit)
  */
-function Excerpt({ c, shown, from, count, bits, stopped, row }: {
-  c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean; row: Row
+function Excerpt({ c, shown, from, count, bits, stopped }: {
+  c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean
 }) {
   const { t, fmt } = useTranslation()
   const these = shown.slice(from, from + count), rate = c.setup.rate
   /** A sample's column: EXCERPT_S across the box */
   const colW = COLS_W / (EXCERPT_S * rate)
-  const groupGap = bits > 4 ? 8 : 0, gaps = (Math.ceil(bits / 4) - 1) * groupGap
-  const rowH = Math.min(BIT_ROW_MAX, Math.floor((BITS_BOTTOM - BITS_TOP - gaps) / bits))
-  const rowY = (r: number) => r * rowH + Math.floor(r / 4) * groupGap
-  const bitsTop = (BITS_TOP + BITS_BOTTOM - (bits * rowH + gaps)) / 2
-  const { cy, px, vy, top: waveTop, bottom: waveBottom } = row
+  const groupGap = bits > 4 ? BIT_GROUP_GAP : 0, lastGap = Math.floor((bits - 1) / 4) * groupGap
+  // The last digit's row ends inside half the box
+  const rowH = Math.min(BIT_ROW_MAX, Math.floor((EX_HALF - 4 - lastGap) / (bits - 0.5)))
+  /** How far a digit's middle is from the 0 V line */
+  const offset = (r: number) => r * rowH + Math.floor(r / 4) * groupGap
+  // The zoom: the loudest sample shown on its word's last digit (silence: the analogue side's top at the box's edges)
+  const loudest = Math.max(0, ...these.map((s) => Math.abs(s.value)))
+  const px = loudest > 0 ? offset(bits - 1) / loudest : EX_HALF / ANALOG_TOP, vy = (v: number) => EX_CY - px * v
+  const clip = useId()
   const x = (time: number) => COLS_X + (time * rate - from + 0.5) * colW
   const right = COLS_X + count * colW
-  const dots = dotsOf(these, x, vy, cy, stopped, colW, [COLS_X, right], [waveTop, waveBottom])
+  const dots = dotsOf(these, x, vy, EX_CY, stopped, colW, [COLS_X, right], [EX_TOP, EX_BOTTOM])
   const font = Math.min(BIT_FONT_MAX, rowH - BIT_FONT_GAP, colW * BIT_FONT_PER_COL)
-  /**
-   * The sample shown whose number reaches highest (its top digit nearest the sign — −1, the sign
-   * alone, never: +1 is marked over it), the bigger voltage if several, the first if still several
-   */
-  const tops = these.map((s) => topDigitOf(codeOf(s.value, bits), bits) ?? bits)
-  const peakAt = tops.reduce((best, r, i) => (r < tops[best] || (r === tops[best] && Math.abs(these[i].value) > Math.abs(these[best].value)) ? i : best), 0)
-  const peakRow = these.length && tops[peakAt] < bits ? tops[peakAt] : null
+  const codes = these.map((s) => codeOf(s.value, bits))
+  /** Where a sample's digit is: its middle */
+  const digitY = (i: number, r: number) => EX_CY + (codes[i] < 0 ? 1 : -1) * offset(r)
+  /** The marks: each side's sample reaching furthest (its top digit nearest the sign, the bigger voltage if several) */
+  const marks = [(k: number) => k > 0, (k: number) => k < 0].flatMap((side) => {
+    let best: { i: number; r: number } | null = null
+    codes.forEach((k, i) => {
+      if (!side(k)) return
+      const r = topDigitOf(k, bits) ?? bits - 1
+      if (!best || r < best.r || (r === best.r && Math.abs(k) > Math.abs(codes[best.i]))) best = { i, r }
+    })
+    return best ? [best] : []
+  })
+  const markW = Math.min(colW - 4, font * 2.2)
   return (
     <g>
-      {/* The sign's row; the loudest sample's top digit */}
-      <rect x={COLS_X} y={bitsTop + 1} width={right - COLS_X} height={rowH - 2} rx={3} fill={FLOW} opacity={0.22} />
-      {peakRow !== null && (
-        <rect x={COLS_X + peakAt * colW + 1} y={bitsTop + rowY(peakRow) + 1} width={colW - 2} height={rowH - 2} rx={4}
+      <clipPath id={clip}><rect x={COLS_X} y={EX_TOP} width={right - COLS_X} height={EX_BOTTOM - EX_TOP} /></clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
+        <line x1={COLS_X} y1={vy(FS_VOLTS)} x2={right} y2={vy(FS_VOLTS)} {...FULL_SCALE} />
+        <line x1={COLS_X} y1={vy(-FS_VOLTS)} x2={right} y2={vy(-FS_VOLTS)} {...FULL_SCALE} />
+        <line x1={COLS_X} y1={EX_CY} x2={right} y2={EX_CY} stroke={INK} strokeWidth={1} />
+        <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
+        <Dots dots={{ ...dots, r: 5, stem: 1.5 }} />
+      </g>
+      {marks.map(({ i, r }) => (
+        <rect key={i} x={COLS_X + (i + 0.5) * colW - markW / 2} y={digitY(i, r) - rowH / 2 + 1} width={markW} height={rowH - 2} rx={4}
           fill={MOVER} fillOpacity={0.3} stroke={MOVER} strokeWidth={2.5} />
-      )}
-      <path d={stepLines(COLS_X, right, bits, vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />
-      <line x1={COLS_X} y1={cy} x2={right} y2={cy} stroke={INK} strokeWidth={1} />
-      <path d={wavePath(x, (time) => c.received(time, PHASE), (from - 0.5) / rate, (from + count - 0.5) / rate, vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.5} />
-      <Dots dots={{ ...dots, r: 5, stem: 1.5 }} />
-      {these.map((s, i) => {
-        const word = bitsOf(codeOf(s.value, bits), bits)
-        return (
-          <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : 'var(--lsc-fg)' }} textAnchor="middle">
-            {word.map((on, r) => (
-              <text key={r} x={COLS_X + (i + 0.5) * colW} y={bitsTop + rowY(r) + rowH * 0.8}>{on ? '1' : '0'}</text>
-            ))}
-          </g>
-        )
-      })}
+      ))}
+      {these.map((s, i) => (
+        <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : 'var(--lsc-fg)', ...HALO }} textAnchor="middle">
+          {bitsOf(codes[i], bits).map((on, r) => (
+            <text key={r} x={COLS_X + (i + 0.5) * colW} y={digitY(i, r) + font * 0.36}>{on ? '1' : '0'}</text>
+          ))}
+        </g>
+      ))}
       <Label at={[(NUM_L + NUM_R) / 2, ROW_2 + 262 - 20]} anchor="middle">
         {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_S) })}
       </Label>
     </g>
   )
 }
+
 
 /** The dBFS meter's zones over the noise: green to −18, yellow to −2, red to 0 (the canvas's) */
 const ZONES: readonly [MeterZoneKind, number][] = [['good', -18], ['hot', -2], ['clipping', 0]]
@@ -511,7 +529,7 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={ADC_R} y1={R1.cy} x2={NUM_L} y2={R1.cy} {...DIGITAL} />
         <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R2.boxBottom - R1.boxTop} {...BOX} />
         <Label at={[(NUM_L + NUM_R) / 2, R2.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
-        <Excerpt c={c} shown={shown} from={from} count={count} bits={bits} stopped={stopped} row={R1} />
+        <Excerpt c={c} shown={shown} from={from} count={count} bits={bits} stopped={stopped} />
       </Step>
 
       {/* 3 · Analogue conversion: the digital line from the A/D converter down to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
