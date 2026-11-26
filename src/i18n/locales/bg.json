@@ -851,8 +851,6 @@
       "bitsFloor": "{bits}: {db}",
       "peak": "Пик {db}",
       "numbers": "Числата: {bits} на семпъл",
-      "budgetNoise": "Евтин ADC: {db}",
-      "qualityNoise": "Качествен ADC: {db}",
       "underSignal": "{db} dB под сигнала",
       "hz": "{n} Hz",
       "someSamples": "{n} семпъла за {ms} ms, увеличени",

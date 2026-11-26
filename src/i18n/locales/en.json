@@ -851,8 +851,6 @@
       "bitsFloor": "{bits}: {db}",
       "peak": "Peak {db}",
       "numbers": "The numbers: {bits} a sample",
-      "budgetNoise": "Budget ADC: {db}",
-      "qualityNoise": "Quality ADC: {db}",
       "underSignal": "{db} dB under the signal",
       "hz": "{n} Hz",
       "someSamples": "{n} samples in {ms} ms, magnified",
