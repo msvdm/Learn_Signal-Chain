@@ -37,9 +37,9 @@ import type { ConversionSettings } from './conversionSettings'
 //     or late, drawn thousands of times bigger, played back on time).
 // (2) Quantization: each sample rounded to the nearest of its bit depth's steps; the converter's
 //     meter (dBFS) right of the numbers, as tall as both rows — the signal, the noise its bits leave,
-//     how far under the signal it is; the numbers: EXCERPT_S of samples magnified (around the wave's rising zero one
-//     cycle in: both its halves), each one's number on the 0 V line (its last digit next to it), a
-//     line from each one's top digit to the next — that stretch lit on the graph.
+//     how far under the signal it is; the numbers: the first EXCERPT_COUNT samples magnified, each
+//     one's number standing on the box's bottom line (its last digit next to it), a line from each
+//     one's top digit to the next — that stretch lit on the graph.
 // (3) Analogue conversion: the D/A converter holds each number until the next (the steps); the filter
 //     after it smooths them into the line out — at its real size over what came in (dashed), the gap
 //     between them shaded, how far under the signal it is and whether it is heard. Past half
@@ -77,11 +77,11 @@ const IN_METER_X = -20, IN_X = 60
 const FILTER_L = 830, FILTER_R = 885
 const ADC_L = 905, ADC_X = 945, ADC_R = 1720
 /**
- * The numbers' box, as tall as both rows, right of them: EXCERPT_S of time, a column a sample — 48 at
- * 96 kHz, 4 at 8 kHz (the user's call, 2026-11-25: how little the numbers hold at a low rate) —, its
- * columns `COLS_W` wide in all (the boxes' sizes from the user's edited screenshot, 2026-11-26)
+ * The numbers' box, as tall as both rows, right of them: the first EXCERPT_COUNT samples, from the
+ * graph's start, whatever is picked (the user's call, 2026-11-28), a column a sample, its columns
+ * `COLS_W` wide in all (the boxes' sizes from the user's edited screenshot, 2026-11-26)
  */
-const NUM_L = 1880, NUM_R = 2920, EXCERPT_S = 0.0005, COLS_X = NUM_L + 30, COLS_W = NUM_R - NUM_L - 60
+const NUM_L = 1880, NUM_R = 2920, EXCERPT_COUNT = 24, COLS_X = NUM_L + 30, COLS_W = NUM_R - NUM_L - 60
 /**
  * The A/D converter's meter right of the numbers' box, as tall as both rows (the user's call,
  * 2026-11-26): its top and bottom, the marks' words right of it
@@ -108,11 +108,17 @@ const POINTS = 1440
 /** The steps' lines are drawn while at least this far apart; each sample's faint line while the samples are */
 const STEP_LINES_PX = 4, SAMPLE_LINES_PX = 8
 /**
- * The A/D converter's graph's two big readings (the user's call, 2026-11-28: how fine 24 bits and
- * 96 kHz are, a "wow" — no longer "too close together to draw"): the bits and their steps above its
- * 0 dBFS line, the samples in its window under its bottom one; bold, `BIG_GAP` from the line
+ * Big bold words (the user's calls, 2026-11-28): the converters' names — the A/D converter's above its
+ * box, `BIG_GAP` from it — and the A/D converter's two readings under its bottom line (how fine
+ * 24 bits and 96 kHz are, a "wow" — no longer "too close together to draw"): the samples in its whole
+ * window, the bits and their steps under them, `BIG_LINE` apart
  */
-const BIG = { fontSize: 28, fontWeight: 700 } as const, BIG_GAP = 10
+const BIG = { fontSize: 28, fontWeight: 700 } as const, BIG_GAP = 10, BIG_LINE = 36
+
+/** Big bold words at a point */
+function Big({ at: [x, y], anchor = 'end', children }: { at: readonly [number, number]; anchor?: 'start' | 'middle' | 'end'; children: ReactNode }) {
+  return <text className="lsc-dd-reading" style={BIG} x={x} y={y} textAnchor={anchor}>{children}</text>
+}
 
 /** What the converter is set to: every step the same (the bit depth too, from step 1 — 2026-11-26) */
 function setupAt(s: ConversionSettings): Setup {
@@ -327,15 +333,6 @@ function Peak({ x, y, peak }: { x: number; y: number; peak: string }) {
 }
 
 /**
- * The samples the numbers' box magnifies: as many as EXCERPT_S holds, around the wave's rising zero
- * one cycle in (both its halves, at 2 kHz one whole cycle) — the first and how many
- */
-function excerptOf(c: Conversion, total: number): { from: number; count: number } {
-  const count = Math.min(total, Math.max(1, Math.floor(EXCERPT_S * c.setup.rate + 1e-9)))
-  return { from: Math.max(0, Math.min(total - count, Math.round(c.setup.rate / c.setup.tone - count / 2))), count }
-}
-
-/**
  * The numbers' box's graph: its top and bottom, the line every number stands on at its bottom (both
  * sides of the wave up from it — the user's call, 2026-11-28: so 24 bits fit in the box)
  */
@@ -361,9 +358,8 @@ function topLinePath(ys: readonly number[], colW: number): string {
 }
 
 /**
- * The numbers' box (the user's calls, 2026-11-25 and 26 — "we are sound engineers"): EXCERPT_S of
- * time magnified, `count` samples from `from` (a column each — wide at a low sample rate, narrow at a
- * high one). Each sample's number stands on the line at the box's bottom in its column, turned round:
+ * The numbers' box (the user's calls, 2026-11-25, 26 and 28 — "we are sound engineers"): the first
+ * EXCERPT_COUNT samples magnified, a column each (the same at every sample rate). Each sample's number stands on the line at the box's bottom in its column, turned round:
  * its last digit next to the line, the sign at the top — both sides of the wave (0… and 1…) up the
  * same way (the user's call, 2026-11-28: 24 bits fit in the box) —, in fours past 4 bits, rows of
  * BIT_ROW at every bit depth, each over a halo. Its top digit (`topDigitOf`: the first after the sign
@@ -371,18 +367,16 @@ function topLinePath(ys: readonly number[], colW: number): string {
  * the next: a staircase of how many digits each sample uses (a row about 6 dB), on either side, not
  * of its voltage — the wave's own shape is step 3's. A clipped sample's number red
  */
-function Excerpt({ c, shown, from, count, bits, stopped }: {
-  c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean
-}) {
+function Excerpt({ c, bits, stopped }: { c: Conversion; bits: number; stopped: (s: Sample) => boolean }) {
   const { t, fmt } = useTranslation()
-  const these = shown.slice(from, from + count), rate = c.setup.rate
-  /** A sample's column: EXCERPT_S across the box */
-  const colW = COLS_W / (EXCERPT_S * rate)
+  const these = samplesOf(c, PHASE, 0, EXCERPT_COUNT - 1), rate = c.setup.rate
+  /** A sample's column */
+  const colW = COLS_W / EXCERPT_COUNT
   const groupGap = bits > 4 ? BIT_GROUP_GAP : 0
   /** How far a digit's middle is from the 0 V line: the last digit's row next to it, the sign's furthest out */
   const offset = (r: number) => (bits - r) * BIT_ROW + Math.floor((bits - r - 1) / 4) * groupGap
   const clip = useId()
-  const right = COLS_X + count * colW
+  const right = COLS_X + EXCERPT_COUNT * colW
   const font = Math.min(BIT_FONT_MAX, colW * BIT_FONT_PER_COL)
   const codes = these.map((s) => codeOf(s.value, bits))
   /** Where a sample's digit is: its middle */
@@ -411,7 +405,7 @@ function Excerpt({ c, shown, from, count, bits, stopped }: {
         ))}
       </g>
       <Label at={[(NUM_L + NUM_R) / 2, ROW_2 + 262 - 20]} anchor="middle">
-        {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_S) })}
+        {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_COUNT / rate) })}
       </Label>
     </g>
   )
@@ -451,9 +445,10 @@ export function ConversionScene({ step }: SceneProps) {
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
 
   const dots = dotsOf(shown, adcX, R1.vy, R1.cy, stopped, GRAPH_W / perWindow, [ADC_X, ADC_X + GRAPH_W], [R1.top, R1.bottom])
-  const { from, count } = excerptOf(c, shown.length)
-  const lit = [Math.max(ADC_X, adcX((from - 0.5) / rate)), Math.min(ADC_X + GRAPH_W, adcX((from + count - 0.5) / rate))]
+  const lit = [Math.max(ADC_X, adcX(-0.5 / rate)), Math.min(ADC_X + GRAPH_W, adcX((EXCERPT_COUNT - 0.5) / rate))]
   const outPaths = out && lineOutPaths(out, span, R2)
+  /** The A/D converter's samples' words, under its bottom full-scale line */
+  const samplesY = R1.vy(-FS_VOLTS) + BIG_GAP + BIG.fontSize * 0.72
 
   return (
     <g>
@@ -470,17 +465,16 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={IN_X + GRAPH_W + 20} y1={R1.cy} x2={ADC_L} y2={R1.cy} stroke={INK} strokeWidth={2} />
         <Filter left={FILTER_L} right={FILTER_R} row={R1} />
         <rect x={ADC_L} y={R1.boxTop} width={ADC_R - ADC_L} height={R1.boxBottom - R1.boxTop} {...BOX} />
-        <Label at={[(ADC_L + ADC_R) / 2, R1.nameY]} anchor="middle">{l.adc}</Label>
+        <Big at={[(ADC_L + ADC_R) / 2, R1.boxTop - BIG_GAP]} anchor="middle">{l.adc}</Big>
         <FullScale from={IN_X + GRAPH_W} to={ADC_X} row={R1} />
         <DigitalTop x={ADC_X} row={R1} />
         <Axes x={ADC_X} row={R1} />
         <path d={wavePath(adcX, (time) => c.received(time, PHASE), 0, span, R1.vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.35} />
         <Dots dots={dots} />
-        <text className="lsc-dd-reading" style={BIG} x={ADC_X + GRAPH_W} y={R1.vy(-FS_VOLTS) + BIG_GAP + BIG.fontSize * 0.72} textAnchor="end">
-          {fmt(l.samplesIn, { n: numberText(shown.length), ms: msText(span) })}
-        </text>
-        <TimeEnd x={ADC_X} row={R1} span={span} />
-        {jitter > 0 && <Label at={[ADC_X, R1.bottom + 34]}>{l.wobbleBigger}</Label>}
+        {/* Its window's length is in the samples' words: no time at its end */}
+        <Big at={[ADC_X + GRAPH_W, samplesY]}>{fmt(l.samplesIn, { n: numberText(shown.length), ms: msText(span) })}</Big>
+        {/* The wobble's note where the box's name was, under it, clear of the clock's wire */}
+        {jitter > 0 && <Label at={[(ADC_L + ADC_R) / 2, R1.nameY]} anchor="middle">{l.wobbleBigger}</Label>}
 
         {/* The clock between the rows (under the A/D converter's box, wherever it ends), ticking at the sample rate, wired
             into the box's bottom; Steady or Wobbly left of it */}
@@ -496,9 +490,7 @@ export function ConversionScene({ step }: SceneProps) {
       {/* 2 · Quantization: the steps and their numbers, the samples rounded; the meter; the numbers magnified, their bits */}
       <Step n={QUANT_STEP} step={step}>
         <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1.vy, R1.px)} fill="none" stroke={FAINT} strokeWidth={1} />
-        <text className="lsc-dd-reading" style={BIG} x={ADC_X + GRAPH_W} y={R1.vy(FS_VOLTS) - BIG_GAP} textAnchor="end">
-          {fmt(l.bitsSteps, { bits: String(bits), n: numberText(2 ** bits) })}
-        </text>
+        <Big at={[ADC_X + GRAPH_W, samplesY + BIG_LINE]}>{fmt(l.bitsSteps, { bits: String(bits), n: numberText(2 ** bits) })}</Big>
         {/* The stretch the numbers' box magnifies */}
         <rect x={lit[0]} y={R1.top} width={Math.max(0, lit[1] - lit[0])} height={2 * R1.h} fill={MOVER} opacity={0.1} />
 
@@ -531,7 +523,7 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={ADC_R} y1={R1.cy} x2={NUM_L} y2={R1.cy} {...DIGITAL} />
         <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R2.boxBottom - R1.boxTop} {...BOX} />
         <Label at={[(NUM_L + NUM_R) / 2, R2.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
-        <Excerpt c={c} shown={shown} from={from} count={count} bits={bits} stopped={stopped} />
+        <Excerpt c={c} bits={bits} stopped={stopped} />
       </Step>
 
       {/* 3 · Analogue conversion: the digital line from the A/D converter down to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
@@ -540,7 +532,7 @@ export function ConversionScene({ step }: SceneProps) {
         <circle cx={TAP_X} cy={R1.cy} r={6} fill={MOVER} />
         <path d={`M${(CLOCK_L + CLOCK_R) / 2} ${CLOCK_BOTTOM} V${R2.boxTop}`} {...CLOCK_WIRE} />
         <rect x={DAC_L} y={R2.boxTop} width={DAC_R - DAC_L} height={R2.boxBottom - R2.boxTop} {...BOX} />
-        <Label at={[(DAC_L + DAC_R) / 2, R2.nameY]} anchor="middle">{l.dac}</Label>
+        <Big at={[(DAC_L + DAC_R) / 2, R2.nameY]} anchor="middle">{l.dac}</Big>
         <DigitalTop x={DAC_X} row={R2} />
         <Axes x={DAC_X} row={R2} />
         <path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2.vy, px)} fill="none" stroke={FAINT} strokeWidth={1} />

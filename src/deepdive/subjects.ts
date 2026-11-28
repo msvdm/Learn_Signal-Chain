@@ -128,9 +128,9 @@ export const SUBJECTS: readonly Subject[] = [
     icon: Binary,
     Scene: ConversionScene,
     steps: [
-      { id: 'sampling',      box: [-40, 20, 1720, 640] },
-      { id: 'quantization',  box: [-40, 20, 3270, 1300] },
-      { id: 'analogue',      box: [-40, 20, 3270, 1200] },
+      { id: 'sampling',      box: [-40, 0, 1720, 640] },
+      { id: 'quantization',  box: [-40, 0, 3270, 1300] },
+      { id: 'analogue',      box: [-40, 0, 3270, 1200] },
     ],
     Controls: ConversionControls,
   },
