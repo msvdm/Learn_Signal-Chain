@@ -56,6 +56,20 @@ export const TONE_START = 2000
  */
 export const LEVEL_MIN = -130, LEVEL_MAX = 40, LEVEL_START = 0
 
+/**
+ * The graphs' zoom (only how they are drawn: every number stays its own): a wave whose peak is some
+ * dB under full scale is drawn `DRAWN_SHARE` of them under it, so the gain knob still makes it bigger,
+ * only slower, and a quiet one is seen — line level (a peak of +3 dBu, 15 dB under) drawn as +13 dBu's
+ * was, 5 dB under (the user's call, 2026-11-28). From full scale up, its real size: the full-scale and
+ * +20 dBu lines never move, and a clipped wave meets them where it clips.
+ */
+export const DRAWN_SHARE = 1 / 3
+/** How many times bigger than its real size a wave of this peak (dBu) is drawn */
+export function zoomOf(peakDbu: number): number {
+  const under = ALIGNMENT_DB - peakDbu
+  return under > 0 ? 10 ** ((under * (1 - DRAWN_SHARE)) / 20) : 1
+}
+
 /** The converter's own noise (its analogue parts'), rms under full scale: a budget one's, a good one's */
 export const OWN_NOISE = { quality: -120, budget: -100 } as const
 export type Grade = keyof typeof OWN_NOISE

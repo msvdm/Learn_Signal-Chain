@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { getHealth } from '../signal/levels'
 import {
-  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, OWN_NOISE, TONES, TONE_START, windowOf,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf, topDigitOf,
+  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_START, OWN_NOISE, SINE_CREST_DB, TONES, TONE_START, windowOf,
+  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf, topDigitOf, zoomOf,
 } from './converter'
 import type { Setup } from './converter'
 
@@ -10,7 +10,7 @@ import type { Setup } from './converter'
 
 const LINE: Setup = { rate: 48000, tone: TONE_START, level: 0, bits: null, grade: 'quality', filter: true, jitter: 0 }
 const at = (s: Partial<Setup>) => conversionOf({ ...LINE, ...s })
-/** The picture's window at the start: 4.6 ms of 2 kHz */
+/** The picture's window at the start: 1.3 ms of 2 kHz */
 const WINDOW_S = windowOf(TONE_START)
 
 /** The largest gap between the DAC's output and a wave over the window, in volts */
@@ -50,6 +50,28 @@ describe('the picture\'s window', () => {
     expect(TONES[TONES.length - 1]).toBe(30000)
     expect(TONES.some((f) => f === TONE_START)).toBe(true)
     TONES.forEach((f, i) => { if (i) expect(f).toBeGreaterThan(TONES[i - 1]) })
+  })
+})
+
+describe('the graphs\' zoom (drawing only)', () => {
+  /** Where a wave of this peak (dBu) is drawn, in dBu */
+  const drawn = (peak: number) => peak + 20 * Math.log10(zoomOf(peak))
+  // Line level drawn as +13 dBu's was (the user's call, 2026-11-28): a third of its 15 dB under full scale
+  test('line level (a peak of +3 dBu) drawn as +13 dBu; −41 dBu as +1.3 dBu', () => {
+    // (18 − 15 ÷ 3: +13.00, the gain's +10 a peak of +13.01 — the same to a hundredth of a dB)
+    expect(drawn(LEVEL_START + SINE_CREST_DB)).toBeCloseTo(LEVEL_START + 10 + SINE_CREST_DB, 1)
+    expect(drawn(-41)).toBeCloseTo(18 - 59 / 3, 6)
+  })
+  test('from full scale up, its real size: the lines and a clipped wave where they are', () => {
+    expect(zoomOf(18)).toBe(1)
+    expect(zoomOf(20)).toBe(1)
+    expect(drawn(18)).toBeCloseTo(20 * Math.log10(FS_VOLTS / 0.775), 9)
+  })
+  test('the gain still makes it bigger, only slower', () => {
+    for (let p = -130; p < 20; p += 1) {
+      expect(drawn(p + 1)).toBeGreaterThan(drawn(p))
+      expect(drawn(p + 1) - drawn(p)).toBeLessThanOrEqual(1 + 1e-9)
+    }
   })
 })
 
