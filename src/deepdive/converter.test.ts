@@ -26,18 +26,24 @@ function worstGap(s: Partial<Setup>, wave: (t: number) => number, deg = 37): num
 }
 
 describe('the picture\'s window', () => {
-  test('as a sound editor zooms: 0.1 s at 20 Hz (two cycles), 1 ms at 20 kHz (twenty), 4.6 ms at 2 kHz — never under 1 ms', () => {
+  // Two to three cycles at every tone (the user's call, 2026-11-28: it was 0.1 s down to 1 ms, twenty
+  // cycles at 20 kHz — too many to draw)
+  test('0.1 s at 20 Hz (two cycles), 1.3 ms at 2 kHz, 0.15 ms at 20 kHz (three), shorter as the tone rises', () => {
     expect(windowOf(20)).toBeCloseTo(0.1, 9)
-    expect(windowOf(20000)).toBeCloseTo(0.001, 9)
-    expect(windowOf(30000)).toBeCloseTo(0.001, 9)
-    expect(WINDOW_S).toBeCloseTo(0.0046, 9)
-    expect(windowOf(1000)).toBeCloseTo(0.0074, 9)
+    expect(WINDOW_S).toBeCloseTo(0.0013, 9)
+    expect(windowOf(1000)).toBeCloseTo(0.0025, 9)
+    expect(windowOf(20000)).toBeCloseTo(0.00015, 9)
+    expect(windowOf(30000)).toBeCloseTo(0.0001, 9)
     TONES.forEach((f, i) => { if (i) expect(windowOf(f)).toBeLessThanOrEqual(windowOf(TONES[i - 1])) })
   })
-  test('the window holds several cycles at every tone, more as it rises', () => {
+  test('the window holds two to three cycles at every tone, more as it rises', () => {
     expect(windowOf(20) * 20).toBeCloseTo(2, 6)
-    expect(windowOf(TONE_START) * TONE_START).toBeCloseTo(9.2, 6)
-    expect(windowOf(20000) * 20000).toBeCloseTo(20, 6)
+    expect(windowOf(TONE_START) * TONE_START).toBeCloseTo(2.6, 6)
+    expect(windowOf(20000) * 20000).toBeCloseTo(3, 6)
+    TONES.forEach((f) => {
+      expect(windowOf(f) * f).toBeGreaterThan(2 - 1e-9)
+      expect(windowOf(f) * f).toBeLessThanOrEqual(3 + 1e-9)
+    })
   })
   test('the tone\'s steps: third octaves from 20 Hz to 30 kHz, rising, 2 kHz among them', () => {
     expect(TONES[0]).toBe(20)

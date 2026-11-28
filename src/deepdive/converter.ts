@@ -28,13 +28,15 @@ export const RATE_START = 48000
 export const BIT_DEPTHS = [3, 4, 8, 16, 24] as const
 export const BITS_START = 4
 /**
- * How long the picture's windows are, as a sound editor zooms: 0.1 s at 20 Hz (two cycles) down to
- * 1 ms at 20 kHz (twenty), evenly on a log scale between — long enough to see the rounding change from
- * one cycle to the next (the user's call, 2026-11-24); to two figures (2 kHz: 4.6 ms), never under 1 ms
+ * How long the picture's windows are: two cycles of the tone at 20 Hz (0.1 s) up to three at 20 kHz
+ * and above (0.15 ms), evenly on a log scale between — never more than three, the wave drawn big
+ * enough to read at every frequency (the user's call, 2026-11-28; it was 0.1 s down to 1 ms, twenty
+ * cycles at 20 kHz); to two figures, rounded down so never past three (2 kHz: 1.3 ms)
  */
 export function windowOf(tone: number): number {
-  const s = 0.1 * (20 / Math.min(tone, 20000)) ** (2 / 3), unit = 10 ** (Math.floor(Math.log10(s)) - 1)
-  return Math.round(s / unit) * unit
+  const cycles = 2 + Math.log10(Math.min(tone, 20000) / 20) / 3
+  const s = cycles / tone, unit = 10 ** (Math.floor(Math.log10(s)) - 1)
+  return Math.floor(s / unit + 1e-6) * unit
 }
 
 /**
@@ -49,9 +51,10 @@ export const TONE_START = 2000
 /**
  * The level, the sine's average in dBu (the gain knob, from line level): up to +40, a sine 25 dB past
  * full scale — the line in itself clipped at +20 dBu from +17, the numbers almost a square wave (the
- * user's call, 2026-11-25: "a fully distorted disaster")
+ * user's call, 2026-11-25: "a fully distorted disaster"); down to −130, an average of −148 dBFS: under
+ * even 24 bits' noise (the user's call, 2026-11-28 — −20 was far from showing what 24 bits hold)
  */
-export const LEVEL_MIN = -20, LEVEL_MAX = 40, LEVEL_START = 0
+export const LEVEL_MIN = -130, LEVEL_MAX = 40, LEVEL_START = 0
 
 /** The converter's own noise (its analogue parts'), rms under full scale: a budget one's, a good one's */
 export const OWN_NOISE = { quality: -120, budget: -100 } as const

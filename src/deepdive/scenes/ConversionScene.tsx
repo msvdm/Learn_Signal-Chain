@@ -26,8 +26,7 @@ import type { ConversionSettings } from './conversionSettings'
 // both (24 bits readable — 2026-11-25), on a tap of that line. Height is voltage, as in Analogue
 // amplification, every graph on one scale: the analogue side's top (+20 dBu) at its edge, so the gain
 // knob makes the wave bigger or smaller (no zoom — the user's call, 2026-11-25). Every graph covers the same stretch of time (`windowOf`: 0.1 s at 20 Hz, two
-// cycles, down to 1 ms at 20 kHz, twenty — as a sound editor zooms), long enough to see the rounding
-// change from one cycle to the next. The picture stands still (a sine is the same moving or not):
+// cycles, down to 0.15 ms at 20 kHz, three — never more than three: 2026-11-28). The picture stands still (a sine is the same moving or not):
 // the controls under it set it (`useConversion`) — the gain knob and the frequency's slider at every
 // step (the user's call, 2026-11-25), the sample rate's buttons, the bit depth's from its step; the clock's are on the picture, beside it.
 // (1) Sampling: the line in (its meter in dBu), the filter before the converter (always in), the
