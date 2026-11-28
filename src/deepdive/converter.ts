@@ -74,6 +74,53 @@ export function zoomOf(peakDbu: number): number {
 export const OWN_NOISE = { quality: -120, budget: -100 } as const
 export type Grade = keyof typeof OWN_NOISE
 
+// ── 32-bit float (step 4) ───────────────────────────────────────────────────
+// A recorder sold as "32-bit float" has two A/D converters on every input, at different
+// sensitivities: a sensitive one for the quiet detail and a less sensitive one, FLOAT_OFFSET_DB
+// below it, whose full scale sits far above anything the input delivers. The recorder joins them
+// sample by sample, so no gain has to be set before them (Zoom's F6: "a high-gain path for small
+// signals", "a low-gain (or no-gain) path for large signals", "combined at the moment of
+// recording" — README's Sources). The number it writes is an IEEE 754 single: 1 sign digit,
+// 8 exponent digits and 23 of detail, so it has no ceiling of its own — a sample above 0 dBFS is
+// kept as it is, and the 24 digits of detail (23 written, the hidden 1) are always relative to the
+// sample itself. What float cannot save: anything already clipped before the converters, and
+// playback — a D/A converter still stops at full scale (`playedOf`).
+
+/**
+ * How far below the sensitive converter the less sensitive one sits, in dB. Neither Zoom nor Sound
+ * Devices publish theirs; 24 dB is the figure in the gain-ranging A/D patent README's Sources cites
+ * (a low-gain path at 0 dB, a high-gain path 24 dB above it) — and exactly 4 bits (the user's call,
+ * 2026-11-28)
+ */
+export const FLOAT_OFFSET_DB = 24
+/** IEEE 754 single precision: its digits, and the exponent 1.0 is written with */
+export const FLOAT_EXP_BITS = 8, FLOAT_MANTISSA_BITS = 23, FLOAT_BIAS = 127
+export const FLOAT_BITS = 1 + FLOAT_EXP_BITS + FLOAT_MANTISSA_BITS
+/** The loudest the two converters together take, in volts: full scale FLOAT_OFFSET_DB up */
+export const FLOAT_TOP = FS_VOLTS * 10 ** (FLOAT_OFFSET_DB / 20)
+
+const FLOAT_VIEW = new DataView(new ArrayBuffer(4))
+/** What a 32-bit float keeps of a number: 24 digits of detail, wherever the number sits */
+export function toFloat32(x: number): number {
+  FLOAT_VIEW.setFloat32(0, x)
+  return FLOAT_VIEW.getFloat32(0)
+}
+/** A number's 32 IEEE 754 digits, the sign first — exactly what the browser stores, nothing faked */
+export function floatBitsOf(x: number): boolean[] {
+  FLOAT_VIEW.setFloat32(0, x)
+  const word = FLOAT_VIEW.getUint32(0)
+  return Array.from({ length: FLOAT_BITS }, (_, i) => ((word >>> (FLOAT_BITS - 1 - i)) & 1) === 1)
+}
+/** Its 8 exponent digits as a whole number: 127 for 1.0 (0 dBFS), one more every 6.02 dB */
+export function floatExponentOf(x: number): number {
+  FLOAT_VIEW.setFloat32(0, x)
+  return (FLOAT_VIEW.getUint32(0) >>> FLOAT_MANTISSA_BITS) & 0xff
+}
+/** Which of the two converters gives a sample: the sensitive one while it is not at its full scale */
+export function converterFor(volts: number): 'sensitive' | 'coarse' {
+  return Math.abs(volts) < FS_VOLTS ? 'sensitive' : 'coarse'
+}
+
 /**
  * A wobbly clock, at its worst: each sample taken up to this share of a sample's time early or late
  * (a real one's wobble is around a nanosecond — this is thousands of times bigger, to be seen)
@@ -97,6 +144,16 @@ export interface Setup {
   filter: boolean
   /** How far the clock wobbles: the most a sample is taken early or late, as a share of a sample's time (0 … JITTER_MAX) */
   jitter: number
+  /**
+   * 32-bit float (step 4): the two converters instead of one (nothing stops until FLOAT_TOP) and the
+   * numbers kept as IEEE singles — `bits` is then ignored
+   */
+  float?: boolean
+  /**
+   * Float only: the gain on the numbers, after the converters (dB). It is where the gain knob moves
+   * at step 4 — a multiplication, so it can raise a sample above 0 dBFS instead of clipping it
+   */
+  numberGain?: number
 }
 
 /** A sine's peak in volts at an average of `dbu` */
@@ -267,15 +324,38 @@ const reconstruct = (x: number) => {
 
 const dbOf = (volts: number) => 20 * Math.log10(Math.max(volts, 1e-12) / FS_VOLTS)
 
+/**
+ * What a D/A converter can play of a number: nothing above full scale, however the number got there.
+ * A whole number never passes it, so this only bites in float — the one thing float cannot save
+ * (the sound has to be turned down in numbers first: `turnDownOf`)
+ */
+export const playedOf = (volts: number) => clamp(volts, -FS_VOLTS, FS_VOLTS)
+
+/**
+ * How far the numbers must be turned down, in dB, before a D/A converter can play them whole:
+ * 0 while the peak is already under full scale
+ */
+export const turnDownOf = (peakDbfs: number) => Math.max(0, peakDbfs)
+
 export function conversionOf(setup: Setup): Conversion {
   const { rate, tone, level, bits, filter, jitter } = setup
+  const float = setup.float === true
+  /** The gain on the numbers, after the converters (float only): a multiplication, never a stop */
+  const numberGain = float ? 10 ** ((setup.numberGain ?? 0) / 20) : 1
   const amplitude = amplitudeOf(level), period = 1 / rate
-  /** Where the input stops: full scale, or a few bits' top number below it */
-  const top = bits === null ? FS_VOLTS : codeRange(bits).top
+  /**
+   * Where the input stops. For whole numbers that is the converter: full scale, or a few bits' top
+   * number below it. In float the two converters' own full scale (FLOAT_TOP) is above anything the
+   * analogue side can deliver, so what stops the wave is the analogue side's own top — the one thing
+   * float cannot save, and the reason a clipped float sample is red for what happened before it
+   */
+  const top = float ? ANALOG_TOP : bits === null ? FS_VOLTS : codeRange(bits).top
+  /** Its other side (a whole number's lowest is full scale itself; the analogue side's rails are even) */
+  const bottom = float ? -ANALOG_TOP : -FS_VOLTS
   const reaching = filter ? amplitude * passOf(tone, rate) : amplitude
   // Clipped, the sine's harmonics (a few bits' top number one step under full scale cuts its tops unevenly)
   const harmonics = reaching <= top ? [{ sin: reaching, cos: 0, size: reaching }]
-    : seriesOf(cycleOf((p) => clamp(reaching * Math.sin(p), -FS_VOLTS, top)))
+    : seriesOf(cycleOf((p) => clamp(reaching * Math.sin(p), bottom, top)))
   /** What the filter after the clipping lets through of each harmonic (k = i + 1) */
   const kept = harmonics.map((h, i) => {
     const pass = filter ? passOf((i + 1) * tone, rate) : 1
@@ -298,16 +378,22 @@ export function conversionOf(setup: Setup): Conversion {
     return sum
   }
   /** What the converter writes at a phase of the tone: before the bit depth's rounding */
-  const writes = (theta: number) => clamp(filter ? filtered(theta) : amplitude * Math.sin(theta), -FS_VOLTS, top)
+  const writes = (theta: number) => clamp(filter ? filtered(theta) : amplitude * Math.sin(theta), bottom, top)
   const thetaAt = (t: number, deg: number) => TAU * tone * t + rad(deg)
 
+  /**
+   * The number a sample is written as: rounded to the bit depth's nearest step, or — in float — kept
+   * as an IEEE single (24 digits of detail wherever it sits) and then multiplied by the gain, which
+   * is after the converters and so can carry it above full scale instead of stopping it there
+   */
+  const round = (v: number) => (float ? toFloat32(v / FS_VOLTS) * FS_VOLTS * numberGain : bits === null ? v : quantize(v, bits))
   /** Each converter's own noise, in volts rms */
   const own = FS_VOLTS * 10 ** (OWN_NOISE[setup.grade] / 20)
   const sample = (n: number, deg: number): Sample => {
     const at = (n + jitter * jitterOf(n)) * period
-    const held = clamp(writes(thetaAt(at, deg)) + own * noiseOf(n), -FS_VOLTS, top)
-    const value = bits === null ? held : quantize(held, bits)
-    return { at, held, value, played: value + own * noiseOf(n + 0.25) }
+    const held = clamp(writes(thetaAt(at, deg)) + own * noiseOf(n), bottom, top)
+    const value = round(held)
+    return { at, held, value, played: playedOf(value) + own * noiseOf(n + 0.25) }
   }
 
   const output = (t: number, samples: readonly Sample[], first: number) => {
@@ -321,18 +407,18 @@ export function conversionOf(setup: Setup): Conversion {
   // the canvas reads them, and their sines — each where it comes out once sampled (above half the
   // sample rate folded back), those landing together added as powers. With the filter, its sines are
   // those it leaves: the few its small overs make, cut again at full scale, are a chip's own (left out)
-  const round = (v: number) => (bits === null ? v : quantize(v, bits))
   const written = cycleOf((p) => round(writes(p)))
-  const step = bits === null ? 0 : codeRange(bits).step
-  const spectral = filter && clipped ? cycleOf((p) => (step ? Math.round(filtered(p) / step) * step : filtered(p))) : written
+  const step = bits === null || float ? 0 : codeRange(bits).step
+  const spectral = filter && clipped && !float ? cycleOf((p) => (step ? Math.round(filtered(p) / step) * step : filtered(p))) : written
   let sq = 0, peak = 0
   for (const v of written) {
     sq += v * v
     peak = Math.max(peak, Math.abs(v))
   }
-  const digital = { rms: dbOf(Math.sqrt(sq / POINTS)), peak: clipped ? 0 : dbOf(peak) }
+  // In float the peak is the number's own, above 0 dBFS and all: nothing stopped it there
+  const digital = { rms: dbOf(Math.sqrt(sq / POINTS)), peak: clipped && !float ? 0 : dbOf(peak) }
   const byFreq = new Map<number, { power: number; kind: Component['kind'] }>()
-  const series = bits === null && (!clipped || filter) ? kept : seriesOf(spectral)
+  const series = !float && bits === null && (!clipped || filter) ? kept : seriesOf(spectral)
   series.forEach(({ size }, i) => {
     if (size < NOTHING) return
     const k = i + 1, made = k * tone, freq = foldOf(made, rate)

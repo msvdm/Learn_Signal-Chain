@@ -709,7 +709,8 @@
       "dynamicMic": "Dynamic: a coil and a magnet",
       "condenserMic": "Condenser: two plates and 48V",
       "ribbonMic": "Ribbon: foil between magnets",
-      "piezoMic": "Piezo: a bent crystal"
+      "piezoMic": "Piezo: a bent crystal",
+      "float": "32-bit float"
     },
     "stepsLabel": "Steps",
     "back": "Previous step",
@@ -744,7 +745,7 @@
       "amplitude": "Amplitude (A)",
       "wavelength": "Wavelength (λ): one cycle in space",
       "period": "Period (T): one cycle in time",
-      "frequency": "Frequency (f) = 1 / T: cycles per second (Hz)",
+      "frequency": "Frequency",
       "centreRight": "centre →",
       "rightPeak": "right peak",
       "centreLeft": "centre ←",
@@ -833,7 +834,7 @@
       "pin2MinusPin3": "Pin 2 − pin 3",
       "noise": "EMI/RFI Noise",
       "preampChip": "Preamp chip",
-      "difference": "Difference",
+      "difference": "Difference from the input: {db} dB",
       "rg": "RG {r}",
       "ohms": "{r} Ω",
       "kOhms": "{r} kΩ",
@@ -863,12 +864,10 @@
       "bitsSteps": "Number of bits: {bits} → {n} steps",
       "samplesIn": "Number of samples: {n} in {ms} ms",
       "ms": "{n} ms",
-      "difference": "Difference from the input: {db} dB",
       "sampleRate": "Sample rate",
       "bitDepth": "Bit depth",
       "steady": "Steady",
       "wobbly": "Wobbly",
-      "frequency": "Frequency",
       "gain": "Gain",
       "micDynamic": "Dynamic",
       "micCondenser": "Condenser",
@@ -886,7 +885,20 @@
       "uv": "µV",
       "crystal": "Crystal",
       "drivePin": "Drive pin",
-      "hiZ": "Hi-Z input, {r} MΩ"
+      "hiZ": "Hi-Z input, {r} MΩ",
+      "floatAdc": "32-bit float converter",
+      "floatNumbers": "The numbers: 32 bits a sample",
+      "floatSign": "1 · sign",
+      "floatExponent": "8 · exponent",
+      "floatDetail": "23 · detail",
+      "floatPeak": "Peak kept: {db}",
+      "floatAnyLevel": "24 bits of detail at any level",
+      "bothConverters": "Both converters: +{db} dBFS",
+      "wouldHaveClipped": "24-bit, the gain before the converter: clipped",
+      "wouldHaveMatched": "24-bit, the gain before the converter: the same number",
+      "beforeTheConverters": "Clipped here, before the converters? Float cannot bring it back.",
+      "turnDownBy": "Turn the numbers down {db} dB first",
+      "nothingToTurnDown": "Under 0 dBFS: it plays as it is"
     }
   }
 }

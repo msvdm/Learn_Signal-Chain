@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { getHealth } from '../signal/levels'
 import {
-  ANALOG_TOP, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_START, OWN_NOISE, SINE_CREST_DB, TONES, TONE_START, windowOf,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, foldOf, jitterOf, noiseOf, passOf, quantize, samplesOf, topDigitOf, zoomOf,
+  ANALOG_TOP, FLOAT_BIAS, FLOAT_BITS, FLOAT_EXP_BITS, FLOAT_MANTISSA_BITS, FLOAT_OFFSET_DB, FLOAT_TOP,
+  FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_START, OWN_NOISE, SINE_CREST_DB, TONES, TONE_START, windowOf,
+  bitsOf, codeOf, codeRange, conversionOf, converterFor, floatBitsOf, floatExponentOf, floorOf, foldOf,
+  jitterOf, noiseOf, passOf, playedOf, quantize, samplesOf, toFloat32, topDigitOf, turnDownOf, zoomOf,
 } from './converter'
 import type { Setup } from './converter'
 
@@ -255,5 +257,156 @@ describe('the clock', () => {
     }
     expect(errorAt(2000)).toBeLessThan(0.1)
     expect(errorAt(15000)).toBeGreaterThan(0.4)
+  })
+})
+
+// ── 32-bit float (step 4) ───────────────────────────────────────────────────
+
+/** The line in at step 4: the gain is no longer before the converters, so the sound arriving is fixed */
+const FLOAT: Setup = { ...LINE, level: LEVEL_START, float: true, numberGain: 0 }
+const floatAt = (s: Partial<Setup>) => conversionOf({ ...FLOAT, ...s })
+/** What a 24-bit recorder makes of the same gain, set the old way: before its one converter */
+const integerAt = (gain: number) => at({ bits: 24, level: LEVEL_START + gain })
+/** A sample's value as a share of full scale (what the float number itself holds) */
+const share = (volts: number) => volts / FS_VOLTS
+
+describe('the number format', () => {
+  test('1 sign digit, 8 exponent digits and 23 of detail — 32 in all', () => {
+    expect(FLOAT_BITS).toBe(32)
+    expect(1 + FLOAT_EXP_BITS + FLOAT_MANTISSA_BITS).toBe(FLOAT_BITS)
+    expect(floatBitsOf(1).length).toBe(32)
+  })
+  test('1.0 (0 dBFS) is exponent 127, and its 8 digits are 0111 1111', () => {
+    expect(floatExponentOf(1)).toBe(FLOAT_BIAS)
+    expect(FLOAT_BIAS).toBe(127)
+    const digits = floatBitsOf(1).slice(1, 1 + FLOAT_EXP_BITS).map((on) => (on ? 1 : 0))
+    expect(digits).toEqual([0, 1, 1, 1, 1, 1, 1, 1])
+    // 1.0 is the hidden 1 alone: every digit of detail is 0, and the sign is +
+    expect(floatBitsOf(1)[0]).toBe(false)
+    expect(floatBitsOf(1).slice(1 + FLOAT_EXP_BITS).some(Boolean)).toBe(false)
+  })
+  test('each 6.02 dB raises the exponent by one, up and down', () => {
+    for (let n = -20; n <= 20; n++) expect(floatExponentOf(2 ** n)).toBe(FLOAT_BIAS + n)
+    // the step itself: 6.0206 dB is exactly a doubling
+    expect(20 * Math.log10(2)).toBeCloseTo(6.0206, 4)
+    expect(floatExponentOf(10 ** (6.0206 / 20))).toBe(FLOAT_BIAS + 1)
+  })
+  test('a sample above 0 dBFS is kept: +12 dBFS is about 3.98, exponent 128', () => {
+    const over = 10 ** (12 / 20)
+    expect(over).toBeCloseTo(3.981, 3)
+    expect(toFloat32(over)).toBeCloseTo(over, 6)
+    expect(floatExponentOf(over)).toBe(128)
+  })
+  test('the sign is the only thing a minus changes', () => {
+    expect(floatBitsOf(-1)[0]).toBe(true)
+    expect(floatBitsOf(-1).slice(1)).toEqual(floatBitsOf(1).slice(1))
+  })
+  test('24 digits of detail at any level: the same precision a hair above 0 dBFS and 100 dB under it', () => {
+    for (const x of [3.98, 1, 0.5, 1e-3, 1e-5]) {
+      const err = Math.abs(toFloat32(x) - x) / x
+      expect(err).toBeLessThanOrEqual(2 ** -24)
+    }
+    // where 24 whole bits have run out of steps, float has not: a value 100 dB down still rounds
+    // to 24 digits of its own, while 24-bit rounds it to a handful of steps
+    const quiet = FS_VOLTS * 10 ** (-100 / 20)
+    expect(Math.abs(toFloat32(share(quiet)) * FS_VOLTS - quiet) / quiet).toBeLessThanOrEqual(2 ** -24)
+    expect(Math.abs(quantize(quiet, 24) - quiet) / quiet).toBeGreaterThan(2 ** -24)
+  })
+})
+
+describe('the two converters', () => {
+  test('the less sensitive one is 24 dB down, so the pair takes 24 dB more than one', () => {
+    expect(FLOAT_OFFSET_DB).toBe(24)
+    expect(20 * Math.log10(FLOAT_TOP / FS_VOLTS)).toBeCloseTo(FLOAT_OFFSET_DB, 9)
+  })
+  test('the sensitive one gives the sample while it is not at its full scale; the less sensitive one above it', () => {
+    expect(converterFor(0)).toBe('sensitive')
+    expect(converterFor(0.99 * FS_VOLTS)).toBe('sensitive')
+    expect(converterFor(-0.99 * FS_VOLTS)).toBe('sensitive')
+    expect(converterFor(FS_VOLTS)).toBe('coarse')
+    expect(converterFor(-2 * FS_VOLTS)).toBe('coarse')
+  })
+  test('the pair never clips: its full scale is above everything the analogue side can deliver', () => {
+    expect(FLOAT_TOP).toBeGreaterThan(ANALOG_TOP)
+    // the loudest the line in can be is its peak at the canvas's +20 dBu — a sixteenth of the pair's
+    // full scale, so no sample ever reaches it (what cuts the wave there is the analogue side)
+    const loudest = floatAt({ level: LEVEL_MAX })
+    const held = samplesOf(loudest, 0, 0, 200).map((s) => Math.abs(s.held))
+    expect(Math.max(...held)).toBeLessThanOrEqual(ANALOG_TOP * 1.0001)
+    expect(Math.max(...held)).toBeLessThan(FLOAT_TOP / 10)
+  })
+})
+
+describe('the gain, now after the converters', () => {
+  // The whole of step 4: the same knob sits before the converter on a 24-bit recorder and after it
+  // on a float one. Under the clipping point they agree exactly; past it the 24-bit one is gone.
+  test('under the clipping point the two recorders write the same number', () => {
+    for (const gain of [-20, -6, 0, 6, 12]) {
+      expect(floatAt({ numberGain: gain }).digital.rms).toBeCloseTo(integerAt(gain).digital.rms, 1)
+    }
+  })
+  test('past it the 24-bit converter clips flat and float does not', () => {
+    const gain = 20
+    const whole = integerAt(gain), f = floatAt({ numberGain: gain })
+    expect(whole.clipped).toBe(true)
+    expect(whole.digital.peak).toBe(0)
+    expect(f.clipped).toBe(false)
+    // the line in's peak is 3.01 dB over its average, and 0 dBFS is +18 dBu
+    expect(f.digital.peak).toBeCloseTo(LEVEL_START + SINE_CREST_DB + gain - 18, 1)
+    expect(f.digital.peak).toBeGreaterThan(0)
+  })
+  test('the gain is a multiplication, so turning it back down gives the number back exactly', () => {
+    const up = floatAt({ numberGain: 30 }), back = floatAt({ numberGain: 0 })
+    const a = samplesOf(up, 11, 0, 40), b = samplesOf(back, 11, 0, 40)
+    a.forEach((s, i) => expect(share(s.value) / 10 ** (30 / 20)).toBeCloseTo(share(b[i].value), 6))
+    // a 24-bit recorder cannot: what it clipped away does not come back
+    const clipped = integerAt(30)
+    expect(clipped.clipped).toBe(true)
+  })
+})
+
+describe('what float cannot save', () => {
+  test('a D/A converter still stops at full scale', () => {
+    expect(playedOf(3 * FS_VOLTS)).toBeCloseTo(FS_VOLTS, 9)
+    expect(playedOf(-3 * FS_VOLTS)).toBeCloseTo(-FS_VOLTS, 9)
+    expect(playedOf(0.5 * FS_VOLTS)).toBeCloseTo(0.5 * FS_VOLTS, 9)
+  })
+  test('the overs clip at the D/A converter unless the numbers are turned down first', () => {
+    const over = floatAt({ numberGain: 20 })
+    const samples = samplesOf(over, 0, 0, 200)
+    // the numbers themselves pass full scale
+    expect(Math.max(...samples.map((s) => Math.abs(s.value)))).toBeGreaterThan(FS_VOLTS)
+    // what the D/A plays of them does not (its own noise aside)
+    const own = FS_VOLTS * 10 ** (OWN_NOISE.quality / 20)
+    expect(Math.max(...samples.map((s) => Math.abs(s.played)))).toBeLessThanOrEqual(FS_VOLTS + 4 * own)
+  })
+  test('how far down they have to come is the peak itself, and nothing while it is under full scale', () => {
+    const over = floatAt({ numberGain: 20 })
+    expect(turnDownOf(over.digital.peak)).toBeCloseTo(over.digital.peak, 9)
+    const down = floatAt({ numberGain: 20 - turnDownOf(over.digital.peak) })
+    expect(down.digital.peak).toBeCloseTo(0, 6)
+    expect(turnDownOf(floatAt({ numberGain: 0 }).digital.peak)).toBe(0)
+  })
+  test('turned down first, the D/A plays the whole wave — the detail was never lost', () => {
+    const over = floatAt({ numberGain: 20 })
+    const down = floatAt({ numberGain: 20 - turnDownOf(over.digital.peak) })
+    const lost = (c: ReturnType<typeof floatAt>) =>
+      Math.max(...samplesOf(c, 0, 0, 200).map((s) => Math.abs(playedOf(s.value) - s.value)))
+    // played as it is, the D/A cannot reach the overs at all; turned down first, what it misses is
+    // a hair of the converter's own noise — under −100 dBFS, and thousands of times smaller
+    expect(lost(over)).toBeGreaterThan(0.5 * FS_VOLTS)
+    expect(20 * Math.log10(lost(down) / FS_VOLTS)).toBeLessThan(-100)
+    expect(lost(down)).toBeLessThan(lost(over) / 1000)
+  })
+  test('what the analogue side clipped before the converters is gone in float too', () => {
+    // the line in itself stops at the canvas's +20 dBu: float writes those flat tops as faithfully
+    // as anything else (its own levels are the flat-topped wave's)
+    const hot = floatAt({ level: 30 })
+    expect(hot.analog.peak).toBeCloseTo(20 * Math.log10(ANALOG_TOP / 0.775), 6)
+    // the wave was cut — by the analogue side, not by the converters, which never reach their own top
+    expect(hot.clipped).toBe(true)
+    const flat = samplesOf(hot, 0, 0, 400).filter((s) => Math.abs(s.held) >= 0.999 * ANALOG_TOP)
+    expect(flat.length).toBeGreaterThan(20)
+    expect(Math.max(...samplesOf(hot, 0, 0, 400).map((s) => Math.abs(s.held)))).toBeLessThan(FLOAT_TOP)
   })
 })

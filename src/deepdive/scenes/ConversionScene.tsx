@@ -5,12 +5,13 @@ import { ALIGNMENT_DB, formatDb, zoneColor } from '../../signal/levels'
 import type { MeterZoneKind } from '../../signal/levels'
 import { bitsText, rateText } from '../../utils/formatText'
 import {
-  ANALOG_TOP, BIT_DEPTHS, FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, RATES,
-  RECONSTRUCT_TAPS, TONES,
-  bitsOf, codeOf, codeRange, conversionOf, floorOf, samplesOf, topDigitOf, windowOf, zoomOf,
+  ANALOG_TOP, BIT_DEPTHS, FLOAT_BIAS, FLOAT_BITS, FLOAT_EXP_BITS, FLOAT_MANTISSA_BITS, FLOAT_OFFSET_DB,
+  FS_VOLTS, JITTER_MAX, LEVEL_MAX, LEVEL_MIN, LEVEL_START, RATES, RECONSTRUCT_TAPS, TONES,
+  bitsOf, codeOf, codeRange, conversionOf, floatBitsOf, floatExponentOf, floorOf, playedOf,
+  samplesOf, topDigitOf, turnDownOf, windowOf, zoomOf,
 } from '../converter'
 import type { Conversion, Sample, Setup } from '../converter'
-import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, TRACE } from './look'
+import { ARROW_INK, FAINT, FLOW, INK, MOVER, PART, PART_2, TRACE } from './look'
 import type { SceneProps } from './painter'
 import { Label, Step } from './sceneParts'
 import { LevelMeter } from './circuitParts'
@@ -90,6 +91,16 @@ const NUM_L = 1880, NUM_R = 2920, EXCERPT_COUNT = 24, COLS_X = NUM_L + 30, COLS_
  * 2026-11-26): its top and bottom, the marks' words right of it
  */
 const METER_X = NUM_R + 60, METER_TOP = ROW_1 - H, METER_BOTTOM = 1030, MARKS_X = METER_X + 60
+/**
+ * Step 4 · 32-bit float. The numbers' box grows down to hold 32 rows (the user said there was room,
+ * 2026-11-28); the meter keeps its place but makes room above 0 dBFS, since a float number goes
+ * there. The comparison trace is what a 24-bit recorder would have written with the same knob.
+ */
+const FLOAT_BASE = 1390, FLOAT_BOX_BOTTOM = 1500, COMPARE_BITS = 24
+/** Its columns are indented, leaving a gutter down the box's left for each group's name, upright */
+const FLOAT_COLS_X = NUM_L + 76, FLOAT_COLS_W = NUM_R - FLOAT_COLS_X - 30
+/** The meter at step 4: the two converters' full scale at its top, so the overs have somewhere to go */
+const FLOAT_METER_TOP = FLOAT_OFFSET_DB, FLOAT_METER_BOTTOM = -150
 /** Between the rows · the clock (its buttons left of it), its wires into the A/D converter's bottom and the D/A converter's top */
 const CLOCK_L = 340, CLOCK_R = 480, CLOCK_TOP = 565, CLOCK_BOTTOM = 615, CLOCK_WIRE_Y = 590, CLOCK_INTO_ADC = 1000
 const CHOICE_H = 50, CHOICE_GAP = 8
@@ -103,7 +114,7 @@ const OUT_FILTER_L = 870, OUT_FILTER_R = 925
 /** (the line out's graph 50 right of the A/D converter's, so its 0 V clears the filter — 2026-11-25; its meter where it was) */
 const OUT_X = ADC_X + 50, OUT_W = ADC_R - OUT_X - 90, OUT_METER_X = OUT_X + OUT_W + 50
 
-export const SAMPLE_STEP = 1, QUANT_STEP = 2, DAC_STEP = 3
+export const SAMPLE_STEP = 1, QUANT_STEP = 2, DAC_STEP = 3, FLOAT_STEP = 4
 /** The tone's phase at the graphs' left edge */
 const PHASE = 0
 /** Points a wave is drawn with */
@@ -123,8 +134,14 @@ function Big({ at: [x, y], anchor = 'end', children }: { at: readonly [number, n
   return <text className="lsc-dd-reading" style={BIG} x={x} y={y} textAnchor={anchor}>{children}</text>
 }
 
-/** What the converter is set to: every step the same (the bit depth too, from step 1 — 2026-11-26) */
-function setupAt(s: ConversionSettings): Setup {
+/**
+ * What the converter is set to: every step the same (the bit depth too, from step 1 — 2026-11-26).
+ * At step 4 the one gain knob moves from before the converter to after it (the user's call,
+ * 2026-11-28: "you never turn two gain knobs"): the sound arriving is then fixed — a float recorder
+ * has no gain to set — and the knob multiplies the numbers instead, which cannot clip them.
+ */
+function setupAt(s: ConversionSettings, step: number): Setup {
+  const float = step >= FLOAT_STEP
   return {
     rate: s.rate,
     bits: s.bits,
@@ -132,14 +149,34 @@ function setupAt(s: ConversionSettings): Setup {
     grade: 'quality',
     filter: true,
     tone: s.tone,
-    level: LEVEL_START + s.gain,
+    level: float ? LEVEL_START : LEVEL_START + s.gain,
+    ...(float ? { float: true, numberGain: s.gain } : null),
   }
+}
+
+/** What a 24-bit recorder makes of the same knob, set the old way — before its one converter */
+function comparedAt(s: ConversionSettings, from: Setup): Setup {
+  return { ...from, float: false, numberGain: 0, bits: COMPARE_BITS, level: LEVEL_START + s.gain }
 }
 
 /** A graph's x of a moment, its window `span` long (s), `w` wide */
 const timeX = (left: number, span: number, w = GRAPH_W) => (t: number) => left + (w * t) / span
 /** The A/D converter's meter: 0 dBFS at its top, −150 at its bottom */
 const meterY = (db: number) => METER_TOP + ((METER_BOTTOM - METER_TOP) * Math.min(150, Math.max(0, -db))) / 150
+/** The same meter at step 4, with the two converters' full scale at its top instead of 0 dBFS */
+const floatMeterY = (db: number) => {
+  const share = (FLOAT_METER_TOP - Math.min(FLOAT_METER_TOP, Math.max(FLOAT_METER_BOTTOM, db))) / (FLOAT_METER_TOP - FLOAT_METER_BOTTOM)
+  return METER_TOP + (METER_BOTTOM - METER_TOP) * share
+}
+/**
+ * How many times bigger a float number is drawn. A quiet one as ever (`zoomOf`), but one whose peak
+ * has passed the canvas's top is drawn smaller so the whole wave is seen: it is the wave standing
+ * above the 0 dBFS line that matters, and the readings say how far
+ */
+const ANALOG_TOP_DBU = 20 * Math.log10(ANALOG_TOP / 0.775)
+function floatZoomOf(peakDbu: number): number {
+  return peakDbu > ANALOG_TOP_DBU ? 10 ** ((ANALOG_TOP_DBU - peakDbu) / 20) : zoomOf(peakDbu)
+}
 
 /** A wave over a stretch of time (`from` … `to` s) */
 function wavePath(x: (t: number) => number, volts: (t: number) => number, from: number, to: number, vy: (v: number) => number): string {
@@ -171,11 +208,11 @@ function picture(c: Conversion, span: number) {
 }
 
 /** The line out against what came in, over the window: its voltages, its peak, how far under the signal the difference is (dB) */
-function lineOutOf(c: Conversion, samples: readonly Sample[], first: number, span: number) {
+function lineOutOf(c: Conversion, samples: readonly Sample[], first: number, span: number, should?: (t: number) => number) {
   const out: number[] = [], want: number[] = []
   let peak = 0, sq = 0, sig = 0
   for (let i = 0; i <= POINTS; i++) {
-    const t = (span * i) / POINTS, o = c.output(t, samples, first), w = c.arriving(t, PHASE)
+    const t = (span * i) / POINTS, o = c.output(t, samples, first), w = should ? should(t) : c.arriving(t, PHASE)
     out.push(o); want.push(w)
     peak = Math.max(peak, Math.abs(o))
     sq += (o - w) ** 2; sig += w * w
@@ -204,10 +241,10 @@ function stacked<T extends { db: number }>(marks: readonly T[]): (T & { y: numbe
 }
 
 /** The D/A converter's steps: each number held until the next */
-function stairsOf(shown: readonly Sample[], rate: number, span: number, row: Row): string {
+function stairsOf(shown: readonly Sample[], rate: number, span: number, row: Row, held: (s: Sample) => number = (s) => s.value): string {
   const dacX = timeX(DAC_X, span)
   return shown.map((s, i) => {
-    const y = row.sy(s.value).toFixed(1), to = Math.min(dacX((i + 1) / rate), DAC_X + GRAPH_W).toFixed(1)
+    const y = row.sy(held(s)).toFixed(1), to = Math.min(dacX((i + 1) / rate), DAC_X + GRAPH_W).toFixed(1)
     return i ? `V${y} H${to}` : `M${DAC_X} ${y} H${to}`
   }).join(' ')
 }
@@ -359,8 +396,8 @@ const WAVE_OVER = 'var(--lsc-dd-wave-over)'
  * The line through the numbers' box: each number's top digit (its height), held across its column,
  * a step between columns
  */
-function topLinePath(ys: readonly number[], colW: number): string {
-  return ys.map((y, i) => `${i ? 'V' : `M${COLS_X} `}${y.toFixed(1)} H${(COLS_X + (i + 1) * colW).toFixed(1)}`).join(' ')
+function topLinePath(ys: readonly number[], colW: number, left = COLS_X): string {
+  return ys.map((y, i) => `${i ? 'V' : `M${left} `}${y.toFixed(1)} H${(left + (i + 1) * colW).toFixed(1)}`).join(' ')
 }
 
 /**
@@ -418,8 +455,97 @@ function Excerpt({ c, bits, stopped }: { c: Conversion; bits: number; stopped: (
 }
 
 
+/**
+ * Step 4's numbers' box: the same EXCERPT_COUNT samples, written as IEEE 754 singles — the browser's
+ * own digits (`floatBitsOf`), nothing faked. 32 rows in three groups, standing on the box's bottom
+ * line and turned round as the whole numbers are: 1 sign digit furthest out, then 8 exponent digits,
+ * then 23 of detail with the last next to the line. The line through them is the exponent, drawn at
+ * the row it names (127, which is 1.0 and so 0 dBFS, is row 24): exactly the staircase the integer
+ * box's ringed top digit drew — only here it is stored on its own, with 24 digits of detail under it
+ * whatever row it sits on. That is the whole of 32-bit float in one picture.
+ */
+const FLOAT_ROW = BIT_ROW, FLOAT_GROUP_GAP = 10
+/** The groups, in order from the sign: how many rows each has and what colour its digits are */
+const FLOAT_GROUPS = [
+  { rows: 1, colour: PART_2 },
+  { rows: FLOAT_EXP_BITS, colour: MOVER },
+  { rows: FLOAT_MANTISSA_BITS, colour: TRACE },
+] as const
+/** A gap below every row that ends a group */
+const floatGaps = (r: number) => (r <= 0 ? 1 : 0) + (r <= FLOAT_EXP_BITS ? 1 : 0)
+/** How far a digit's middle is from the box's bottom line */
+const floatOffset = (r: number) => (FLOAT_BITS - 1 - r) * FLOAT_ROW + floatGaps(r) * FLOAT_GROUP_GAP
+/** Which row the exponent names: 127 (1.0, so 0 dBFS) is the row a 24-bit number's top digit filled */
+const floatStairRow = (exp: number) => Math.max(0, Math.min(FLOAT_BITS, exp - (FLOAT_BIAS - 24)))
+
+function FloatExcerpt({ c }: { c: Conversion }) {
+  const { t, fmt } = useTranslation()
+  const these = samplesOf(c, PHASE, 0, EXCERPT_COUNT - 1)
+  const colW = FLOAT_COLS_W / EXCERPT_COUNT
+  const clip = useId()
+  const left = FLOAT_COLS_X, right = left + EXCERPT_COUNT * colW
+  const font = Math.min(BIT_FONT_MAX, colW * BIT_FONT_PER_COL)
+  const colX = (i: number) => left + (i + 0.5) * colW
+  const digitY = (r: number) => FLOAT_BASE - floatOffset(r)
+  /** Each sample as a share of full scale: that is the number the recorder writes */
+  const shares = these.map((s) => s.value / FS_VOLTS)
+  const stairY = shares.map((v) => FLOAT_BASE - floatStairRow(floatExponentOf(v)) * FLOAT_ROW)
+  /** Which group a row belongs to */
+  const groupOf = (r: number) => (r === 0 ? 0 : r <= FLOAT_EXP_BITS ? 1 : 2)
+  return (
+    <g>
+      <clipPath id={clip}><rect x={left - 14} y={EX_TOP} width={right - left + 28} height={FLOAT_BASE + 14 - EX_TOP} /></clipPath>
+      <g clipPath={`url(#${clip})`}>
+        {/* Each group's band behind its digits, in its own colour */}
+        {FLOAT_GROUPS.map(({ rows, colour }, g) => {
+          const from = g === 0 ? 0 : g === 1 ? 1 : 1 + FLOAT_EXP_BITS
+          const top = digitY(from) - FLOAT_ROW / 2, bottom = digitY(from + rows - 1) + FLOAT_ROW / 2
+          return <rect key={g} x={left - 10} y={top} width={right - left + 20} height={bottom - top} rx={6} fill={colour} opacity={0.09} />
+        })}
+        <line x1={left} y1={FLOAT_BASE + 14} x2={right} y2={FLOAT_BASE + 14} stroke={INK} strokeWidth={1} />
+        {/* The exponent's staircase: the row each number reaches up to */}
+        <path d={topLinePath(stairY, colW, left)} fill="none" stroke={WAVE_OVER} strokeWidth={4} strokeLinejoin="round" />
+        {stairY.map((y, i) => (
+          <circle key={i} cx={colX(i)} cy={y} r={Math.max(4, Math.min(font * 0.6, colW / 2 - 1))}
+            fill="var(--lsc-sunken)" stroke={FLOW} strokeWidth={2.5} />
+        ))}
+        {shares.map((v, i) => (
+          <g key={i} className="lsc-dd-code" style={{ fontSize: font, ...HALO }} textAnchor="middle">
+            {floatBitsOf(v).map((on, r) => (
+              <text key={r} x={colX(i)} y={digitY(r) + font * 0.36} fill={FLOAT_GROUPS[groupOf(r)].colour}>{on ? '1' : '0'}</text>
+            ))}
+          </g>
+        ))}
+      </g>
+      {/* What each group is, turned a quarter in the gutter down the box's left edge */}
+      {FLOAT_GROUPS.map(({ rows }, g) => {
+        const from = g === 0 ? 0 : g === 1 ? 1 : 1 + FLOAT_EXP_BITS
+        const mid = (digitY(from) + digitY(from + rows - 1)) / 2
+        const name = [t.deepDive.labels.floatSign, t.deepDive.labels.floatExponent, t.deepDive.labels.floatDetail][g]
+        return (
+          <text key={g} className="lsc-dd-label" textAnchor="middle" transform={`translate(${NUM_L + 40} ${mid}) rotate(-90)`}>{name}</text>
+        )
+      })}
+      <Label at={[(NUM_L + NUM_R) / 2, FLOAT_BASE + 46]} anchor="middle">
+        {fmt(t.deepDive.labels.someSamples, { n: String(these.length), ms: msText(EXCERPT_COUNT / c.setup.rate) })}
+      </Label>
+    </g>
+  )
+}
+
 /** The dBFS meter's zones over the noise: green to −18, yellow to −2, red to 0 (the canvas's) */
 const ZONES: readonly [MeterZoneKind, number][] = [['good', -18], ['hot', -2], ['clipping', 0]]
+/**
+ * At step 4 nothing on the meter is red: a float number above 0 dBFS is not clipped, only louder
+ * than a D/A converter can play, and it comes back whole the moment it is turned down. So green to
+ * unity and yellow from there to the two converters' own top, with 0 dBFS marked as a line across it
+ */
+const FLOAT_ZONES: readonly [MeterZoneKind, number][] = [['good', -18], ['hot', FLOAT_METER_TOP]]
+
+/** What step 4 replaces: on the picture up to step 3, gone once 32-bit float takes its place */
+function UntilFloat({ step, children }: { step: number; children: ReactNode }) {
+  return <Step n={SAMPLE_STEP} until={DAC_STEP} step={step}>{children}</Step>
+}
 
 export function ConversionScene({ step }: SceneProps) {
   const settings = useConversion()
@@ -427,21 +553,41 @@ export function ConversionScene({ step }: SceneProps) {
   const { t, fmt } = useTranslation()
   const l = t.deepDive.labels
 
-  const c = conversionOf(setupAt(settings))
+  const float = step >= FLOAT_STEP
+  const c = conversionOf(setupAt(settings, step))
+  /** Step 4 · what a 24-bit recorder would have written with the same knob, set before its converter */
+  const compared = float ? conversionOf(comparedAt(settings, c.setup)) : null
   const { rate, jitter } = c.setup
-  const bits = c.setup.bits ?? settings.bits
+  const bits = float ? COMPARE_BITS : c.setup.bits ?? settings.bits
   /** How long each graph is, how many samples it holds */
   const span = windowOf(c.setup.tone), perWindow = span * rate
   const { first, samples, shown } = picture(c, span)
-  const top = c.setup.bits === null ? FS_VOLTS : codeRange(bits).top
-  /** A sample stopped at full scale (or a few bits' top number) */
-  const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : FS_VOLTS)
-  const out = step >= DAC_STEP ? lineOutOf(c, samples, first, span) : null
+  const top = float ? ANALOG_TOP : c.setup.bits === null ? FS_VOLTS : codeRange(bits).top
+  /**
+   * A sample stopped where the wave was cut: at full scale (or a few bits' top number) — and in
+   * float at the analogue side's own top, since the two converters' full scale is far above it
+   */
+  const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : float ? ANALOG_TOP : FS_VOLTS)
+  /**
+   * What the line out should have been: the sound that came in — and in float the numbers' own
+   * level, since the gain is on them, so the gap the D/A leaves is what its full scale cost
+   */
+  const numberTimes = float ? 10 ** (settings.gain / 20) : 1
+  const should = (time: number) => c.arriving(time, PHASE) * numberTimes
+  const out = step >= DAC_STEP ? lineOutOf(c, samples, first, span, should) : null
 
-  /** Every graph's signals zoomed alike, by the line in's peak (the lines where they are) */
-  const zoom = zoomOf(c.analog.peak)
+  /**
+   * Every graph's signals zoomed alike (the lines where they are): by the line in's peak, or — in
+   * float, where the gain is on the numbers — by the number's own, so a wave past 0 dBFS is seen whole
+   */
+  const zoom = float ? floatZoomOf(c.digital.peak + ALIGNMENT_DB) : zoomOf(c.analog.peak)
   const px = PX_V, R2 = rowAt(ROW_2, px, H, zoom)
   const R1 = step === QUANT_STEP ? rowAt(TALL_CY, TALL_H / ANALOG_TOP, TALL_H, zoom) : rowAt(ROW_1, px, H, zoom)
+  /**
+   * The line in keeps its own zoom: in float the knob is on the numbers, so the sound arriving does
+   * not change however far it is turned, and its graph must not shrink with the numbers' zoom
+   */
+  const R1in = float ? rowAt(R1.cy, R1.px, R1.h, zoomOf(c.analog.peak)) : R1
   const inX = timeX(IN_X, span), adcX = timeX(ADC_X, span), outX = timeX(OUT_X, span, OUT_W)
 
   // The meter's mark: the noise the bits leave, with how far under the signal it is (no budget or
@@ -451,6 +597,16 @@ export function ConversionScene({ step }: SceneProps) {
   const placed = stacked(marks)
   /** The line out: what the numbers hold, back in dBu (0 dBFS a peak of +18 dBu) */
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
+  /** Step 4 · how far the numbers must come down before a D/A converter can play them whole */
+  const turnDown = float ? turnDownOf(c.digital.peak) : 0
+  /**
+   * Step 4 · what the D/A converter actually played, measured on its output (`playedOf` stopped
+   * every over at full scale), not on the numbers it was handed
+   */
+  const dbu = (volts: number) => 20 * Math.log10(Math.max(volts, 1e-12) / 0.775)
+  const playedLevel = float && out
+    ? { rms: dbu(Math.sqrt(out.out.reduce((a, v) => a + v * v, 0) / out.out.length)), peak: dbu(out.peak) }
+    : null
 
   const dots = dotsOf(shown, adcX, R1.sy, R1.cy, stopped, GRAPH_W / perWindow, [ADC_X, ADC_X + GRAPH_W], [R1.top, R1.bottom])
   const lit = [Math.max(ADC_X, adcX(-0.5 / rate)), Math.min(ADC_X + GRAPH_W, adcX((EXCERPT_COUNT - 0.5) / rate))]
@@ -465,7 +621,7 @@ export function ConversionScene({ step }: SceneProps) {
         <Label at={[IN_X + 8, R1.top - 30]}>{l.lineLevel}</Label>
         <Axes x={IN_X} row={R1} />
         <AnalogLines x={IN_X} row={R1} />
-        <path d={wavePath(inX, (time) => c.arriving(time, PHASE), 0, span, R1.sy)} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
+        <path d={wavePath(inX, (time) => c.arriving(time, PHASE), 0, span, R1in.sy)} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
         <TimeEnd x={IN_X} row={R1} span={span} />
         <LevelMeter x={IN_METER_X} y={R1.top} w={METER_W} h={2 * R1.h} rms={c.analog.rms} peak={c.analog.peak} />
         <Peak x={IN_METER_X} y={R1.readY} peak={formatDb(c.analog.peak)} />
@@ -473,7 +629,7 @@ export function ConversionScene({ step }: SceneProps) {
         <line x1={IN_X + GRAPH_W + 20} y1={R1.cy} x2={ADC_L} y2={R1.cy} stroke={INK} strokeWidth={2} />
         <Filter left={FILTER_L} right={FILTER_R} row={R1} />
         <rect x={ADC_L} y={R1.boxTop} width={ADC_R - ADC_L} height={R1.boxBottom - R1.boxTop} {...BOX} />
-        <Big at={[(ADC_L + ADC_R) / 2, R1.boxTop - BIG_GAP]} anchor="middle">{l.adc}</Big>
+        <UntilFloat step={step}><Big at={[(ADC_L + ADC_R) / 2, R1.boxTop - BIG_GAP]} anchor="middle">{l.adc}</Big></UntilFloat>
         <FullScale from={IN_X + GRAPH_W} to={ADC_X} row={R1} />
         <DigitalTop x={ADC_X} row={R1} />
         <Axes x={ADC_X} row={R1} />
@@ -497,11 +653,14 @@ export function ConversionScene({ step }: SceneProps) {
 
       {/* 2 · Quantization: the steps and their numbers, the samples rounded; the meter; the numbers magnified, their bits */}
       <Step n={QUANT_STEP} step={step}>
-        <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1)} fill="none" stroke={FAINT} strokeWidth={1} />
-        <Big at={[ADC_X + GRAPH_W, samplesY + BIG_LINE]}>{fmt(l.bitsSteps, { bits: String(bits), n: numberText(2 ** bits) })}</Big>
+        <UntilFloat step={step}>
+          <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1)} fill="none" stroke={FAINT} strokeWidth={1} />
+          <Big at={[ADC_X + GRAPH_W, samplesY + BIG_LINE]}>{fmt(l.bitsSteps, { bits: String(bits), n: numberText(2 ** bits) })}</Big>
+        </UntilFloat>
         {/* The stretch the numbers' box magnifies */}
         <rect x={lit[0]} y={R1.top} width={Math.max(0, lit[1] - lit[0])} height={2 * R1.h} fill={MOVER} opacity={0.1} />
 
+        <UntilFloat step={step}>
         {/* Its meter, right of the numbers: the signal (its average solid, its peaks pale, a line at the peak), the noise under it grey */}
         <rect x={METER_X} y={METER_TOP} width={METER_W} height={METER_BOTTOM - METER_TOP} rx={2} fill={FAINT} opacity={0.5} />
         <rect x={METER_X} y={meterY(floor.total)} width={METER_W} height={METER_BOTTOM - meterY(floor.total)} fill={zoneColor('noise')} />
@@ -526,12 +685,15 @@ export function ConversionScene({ step }: SceneProps) {
           </g>
         ))}
         <Peak x={METER_X} y={METER_BOTTOM + 42} peak={formatDb(c.digital.peak, 'digital')} />
+        </UntilFloat>
 
         {/* The numbers, as tall as both rows */}
         <line x1={ADC_R} y1={R1.cy} x2={NUM_L} y2={R1.cy} {...DIGITAL} />
-        <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R2.boxBottom - R1.boxTop} {...BOX} />
-        <Label at={[(NUM_L + NUM_R) / 2, R2.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
-        <Excerpt c={c} bits={bits} stopped={stopped} />
+        <UntilFloat step={step}>
+          <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={R2.boxBottom - R1.boxTop} {...BOX} />
+          <Label at={[(NUM_L + NUM_R) / 2, R2.nameY]} anchor="middle">{fmt(l.numbers, { bits: bitsText(t, bits) })}</Label>
+          <Excerpt c={c} bits={bits} stopped={stopped} />
+        </UntilFloat>
       </Step>
 
       {/* 3 · Analogue conversion: the digital line from the A/D converter down to the D/A converter, its steps, the filter after it; the line out, never quite what came in */}
@@ -543,8 +705,8 @@ export function ConversionScene({ step }: SceneProps) {
         <Big at={[(DAC_L + DAC_R) / 2, R2.nameY]} anchor="middle">{l.dac}</Big>
         <DigitalTop x={DAC_X} row={R2} />
         <Axes x={DAC_X} row={R2} />
-        <path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2)} fill="none" stroke={FAINT} strokeWidth={1} />
-        <path d={stairsOf(shown, rate, span, R2)} fill="none" stroke={MOVER} strokeWidth={2.5} strokeLinejoin="round" />
+        <UntilFloat step={step}><path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2)} fill="none" stroke={FAINT} strokeWidth={1} /></UntilFloat>
+        <path d={stairsOf(shown, rate, span, R2, float ? (sm) => playedOf(sm.value) : undefined)} fill="none" stroke={MOVER} strokeWidth={2.5} strokeLinejoin="round" />
         <TimeEnd x={DAC_X} row={R2} span={span} />
 
         <line x1={DAC_R} y1={R2.cy} x2={OUT_FILTER_L} y2={R2.cy} stroke={INK} strokeWidth={2} />
@@ -554,7 +716,7 @@ export function ConversionScene({ step }: SceneProps) {
         <Axes x={OUT_X} row={R2} w={OUT_W} />
         <AnalogLines x={OUT_X} row={R2} w={OUT_W} />
         {outPaths && <path d={outPaths.gap} fill={WRONG} opacity={0.5} stroke="none" />}
-        <path d={wavePath(outX, (time) => c.arriving(time, PHASE), 0, span, R2.sy)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.6} />
+        <path d={wavePath(outX, should, 0, span, R2.sy)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.6} />
         {outPaths && <path d={outPaths.path} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />}
         <TimeEnd x={OUT_X} row={R2} span={span} w={OUT_W} />
         {out && (
@@ -563,8 +725,72 @@ export function ConversionScene({ step }: SceneProps) {
             <Label at={[OUT_X, R2.readY + 30]}>{l.heard[heardOf(out.db)]}</Label>
           </>
         )}
-        <LevelMeter x={OUT_METER_X} y={R2.top} w={METER_W} h={2 * H} rms={lineOutLevel.rms} peak={lineOutLevel.peak} />
-        <Peak x={OUT_METER_X} y={R2.readY} peak={formatDb(lineOutLevel.peak)} />
+        <UntilFloat step={step}>
+          <LevelMeter x={OUT_METER_X} y={R2.top} w={METER_W} h={2 * H} rms={lineOutLevel.rms} peak={lineOutLevel.peak} />
+          <Peak x={OUT_METER_X} y={R2.readY} peak={formatDb(lineOutLevel.peak)} />
+        </UntilFloat>
+      </Step>
+
+      {/* 4 · 32-bit float: two converters instead of one, numbers with no ceiling, and the one thing
+          that still cannot play them — the D/A converter */}
+      <Step n={FLOAT_STEP} step={step}>
+        <Big at={[(ADC_L + ADC_R) / 2, R1.boxTop - BIG_GAP]} anchor="middle">{l.floatAdc}</Big>
+        {/* No analogue rails on this graph: it is zoomed by the number's own peak (the knob is on the
+            numbers now), so a line at a fixed voltage would read as a ceiling the number never meets.
+            The only line that matters here is 0 dBFS — where a 24-bit converter and every D/A stop. */}
+        {/* What a 24-bit recorder would have written with the same knob, set before its converter */}
+        {compared && (
+          <>
+            <path d={wavePath(adcX, (time) => Math.max(-FS_VOLTS, Math.min(codeRange(COMPARE_BITS).top, compared.received(time, PHASE))), 0, span, R1.sy)}
+              fill="none" stroke={CLIPPED} strokeWidth={2.5} strokeDasharray="7 5" opacity={0.85} />
+            <Label at={[ADC_X + 8, R1.vy(-FS_VOLTS) - 14]}>
+              {compared.clipped ? l.wouldHaveClipped : l.wouldHaveMatched}
+            </Label>
+          </>
+        )}
+        {/* The two readings, where the samples' and the bits' were */}
+        <Big at={[ADC_X + GRAPH_W, samplesY + BIG_LINE]}>{fmt(l.floatPeak, { db: formatDb(c.digital.peak, 'digital') })}</Big>
+        <Big at={[ADC_X + GRAPH_W, samplesY + 2 * BIG_LINE]}>{l.floatAnyLevel}</Big>
+        {/* Float cannot bring back what was already cut before the converters */}
+        <Label at={[IN_X, R1.bottom + 64]}>{l.beforeTheConverters}</Label>
+
+        {/* The numbers' box, grown to hold all 32 rows */}
+        <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={FLOAT_BOX_BOTTOM - R1.boxTop} {...BOX} />
+        <Label at={[(NUM_L + NUM_R) / 2, FLOAT_BOX_BOTTOM - 22]} anchor="middle">{l.floatNumbers}</Label>
+        <FloatExcerpt c={c} />
+
+        {/* Its meter, with the two converters' full scale at the top: the overs have somewhere to go */}
+        <rect x={METER_X} y={METER_TOP} width={METER_W} height={METER_BOTTOM - METER_TOP} rx={2} fill={FAINT} opacity={0.5} />
+        {FLOAT_ZONES.map(([kind, to], i) => {
+          const from = i ? FLOAT_ZONES[i - 1][1] : FLOAT_METER_BOTTOM
+          const solid = Math.min(to, c.digital.rms), pale = Math.min(to, c.digital.peak)
+          return (
+            <g key={kind} fill={zoneColor(kind)}>
+              {solid > from && <rect x={METER_X} y={floatMeterY(solid)} width={METER_W} height={floatMeterY(from) - floatMeterY(solid)} />}
+              {pale > Math.max(from, solid) && <rect x={METER_X} y={floatMeterY(pale)} width={METER_W} height={floatMeterY(Math.max(from, solid)) - floatMeterY(pale)} opacity={0.35} />}
+            </g>
+          )
+        })}
+        <line x1={METER_X - 3} y1={floatMeterY(c.digital.peak)} x2={METER_X + METER_W + 3} y2={floatMeterY(c.digital.peak)} stroke={INK} strokeWidth={1.5} />
+        <Label at={[MARKS_X, METER_TOP + 6]}>{fmt(l.bothConverters, { db: String(FLOAT_OFFSET_DB) })}</Label>
+        <line x1={METER_X - 4} y1={floatMeterY(0)} x2={METER_X + METER_W + 4} y2={floatMeterY(0)} stroke={CLIPPED} strokeWidth={1.5} strokeDasharray="5 4" />
+        <Label at={[MARKS_X, floatMeterY(0) + 6]}>{l.fullScale}</Label>
+        <Peak x={METER_X} y={METER_BOTTOM + 42} peak={formatDb(c.digital.peak, 'digital')} />
+
+        {/* Row 2 · a D/A converter still stops at full scale: how far the numbers must come down first */}
+        <g>
+          <rect x={DAC_L} y={R2.boxBottom + 76} width={DAC_R - DAC_L} height={96} rx={10}
+            fill="var(--lsc-sunken)" stroke={turnDown > 0 ? 'var(--lsc-accent)' : PART} strokeWidth={2} strokeDasharray="7 5" />
+          <text className="lsc-dd-reading" style={BIG} x={(DAC_L + DAC_R) / 2} y={R2.boxBottom + 138} textAnchor="middle">
+            {turnDown > 0 ? fmt(l.turnDownBy, { db: String(Math.round(10 * turnDown) / 10) }) : l.nothingToTurnDown}
+          </text>
+        </g>
+        {playedLevel && (
+          <>
+            <LevelMeter x={OUT_METER_X} y={R2.top} w={METER_W} h={2 * H} rms={playedLevel.rms} peak={playedLevel.peak} />
+            <Peak x={OUT_METER_X} y={R2.readY} peak={formatDb(playedLevel.peak)} />
+          </>
+        )}
       </Step>
     </g>
   )
@@ -680,15 +906,16 @@ const KNOB = 40
  * `choices` — the sample rate's buttons over the bit depth's (their units say what they are), at
  * every step too (the bit depths from step 1 — the user's call, 2026-11-26: there they wait for step 2)
  */
-export function ConversionControls({ part }: { step: number; part: 'knobs' | 'choices' }) {
+export function ConversionControls({ step, part }: { step: number; part: 'knobs' | 'choices' }) {
   const s = useConversion()
   const { t, fmt } = useTranslation()
   const l = t.deepDive.labels
   if (part === 'choices') {
+    // At step 4 there is no bit depth to pick — float is its own format — but its row keeps its room
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
         <Choices name={l.sampleRate} options={RATES} value={s.rate as (typeof RATES)[number]} text={(r) => rateText(t, r)} onPick={(rate) => s.set({ rate })} />
-        <Choices name={l.bitDepth} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} />
+        <Choices name={l.bitDepth} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} hidden={step >= FLOAT_STEP} />
       </div>
     )
   }
