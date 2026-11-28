@@ -329,11 +329,14 @@ function excerptOf(c: Conversion, total: number): { from: number; count: number 
   return { from: Math.max(0, Math.min(total - count, Math.round(c.setup.rate / c.setup.tone - count / 2))), count }
 }
 
-/** The numbers' box's graph: its top and bottom, its 0 V line halfway */
-const EX_TOP = ROW_1 - 220 + 30, EX_BOTTOM = ROW_2 + 262 - 60, EX_CY = (EX_TOP + EX_BOTTOM) / 2
 /**
- * A digit's row, the same at every bit depth (no zoom — the user's call, 2026-11-26: from 16 bits the
- * words run past the box, the lesson how much bigger the file grows); the gap after every four digits past 4 bits
+ * The numbers' box's graph: its top and bottom, the line every number stands on at its bottom (both
+ * sides of the wave up from it — the user's call, 2026-11-28: so 24 bits fit in the box)
+ */
+const EX_TOP = ROW_1 - 220 + 30, EX_BOTTOM = ROW_2 + 262 - 60, EX_BASE = EX_BOTTOM
+/**
+ * A digit's row, the same at every bit depth (no zoom — the user's call, 2026-11-26: the numbers grow
+ * taller with the bits, the lesson how much bigger the file grows); the gap after every four digits past 4 bits
  */
 const BIT_ROW = 40, BIT_GROUP_GAP = 4
 /** Their font: at most this, and a digit (0.6 of it wide) with room beside it in its column */
@@ -354,13 +357,13 @@ function topLinePath(ys: readonly number[], colW: number): string {
 /**
  * The numbers' box (the user's calls, 2026-11-25 and 26 — "we are sound engineers"): EXCERPT_S of
  * time magnified, `count` samples from `from` (a column each — wide at a low sample rate, narrow at a
- * high one). Each sample's number stands on the 0 V line in its column, turned round: its last digit
- * next to the line, the sign furthest out, to the side the sample is on (0… up, 1… down), in fours
- * past 4 bits — rows of BIT_ROW at every bit depth, cut at the box (from 16 bits), each over a halo.
- * Its top digit (`topDigitOf`: the first after the sign that differs from it — −1, the sign alone,
- * its last digit) ringed, and a line from each top digit to the next: a staircase of how many digits
- * each sample uses (a row about 6 dB), not of its voltage — the wave's own shape is step 3's. A
- * clipped sample's number red
+ * high one). Each sample's number stands on the line at the box's bottom in its column, turned round:
+ * its last digit next to the line, the sign at the top — both sides of the wave (0… and 1…) up the
+ * same way (the user's call, 2026-11-28: 24 bits fit in the box) —, in fours past 4 bits, rows of
+ * BIT_ROW at every bit depth, each over a halo. Its top digit (`topDigitOf`: the first after the sign
+ * that differs from it — −1, the sign alone, its last digit) ringed, and a line from each top digit to
+ * the next: a staircase of how many digits each sample uses (a row about 6 dB), on either side, not
+ * of its voltage — the wave's own shape is step 3's. A clipped sample's number red
  */
 function Excerpt({ c, shown, from, count, bits, stopped }: {
   c: Conversion; shown: readonly Sample[]; from: number; count: number; bits: number; stopped: (s: Sample) => boolean
@@ -377,8 +380,8 @@ function Excerpt({ c, shown, from, count, bits, stopped }: {
   const font = Math.min(BIT_FONT_MAX, colW * BIT_FONT_PER_COL)
   const codes = these.map((s) => codeOf(s.value, bits))
   /** Where a sample's digit is: its middle */
-  const digitY = (i: number, r: number) => EX_CY + (codes[i] < 0 ? 1 : -1) * offset(r)
-  /** Each number's top digit (0 has none: its line on 0 V) */
+  const digitY = (r: number) => EX_BASE - offset(r)
+  /** Each number's top digit (0 has none: its line on the bottom line) */
   const tops = codes.map((k) => (k === 0 ? null : (topDigitOf(k, bits) ?? bits - 1)))
   const ring = Math.max(4, Math.min(font * 0.75, colW / 2 - 1))
   const colX = (i: number) => COLS_X + (i + 0.5) * colW
@@ -386,17 +389,17 @@ function Excerpt({ c, shown, from, count, bits, stopped }: {
     <g>
       <clipPath id={clip}><rect x={COLS_X} y={EX_TOP} width={right - COLS_X} height={EX_BOTTOM - EX_TOP} /></clipPath>
       <g clipPath={`url(#${clip})`}>
-        <line x1={COLS_X} y1={EX_CY} x2={right} y2={EX_CY} stroke={INK} strokeWidth={1} />
+        <line x1={COLS_X} y1={EX_BASE} x2={right} y2={EX_BASE} stroke={INK} strokeWidth={1} />
         {/* The line from each number's top digit to the next one's, under the rings */}
-        <path d={topLinePath(tops.map((r, i) => (r === null ? EX_CY : digitY(i, r))), colW)}
+        <path d={topLinePath(tops.map((r) => (r === null ? EX_BASE : digitY(r))), colW)}
           fill="none" stroke={WAVE_OVER} strokeWidth={4} strokeLinejoin="round" />
         {tops.map((r, i) => r !== null && (
-          <circle key={i} cx={colX(i)} cy={digitY(i, r)} r={ring} fill="var(--lsc-sunken)" stroke={FLOW} strokeWidth={2.5} />
+          <circle key={i} cx={colX(i)} cy={digitY(r)} r={ring} fill="var(--lsc-sunken)" stroke={FLOW} strokeWidth={2.5} />
         ))}
         {these.map((s, i) => (
           <g key={i} className="lsc-dd-code" style={{ fontSize: font, fill: stopped(s) ? CLIPPED : INK, ...HALO }} textAnchor="middle">
             {bitsOf(codes[i], bits).map((on, r) => (
-              <text key={r} x={colX(i)} y={digitY(i, r) + font * 0.36}>{on ? '1' : '0'}</text>
+              <text key={r} x={colX(i)} y={digitY(r) + font * 0.36}>{on ? '1' : '0'}</text>
             ))}
           </g>
         ))}
