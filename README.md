@@ -119,6 +119,14 @@ Sources for Deep dive's *Analogue amplification* — the XLR's pins, the clean p
 * [Sound On Sound: BAE 1073 MPF](https://www.soundonsound.com/reviews/bae-1073-mpf): a classic transformer preamp needs two transistor stages for its +80 dB
 * [ProSoundTraining: amplifier sensitivity](https://www.prosoundtraining.com/?p=44890): a power amplifier is a fixed gain behind an input attenuator, its level knob
 
+Sources for Deep dive's *A/D and D/A conversion*, the **32-bit float** step — the two converters, and the gain that moves after them:
+
+* [Zoom: the F6 development story](https://zoomcorp.com/en/us/news/f6-development-story/): the input split into two A/D paths — "a high-gain path for small signals" and "a low-gain (or no-gain) path for large signals" — combined at the moment of recording into a single 32-bit floating-point file, so gain no longer has to be set while recording
+* [Zoom F6 specifications (Full Compass)](https://fullcompass.com/prod/567439-zoom-f6-compact-field-recorder): +75 dB of mic gain, equivalent input noise about −127 dBu (A-weighted, +75 dB, 150 Ω); [AudioTechnology's F6 review](https://audiotechnology.com/?p=49205) works that and the manual's +4 dBu maximum mic input into about 131 dB of range
+* [Sound Devices: noise in 32-bit float](https://www.sounddevices.com/noise-in-32-bit-float/) and the [MixPre II FAQ](https://www.sounddevices.com/mixpre-ii-faq/): the same design on another maker's recorders — converters working at different levels, which Sound Devices gives as more than 142 dB of range, so what limits the recording is the microphone, not the recorder. (Both pages refuse automated requests; the figure is as those pages are quoted, not read from them here. No figure in the step depends on it.)
+* [US6271780B1 — gain-ranging analog-to-digital converter](https://patents.google.com/patent/US6271780B1/en): a low-gain path at 0 dB and a high-gain path **24 dB** above it, which is the figure the step uses — neither Zoom nor Sound Devices publish theirs
+* [IEEE 754 — Wikipedia](https://en.wikipedia.org/wiki/Single-precision_floating-point_format): single precision — 1 sign bit, 8 exponent bits (bias 127, so 1.0 is 127) and 23 of mantissa, 24 significant bits with the hidden one. The step's digits are not described from this: they are read out of the browser's own `DataView.setFloat32`
+
 Sources for Deep dive's *Microphone types* — each microphone's voltage for the same sound (94 dB SPL, 1 pascal), and what it needs:
 
 * [Shure SM58 spec sheet](https://www.fullcompass.com/common/files/1626-ShureSM58SpecsSheet.pdf): a dynamic microphone, −54.5 dBV/Pa (1.85 mV)

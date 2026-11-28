@@ -2,7 +2,12 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
-## 1.9.1
+## 1.10.0
+
+- **A fourth step in *A/D and D/A conversion*: 32-bit float** — why people say 32-bit float can save a recording from clipping. A recorder sold that way has two A/D converters on every input, at different sensitivities: a sensitive one for the quiet detail and a less sensitive one, 24 dB below it, whose full scale sits far above anything the input can deliver. They are joined sample by sample, so there is no gain to set before them.
+- **The gain moves to the other side of the converter.** On a 24-bit recorder you set it first, and if you set it too high the converter clips and the sound is gone. In float the same knob multiplies the numbers afterwards: turn it up and the number simply goes past 0 dBFS, with every one of its 24 bits of detail still there. Up to the clipping point both recorders write exactly the same number; past it the 24-bit one, drawn as a dashed line on the same graph, has flat tops.
+- **The numbers in float:** 32 digits a sample in three groups — 1 for the sign, 8 for the exponent and 23 for the detail — taken from the computer's own arithmetic, nothing made up. The line through them is the exponent, which says how far up the number reaches: 0 dBFS sits exactly where a 24-bit number's top digit sat, and the detail under it is just as fine wherever the number goes.
+- **What float cannot save:** anything already clipped before the converters, and playback. A D/A converter still stops at full scale, so the step says how far the numbers have to come down before it can play them whole — and once they are down, the sound is there in full.
 
 Improvements to *A/D and D/A conversion* in Deep dive:
 
