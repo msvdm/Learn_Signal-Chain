@@ -860,8 +860,8 @@
         "faint": "Heard only when all is quiet",
         "silent": "Too quiet to hear"
       },
-      "steps": "{n} steps",
-      "stepsTooClose": "{n} steps: too close together to draw",
+      "bitsSteps": "Number of bits: {bits} → {n} steps",
+      "samplesIn": "Number of samples: {n} in {ms} ms",
       "ms": "{n} ms",
       "difference": "Difference from the input: {db} dB",
       "sampleRate": "Sample rate",

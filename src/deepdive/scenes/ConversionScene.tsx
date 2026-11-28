@@ -107,6 +107,12 @@ const PHASE = 0
 const POINTS = 1440
 /** The steps' lines are drawn while at least this far apart; each sample's faint line while the samples are */
 const STEP_LINES_PX = 4, SAMPLE_LINES_PX = 8
+/**
+ * The A/D converter's graph's two big readings (the user's call, 2026-11-28: how fine 24 bits and
+ * 96 kHz are, a "wow" — no longer "too close together to draw"): the bits and their steps above its
+ * 0 dBFS line, the samples in its window under its bottom one; bold, `BIG_GAP` from the line
+ */
+const BIG = { fontSize: 28, fontWeight: 700 } as const, BIG_GAP = 10
 
 /** What the converter is set to: every step the same (the bit depth too, from step 1 — 2026-11-26) */
 function setupAt(s: ConversionSettings): Setup {
@@ -427,7 +433,6 @@ export function ConversionScene({ step }: SceneProps) {
   /** How long each graph is, how many samples it holds */
   const span = windowOf(c.setup.tone), perWindow = span * rate
   const { first, samples, shown } = picture(c, span)
-  const { step: bitStep } = codeRange(bits)
   const top = c.setup.bits === null ? FS_VOLTS : codeRange(bits).top
   /** A sample stopped at full scale (or a few bits' top number) */
   const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : FS_VOLTS)
@@ -471,8 +476,11 @@ export function ConversionScene({ step }: SceneProps) {
         <Axes x={ADC_X} row={R1} />
         <path d={wavePath(adcX, (time) => c.received(time, PHASE), 0, span, R1.vy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.35} />
         <Dots dots={dots} />
+        <text className="lsc-dd-reading" style={BIG} x={ADC_X + GRAPH_W} y={R1.vy(-FS_VOLTS) + BIG_GAP + BIG.fontSize * 0.72} textAnchor="end">
+          {fmt(l.samplesIn, { n: numberText(shown.length), ms: msText(span) })}
+        </text>
         <TimeEnd x={ADC_X} row={R1} span={span} />
-        {jitter > 0 && <Label at={[ADC_X + 10, R1.boxTop + 34]}>{l.wobbleBigger}</Label>}
+        {jitter > 0 && <Label at={[ADC_X, R1.bottom + 34]}>{l.wobbleBigger}</Label>}
 
         {/* The clock between the rows (under the A/D converter's box, wherever it ends), ticking at the sample rate, wired
             into the box's bottom; Steady or Wobbly left of it */}
@@ -488,9 +496,9 @@ export function ConversionScene({ step }: SceneProps) {
       {/* 2 · Quantization: the steps and their numbers, the samples rounded; the meter; the numbers magnified, their bits */}
       <Step n={QUANT_STEP} step={step}>
         <path d={stepLines(ADC_X, ADC_X + GRAPH_W, bits, R1.vy, R1.px)} fill="none" stroke={FAINT} strokeWidth={1} />
-        <Label at={[ADC_X + GRAPH_W, R1.top - 10]} anchor="end">
-          {fmt(bitStep * R1.px < STEP_LINES_PX ? l.stepsTooClose : l.steps, { n: numberText(2 ** bits) })}
-        </Label>
+        <text className="lsc-dd-reading" style={BIG} x={ADC_X + GRAPH_W} y={R1.vy(FS_VOLTS) - BIG_GAP} textAnchor="end">
+          {fmt(l.bitsSteps, { bits: String(bits), n: numberText(2 ** bits) })}
+        </text>
         {/* The stretch the numbers' box magnifies */}
         <rect x={lit[0]} y={R1.top} width={Math.max(0, lit[1] - lit[0])} height={2 * R1.h} fill={MOVER} opacity={0.1} />
 
