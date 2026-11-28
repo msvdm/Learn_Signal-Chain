@@ -569,19 +569,38 @@ export function ConversionScene({ step }: SceneProps) {
    */
   const stopped = (s: Sample) => c.clipped && Math.abs(s.held) >= 0.98 * (s.held > 0 ? top : float ? ANALOG_TOP : FS_VOLTS)
   /**
-   * What the line out should have been: the sound that came in — and in float the numbers' own
-   * level, since the gain is on them, so the gap the D/A leaves is what its full scale cost
+   * Step 4 · how far the numbers must come down before a D/A converter can play them whole, and the
+   * same numbers turned down by it. Nobody plays a float file into a converter untouched: the whole
+   * point is that the take survived and comes back whole once it is brought down, so that is what
+   * row 2 converts (the user, 2026-11-28, seeing the clipped one: "This seem to indicate that we are
+   * clipping after all"). What it would have done sent as it is stays on the graph behind it
    */
-  const numberTimes = float ? 10 ** (settings.gain / 20) : 1
+  const turnDown = float ? turnDownOf(c.digital.peak) : 0
+  const playing = float && turnDown > 0 ? conversionOf({ ...c.setup, numberGain: settings.gain - turnDown }) : c
+  const back = playing === c ? { first, samples, shown } : picture(playing, span)
+  /**
+   * What the line out should have been: the sound that came in — and in float the numbers' own
+   * level once they are down to where a D/A converter can take them, so the gap the graph shades is
+   * what the conversion itself cost, not what the turn-down did
+   */
+  const numberTimes = float ? 10 ** ((settings.gain - turnDown) / 20) : 1
   const should = (time: number) => c.arriving(time, PHASE) * numberTimes
-  const out = step >= DAC_STEP ? lineOutOf(c, samples, first, span, should) : null
+  const out = step >= DAC_STEP ? lineOutOf(playing, back.samples, back.first, span, should) : null
+  /** The same numbers sent to the D/A as they are: the flat tops that are the converter's, not float's */
+  const ghost = float && turnDown > 0 ? lineOutOf(c, samples, first, span, should) : null
 
   /**
    * Every graph's signals zoomed alike (the lines where they are): by the line in's peak, or — in
    * float, where the gain is on the numbers — by the number's own, so a wave past 0 dBFS is seen whole
    */
   const zoom = float ? floatZoomOf(c.digital.peak + ALIGNMENT_DB) : zoomOf(c.analog.peak)
-  const px = PX_V, R2 = rowAt(ROW_2, px, H, zoom)
+  /**
+   * Row 2 converts back what the D/A converter is actually given — in float the turned-down numbers,
+   * not the ones row 1 holds — so it is zoomed by those, and the line out is drawn at a size that
+   * meets the 0 dBFS line instead of shrinking with the gain
+   */
+  const backZoom = float ? floatZoomOf(playing.digital.peak + ALIGNMENT_DB) : zoom
+  const px = PX_V, R2 = rowAt(ROW_2, px, H, backZoom)
   const R1 = step === QUANT_STEP ? rowAt(TALL_CY, TALL_H / ANALOG_TOP, TALL_H, zoom) : rowAt(ROW_1, px, H, zoom)
   /**
    * The line in has its own zoom at step 4, where the graph carries two traces: the sound arriving
@@ -604,8 +623,6 @@ export function ConversionScene({ step }: SceneProps) {
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
   /** What the line in's meter reads: the level the knob set — at step 4 the gained trace's */
   const inLevel = float && compared ? compared.analog : c.analog
-  /** Step 4 · how far the numbers must come down before a D/A converter can play them whole */
-  const turnDown = float ? turnDownOf(c.digital.peak) : 0
   /**
    * Step 4 · what the D/A converter actually played, measured on its output (`playedOf` stopped
    * every over at full scale), not on the numbers it was handed
@@ -618,6 +635,7 @@ export function ConversionScene({ step }: SceneProps) {
   const dots = dotsOf(shown, adcX, R1.sy, R1.cy, stopped, GRAPH_W / perWindow, [ADC_X, ADC_X + GRAPH_W], [R1.top, R1.bottom])
   const lit = [Math.max(ADC_X, adcX(-0.5 / rate)), Math.min(ADC_X + GRAPH_W, adcX((EXCERPT_COUNT - 0.5) / rate))]
   const outPaths = out && lineOutPaths(out, span, R2)
+  const ghostPaths = ghost && lineOutPaths(ghost, span, R2)
   /** The A/D converter's samples' words, under its bottom full-scale line */
   const samplesY = R1.vy(-FS_VOLTS) + BIG_GAP + BIG.fontSize * 0.72
 
@@ -718,7 +736,7 @@ export function ConversionScene({ step }: SceneProps) {
         <DigitalTop x={DAC_X} row={R2} />
         <Axes x={DAC_X} row={R2} />
         <UntilFloat step={step}><path d={stepLines(DAC_X, DAC_X + GRAPH_W, bits, R2)} fill="none" stroke={FAINT} strokeWidth={1} /></UntilFloat>
-        <path d={stairsOf(shown, rate, span, R2, float ? (sm) => playedOf(sm.value) : undefined)} fill="none" stroke={MOVER} strokeWidth={2.5} strokeLinejoin="round" />
+        <path d={stairsOf(back.shown, rate, span, R2, float ? (sm) => playedOf(sm.value) : undefined)} fill="none" stroke={MOVER} strokeWidth={2.5} strokeLinejoin="round" />
         <TimeEnd x={DAC_X} row={R2} span={span} />
 
         <line x1={DAC_R} y1={R2.cy} x2={OUT_FILTER_L} y2={R2.cy} stroke={INK} strokeWidth={2} />
@@ -728,6 +746,8 @@ export function ConversionScene({ step }: SceneProps) {
         <Axes x={OUT_X} row={R2} w={OUT_W} />
         <AnalogLines x={OUT_X} row={R2} w={OUT_W} />
         {outPaths && <path d={outPaths.gap} fill={WRONG} opacity={0.5} stroke="none" />}
+        {/* Behind it: what those same numbers would have done sent to the D/A as they are */}
+        {ghostPaths && <path d={ghostPaths.path} fill="none" stroke={CLIPPED} strokeWidth={2} strokeDasharray="7 5" opacity={0.75} />}
         <path d={wavePath(outX, should, 0, span, R2.sy)} fill="none" stroke={INK} strokeWidth={1.25} strokeDasharray="4 4" opacity={0.6} />
         {outPaths && <path d={outPaths.path} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />}
         <TimeEnd x={OUT_X} row={R2} span={span} w={OUT_W} />
@@ -735,6 +755,9 @@ export function ConversionScene({ step }: SceneProps) {
           <>
             <text className="lsc-dd-reading" x={OUT_X} y={R2.readY}>{fmt(l.difference, { db: minus(out.db) })}</text>
             <Label at={[OUT_X, R2.readY + 30]}>{l.heard[heardOf(out.db)]}</Label>
+            {ghostPaths && (
+              <text className="lsc-dd-label" x={OUT_X} y={R2.readY + 58} fill={CLIPPED}>{l.playedAsItIs}</text>
+            )}
           </>
         )}
         <UntilFloat step={step}>
