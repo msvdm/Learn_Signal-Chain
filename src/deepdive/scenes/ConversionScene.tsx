@@ -584,10 +584,15 @@ export function ConversionScene({ step }: SceneProps) {
   const px = PX_V, R2 = rowAt(ROW_2, px, H, zoom)
   const R1 = step === QUANT_STEP ? rowAt(TALL_CY, TALL_H / ANALOG_TOP, TALL_H, zoom) : rowAt(ROW_1, px, H, zoom)
   /**
-   * The line in keeps its own zoom: in float the knob is on the numbers, so the sound arriving does
-   * not change however far it is turned, and its graph must not shrink with the numbers' zoom
+   * The line in has its own zoom at step 4, where the graph carries two traces: the sound arriving
+   * (the knob no longer touches it — a float recorder's converters are before it) and that sound with
+   * the gain you set, which is what a 24-bit converter is fed. It follows the louder of the two, so
+   * neither runs off the graph whichever way the knob is turned
    */
-  const R1in = float ? rowAt(R1.cy, R1.px, R1.h, zoomOf(c.analog.peak)) : R1
+  const inPeak = Math.max(c.analog.peak, compared?.analog.peak ?? -Infinity)
+  const R1in = float ? rowAt(R1.cy, R1.px, R1.h, zoomOf(inPeak)) : R1
+  /** Whether the gain has pushed the signal onto the analogue side's rails */
+  const railed = float && compared !== null && compared.analog.peak >= ANALOG_TOP_DBU - 0.01
   const inX = timeX(IN_X, span), adcX = timeX(ADC_X, span), outX = timeX(OUT_X, span, OUT_W)
 
   // The meter's mark: the noise the bits leave, with how far under the signal it is (no budget or
@@ -597,6 +602,8 @@ export function ConversionScene({ step }: SceneProps) {
   const placed = stacked(marks)
   /** The line out: what the numbers hold, back in dBu (0 dBFS a peak of +18 dBu) */
   const lineOutLevel = { rms: c.digital.rms + ALIGNMENT_DB, peak: c.digital.peak + ALIGNMENT_DB }
+  /** What the line in's meter reads: the level the knob set — at step 4 the gained trace's */
+  const inLevel = float && compared ? compared.analog : c.analog
   /** Step 4 · how far the numbers must come down before a D/A converter can play them whole */
   const turnDown = float ? turnDownOf(c.digital.peak) : 0
   /**
@@ -623,8 +630,9 @@ export function ConversionScene({ step }: SceneProps) {
         <AnalogLines x={IN_X} row={R1} />
         <path d={wavePath(inX, (time) => c.arriving(time, PHASE), 0, span, R1in.sy)} fill="none" stroke={TRACE} strokeWidth={3} strokeLinejoin="round" />
         <TimeEnd x={IN_X} row={R1} span={span} />
-        <LevelMeter x={IN_METER_X} y={R1.top} w={METER_W} h={2 * R1.h} rms={c.analog.rms} peak={c.analog.peak} />
-        <Peak x={IN_METER_X} y={R1.readY} peak={formatDb(c.analog.peak)} />
+        {/* Its meter reads the level the knob set (at step 4 that is the gained trace, not the sound) */}
+        <LevelMeter x={IN_METER_X} y={R1.top} w={METER_W} h={2 * R1.h} rms={inLevel.rms} peak={inLevel.peak} />
+        <Peak x={IN_METER_X} y={R1.readY} peak={formatDb(inLevel.peak)} />
 
         <line x1={IN_X + GRAPH_W + 20} y1={R1.cy} x2={ADC_L} y2={R1.cy} stroke={INK} strokeWidth={2} />
         <Filter left={FILTER_L} right={FILTER_R} row={R1} />
@@ -633,7 +641,11 @@ export function ConversionScene({ step }: SceneProps) {
         <FullScale from={IN_X + GRAPH_W} to={ADC_X} row={R1} />
         <DigitalTop x={ADC_X} row={R1} />
         <Axes x={ADC_X} row={R1} />
-        <path d={wavePath(adcX, (time) => c.received(time, PHASE), 0, span, R1.sy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.35} />
+        {/* At step 4 this graph is about the numbers, which are on their own zoom: the wave reaching
+            the converters is the line in's solid trace instead */}
+        <UntilFloat step={step}>
+          <path d={wavePath(adcX, (time) => c.received(time, PHASE), 0, span, R1.sy)} fill="none" stroke={TRACE} strokeWidth={2} opacity={0.35} />
+        </UntilFloat>
         <Dots dots={dots} />
         {/* Its window's length is in the samples' words: no time at its end */}
         <Big at={[ADC_X + GRAPH_W, samplesY]}>{fmt(l.samplesIn, { n: numberText(shown.length), ms: msText(span) })}</Big>
@@ -735,6 +747,22 @@ export function ConversionScene({ step }: SceneProps) {
           that still cannot play them — the D/A converter */}
       <Step n={FLOAT_STEP} step={step}>
         <Big at={[(ADC_L + ADC_R) / 2, R1.boxTop - BIG_GAP]} anchor="middle">{l.floatAdc}</Big>
+        {/* The line in's second trace: the sound with the gain you set — what a 24-bit recorder's
+            converter is fed. It is the one that moves with the knob, and it goes flat on the rails
+            (the user's call, 2026-11-28: "People adjust gain and hope that 32 bit float will save
+            their recording"). The solid trace beside it is the sound the float converters take,
+            which the knob never reaches. */}
+        {compared && (
+          <>
+            <path d={wavePath(inX, (time) => compared.arriving(time, PHASE), 0, span, R1in.sy)}
+              fill="none" stroke={railed ? CLIPPED : INK} strokeWidth={2.5} strokeDasharray="9 6" strokeLinejoin="round" opacity={0.9} />
+            {/* The two traces' names above the graph, at its right end: under it the clock's words are */}
+            <Label at={[IN_X + GRAPH_W, R1.top - 74]} anchor="end">{l.theSound}</Label>
+            <text className="lsc-dd-label" x={IN_X + GRAPH_W} y={R1.top - 52} textAnchor="end" fill={railed ? CLIPPED : undefined}>
+              {railed ? l.withTheGainRailed : l.withTheGain}
+            </text>
+          </>
+        )}
         {/* No analogue rails on this graph: it is zoomed by the number's own peak (the knob is on the
             numbers now), so a line at a fixed voltage would read as a ceiling the number never meets.
             The only line that matters here is 0 dBFS — where a 24-bit converter and every D/A stop. */}
@@ -751,8 +779,8 @@ export function ConversionScene({ step }: SceneProps) {
         {/* The two readings, where the samples' and the bits' were */}
         <Big at={[ADC_X + GRAPH_W, samplesY + BIG_LINE]}>{fmt(l.floatPeak, { db: formatDb(c.digital.peak, 'digital') })}</Big>
         <Big at={[ADC_X + GRAPH_W, samplesY + 2 * BIG_LINE]}>{l.floatAnyLevel}</Big>
-        {/* Float cannot bring back what was already cut before the converters */}
-        <Label at={[IN_X, R1.bottom + 64]}>{l.beforeTheConverters}</Label>
+        {/* Float cannot bring back what was already cut before it — a microphone or a preamp pushed too far */}
+        <Label at={[ADC_X + 8, R1.vy(-FS_VOLTS) - 48]}>{l.beforeTheConverters}</Label>
 
         {/* The numbers' box, grown to hold all 32 rows */}
         <rect x={NUM_L} y={R1.boxTop} width={NUM_R - NUM_L} height={FLOAT_BOX_BOTTOM - R1.boxTop} {...BOX} />
@@ -911,11 +939,15 @@ export function ConversionControls({ step, part }: { step: number; part: 'knobs'
   const { t, fmt } = useTranslation()
   const l = t.deepDive.labels
   if (part === 'choices') {
-    // At step 4 there is no bit depth to pick — float is its own format — but its row keeps its room
+    // At step 4 there is no bit depth to pick: the row shows the one format in use instead, in the
+    // app's own words for it (`bitsText(32)` — the same "32-bit float" a digital wire says, D36)
+    const float = step >= FLOAT_STEP
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
         <Choices name={l.sampleRate} options={RATES} value={s.rate as (typeof RATES)[number]} text={(r) => rateText(t, r)} onPick={(rate) => s.set({ rate })} />
-        <Choices name={l.bitDepth} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} hidden={step >= FLOAT_STEP} />
+        {float
+          ? <Choices name={l.bitDepth} options={[FLOAT_BITS]} value={FLOAT_BITS} text={(b) => bitsText(t, b)} onPick={() => {}} />
+          : <Choices name={l.bitDepth} options={BIT_DEPTHS} value={s.bits as (typeof BIT_DEPTHS)[number]} text={(b) => bitsText(t, b)} onPick={(bits) => s.set({ bits })} />}
       </div>
     )
   }

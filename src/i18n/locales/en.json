@@ -896,9 +896,12 @@
       "bothConverters": "Both converters: +{db} dBFS",
       "wouldHaveClipped": "24-bit, the gain before the converter: clipped",
       "wouldHaveMatched": "24-bit, the gain before the converter: the same number",
-      "beforeTheConverters": "Clipped here, before the converters? Float cannot bring it back.",
+      "beforeTheConverters": "Float cannot save what was clipped before it.",
       "turnDownBy": "Turn the numbers down {db} dB first",
-      "nothingToTurnDown": "Under 0 dBFS: it plays as it is"
+      "nothingToTurnDown": "Under 0 dBFS: it plays as it is",
+      "theSound": "—— the sound arriving: what the float converters take",
+      "withTheGain": "- - - with the gain you set: into a 24-bit converter",
+      "withTheGainRailed": "- - - with the gain you set: on the rails"
     }
   }
 }

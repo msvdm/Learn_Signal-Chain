@@ -133,7 +133,7 @@ export const SUBJECTS: readonly Subject[] = [
       { id: 'analogue',      box: [-40, 0, 3270, 1200] },
       // 32-bit float reuses both rows; the numbers' box grows to hold all 32 digits, and the box
       // reaches further right so the meter's mark fits beside it in Bulgarian too (1024 px, 2026-11-28)
-      { id: 'float',         box: [-40, 0, 3430, 1530] },
+      { id: 'float',         box: [-40, -30, 3430, 1530] },
     ],
     Controls: ConversionControls,
   },
