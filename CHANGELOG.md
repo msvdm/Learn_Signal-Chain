@@ -2,6 +2,16 @@
 
 What changed in each release of Learn Signal Chain. The newest is on top.
 
+## 1.9.1
+
+Improvements to *A/D and D/A conversion* in Deep dive:
+
+- **The numbers, magnified:** always the first 24 samples, whatever rate is picked. Each number stands upright on the box's bottom line, its sign at the top, both sides of the wave the same way up, so all 24 bits fit. Each sample's top digit is ringed, and a line joins the rings: a staircase of how many digits each sample uses. The converter's meter now stands beside the numbers.
+- **Big, bold readings** under the A/D converter's graph: how many samples its window holds, and how many bits and steps there are (24 bits: 16 777 216 steps). The converters' names are bold too.
+- **The gain goes down to −130 dB**, quiet enough to sink under even 24 bits' noise.
+- **Every graph shows two to three cycles of the tone**, at any frequency: no more crowded waves at high frequencies.
+- **A quiet wave is drawn bigger**, so line level is easy to see. The gain still makes it bigger, only more slowly; the +20 dBu and 0 dBFS lines stay where they are, and every number stays the same.
+
 ## 1.9.0
 
 - **A new subject in Deep dive: *A/D and D/A conversion*** — the journey from line level into numbers and back, in one still picture you set with its own controls. Three steps: sampling, quantization and analogue conversion.
